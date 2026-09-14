@@ -14,3 +14,17 @@ mtime_ms = 1789403551663
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/bdbab406-cdf6-4606-acaa-acefb678bb10/c4bb53b0-b174-40b6-b6f7-c9bcd16a85bd"
 storage_version_token = "1789403575104368"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "KGIa9gAL0xpGB-GBV6avV"
+uri = "file://reports/gridline-2025-oos-model-audit.md"
+type = "text"
+title = "Gridline 2025 Out-of-Sample Model Audit"
+description = "Read-only production-data audit with full-season model metrics, model comparison, weekly coverage, and explicit limitations for unavailable prediction and market evidence."
+logical_id = "52c64d59-7f2a-404b-b2eb-3359c12b360c"
+content_hash = "sha256:479bda9a3e717274d8dd71a123f29e38084b547a66f3449dc2d5759e237c12a8"
+size = 12755
+mtime_ms = 1789423870846
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/52c64d59-7f2a-404b-b2eb-3359c12b360c/3a33c0e6-6caf-4940-9090-f321f34ed75f"
+storage_version_token = "1789423882219280"
+content_type = "text/markdown"
