@@ -6,3 +6,4 @@
 - [Phase 5 production gates](phase5-production-gates.md) — keep challengers separate; only explicit per-family promotion unlocks immutable live snapshots and kickoff freezing.
 - [Prediction finiteness gates](prediction-finiteness.md) — standardize defensively and reject non-finite model outputs before snapshot persistence.
 - [Feed scheduling constraints](feed-scheduling.md) — recurring syncs need always-running hosting and fresh source downloads, not cached historical files.
+- [Post-merge schema safety](post-merge-schema-safety.md) — non-interactive schema reconciliation must fail closed and never accept destructive truncation.
