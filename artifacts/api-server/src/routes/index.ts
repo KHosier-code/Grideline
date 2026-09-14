@@ -5,6 +5,7 @@ import dashboardRouter from "./dashboard";
 import settingsRouter from "./settings";
 import dataSyncRouter from "./data-sync";
 import featuresRouter from "./features";
+import modelsRouter from "./models";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(dashboardRouter);
 router.use(settingsRouter);
 router.use(dataSyncRouter);
 router.use(featuresRouter);
+router.use(modelsRouter);
 
 export default router;

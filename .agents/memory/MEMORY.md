@@ -2,3 +2,4 @@
 - [NFLverse availability semantics](nflverse-availability.md) — validate requested-season rows; downloaded files can be valid but lack that season, and depth formats change by era.
 - [Pregame feature chronology](feature-engineering.md) — build from normalized historical rows, not only live schedule coverage; version coverage-rule changes.
 - [Persistent scheduler ownership](persistent-scheduler.md) — recurring refreshes belong to the durable worker, not the interactive API process; health must distinguish the two.
+- [Model candidate selection](model-selection.md) — rank production candidates on multi-season historical averages; keep small current-season results out of promotion decisions.

@@ -216,6 +216,27 @@ export const modelVersionsTable = pgTable("model_versions", {
   backtestResults: jsonb("backtest_results").$type<Record<string, unknown>>(),
 });
 
+export const modelTrainingRunsTable = pgTable("model_training_runs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  modelVersion: text("model_version").notNull(),
+  family: text("family").notNull(),
+  algorithm: text("algorithm").notNull(),
+  featureVersion: text("feature_version").notNull(),
+  trainingSeasons: jsonb("training_seasons").$type<number[]>().notNull().default([]),
+  testSeason: integer("test_season").notNull(),
+  samplePolicy: text("sample_policy").notNull(),
+  status: text("status").notNull().default("challenger"),
+  sampleSize: integer("sample_size").notNull().default(0),
+  metrics: jsonb("metrics").$type<Record<string, unknown>>().notNull().default({}),
+  calibration: jsonb("calibration").$type<Record<string, unknown>>().notNull().default({}),
+  featureImportance: jsonb("feature_importance").$type<Record<string, number>>().notNull().default({}),
+  notes: text("notes"),
+  trainedAt: timestamp("trained_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("model_training_runs_family_idx").on(table.family, table.testSeason, table.trainedAt),
+  unique("model_training_runs_version_unique").on(table.modelVersion),
+]);
+
 export const dataSyncRunsTable = pgTable("data_sync_runs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   provider: text("provider").notNull(),
@@ -280,6 +301,8 @@ export const teamGameStatsTable = pgTable("team_game_stats", {
   week: integer("week").notNull(),
   gameId: text("game_id").notNull(),
   gameDate: date("game_date", { mode: "string" }),
+  teamScore: integer("team_score"),
+  opponentScore: integer("opponent_score"),
   teamId: text("team_id").notNull(),
   opponentTeamId: text("opponent_team_id").notNull(),
   isHome: boolean("is_home").notNull(),

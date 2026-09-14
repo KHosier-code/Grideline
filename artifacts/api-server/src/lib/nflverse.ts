@@ -44,6 +44,8 @@ type TeamGameAccumulator = {
   week: number;
   gameId: string;
   gameDate: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
   teamId: string;
   opponentTeamId: string;
   isHome: boolean;
@@ -261,6 +263,8 @@ function createAccumulator(row: CsvRow, teamId: string, opponentTeamId: string):
     week: Number(row.week),
     gameId: row.game_id,
     gameDate: row.game_date || null,
+    homeScore: numberValue(row.total_home_score),
+    awayScore: numberValue(row.total_away_score),
     teamId,
     opponentTeamId,
     isHome: row.home_team === teamId,
@@ -330,6 +334,16 @@ async function ingestPlayByPlay(season: number, filePath: string) {
     const epa = numberValue(row.epa) ?? 0;
     const success = numberValue(row.success) ?? (epa > 0 ? 1 : 0);
     const yards = numberValue(row.yards_gained) ?? 0;
+    const totalHomeScore = numberValue(row.total_home_score);
+    const totalAwayScore = numberValue(row.total_away_score);
+    if (totalHomeScore !== null) {
+      offense.homeScore = totalHomeScore;
+      defense.homeScore = totalHomeScore;
+    }
+    if (totalAwayScore !== null) {
+      offense.awayScore = totalAwayScore;
+      defense.awayScore = totalAwayScore;
+    }
     const down = integerValue(row.down);
     const earlyDown = down === 1 || down === 2;
     offense.plays += 1;
@@ -443,6 +457,8 @@ async function ingestPlayByPlay(season: number, filePath: string) {
     week: item.week,
     gameId: item.gameId,
     gameDate: item.gameDate,
+    teamScore: item.isHome ? item.homeScore : item.awayScore,
+    opponentScore: item.isHome ? item.awayScore : item.homeScore,
     teamId: item.teamId,
     opponentTeamId: item.opponentTeamId,
     isHome: item.isHome,
@@ -498,6 +514,8 @@ async function ingestPlayByPlay(season: number, filePath: string) {
         epaPerPlay: sql`excluded.epa_per_play`,
         passEpa: sql`excluded.pass_epa`,
         rushEpa: sql`excluded.rush_epa`,
+        teamScore: sql`excluded.team_score`,
+        opponentScore: sql`excluded.opponent_score`,
         offensiveSuccessRate: sql`excluded.offensive_success_rate`,
         defensiveEpaAllowedPerPlay: sql`excluded.defensive_epa_allowed_per_play`,
         defensiveSuccessRate: sql`excluded.defensive_success_rate`,

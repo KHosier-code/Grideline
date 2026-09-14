@@ -675,7 +675,92 @@ function Backtesting() {
 }
 
 function ModelLab() {
-  return <ReadinessPage eyebrow="Research" title="Model lab" detail="Production and challenger models, with calibration as a first-class check." icon={Sparkles} blocks={['Production model', 'Challenger queue', 'Calibration readiness']} />;
+  const lab = useQuery({
+    queryKey: ['model-lab'],
+    queryFn: async () => {
+      const response = await fetch('/api/models/lab', { credentials: 'include' });
+      if (!response.ok) throw new Error('Model Lab unavailable');
+      return response.json() as Promise<any>;
+    },
+    staleTime: 30000,
+  });
+  const runs = (lab.data?.runs ?? []) as any[];
+  const families = [
+    { key: 'spread', label: 'Spread / ATS', description: 'Projected home margin. Cover probability remains unavailable without a legitimate historical sportsbook spread.', primary: 'mae', secondary: 'rmse' },
+    { key: 'moneyline', label: 'Moneyline', description: 'Home-win probability evaluated with accuracy, log loss, Brier score, and calibration.', primary: 'logLoss', secondary: 'brierScore' },
+    { key: 'totals', label: 'Game totals', description: 'Projected combined score. Over/Under probability is derived only when a pre-prediction market total exists.', primary: 'mae', secondary: 'rmse' },
+  ];
+  const metric = (run: any, key: string) => typeof run?.metrics?.[key] === 'number' ? Number(run.metrics[key]).toFixed(3) : '—';
+  const percentMetric = (run: any, key: string) => typeof run?.metrics?.[key] === 'number' ? `${(Number(run.metrics[key]) * 100).toFixed(1)}%` : '—';
+  const topFeatures = (run: any) => Object.entries(run?.featureImportance ?? {}).sort((left: any, right: any) => Number(right[1]) - Number(left[1])).slice(0, 6);
+  return (
+    <>
+      <PageHeader eyebrow="Research / Phase 4" title="Model lab" detail="Chronological walk-forward comparison of separate spread, moneyline, and totals model families." actions={<button type="button" className="button button-subtle" onClick={() => lab.refetch()}><RefreshCw className={cx('h-4 w-4', lab.isFetching && 'animate-spin')} /> Refresh results</button>} />
+      <div className="readiness-header">
+        <div className="readiness-header-icon"><ShieldCheck className="h-5 w-5" /></div>
+        <div>
+          <p className="eyebrow text-accent">PHASE 4 / CHALLENGER ONLY</p>
+          <h2 className="text-lg font-semibold text-ink">No candidate is active.</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Feature version <span className="font-mono text-ink">{lab.data?.featureVersion ?? 'pregame-v3'}</span>. Models train on prior seasons and test on the next season. Nothing is promoted automatically.</p>
+        </div>
+      </div>
+      {lab.isLoading ? <LoadingPanel label="Loading walk-forward results" /> : lab.isError ? <ErrorPanel message="The model comparison could not be loaded." /> : (
+        <>
+          <div className="mt-5 grid gap-5 xl:grid-cols-3">
+            {families.map((family) => {
+              const recommendation = lab.data?.recommendations?.[family.key];
+              return (
+                <Panel key={family.key} eyebrow={family.label} title={recommendation ? `${recommendation.algorithm.replaceAll('_', ' ')} candidate` : 'No candidate'} action={<StatusPill status="not_configured">Challenger</StatusPill>}>
+                  <p className="text-xs leading-5 text-muted-foreground">{family.description}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">{family.primary}</p><p className="mt-2 font-display text-2xl font-semibold text-ink">{recommendation ? metric(recommendation, family.primary) : '—'}</p></div>
+                    <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">{family.secondary}</p><p className="mt-2 font-display text-2xl font-semibold text-ink">{recommendation ? metric(recommendation, family.secondary) : '—'}</p></div>
+                  </div>
+                  <p className="mt-3 text-[11px] leading-5 text-muted-foreground">{recommendation ? `Selected for review by lowest ${family.primary}; this is not an activation decision.` : 'No evaluated candidate is available.'}</p>
+                </Panel>
+              );
+            })}
+          </div>
+          {families.map((family) => {
+            const familyRuns = runs.filter((run) => run.family === family.key);
+            return (
+              <Panel key={family.key} eyebrow={family.label} title="Candidate comparison" className="mt-5" action={<span className="section-meta">{familyRuns.length} walk-forward records</span>}>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1450px] text-left text-xs">
+                    <thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Algorithm</th><th className="px-3 py-3">Sample policy</th><th className="px-3 py-3">Train → test</th><th className="px-3 py-3">Feature version</th><th className="px-3 py-3">Sample</th><th className="px-3 py-3">{family.primary}</th><th className="px-3 py-3">{family.secondary}</th><th className="px-3 py-3">Calibration</th><th className="px-3 py-3">Model version / trained</th><th className="px-3 py-3">Status</th></tr></thead>
+                    <tbody>{familyRuns.map((run) => <tr className="border-b border-border/70 align-top" key={run.modelVersion}><td className="px-3 py-3 font-semibold capitalize text-ink">{String(run.algorithm).replaceAll('_', ' ')}</td><td className="px-3 py-3">{String(run.samplePolicy).replaceAll('_', ' ')}</td><td className="px-3 py-3">{(run.trainingSeasons ?? []).join(', ')} <span className="text-muted-foreground">→ {run.testSeason}</span></td><td className="px-3 py-3 font-mono">{run.featureVersion}</td><td className="px-3 py-3">{run.sampleSize}</td><td className="px-3 py-3 font-mono">{family.key === 'moneyline' ? percentMetric(run, family.primary) : metric(run, family.primary)}</td><td className="px-3 py-3 font-mono">{family.key === 'moneyline' ? metric(run, family.secondary) : metric(run, family.secondary)}</td><td className="px-3 py-3">{Array.isArray(run.calibration) ? `${run.calibration.filter((bucket: any) => bucket.predictions > 0).length} populated buckets` : 'Not applicable'}</td><td className="max-w-[240px] px-3 py-3"><span className="block truncate font-mono text-[10px] text-ink" title={run.modelVersion}>{run.modelVersion}</span><span className="text-muted-foreground">{formatDate(String(run.trainedAt), true)}</span></td><td className="px-3 py-3"><StatusPill status="not_configured">Challenger</StatusPill></td></tr>)}</tbody>
+                  </table>
+                </div>
+              </Panel>
+            );
+          })}
+          <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+            <Panel eyebrow="Probability quality" title="Moneyline calibration">
+              {(() => {
+                const run = lab.data?.recommendations?.moneyline;
+                const buckets = Array.isArray(run?.calibration) ? run.calibration.filter((bucket: any) => bucket.predictions > 0) : [];
+                return buckets.length ? <div className="odds-table"><div className="odds-head"><span>Bucket</span><span>Predicted</span><span>Actual</span><span>Predictions</span><span>Gap</span></div>{buckets.map((bucket: any) => <div className="odds-row" key={bucket.bucket}><span>{bucket.bucket}</span><span>{formatPercent(bucket.predictedProbability * 100)}</span><span>{formatPercent(bucket.actualRate * 100)}</span><span>{bucket.predictions}</span><span>{formatPercent(Math.abs(bucket.predictedProbability - bucket.actualRate) * 100)}</span></div>)}</div> : <EmptyPanel title="No populated calibration buckets" detail="Calibration is calculated out of sample and remains empty when no candidate has test predictions in a bucket." icon={BarChart3} />;
+              })()}
+            </Panel>
+            <Panel eyebrow="Research notes" title="Market and promotion gates">
+              <div className="space-y-3 text-xs leading-5 text-muted-foreground">
+                <p><strong className="text-ink">Sportsbook evaluation:</strong> {lab.data?.marketEvaluation?.reason ?? 'Unavailable.'}</p>
+                <p><strong className="text-ink">Low-sample comparison:</strong> Each family is evaluated with low-sample games included and with low-sample games restricted. Early-season rows are not silently dropped.</p>
+                <p><strong className="text-ink">QB uncertainty:</strong> QB confidence, continuity, and starter-change inputs remain in the feature vector. Low-confidence rows are measured separately in the stored metrics.</p>
+                <p><strong className="text-ink">Not added:</strong> No subjective AI override, confidence score, bet sizing, Kelly staking, player props, or automated wagering.</p>
+              </div>
+            </Panel>
+          </div>
+          <Panel eyebrow="Interpretability" title="Most influential features" className="mt-5">
+            <div className="grid gap-5 md:grid-cols-3">{families.map((family) => {
+              const run = lab.data?.recommendations?.[family.key];
+              return <div key={family.key}><p className="text-sm font-semibold text-ink">{family.label}</p><div className="mt-3 space-y-2">{topFeatures(run).map(([name, value]: any) => <div key={name} className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-muted-foreground">{name}</span><span className="font-mono text-ink">{(Number(value) * 100).toFixed(1)}%</span></div>)}{!run && <p className="text-xs text-muted-foreground">No feature importance available.</p>}</div></div>;
+            })}</div>
+          </Panel>
+        </>
+      )}
+    </>
+  );
 }
 
 function Performance() {
