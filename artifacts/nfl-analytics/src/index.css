@@ -610,6 +610,16 @@
   .mobile-topbar, .mobile-overlay, .mobile-close { display: none; }
 }
 
+  .audit-head { display: grid; grid-template-columns: minmax(130px, 1fr) 100px 90px 140px 100px 100px 100px; padding: 12px 22px; color: hsl(var(--muted-foreground)); border-bottom: 1px solid hsl(var(--border)); font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }
+  .audit-row { display: grid; grid-template-columns: minmax(130px, 1fr) 100px 90px 140px 100px 100px 100px; align-items: center; gap: 12px; padding: 15px 22px; color: hsl(var(--muted-foreground)); font-size: 11px; transition: background-color .2s ease; border-bottom: 1px solid hsl(var(--border)); }
+  .audit-row:hover { background: hsl(var(--secondary) / .55); }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-metric { font-family: var(--app-font-mono); }
+  .input-select { display: flex; height: 32px; min-width: 130px; border-radius: 6px; border: 1px solid hsl(var(--border)); background-color: hsl(var(--card)); padding: 6px 30px 6px 12px; font-family: var(--app-font-mono); font-size: 11px; font-weight: 500; transition: border-color .2s ease; appearance: none; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
+  .input-select:focus { outline: none; border-color: hsl(var(--ring)); }
+  .input-text { display: flex; height: 32px; border-radius: 6px; border: 1px solid hsl(var(--border)); background-color: hsl(var(--card)); padding: 6px 12px; font-family: var(--app-font-mono); font-size: 11px; font-weight: 500; transition: border-color .2s ease; }
+  .input-text:focus { outline: none; border-color: hsl(var(--ring)); box-shadow: 0 0 0 1px hsl(var(--ring) / .3); }
+
 @keyframes shimmer {
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }

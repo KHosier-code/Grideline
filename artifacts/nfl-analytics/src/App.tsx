@@ -21,6 +21,7 @@ import {
   Loader2,
   LockKeyhole,
   Menu,
+  Microscope,
   RefreshCw,
   Save,
   Settings2,
@@ -97,6 +98,7 @@ const navGroups = [
     items: [
       { href: '/data-health', label: 'Data health', icon: Database },
       { href: '/feature-audit', label: 'Feature audit', icon: FileSearch },
+      { href: '/evaluation-audit', label: 'Evaluation audit', icon: Microscope },
       { href: '/personnel-context', label: 'Personnel & context', icon: UserRound },
       { href: '/performance', label: 'Performance', icon: BarChart3 },
       { href: '/settings', label: 'Settings', icon: Settings2 },
@@ -185,7 +187,7 @@ function marketLabel(market: string) {
 function statusTone(status?: string | null) {
   if (status === 'current' || status === 'available' || status === 'healthy' || status === 'success') return 'good';
   if (status === 'stale' || status === 'warning' || status === 'running' || status === 'partial') return 'warn';
-  if (status === 'not_configured' || status === 'not_trained') return 'neutral';
+  if (status === 'not_configured' || status === 'not_trained' || status === 'spread' || status === 'moneyline' || status === 'totals') return 'neutral';
   return 'bad';
 }
 
@@ -1414,13 +1416,363 @@ function SettingsPage() {
   return <><PageHeader eyebrow="Configuration" title="Settings" detail="Control what the workspace considers actionable." actions={<button type="button" className="button button-primary" onClick={save} disabled={update.isPending} data-testid="button-save-settings">{update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}{saved ? 'Saved' : 'Save settings'}</button>} /><div className="settings-layout"><Panel eyebrow="Market inputs" title="Sportsbooks" action={<span className="section-meta">{sportsbooks.length} selected</span>}><p className="mb-4 text-sm leading-6 text-muted-foreground">Select the books that should be considered when a market snapshot is assembled.</p><div className="book-grid">{['DraftKings', 'FanDuel'].map((book) => <button type="button" key={book} onClick={() => toggleBook(book)} className={cx('book-toggle', sportsbooks.includes(book) && 'book-toggle-active')} data-testid={`button-toggle-${book.toLowerCase()}`}><span className="book-logo">{book === 'DraftKings' ? 'DK' : 'FD'}</span><span>{book}</span>{sportsbooks.includes(book) ? <Check className="ml-auto h-4 w-4 text-accent" /> : <span className="ml-auto h-4 w-4 rounded-full border border-border" />}</button>)}</div><div className="settings-divider" /><div className="flex items-start gap-3"><div className="provider-mark provider-neutral"><LockKeyhole className="h-4 w-4" /></div><div><p className="text-sm font-semibold text-ink">Odds API connection</p><p className="mt-1 text-xs text-muted-foreground">Secrets stay server-side. Configuration status is the only value exposed here.</p></div><StatusPill status={settings.data.oddsApiConfigured ? 'current' : 'not_configured'}>{settings.data.oddsApiConfigured ? 'Configured' : 'Not configured'}</StatusPill></div></Panel><Panel eyebrow="Decision rules" title="Thresholds"><div className="settings-form"><label className="field-label" htmlFor="minimum-edge">Minimum edge<span>percentage points</span></label><input id="minimum-edge" data-testid="input-minimum-edge" className="field-input" type="number" min="0" step="0.1" value={minimumEdge} onChange={(event) => setMinimumEdge(event.target.value)} /><p className="field-help">Only edges at or above this threshold can be surfaced.</p><label className="field-label" htmlFor="minimum-confidence">Minimum confidence<span>0–100</span></label><input id="minimum-confidence" data-testid="input-minimum-confidence" className="field-input" type="number" min="0" max="100" step="1" value={minimumConfidence} onChange={(event) => setMinimumConfidence(event.target.value)} /><p className="field-help">Sets the minimum confidence gate for any future model output.</p><label className="field-label" htmlFor="unit-size">Unit size<span>accounting unit</span></label><input id="unit-size" data-testid="input-unit-size" className="field-input" type="number" min="0.1" step="0.1" value={unitSize} onChange={(event) => setUnitSize(event.target.value)} /><p className="field-help">Used for ledger display, never treated as bankroll advice.</p><div className="toggle-line"><div><p className="text-sm font-semibold text-ink">Kelly sizing</p><p className="mt-1 text-xs text-muted-foreground">Keep disabled until model calibration and bankroll policy are verified.</p></div><button type="button" role="switch" aria-checked={kellyEnabled} onClick={() => setKellyEnabled((value) => !value)} className={cx('switch', kellyEnabled && 'switch-on')} data-testid="button-toggle-kelly"><span /></button></div></div></Panel></div><div className="callout callout-neutral mt-5"><ShieldCheck className="h-4 w-4 shrink-0 text-accent" /><p><strong>Configuration is not a prediction.</strong> These values shape future model gates and market selection; they do not create an edge while the model is untrained.</p></div></>;
 }
 
+function AuditSummary({ rows, total }: { rows: any[]; total: number }) {
+  if (!rows.length) return null;
+
+  const familySummary = (family: 'spread' | 'moneyline' | 'totals') => {
+    const familyRows = rows.filter((row) => row.family === family && typeof row.predictedValue === 'number' && typeof row.actualValue === 'number');
+    const weekly = new Map<string, { season: number; week: number; sum: number; count: number }>();
+    let absoluteError = 0;
+    let squaredError = 0;
+    let logLoss = 0;
+    let correct = 0;
+    for (const row of familyRows) {
+      const probability = family === 'moneyline' ? Math.min(1 - 1e-15, Math.max(1e-15, row.predictedValue)) : row.predictedValue;
+      const error = family === 'moneyline' ? (probability - row.actualValue) ** 2 : Math.abs(row.predictedValue - row.actualValue);
+      absoluteError += Math.abs(row.predictedValue - row.actualValue);
+      squaredError += (row.predictedValue - row.actualValue) ** 2;
+      if (family === 'moneyline') {
+        logLoss += -(row.actualValue * Math.log(probability) + (1 - row.actualValue) * Math.log(1 - probability));
+        correct += (probability >= 0.5 ? 1 : 0) === row.actualValue ? 1 : 0;
+      }
+      const key = `${row.testSeason}-${row.week}`;
+      const current = weekly.get(key) || { season: row.testSeason, week: row.week, sum: 0, count: 0 };
+      current.sum += error;
+      current.count++;
+      weekly.set(key, current);
+    }
+    const rankedWeeks = [...weekly.values()]
+      .map((item) => ({ ...item, metric: item.sum / item.count }))
+      .sort((left, right) => left.metric - right.metric);
+    return {
+      family,
+      rows: familyRows,
+      count: familyRows.length,
+      primary: family === 'moneyline'
+        ? familyRows.length ? squaredError / familyRows.length : null
+        : familyRows.length ? absoluteError / familyRows.length : null,
+      secondary: family === 'moneyline'
+        ? familyRows.length ? logLoss / familyRows.length : null
+        : familyRows.length ? Math.sqrt(squaredError / familyRows.length) : null,
+      accuracy: family === 'moneyline' && familyRows.length ? correct / familyRows.length : null,
+      best: rankedWeeks[0] ?? null,
+      worst: rankedWeeks.at(-1) ?? null,
+    };
+  };
+  const summaries = (['spread', 'moneyline', 'totals'] as const).map(familySummary).filter((item) => item.count);
+  const moneylineRows = rows.filter((row) => row.family === 'moneyline' && typeof row.predictedValue === 'number' && typeof row.actualValue === 'number');
+  const calibration = Array.from({ length: 10 }, (_, index) => {
+    const bucketRows = moneylineRows.filter((row) => Math.min(9, Math.floor(Math.max(0, Math.min(1, row.predictedValue)) * 10)) === index);
+    return {
+      label: `${index * 10}–${(index + 1) * 10}%`,
+      count: bucketRows.length,
+      predicted: bucketRows.length ? bucketRows.reduce((sum, row) => sum + row.predictedValue, 0) / bucketRows.length : null,
+      observed: bucketRows.length ? bucketRows.reduce((sum, row) => sum + row.actualValue, 0) / bucketRows.length : null,
+    };
+  });
+  const populatedCalibration = calibration.filter((bucket) => bucket.count);
+  const marketCount = rows.filter((row) => row.marketObservedAt).length;
+
+  return (
+    <div className="mb-6 space-y-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Cumulative evidence" value={String(rows.length)} detail={`${total} filtered immutable records`} icon={FileSearch} />
+        {summaries.map((summary) => (
+          <MetricCard
+            key={summary.family}
+            label={`${summary.family} cumulative`}
+            value={summary.primary === null ? '—' : summary.primary.toFixed(3)}
+            detail={summary.family === 'moneyline'
+              ? `Brier · log loss ${summary.secondary?.toFixed(3)} · ${((summary.accuracy ?? 0) * 100).toFixed(1)}% accuracy`
+              : `MAE · RMSE ${summary.secondary?.toFixed(3)}`}
+            icon={summary.family === 'moneyline' ? BarChart3 : Target}
+          />
+        ))}
+      </div>
+      <Panel eyebrow="Weekly error by family" title="Best and worst weeks">
+        <div className="grid gap-3 md:grid-cols-3">
+          {summaries.map((summary) => (
+            <div data-testid={`summary-weekly-${summary.family}`} className="rounded-xl border border-border bg-secondary/20 p-4" key={summary.family}>
+              <p className="eyebrow">{summary.family} · {summary.family === 'moneyline' ? 'Brier' : 'MAE'}</p>
+              <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+                <div><p className="text-muted-foreground">Best</p><p className="mt-1 font-mono font-semibold text-ink">{summary.best ? `${summary.best.season} W${summary.best.week} · ${summary.best.metric.toFixed(3)}` : '—'}</p></div>
+                <div className="text-right"><p className="text-muted-foreground">Worst</p><p className="mt-1 font-mono font-semibold text-ink">{summary.worst ? `${summary.worst.season} W${summary.worst.week} · ${summary.worst.metric.toFixed(3)}` : '—'}</p></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <Panel eyebrow="Moneyline probability quality" title="Calibration completeness" action={<span className="section-meta">{populatedCalibration.length} / 10 populated bins</span>}>
+        {moneylineRows.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[620px] text-left text-xs">
+              <thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Probability bin</th><th className="px-3 py-3">Mean predicted</th><th className="px-3 py-3">Observed home wins</th><th className="px-3 py-3">Gap</th><th className="px-3 py-3">Games</th></tr></thead>
+              <tbody>{calibration.map((bucket) => <tr className="border-b border-border/70" key={bucket.label}><td className="px-3 py-3 font-mono text-ink">{bucket.label}</td><td className="px-3 py-3 font-mono">{bucket.predicted === null ? 'Unavailable' : formatPercent(bucket.predicted * 100)}</td><td className="px-3 py-3 font-mono">{bucket.observed === null ? 'Unavailable' : formatPercent(bucket.observed * 100)}</td><td className="px-3 py-3 font-mono">{bucket.predicted === null || bucket.observed === null ? 'Unavailable' : formatPercent(Math.abs(bucket.predicted - bucket.observed) * 100)}</td><td className="px-3 py-3">{bucket.count}</td></tr>)}</tbody>
+            </table>
+          </div>
+        ) : <p className="text-sm text-muted-foreground">Not applicable: the filtered evidence contains no moneyline probability evaluations.</p>}
+        <p className="mt-4 text-[11px] leading-5 text-muted-foreground">Market history is independently available for {marketCount} of {rows.length} evaluations. Missing sportsbook observations are never inferred.</p>
+      </Panel>
+    </div>
+  );
+}
+
+function AuditRow({ row }: { row: any }) {
+  const delta = (typeof row.predictedValue === 'number' && typeof row.actualValue === 'number')
+    ? (row.predictedValue - row.actualValue).toFixed(2)
+    : '—';
+
+  const deltaColor = typeof row.predictedValue === 'number' && typeof row.actualValue === 'number'
+    ? (Math.abs(row.predictedValue - row.actualValue) < 1.0 ? 'text-emerald-500' : 'text-amber-500')
+    : 'text-muted-foreground';
+  const valueLabel = row.family === 'moneyline' ? 'Home win probability' : row.family === 'spread' ? 'Home margin' : 'Game total';
+  const predictedDisplay = typeof row.predictedValue !== 'number' ? '—' : row.family === 'moneyline' ? formatPercent(row.predictedValue * 100) : row.predictedValue.toFixed(1);
+  const actualDisplay = typeof row.actualValue !== 'number' ? '—' : row.family === 'moneyline' ? (row.actualValue === 1 ? 'Home win' : 'Away win') : row.actualValue.toFixed(1);
+
+  return (
+    <div className="audit-row" data-testid={`audit-row-${row.id}`}>
+      <div>
+        <div className="font-semibold text-ink">{row.gameId || 'Unknown Game'}</div>
+        <div className="mt-1 text-[9px] font-mono text-muted-foreground uppercase tracking-widest">{formatDate(row.kickoffTime, true)} · W{row.week || '?'}</div>
+      </div>
+
+      <div>
+        <StatusPill status={row.family}>{row.family}</StatusPill>
+        <div className="mt-1 text-[10px] font-mono text-muted-foreground">{row.modelVersion || 'v?'}</div>
+      </div>
+
+      <div>
+        <span className="font-mono text-[11px] font-medium text-ink">{row.evaluationStage || '—'}</span>
+        {row.lowSample && <span className="mt-1 block text-[9px] font-bold text-amber-600 uppercase">Low Sample</span>}
+      </div>
+
+      <div className="text-[11px] text-muted-foreground">
+        {row.marketSportsbook ? (
+          <>
+            <span className="block font-semibold text-ink">{row.marketSportsbook}</span>
+            <span className="mt-0.5 block font-mono">{row.marketSelection || '—'} {formatPoint(row.marketPoint)}</span>
+          </>
+        ) : (
+          <span className="italic text-muted-foreground/50">Market unavailable</span>
+        )}
+      </div>
+
+      <div className="text-right font-mono text-[11px] font-semibold text-ink">
+        <span className="block">{predictedDisplay}</span>
+        <span className="mt-1 block text-[9px] font-normal text-muted-foreground">{valueLabel}</span>
+      </div>
+
+      <div className="text-right font-mono text-[11px] text-ink">
+        <span className="block">{actualDisplay}</span>
+        <span className="mt-1 block text-[9px] text-muted-foreground">{row.actualAwayScore}–{row.actualHomeScore} · margin {formatPoint(row.actualMargin)} · total {row.actualTotal}</span>
+      </div>
+
+      <div className={cx('text-right font-mono text-[11px] font-semibold', delta !== '—' && deltaColor)}>
+        {delta !== '—' && Number(delta) > 0 ? `+${delta}` : delta}
+      </div>
+    </div>
+  );
+}
+
+function EvaluationAudit() {
+  const [testSeason, setTestSeason] = useState<string>('');
+  const [week, setWeek] = useState<string>('');
+  const [family, setFamily] = useState<string>('');
+  const [modelVersion, setModelVersion] = useState<string>('');
+  const [limit] = useState<number>(50);
+
+  const [cursorStack, setCursorStack] = useState<number[]>([]);
+  const [currentCursor, setCurrentCursor] = useState<number | null>(null);
+
+  const resetPagination = () => {
+    setCursorStack([]);
+    setCurrentCursor(null);
+  };
+
+  const handleFilterChange = (setter: (value: string) => void, value: string) => {
+    setter(value);
+    resetPagination();
+  };
+
+  const auditSearch = (cursor: number | null, pageLimit: number) => {
+    const search = new URLSearchParams();
+    if (testSeason) search.set('testSeason', testSeason);
+    if (week) search.set('week', week);
+    if (family) search.set('family', family);
+    if (modelVersion) search.set('modelVersion', modelVersion.trim());
+    search.set('limit', String(pageLimit));
+    if (cursor !== null) search.set('cursor', String(cursor));
+    return search;
+  };
+
+  const query = useQuery({
+    queryKey: ['evaluation-audit', testSeason, week, family, modelVersion, limit, currentCursor],
+    queryFn: async () => {
+      const search = auditSearch(currentCursor, limit);
+      const res = await fetch(`/api/models/evaluations/audit?${search.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch evaluation audit');
+      return res.json();
+    },
+    staleTime: 30000,
+  });
+
+  const cumulative = useQuery({
+    queryKey: ['evaluation-audit-cumulative', testSeason, week, family, modelVersion],
+    queryFn: async () => {
+      const rows: any[] = [];
+      let cursor: number | null = null;
+      let total = 0;
+      do {
+        const response: Response = await fetch(`/api/models/evaluations/audit?${auditSearch(cursor, 1000).toString()}`);
+        if (!response.ok) throw new Error('Failed to fetch cumulative evaluation audit');
+        const page: { rows?: any[]; total?: number; hasMore?: boolean; nextCursor?: number | null } = await response.json();
+        rows.push(...(page.rows ?? []));
+        total = page.total ?? rows.length;
+        cursor = page.hasMore && typeof page.nextCursor === 'number' ? page.nextCursor : null;
+      } while (cursor !== null);
+      return { rows, total };
+    },
+    staleTime: 30000,
+  });
+
+  const goNext = (nextCursor: number) => {
+    setCursorStack(prev => [...prev, currentCursor ?? 0]);
+    setCurrentCursor(nextCursor);
+  };
+
+  const goPrev = () => {
+    const prev = [...cursorStack];
+    const prevCursor = prev.pop();
+    setCursorStack(prev);
+    setCurrentCursor(prevCursor && prevCursor > 0 ? prevCursor : null);
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Review / Validation"
+        title="Evaluation Audit"
+        detail="Immutable evidence of model performance. Inspect game-level predictions, actual results, and market alignment boundaries."
+      />
+
+      <div className="mb-6 flex flex-wrap items-end gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Season</label>
+          <input type="number" min="2000" max="2100" className="input-text w-28" placeholder="All seasons" value={testSeason} onChange={e => handleFilterChange(setTestSeason, e.target.value)} data-testid="filter-season" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Week</label>
+          <select className="input-select" value={week} onChange={e => handleFilterChange(setWeek, e.target.value)} data-testid="filter-week">
+            <option value="">All Weeks</option>
+            {Array.from({ length: 22 }, (_, i) => i + 1).map(w => (
+              <option key={w} value={w}>Week {w}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Family</label>
+          <select className="input-select" value={family} onChange={e => handleFilterChange(setFamily, e.target.value)} data-testid="filter-family">
+            <option value="">All Families</option>
+            <option value="spread">Spread</option>
+            <option value="moneyline">Moneyline</option>
+            <option value="totals">Totals</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Model Version</label>
+          <input type="text" className="input-text w-32" placeholder="e.g. v1.2" value={modelVersion} onChange={e => handleFilterChange(setModelVersion, e.target.value)} data-testid="filter-model" />
+        </div>
+
+        <button type="button" className="button button-subtle ml-auto h-[32px]" onClick={() => query.refetch()} data-testid="button-refresh-audit">
+          <RefreshCw className={cx('h-4 w-4', query.isFetching && 'animate-spin')} /> Refresh
+        </button>
+      </div>
+
+      <div data-testid="status-market-history-boundary" className="callout callout-neutral mb-6">
+        <LineChart className="h-4 w-4 shrink-0 text-accent" />
+        <p><strong>Historical market boundary:</strong> sportsbook history is shown only when an immutable pre-prediction observation exists. Missing market history remains unavailable and is never inferred.</p>
+      </div>
+
+      {cumulative.isLoading ? <div className="mb-6"><LoadingPanel label="Calculating cumulative audit metrics" /></div> : cumulative.data?.rows?.length ? <AuditSummary rows={cumulative.data.rows} total={cumulative.data.total} /> : null}
+
+      <Panel className="overflow-hidden p-0" title="" eyebrow="">
+        <div className="audit-head hidden md:grid">
+          <span>Game & Stage</span>
+          <span>Model</span>
+          <span>Evaluation</span>
+          <span>Market</span>
+          <span className="text-right">Prediction</span>
+          <span className="text-right">Actual</span>
+          <span className="text-right">Delta</span>
+        </div>
+
+        <div>
+          {query.isLoading ? (
+            <div className="space-y-4 p-8">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : query.isError ? (
+            <div className="p-8">
+              <ErrorPanel message="Could not load evaluation audit records." />
+            </div>
+          ) : query.data?.rows?.length ? (
+            query.data.rows.map((row: any) => (
+              <AuditRow key={row.id} row={row} />
+            ))
+          ) : (
+            <div className="p-8">
+              <EmptyPanel title="No evaluations found" detail={query.data?.note ?? 'Adjust your filters to see more results.'} icon={Microscope} />
+            </div>
+          )}
+        </div>
+
+        {query.data?.rows?.length ? (
+          <div data-testid="text-evaluation-audit-note" className="border-t border-border bg-secondary/10 px-6 py-3 text-[11px] leading-5 text-muted-foreground">
+            {query.data.note}
+          </div>
+        ) : null}
+
+        {query.data && (
+          <div className="flex items-center justify-between border-t border-border bg-secondary/20 px-6 py-4">
+            <span className="font-mono text-xs text-muted-foreground">
+              Page {cursorStack.length + 1} · showing {query.data.rows?.length || 0} of {query.data.total || 0} records
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="button button-subtle"
+                disabled={cursorStack.length === 0}
+                onClick={goPrev}
+                data-testid="button-audit-prev"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="button button-subtle"
+                disabled={!query.data.hasMore}
+                onClick={() => goNext(Number(query.data.nextCursor))}
+                data-testid="button-audit-next"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </Panel>
+    </>
+  );
+}
+
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
 function Router() {
-  return <RoutedErrorBoundary><Switch><Route path="/sign-in/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>} /><Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} /><Route><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/live-predictions" component={LivePredictions} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/feature-audit" component={FeatureAuditPage} /><Route path="/personnel-context" component={PersonnelContextPage} /><Route path="/odds" component={OddsBoard} /><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices. Open a game from the Odds board to inspect every preserved change." preferred="odds" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></Route></Switch></RoutedErrorBoundary>;
+  return <RoutedErrorBoundary><Switch><Route path="/sign-in/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>} /><Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} /><Route><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/live-predictions" component={LivePredictions} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/feature-audit" component={FeatureAuditPage} /><Route path="/evaluation-audit" component={EvaluationAudit} /><Route path="/personnel-context" component={PersonnelContextPage} /><Route path="/odds" component={OddsBoard} /><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices. Open a game from the Odds board to inspect every preserved change." preferred="odds" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></Route></Switch></RoutedErrorBoundary>;
 }
 
 function App() {
