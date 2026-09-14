@@ -1,0 +1,313 @@
+Build Gridline Phase 7: Personnel & Context Intelligence.
+
+Do not replace, retrain, or alter the currently active Phase 6 production models yet.
+
+Do not add player props, staking, betting automation, or recommendation logic.
+
+The purpose of Phase 7 is to improve the quality and completeness of pregame inputs so future challenger models can make better predictions.
+
+PHASE 7 GOALS
+
+1. Reliable current personnel/depth-chart intelligence
+2. Better QB certainty and starter-change modeling
+3. Injury importance instead of simple injury counts
+4. Offensive-line continuity
+5. WR/CB/TE/LB matchup context
+6. Weather
+7. Rest/travel/schedule context
+8. Better market-movement features
+9. Data-confidence scoring
+10. Full auditability and no fabricated data
+
+A. CURRENT DEPTH-CHART FALLBACK SYSTEM
+
+The existing ESPN structured depth-chart endpoint is unavailable for all 32 teams.
+
+Build a source hierarchy instead of relying on one feed.
+
+Requirements:
+
+* retain nflverse historical depth charts
+* continue attempting ESPN structured depth charts where available
+* add legal/free current roster and participation-based fallback logic
+* derive probable starters using:
+
+  * recent snap share
+  * recent starts/participation
+  * injury status
+  * prior-week depth position
+  * recent game involvement
+* never label inferred starters as official
+
+Every depth-chart record must include:
+
+* player
+* team
+* position
+* estimated depth position
+* source
+* official/inferred flag
+* confidence
+* snapshot timestamp
+* data freshness
+* unavailable reason where applicable
+
+B. QUARTERBACK INTELLIGENCE
+
+Upgrade the existing QB confidence system.
+
+For every game calculate:
+
+* projected starting QB
+* starter certainty
+* prior-game starter
+* starter-change flag
+* consecutive starts
+* recent snap share
+* recent dropbacks
+* recent EPA/dropback
+* recent success rate
+* interception rate
+* sack rate
+* rushing contribution
+* historical starts
+* backup experience
+* QB continuity score
+
+Create a QB starter-certainty score from 0–100.
+
+Do not treat inferred starter identity as official.
+
+C. INJURY VALUE MODEL
+
+Move beyond simple injury counts.
+
+Assign contextual impact based on:
+
+* position
+* starter likelihood
+* recent snap share
+* usage
+* historical performance
+* replacement quality
+* unit depth
+* injury designation
+* practice participation
+* game status
+
+Create:
+
+* offensive injury impact
+* defensive injury impact
+* special-teams injury impact
+* QB-specific injury impact
+* OL injury impact
+* secondary injury impact
+* skill-position injury impact
+
+Every score must be auditable back to specific players.
+
+Do not invent player-value metrics where source data is unavailable.
+
+D. OFFENSIVE-LINE CONTINUITY
+
+For each team/game derive:
+
+* projected starting five where possible
+* returning starters from prior week
+* OL snap continuity
+* number of OL lineup changes
+* starter games missed
+* LT/RT availability
+* center continuity
+* recent sack rate allowed
+* recent pressure proxy if true pressure data unavailable
+
+Explicitly label proxy metrics.
+
+E. MATCHUP PERSONNEL
+
+Add matchup-context features where data supports them.
+
+Examples:
+
+* WR availability vs opposing CB availability
+* TE usage vs opposing LB/S coverage availability
+* opponent secondary injury burden
+* pass-rusher availability vs OL continuity
+* rushing offense vs defensive front availability
+
+Do not pretend to have direct player-vs-player coverage assignments unless a legitimate source supports it.
+
+Use unit-level matchup context where necessary.
+
+F. WEATHER
+
+Add pregame weather context for outdoor games.
+
+Capture:
+
+* temperature
+* wind speed
+* wind gusts where available
+* precipitation probability
+* precipitation type
+* humidity where useful
+* roof/stadium status
+* indoor/outdoor designation
+
+Store timestamped forecasts.
+
+Never allow a post-kickoff weather observation to leak into a pregame feature row.
+
+Create derived features for:
+
+* high wind
+* extreme cold
+* extreme heat
+* precipitation
+* severe-weather flag
+
+G. REST / TRAVEL / SCHEDULE
+
+For every team/game derive:
+
+* days rest
+* short week
+* Thursday game
+* Monday-to-Sunday turnaround
+* bye-week return
+* consecutive road games
+* travel distance if reliably available
+* timezone change
+* international game
+* previous overtime flag
+* prior-game snap burden proxy if available
+
+H. MARKET MOVEMENT
+
+Improve sportsbook features using preserved immutable odds history.
+
+For spread, total, and moneyline derive where available:
+
+* first Gridline-observed line
+* current line
+* final pre-kickoff line
+* point movement
+* price movement
+* number of observations
+* market disagreement between DraftKings and FanDuel
+* best bettor-available number
+* favorite flip
+* key-number movement
+* time since last odds update
+
+Do not call Gridline's first observation an official opener.
+
+I. DATA CONFIDENCE SCORE
+
+Add a Data Confidence Score from 0–100 for every prediction.
+
+This is NOT betting confidence.
+
+It should measure how complete and trustworthy the pregame information was.
+
+Possible components:
+
+* feature completeness
+* QB starter certainty
+* injury freshness
+* personnel/depth completeness
+* sportsbook freshness
+* weather availability
+* market coverage
+* sample size
+
+Display both:
+
+* overall Data Confidence
+* component breakdown
+
+Examples:
+QB certainty: 85/100
+Personnel completeness: 62/100
+Injury freshness: 95/100
+Market freshness: 70/100
+Overall Data Confidence: 78/100
+
+Do not represent this as probability of winning.
+
+J. VERSIONED FEATURE SET
+
+Create a new feature version, for example:
+
+`pregame-v4-personnel-context`
+
+Do not overwrite `pregame-v3`.
+
+Keep all existing historical feature rows immutable.
+
+Generate new features chronologically with strict leakage prevention.
+
+K. LEAKAGE TESTING
+
+Add tests ensuring no feature can use:
+
+* future game statistics
+* post-kickoff injuries
+* post-kickoff depth information
+* post-kickoff weather
+* post-kickoff odds
+* final scores before prediction time
+
+Extend the existing prediction-safety workflow.
+
+L. PHASE 7 AUDIT PAGE
+
+Add a dedicated Personnel & Context Audit page.
+
+For each game show:
+
+* projected starters
+* inferred vs official status
+* QB certainty
+* injuries and impact
+* OL continuity
+* personnel completeness
+* weather
+* rest/travel context
+* sportsbook freshness
+* Data Confidence
+* sources
+* timestamps
+* unavailable reasons
+
+M. DO NOT CHANGE PRODUCTION MODEL YET
+
+Phase 6 models must remain active.
+
+Do not automatically promote a Phase 7 challenger.
+
+After enough Phase 7 historical features are built, prepare challenger training candidates separately.
+
+FINAL PHASE 7 REPORT
+
+Return:
+
+1. Personnel/depth-chart architecture
+2. Current-team coverage
+3. QB certainty implementation
+4. Injury-value implementation
+5. OL continuity coverage
+6. Matchup-context coverage
+7. Weather coverage
+8. Rest/travel features
+9. Market-movement features
+10. Data Confidence methodology
+11. New feature version
+12. Leakage-test results
+13. Unavailable data and limitations
+14. Any data-source costs introduced
+15. Whether Phase 6 production behavior changed
+
+Do not claim improved predictive accuracy until new challenger models are evaluated honestly.
