@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { generateWeeklyLearningReport, generateLivePredictions, getCurrentWeekValidationReport, getLatestLearningReports, getLivePredictionBoard, getPredictionPerformance, gradeCompletedPredictions } from "../lib/live-predictions";
+import { generateWeeklyLearningReport, generateLivePredictions, getCurrentWeekValidationReport, getLatestLearningReports, getLivePredictionBoard, getPredictionPerformance, getPredictionValidationFailures, gradeCompletedPredictions } from "../lib/live-predictions";
 import { requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
@@ -17,6 +17,18 @@ router.get("/predictions/current-week", async (_req, res): Promise<void> => {
     res.json(await getCurrentWeekValidationReport());
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Current-week validation unavailable" });
+  }
+});
+
+router.get("/predictions/validation-failures", async (req, res): Promise<void> => {
+  try {
+    const requestedLimit = Number(req.query.limit ?? 50);
+    res.json({
+      failures: await getPredictionValidationFailures(Number.isFinite(requestedLimit) ? requestedLimit : 50),
+      note: "Validation failures are append-only audit records. They are excluded from official prediction views.",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Prediction validation audit unavailable" });
   }
 });
 

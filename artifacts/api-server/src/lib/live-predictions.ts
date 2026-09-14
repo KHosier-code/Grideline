@@ -159,21 +159,21 @@ export function comparisonData(
     spread: {
       modelLine: projectedMargin,
       marketLine: spreadLine,
-      pointEdge: projectedMargin !== null && spreadLine !== null ? projectedMargin + spreadLine : null,
-      marketAvailable: spreadLine !== null,
+      pointEdge: projectedMargin !== null && typeof spreadLine === "number" ? projectedMargin + spreadLine : null,
+      marketAvailable: typeof spreadLine === "number",
     },
     moneyline: {
       modelHomeProbability: homeWinProbability,
       noVigHomeProbability: noVigHome,
       noVigAwayProbability: typeof moneyline.noVigAwayProbability === "number" ? moneyline.noVigAwayProbability : null,
       homeProbabilityEdge: homeWinProbability !== null && noVigHome !== null ? homeWinProbability - noVigHome : null,
-      marketAvailable: noVigHome !== null,
+      marketAvailable: typeof noVigHome === "number",
     },
     totals: {
       modelTotal: projectedTotal,
       marketTotal: totalLine,
-      pointEdge: projectedTotal !== null && totalLine !== null ? projectedTotal - totalLine : null,
-      marketAvailable: totalLine !== null,
+      pointEdge: projectedTotal !== null && typeof totalLine === "number" ? projectedTotal - totalLine : null,
+      marketAvailable: typeof totalLine === "number",
     },
   };
 }
@@ -695,16 +695,19 @@ export async function getCurrentWeekValidationReport() {
     const marketSnapshot = snapshot?.marketSnapshot as Record<string, any> | undefined;
     const missing: string[] = [];
     if (!snapshot) missing.push("production_prediction");
-    if (snapshot && comparison?.spread?.marketLine === null) missing.push("current_spread");
-    if (snapshot && comparison?.moneyline?.noVigHomeProbability === null) missing.push("no_vig_moneyline");
-    if (snapshot && comparison?.totals?.marketTotal === null) missing.push("current_total");
+    const spreadAvailable = typeof comparison?.spread?.marketLine === "number";
+    const moneylineAvailable = typeof comparison?.moneyline?.noVigHomeProbability === "number";
+    const totalsAvailable = typeof comparison?.totals?.marketTotal === "number";
+    if (snapshot && !spreadAvailable) missing.push("current_spread");
+    if (snapshot && !moneylineAvailable) missing.push("no_vig_moneyline");
+    if (snapshot && !totalsAvailable) missing.push("current_total");
     const home = teams.get(game.homeTeamId);
     const away = teams.get(game.awayTeamId);
     const componentStatus = {
       modelData: snapshot ? "complete" : "unavailable",
-      spreadComparison: snapshot && comparison?.spread?.marketLine !== null ? "available" : "market_unavailable",
-      moneylineComparison: snapshot && comparison?.moneyline?.noVigHomeProbability !== null ? "available" : "market_unavailable",
-      totalsComparison: snapshot && comparison?.totals?.marketTotal !== null ? "available" : "market_unavailable",
+      spreadComparison: snapshot && spreadAvailable ? "available" : "market_unavailable",
+      moneylineComparison: snapshot && moneylineAvailable ? "available" : "market_unavailable",
+      totalsComparison: snapshot && totalsAvailable ? "available" : "market_unavailable",
     };
     return {
       gameId: game.gameId,
@@ -782,6 +785,13 @@ export async function getCurrentWeekValidationReport() {
     },
     note: "Rankings are independent analysis views. A difference is not a betting recommendation, and unavailable values are not imputed.",
   };
+}
+
+export async function getPredictionValidationFailures(limit = 50) {
+  const safeLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  return db.select().from(predictionValidationFailuresTable)
+    .orderBy(desc(predictionValidationFailuresTable.predictionTimestamp), desc(predictionValidationFailuresTable.id))
+    .limit(safeLimit);
 }
 
 export async function generateWeeklyLearningReport(season: number, week: number) {
