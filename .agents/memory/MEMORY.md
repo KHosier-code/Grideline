@@ -7,3 +7,4 @@
 - [Prediction finiteness gates](prediction-finiteness.md) — standardize defensively and reject non-finite model outputs before snapshot persistence.
 - [Feed scheduling constraints](feed-scheduling.md) — recurring syncs need always-running hosting and fresh source downloads, not cached historical files.
 - [Post-merge schema safety](post-merge-schema-safety.md) — non-interactive schema reconciliation must fail closed and never accept destructive truncation.
+- [Clerk environment separation](clerk-environments.md) — production and development users have different Clerk IDs; preserve opaque admin lists with additive production mappings.
