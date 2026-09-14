@@ -1,0 +1,110 @@
+We are now in Plan mode.
+
+Proceed with the four-task Gridline parallel-development plan we already defined.
+
+Do not edit the shared development workspace while planning.
+
+First inspect the existing partial development changes from the earlier attempt and classify them as:
+
+- reusable
+- needs correction
+- should be discarded
+
+Then formally create/propose these FOUR isolated tasks for parallel execution:
+
+TASK 1 — Consumer UI Foundation
+Ownership:
+- consumer frontend pages
+- consumer navigation
+- game cards
+- game-detail presentation
+- role-aware layouts
+- responsive/mobile styling
+- polished loading/error/empty states
+
+Do not redesign Admin pages.
+
+TASK 2 — Evaluation Retention & Performance
+Ownership:
+- immutable per-game evaluation persistence
+- evaluation database schema/migrations
+- season/week/game reporting
+- evaluation-specific tests
+
+Do not retrain models.
+Do not regenerate missing 2025 predictions.
+
+TASK 3 — Production Stability & QA
+Ownership:
+- personnel-context concurrency
+- worker/scheduler behavior
+- DB/API stability
+- prediction lifecycle safety
+- regression tests
+- freeze/grading/CLV pipeline verification
+
+Fix only genuine stability bugs.
+
+TASK 4 — Consumer Data/API Layer
+Ownership:
+- consumer-safe API endpoints
+- response serialization
+- API contracts
+- generated clients
+- consumer API tests
+
+Do not change prediction logic.
+
+GLOBAL RULES
+
+Across all four tasks:
+
+- Preserve active Phase 6 production models.
+- Do not train or promote models.
+- Do not change existing prediction history.
+- Do not weaken Clerk authorization.
+- Do not change scheduler ownership.
+- Do not introduce paid providers.
+- Do not add player props yet.
+- Do not add wagering automation.
+- Preserve cutoff/leakage protections.
+- Reuse valid partial work already present in the development workspace rather than creating duplicate implementations.
+
+CONFLICT OWNERSHIP
+
+Explicitly assign shared files before implementation.
+
+Task 2 owns evaluation calculations and persistence.
+
+Task 4 may expose Task 2 results but must not duplicate evaluation calculations.
+
+Task 4 owns API contracts/generated clients.
+
+Task 1 consumes Task 4 interfaces.
+
+Task 3 owns worker/scheduler/stability logic.
+
+For shared route-registration, prediction, authorization, and schema files:
+- name the owning task
+- identify dependent tasks
+- sequence changes where necessary
+
+Before starting execution, return:
+
+1. The four formal task definitions
+2. Expected file/domain ownership
+3. Existing partial work that will be reused
+4. Known overlaps/conflicts
+5. Dependency order
+6. Recommended application order
+
+Then create the four isolated tasks for assignment to parallel task agents.
+
+Do not merge/apply them automatically.
+
+Recommended review/application order unless dependencies require otherwise:
+
+1. Production Stability & QA
+2. Evaluation Retention & Performance
+3. Consumer Data/API Layer
+4. Consumer UI Foundation
