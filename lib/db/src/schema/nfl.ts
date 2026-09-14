@@ -283,6 +283,24 @@ export const predictionSnapshotsTable = pgTable("prediction_snapshots", {
   index("prediction_snapshots_official_idx").on(table.officialFinalPrediction, table.kickoffTime),
 ]);
 
+export const predictionValidationFailuresTable = pgTable("prediction_validation_failures", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  gameId: text("game_id").notNull(),
+  predictionTimestamp: timestamp("prediction_timestamp", { withTimezone: true }).notNull(),
+  snapshotLabel: text("snapshot_label").notNull(),
+  featureVersion: text("feature_version").notNull(),
+  spreadModelVersion: text("spread_model_version"),
+  moneylineModelVersion: text("moneyline_model_version"),
+  totalsModelVersion: text("totals_model_version"),
+  failedField: text("failed_field").notNull(),
+  invalidValue: text("invalid_value"),
+  invalidType: text("invalid_type"),
+  failureReason: text("failure_reason").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("prediction_validation_failures_game_idx").on(table.gameId, table.predictionTimestamp),
+]);
+
 export const predictionGradesTable = pgTable("prediction_grades", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   predictionId: integer("prediction_id").notNull(),

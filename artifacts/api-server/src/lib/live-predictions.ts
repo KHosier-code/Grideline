@@ -6,12 +6,14 @@ import {
   modelTrainingRunsTable,
   predictionGradesTable,
   predictionSnapshotsTable,
+  predictionValidationFailuresTable,
   pregameTeamFeaturesTable,
   sportsbookOddsTable,
   teamsTable,
   weeklyLearningReportsTable,
   type PregameFeatureValues,
 } from "@workspace/db";
+import { safeNoVigProbabilities, validatePredictionOutputs } from "./prediction-validation";
 import {
   loadExamples,
   mean,
@@ -124,9 +126,9 @@ async function marketData(gameId: string, capturedAt: Date, home: { teamId: stri
       if (homeQuote && awayQuote) {
         const homeImplied = impliedProbability(homeQuote.price);
         const awayImplied = impliedProbability(awayQuote.price);
-        const total = homeImplied + awayImplied;
-        noVigHomeProbability = homeImplied / total;
-        noVigAwayProbability = awayImplied / total;
+        const noVig = safeNoVigProbabilities(homeImplied, awayImplied);
+        noVigHomeProbability = noVig?.home ?? null;
+        noVigAwayProbability = noVig?.away ?? null;
       }
     }
     markets[market] = {
@@ -315,21 +317,34 @@ export async function generateLivePredictions(now = new Date()) {
     const margin = marginResult.value;
     const total = totalResult.value;
     const homeProbability = homeProbabilityResult.value;
-    if (margin === null || total === null || homeProbability === null ||
-      !Number.isFinite(margin) || !Number.isFinite(total) || !Number.isFinite(homeProbability)) {
+    const projectedHomeScore = margin !== null && total !== null ? (total + margin) / 2 : null;
+    const projectedAwayScore = margin !== null && total !== null ? (total - margin) / 2 : null;
+    const validationFailures = validatePredictionOutputs({
+      projectedMargin: margin,
+      projectedTotal: total,
+      homeWinProbability: homeProbability,
+      awayWinProbability: homeProbability === null ? null : 1 - homeProbability,
+      projectedHomeScore,
+      projectedAwayScore,
+    });
+    if (validationFailures.length) {
       skippedNonFinite += 1;
+      await db.insert(predictionValidationFailuresTable).values(validationFailures.map((failure) => ({
+        gameId: game.gameId,
+        predictionTimestamp: now,
+        snapshotLabel: snapshotLabel(now, game.kickoffTime),
+        featureVersion,
+        spreadModelVersion: models.get("spread")?.modelVersion ?? null,
+        moneylineModelVersion: models.get("moneyline")?.modelVersion ?? null,
+        totalsModelVersion: models.get("totals")?.modelVersion ?? null,
+        ...failure,
+      })));
       if (!firstNonFinite) firstNonFinite = {
         gameId: game.gameId,
         vectorLength: vector.x.length,
         finiteVector: vector.x.every(Number.isFinite),
-        failures: {
-          spread: marginResult,
-          totals: totalResult,
-          moneyline: homeProbabilityResult,
-        },
-        margin,
-        total,
-        homeProbability,
+        failures: validationFailures,
+        modelResults: { spread: marginResult, totals: totalResult, moneyline: homeProbabilityResult },
       };
       continue;
     }
@@ -343,8 +358,6 @@ export async function generateLivePredictions(now = new Date()) {
       name: home.teamName,
       abbreviation: home.abbreviation,
     });
-    const projectedHomeScore = (total + margin) / 2;
-    const projectedAwayScore = (total - margin) / 2;
     const label = snapshotLabel(now, game.kickoffTime);
     const insert = await db.insert(predictionSnapshotsTable).values({
       snapshotKey: `${game.gameId}:${label}:validated-v2`,
