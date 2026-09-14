@@ -1,0 +1,84 @@
+URGENT production issue:
+
+The published Gridline game page for Denver Broncos at Kansas City Chiefs is displaying:
+
+"Model not trained"
+
+This is incorrect because all three Phase 6 production models are active.
+
+Do not change or retrain any models.
+
+Diagnose why the game-detail page is showing this stale state.
+
+Verify against the PRODUCTION environment:
+
+1. Confirm the active production models for:
+
+   * spread
+   * moneyline
+   * totals
+
+2. Confirm Broncos at Chiefs game ID `401872931` exists in production.
+
+3. Confirm valid `pregame-v3` features exist for both Denver and Kansas City for this game.
+
+4. Check whether a valid Phase 6 prediction snapshot exists for this game.
+
+5. Compare the data used by:
+
+   * Live Predictions
+   * This Week
+   * individual Game Detail page
+
+All three should use the same authoritative production-model and prediction-snapshot sources.
+
+The Game Detail page must NOT determine model readiness from an obsolete/legacy model activation table if the current system uses `model_promotion_history`.
+
+If no current Phase 6 prediction exists for Broncos-Chiefs and kickoff has not occurred:
+
+* generate a new valid immutable production prediction snapshot using the active Phase 6 models
+* use only information available before prediction time
+* attach current sportsbook data only where legitimately available
+* do not overwrite previous snapshots
+
+If a valid prediction already exists:
+
+* fix the Game Detail API/UI so it displays that prediction rather than "Model not trained"
+
+GAME DETAIL SHOULD DISPLAY:
+
+* projected score if available
+* projected margin
+* projected total
+* Kansas City win probability
+* Denver win probability
+* current spread comparison when available
+* current total comparison when available
+* moneyline comparison only if available
+* Phase 6 model versions
+* pregame-v3 feature version
+* prediction timestamp
+* sportsbook timestamp
+* QB confidence
+* sample quality
+
+If a sportsbook market is missing, show that market as unavailable.
+
+Do NOT replace the entire model display with "Model not trained" when the football prediction itself is valid.
+
+Also search the entire frontend/API codebase for the text:
+"Model not trained"
+
+Audit every condition that can display it and update stale readiness logic to use the current production-model architecture.
+
+After fixing:
+
+1. Verify Broncos-Chiefs no longer says "Model not trained."
+2. Show the actual production model versions being used.
+3. Show whether a valid prediction snapshot exists.
+4. Show the projected margin, total, and win probabilities.
+5. Confirm Live Predictions and Game Detail return the same current prediction revision.
+6. Confirm no historical snapshots were overwritten.
+7. Confirm no recommendation or staking logic was added.
+
+If the fix requires a new production deployment, clearly tell me that I need to republish Gridline.
