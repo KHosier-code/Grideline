@@ -4,9 +4,13 @@ import { db, modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspa
 import { getAuth } from "@clerk/express";
 import { getModelDriftMonitoring } from "../lib/live-predictions";
 import { getPhase4ModelLab, trainPhase4Models } from "../lib/modeling";
-import { requireAdmin } from "../middlewares/admin";
+import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
+
+router.get("/auth/admin-status", (req, res): void => {
+  res.json(getAdminAuthStatus(req));
+});
 
 router.get("/models/lab", async (_req, res): Promise<void> => {
   try {
@@ -73,8 +77,13 @@ router.post("/models/promote", requireAdmin, async (req, res): Promise<void> => 
       promotedBy: auth.userId ?? "unknown-admin",
       reason: typeof req.body?.notes === "string" ? req.body.notes.trim() || null : null,
     }).returning();
+    const current = await db.select().from(modelPromotionHistoryTable)
+      .where(and(eq(modelPromotionHistoryTable.family, run.family), eq(modelPromotionHistoryTable.role, "production")))
+      .orderBy(desc(modelPromotionHistoryTable.promotedAt), desc(modelPromotionHistoryTable.id))
+      .limit(1);
     res.status(201).json({
       promotion,
+      activeProductionModel: current[0] ?? null,
       note: "Promotion is explicit and append-only. The latest production promotion for this family is used; no automatic promotion occurred.",
     });
   } catch (error) {
