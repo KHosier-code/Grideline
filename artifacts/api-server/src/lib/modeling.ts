@@ -240,10 +240,10 @@ export async function loadExamples(featureVersion: string) {
     const features = names.map((name) => {
       const homeValue = home.features[name];
       const awayValue = away.features[name];
-      return typeof homeValue === "number" && typeof awayValue === "number" ? homeValue - awayValue : 0;
+      return Number.isFinite(homeValue) && Number.isFinite(awayValue) ? homeValue - awayValue : 0;
     });
-    const homeQb = typeof home.features["qb_data_confidence"] === "number" ? home.features["qb_data_confidence"] : 0;
-    const awayQb = typeof away.features["qb_data_confidence"] === "number" ? away.features["qb_data_confidence"] : 0;
+    const homeQb = Number.isFinite(home.features["qb_data_confidence"]) ? home.features["qb_data_confidence"] : 0;
+    const awayQb = Number.isFinite(away.features["qb_data_confidence"]) ? away.features["qb_data_confidence"] : 0;
     examples.push({
       gameId: home.gameId,
       season: home.season,

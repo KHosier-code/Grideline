@@ -248,10 +248,10 @@ function vectorForRows(rows: Array<{ gameId: string; isHome: boolean; features: 
   const x = names.map((name) => {
     const homeValue = home.features[name];
     const awayValue = away.features[name];
-    return typeof homeValue === "number" && typeof awayValue === "number" ? homeValue - awayValue : 0;
+    return Number.isFinite(homeValue) && Number.isFinite(awayValue) ? homeValue - awayValue : 0;
   });
-  const homeQb = typeof home.features.qb_data_confidence === "number" ? home.features.qb_data_confidence : 0;
-  const awayQb = typeof away.features.qb_data_confidence === "number" ? away.features.qb_data_confidence : 0;
+  const homeQb = Number.isFinite(home.features.qb_data_confidence) ? home.features.qb_data_confidence : 0;
+  const awayQb = Number.isFinite(away.features.qb_data_confidence) ? away.features.qb_data_confidence : 0;
   return {
     x: [...x, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb],
     lowSample: home.lowSample || away.lowSample,
