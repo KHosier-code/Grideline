@@ -1,0 +1,115 @@
+Proceed with PRIVATE production deployment verification for Gridline.
+
+Do not add new features.
+
+The goal is to move from NOT READY to READY FOR PRIVATE PRODUCTION by validating the actual production environment.
+
+1. Deploy the web application and API through Replit using the current hardened codebase.
+
+2. Apply the deterministic production-safe migration workflow against the production database.
+
+Before applying:
+
+* show the pending migration plan
+* verify no destructive operation is required
+* verify no TRUNCATE or DROP TABLE operation is present
+* create/confirm a production backup or checkpoint
+
+After applying:
+
+* verify migration ledger
+* verify critical production tables exist
+* report row counts
+* verify no unexpected data loss
+
+3. Deploy the persistent Gridline data worker as an actual production process independent of the interactive web/API process.
+
+Verify:
+
+* worker starts successfully
+* scheduler ownership is production worker only
+* API does not duplicate scheduler ownership
+* scheduled jobs have next-run timestamps
+
+4. Verify production Clerk authentication.
+
+Test:
+
+* production sign-in
+* production sign-out
+* authenticated user identity
+* administrator authorization
+* anonymous mutation attempts return 401
+* non-admin mutation attempts return 403
+* admin promotion and manual-sync authorization work
+
+Do not expose Clerk secrets.
+
+5. Verify production environment secrets exist.
+
+Check configuration presence only for:
+
+* ODDS_API_KEY
+* ADMIN_USER_IDS if used
+* Clerk production configuration
+* database configuration
+* any other required server secrets
+
+Do not print secret values.
+
+6. Verify production Data Health.
+
+Report status for:
+
+* ESPN schedule
+* ESPN injuries
+* NFLverse
+* sportsbook odds
+* pregame features
+* persistent worker
+* production models
+* prediction safety
+
+7. Verify the three Phase 6 models remain active in production:
+
+* Spread: Phase 6 regularized linear regression
+* Moneyline: Phase 6 logistic regression
+* Totals: Phase 6 gradient boosting
+
+8. Run the production-readiness report against the deployed production environment.
+
+Return:
+
+* pass
+* warning
+* pending
+* failure counts
+
+9. Do not fabricate completion of any kickoff/postgame step that has not happened in a real game.
+
+The real-game cycle remains pending until observed.
+
+FINAL RESPONSE:
+
+Report:
+
+* production URL status
+* production database status
+* migration status
+* backup/checkpoint status
+* worker status
+* authentication status
+* admin status
+* secret configuration status
+* feed health
+* active production models
+* readiness-report result
+* remaining real-game-cycle gates
+
+Then give exactly one verdict:
+
+NOT READY
+or
+READY FOR PRIVATE PRODUCTION
+
+Do not use FULLY UNATTENDED READY until a real production game completes the full freeze, grading, CLV, reporting, and challenger-update cycle.
