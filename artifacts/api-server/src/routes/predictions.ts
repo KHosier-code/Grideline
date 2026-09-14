@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { generateWeeklyLearningReport, generateLivePredictions, getCurrentWeekValidationReport, getLatestLearningReports, getLivePredictionBoard, getPredictionPerformance, getPredictionValidationFailures, gradeCompletedPredictions } from "../lib/live-predictions";
+import { generateWeeklyLearningReport, generateLivePredictions, getCurrentWeekValidationReport, getGamePredictionDetail, getLatestLearningReports, getLivePredictionBoard, getPredictionPerformance, getPredictionValidationFailures, gradeCompletedPredictions } from "../lib/live-predictions";
 import { requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
@@ -17,6 +17,19 @@ router.get("/predictions/current-week", async (_req, res): Promise<void> => {
     res.json(await getCurrentWeekValidationReport());
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Current-week validation unavailable" });
+  }
+});
+
+router.get("/predictions/games/:gameId", async (req, res): Promise<void> => {
+  try {
+    const detail = await getGamePredictionDetail(req.params.gameId);
+    if (!detail) {
+      res.status(404).json({ error: "Game not found" });
+      return;
+    }
+    res.json(detail);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Game prediction unavailable" });
   }
 });
 

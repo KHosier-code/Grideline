@@ -583,10 +583,27 @@ function LineHistory({ gameId }: { gameId: string }) {
 function GameDetail() {
   const { gameId = '' } = useParams<{ gameId: string }>();
   const game = useGetGame(gameId, { query: { queryKey: getGetGameQueryKey(gameId), staleTime: 30000 } });
+  const predictionDetail = useQuery({
+    queryKey: ['game-prediction', gameId],
+    queryFn: async () => {
+      const response = await fetch(`/api/predictions/games/${encodeURIComponent(gameId)}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Game prediction unavailable');
+      return response.json() as Promise<any>;
+    },
+    staleTime: 30000,
+  });
   if (game.isLoading) return <><PageHeader eyebrow="Game detail" title="Loading game" detail="Resolving the latest game record." /><LoadingPanel /></>;
   if (game.isError || !game.data) return <><PageHeader eyebrow="Game detail" title="Game unavailable" detail={`Could not resolve ${gameId}.`} /><ErrorPanel /></>;
   const item = game.data;
   const odds = item.latestOdds ?? [];
+  const detail = predictionDetail.data;
+  const prediction = detail?.prediction;
+  const model = detail?.model;
+  const market = detail?.market;
+  const modelAvailable = Boolean(prediction && model);
+  const number = (value: unknown, digits = 1) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'Unavailable';
+  const probability = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : 'Unavailable';
+  const marketLine = (quote: any) => quote && typeof quote.point === 'number' ? `${quote.point > 0 ? '+' : ''}${quote.point} (${quote.sportsbook})` : 'Unavailable';
   return (
     <>
       <PageHeader eyebrow={`Week ${item.week} / ${formatDate(item.gameDate)}`} title={`${item.awayTeam.abbreviation} at ${item.homeTeam.abbreviation}`} detail={`${item.awayTeam.teamName} at ${item.homeTeam.teamName}${item.venue ? ` · ${item.venue}` : ''}`} actions={<Link href="/this-week" className="button button-subtle" data-testid="link-back-week"><ChevronRight className="h-4 w-4 rotate-180" /> Back to slate</Link>} />
@@ -595,8 +612,32 @@ function GameDetail() {
         <Panel eyebrow="Current market" title="Latest odds" action={<span className="section-meta">{odds.length} quotes</span>}>
           {odds.length ? <div className="odds-table"><div className="odds-head"><span>Book</span><span>Market</span><span>Selection</span><span>Point</span><span>Price</span></div>{odds.map((quote, index) => <div className="odds-row" key={`${quote.sportsbook}-${quote.market}-${quote.selection}-${index}`}><span className="font-semibold text-ink">{quote.sportsbook}</span><span>{quote.market}</span><span>{quote.selection}</span><span>{quote.point ?? '—'}</span><span className="font-mono font-medium text-ink">{quote.price > 0 ? `+${quote.price}` : quote.price}</span></div>)}</div> : <EmptyPanel title="No odds captured yet" detail="This game has a schedule record, but no current sportsbook quotes are attached to it." icon={SlidersHorizontal} />}
         </Panel>
-        <Panel eyebrow="Decision gate" title="Model read">
-          <div className="readiness-block"><div className="readiness-icon"><ShieldCheck className="h-5 w-5" /></div><div><StatusPill status={item.modelStatus}>{item.modelStatus === 'not_trained' ? 'Model not yet trained' : 'Model available'}</StatusPill><p className="mt-3 text-sm leading-6 text-muted-foreground">{item.modelStatus === 'not_trained' ? 'Probability, edge, and recommended stake fields are withheld. The workspace will not manufacture a signal from market data alone.' : 'Model outputs are available for review against the current market.'}</p></div></div>
+        <Panel eyebrow="Production snapshot" title="Model read">
+          {predictionDetail.isLoading ? <LoadingPanel label="Loading production prediction" /> : predictionDetail.isError ? <ErrorPanel message="The production prediction could not be loaded." /> : modelAvailable ? <div className="space-y-4">
+            <div className="readiness-block"><div className="readiness-icon"><ShieldCheck className="h-5 w-5" /></div><div><StatusPill status="available">Phase 6 prediction available</StatusPill><p className="mt-3 text-sm leading-6 text-muted-foreground">Football-model outputs remain valid even when an individual sportsbook market is unavailable.</p></div></div>
+            <div className="grid grid-cols-2 gap-3">
+              <MetricCard label={`${item.homeTeam.abbreviation} projected`} value={number(prediction.projectedHomeScore)} detail={`${probability(prediction.homeWinProbability)} win probability`} icon={TrendingUp} />
+              <MetricCard label={`${item.awayTeam.abbreviation} projected`} value={number(prediction.projectedAwayScore)} detail={`${probability(prediction.awayWinProbability)} win probability`} icon={TrendingUp} />
+              <MetricCard label="Projected margin" value={number(prediction.projectedMargin)} detail={`${item.homeTeam.abbreviation} minus ${item.awayTeam.abbreviation}`} icon={Target} />
+              <MetricCard label="Projected total" value={number(prediction.projectedTotal)} detail="Combined points" icon={Gauge} />
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
+              <p><strong className="text-ink">Spread:</strong> {marketLine(market?.spread)}</p>
+              <p className="mt-1"><strong className="text-ink">Total:</strong> {marketLine(market?.total)}</p>
+              <p className="mt-1"><strong className="text-ink">Moneyline:</strong> {market?.moneyline ? `${market.moneyline.price > 0 ? '+' : ''}${market.moneyline.price} (${market.moneyline.sportsbook})` : 'Unavailable'}</p>
+            </div>
+            <dl className="space-y-2 break-all text-xs text-muted-foreground">
+              <div><dt className="font-semibold text-ink">Spread model</dt><dd className="font-mono">{model.spreadModelVersion}</dd></div>
+              <div><dt className="font-semibold text-ink">Moneyline model</dt><dd className="font-mono">{model.moneylineModelVersion}</dd></div>
+              <div><dt className="font-semibold text-ink">Totals model</dt><dd className="font-mono">{model.totalsModelVersion}</dd></div>
+              <div><dt className="font-semibold text-ink">Feature version</dt><dd className="font-mono">{model.featureVersion}</dd></div>
+              <div><dt className="font-semibold text-ink">Prediction revision</dt><dd className="font-mono">#{model.snapshotId} · {model.snapshotLabel}</dd></div>
+              <div><dt className="font-semibold text-ink">Prediction timestamp</dt><dd>{formatDate(model.predictionTimestamp, true)}</dd></div>
+              <div><dt className="font-semibold text-ink">Sportsbook timestamp</dt><dd>{model.sportsbookSnapshotTimestamp ? formatDate(model.sportsbookSnapshotTimestamp, true) : 'Unavailable'}</dd></div>
+              <div><dt className="font-semibold text-ink">QB confidence</dt><dd>{probability(prediction.qbConfidence)}</dd></div>
+              <div><dt className="font-semibold text-ink">Sample quality</dt><dd>{prediction.lowSample ? 'Low sample' : 'Standard sample'}</dd></div>
+            </dl>
+          </div> : <div className="readiness-block"><div className="readiness-icon"><ShieldCheck className="h-5 w-5" /></div><div><StatusPill status="not_trained">Prediction unavailable</StatusPill><p className="mt-3 text-sm leading-6 text-muted-foreground">No valid production prediction snapshot exists for this game. Sportsbook availability does not change this football-model status.</p></div></div>}
         </Panel>
       </div>
       <div className="mt-5"><LineHistory gameId={gameId} /></div>

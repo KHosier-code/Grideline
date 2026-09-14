@@ -658,6 +658,122 @@ export async function getLivePredictionBoard() {
   return [...latest.values()];
 }
 
+export async function getLatestValidPredictionSnapshots(gameIds: string[]) {
+  if (!gameIds.length) return new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
+  const rows = await db.select().from(predictionSnapshotsTable)
+    .where(inArray(predictionSnapshotsTable.gameId, gameIds))
+    .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id));
+  const latest = new Map<string, typeof rows[number]>();
+  for (const row of rows) {
+    if (isValidPredictionSnapshot(row) && !latest.has(row.gameId)) latest.set(row.gameId, row);
+  }
+  return latest;
+}
+
+export async function getProductionModelStatus() {
+  const models = await productionModels();
+  return models.size === 3 ? "available" as const : "not_trained" as const;
+}
+
+function predictionRecord(
+  game: typeof gamesTable.$inferSelect,
+  snapshot: typeof predictionSnapshotsTable.$inferSelect | undefined,
+  previousSnapshot: typeof predictionSnapshotsTable.$inferSelect | undefined,
+  teams: Map<string, typeof teamsTable.$inferSelect>,
+) {
+  const comparison = snapshot?.marketComparison as Record<string, any> | undefined;
+  const marketSnapshot = snapshot?.marketSnapshot as Record<string, any> | undefined;
+  const sportsbookSnapshotTimestamp = Array.isArray(marketSnapshot?.quotes)
+    ? marketSnapshot.quotes
+      .map((quote: Record<string, unknown>) => typeof quote.capturedAt === "string" ? quote.capturedAt : null)
+      .filter((value: string | null): value is string => Boolean(value))
+      .sort()
+      .at(-1) ?? null
+    : null;
+  const missing: string[] = [];
+  if (!snapshot) missing.push("production_prediction");
+  const spreadAvailable = typeof comparison?.spread?.marketLine === "number";
+  const moneylineAvailable = typeof comparison?.moneyline?.noVigHomeProbability === "number";
+  const totalsAvailable = typeof comparison?.totals?.marketTotal === "number";
+  if (snapshot && !spreadAvailable) missing.push("current_spread");
+  if (snapshot && !moneylineAvailable) missing.push("no_vig_moneyline");
+  if (snapshot && !totalsAvailable) missing.push("current_total");
+  const home = teams.get(game.homeTeamId);
+  const away = teams.get(game.awayTeamId);
+  return {
+    gameId: game.gameId,
+    season: game.season,
+    week: game.week,
+    kickoffTime: game.kickoffTime?.toISOString() ?? null,
+    homeTeam: home?.teamName ?? game.homeTeamId,
+    awayTeam: away?.teamName ?? game.awayTeamId,
+    status: !snapshot ? "insufficient_data" : missing.length ? "partial_market_data" : "measured",
+    componentStatus: {
+      modelData: snapshot ? "complete" : "unavailable",
+      spreadComparison: snapshot && spreadAvailable ? "available" : "market_unavailable",
+      moneylineComparison: snapshot && moneylineAvailable ? "available" : "market_unavailable",
+      totalsComparison: snapshot && totalsAvailable ? "available" : "market_unavailable",
+    },
+    missing,
+    model: snapshot ? {
+      snapshotId: snapshot.id,
+      snapshotKey: snapshot.snapshotKey,
+      snapshotLabel: snapshot.snapshotLabel,
+      spreadModelVersion: snapshot.spreadModelVersion,
+      moneylineModelVersion: snapshot.moneylineModelVersion,
+      totalsModelVersion: snapshot.totalsModelVersion,
+      featureVersion: snapshot.featureVersion,
+      predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
+      sportsbookSnapshotTimestamp,
+    } : null,
+    prediction: snapshot ? {
+      projectedHomeScore: snapshot.projectedHomeScore,
+      projectedAwayScore: snapshot.projectedAwayScore,
+      projectedMargin: snapshot.projectedMargin,
+      projectedTotal: snapshot.projectedTotal,
+      homeWinProbability: snapshot.homeWinProbability,
+      awayWinProbability: snapshot.awayWinProbability,
+      qbConfidence: snapshot.qbConfidence,
+      lowSample: snapshot.lowSample,
+    } : null,
+    market: snapshot ? {
+      spread: marketSnapshot?.markets?.spread?.bestAvailable ?? null,
+      moneyline: marketSnapshot?.markets?.moneyline?.bestAvailable ?? null,
+      total: marketSnapshot?.markets?.total?.bestAvailable ?? null,
+      noVigHomeProbability: comparison?.moneyline?.noVigHomeProbability ?? null,
+      noVigAwayProbability: comparison?.moneyline?.noVigAwayProbability ?? null,
+    } : null,
+    difference: snapshot ? {
+      spread: comparison?.spread?.pointEdge ?? null,
+      moneyline: comparison?.moneyline?.homeProbabilityEdge ?? null,
+      total: comparison?.totals?.pointEdge ?? null,
+    } : { spread: null, moneyline: null, total: null },
+    previousPrediction: previousSnapshot ? {
+      predictionTimestamp: previousSnapshot.predictionTimestamp.toISOString(),
+      spreadModelVersion: previousSnapshot.spreadModelVersion,
+      moneylineModelVersion: previousSnapshot.moneylineModelVersion,
+      totalsModelVersion: previousSnapshot.totalsModelVersion,
+      projectedHomeScore: previousSnapshot.projectedHomeScore,
+      projectedAwayScore: previousSnapshot.projectedAwayScore,
+      projectedMargin: previousSnapshot.projectedMargin,
+      projectedTotal: previousSnapshot.projectedTotal,
+      homeWinProbability: previousSnapshot.homeWinProbability,
+      awayWinProbability: previousSnapshot.awayWinProbability,
+    } : null,
+  };
+}
+
+export async function getGamePredictionDetail(gameId: string) {
+  const [game] = await db.select().from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1);
+  if (!game) return null;
+  const snapshots = await db.select().from(predictionSnapshotsTable)
+    .where(eq(predictionSnapshotsTable.gameId, gameId))
+    .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id));
+  const valid = snapshots.filter(isValidPredictionSnapshot);
+  const teams = new Map((await db.select().from(teamsTable)).map((team) => [team.teamId, team]));
+  return predictionRecord(game, valid[0], valid[1], teams);
+}
+
 export async function getCurrentWeekValidationReport() {
   const now = new Date();
   const upcoming = await db.select().from(gamesTable)
@@ -688,81 +804,7 @@ export async function getCurrentWeekValidationReport() {
    }
   const teamRows = await db.select().from(teamsTable);
   const teams = new Map(teamRows.map((team) => [team.teamId, team]));
-  const records = games.map((game) => {
-    const snapshot = latest.get(game.gameId);
-    const previousSnapshot = previous.get(game.gameId);
-    const comparison = snapshot?.marketComparison as Record<string, any> | undefined;
-    const marketSnapshot = snapshot?.marketSnapshot as Record<string, any> | undefined;
-    const missing: string[] = [];
-    if (!snapshot) missing.push("production_prediction");
-    const spreadAvailable = typeof comparison?.spread?.marketLine === "number";
-    const moneylineAvailable = typeof comparison?.moneyline?.noVigHomeProbability === "number";
-    const totalsAvailable = typeof comparison?.totals?.marketTotal === "number";
-    if (snapshot && !spreadAvailable) missing.push("current_spread");
-    if (snapshot && !moneylineAvailable) missing.push("no_vig_moneyline");
-    if (snapshot && !totalsAvailable) missing.push("current_total");
-    const home = teams.get(game.homeTeamId);
-    const away = teams.get(game.awayTeamId);
-    const componentStatus = {
-      modelData: snapshot ? "complete" : "unavailable",
-      spreadComparison: snapshot && spreadAvailable ? "available" : "market_unavailable",
-      moneylineComparison: snapshot && moneylineAvailable ? "available" : "market_unavailable",
-      totalsComparison: snapshot && totalsAvailable ? "available" : "market_unavailable",
-    };
-    return {
-      gameId: game.gameId,
-      season: game.season,
-      week: game.week,
-      kickoffTime: game.kickoffTime?.toISOString() ?? null,
-      homeTeam: home?.teamName ?? game.homeTeamId,
-      awayTeam: away?.teamName ?? game.awayTeamId,
-      status: !snapshot ? "insufficient_data" : missing.length ? "partial_market_data" : "measured",
-      componentStatus,
-      missing,
-      model: snapshot ? {
-        spreadModelVersion: snapshot.spreadModelVersion,
-        moneylineModelVersion: snapshot.moneylineModelVersion,
-        totalsModelVersion: snapshot.totalsModelVersion,
-        featureVersion: snapshot.featureVersion,
-        predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
-        sportsbookSnapshotTimestamp: marketSnapshot?.capturedAt ?? null,
-      } : null,
-      prediction: snapshot ? {
-        projectedHomeScore: snapshot.projectedHomeScore,
-        projectedAwayScore: snapshot.projectedAwayScore,
-        projectedMargin: snapshot.projectedMargin,
-        projectedTotal: snapshot.projectedTotal,
-        homeWinProbability: snapshot.homeWinProbability,
-        awayWinProbability: snapshot.awayWinProbability,
-        qbConfidence: snapshot.qbConfidence,
-        lowSample: snapshot.lowSample,
-      } : null,
-      market: snapshot ? {
-        spread: marketSnapshot?.markets?.spread?.bestAvailable ?? null,
-        moneyline: marketSnapshot?.markets?.moneyline?.bestAvailable ?? null,
-        total: marketSnapshot?.markets?.total?.bestAvailable ?? null,
-        noVigHomeProbability: comparison?.moneyline?.noVigHomeProbability ?? null,
-        noVigAwayProbability: comparison?.moneyline?.noVigAwayProbability ?? null,
-      } : null,
-      difference: snapshot ? {
-        spread: comparison?.spread?.pointEdge ?? null,
-        moneyline: comparison?.moneyline?.homeProbabilityEdge ?? null,
-        total: comparison?.totals?.pointEdge ?? null,
-      } : { spread: null, moneyline: null, total: null },
-      previousPrediction: previousSnapshot ? {
-        predictionTimestamp: previousSnapshot.predictionTimestamp.toISOString(),
-        spreadModelVersion: previousSnapshot.spreadModelVersion,
-        moneylineModelVersion: previousSnapshot.moneylineModelVersion,
-        totalsModelVersion: previousSnapshot.totalsModelVersion,
-        projectedHomeScore: previousSnapshot.projectedHomeScore,
-        projectedAwayScore: previousSnapshot.projectedAwayScore,
-        projectedMargin: previousSnapshot.projectedMargin,
-        projectedTotal: previousSnapshot.projectedTotal,
-        homeWinProbability: previousSnapshot.homeWinProbability,
-        awayWinProbability: previousSnapshot.awayWinProbability,
-      } : null,
-    };
-  });
+  const records = games.map((game) => predictionRecord(game, latest.get(game.gameId), previous.get(game.gameId), teams));
   const rank = (key: "spread" | "moneyline" | "total") => [...records]
     .sort((left, right) => {
       const leftValue = left.difference[key];

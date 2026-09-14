@@ -24,10 +24,11 @@ import {
 import { resolveCurrentSeasonWeek } from "../lib/season";
 import { getLatestOddsByGame, getOddsHistory, type OddsQuote } from "../lib/odds";
 import { saveScheduleGames, saveScheduleTeams, syncEspnScheduleCoverage } from "../lib/schedule";
+import { getLatestValidPredictionSnapshots } from "../lib/live-predictions";
 
 const router: IRouter = Router();
 
-function fromLiveGame(game: EspnGame, latestOdds: OddsQuote[]) {
+function fromLiveGame(game: EspnGame, latestOdds: OddsQuote[], hasPrediction: boolean) {
   return {
     gameId: game.gameId,
     season: game.season,
@@ -49,7 +50,7 @@ function fromLiveGame(game: EspnGame, latestOdds: OddsQuote[]) {
     finalAwayScore: game.finalAwayScore,
     gameStatus: game.gameStatus,
     broadcast: game.broadcast,
-    modelStatus: game.modelStatus,
+    modelStatus: hasPrediction ? "available" as const : "not_trained" as const,
     latestOdds,
   };
 }
@@ -60,6 +61,7 @@ async function fromDbGame(game: DbGame) {
   const homeTeam = teamMap.get(game.homeTeamId);
   const awayTeam = teamMap.get(game.awayTeamId);
   const latestOdds = (await getLatestOddsByGame([game.gameId])).get(game.gameId) ?? [];
+  const predictions = await getLatestValidPredictionSnapshots([game.gameId]);
   return {
     gameId: game.gameId,
     season: game.season,
@@ -81,7 +83,7 @@ async function fromDbGame(game: DbGame) {
     finalAwayScore: game.finalAwayScore,
     gameStatus: game.gameStatus,
     broadcast: game.broadcast,
-    modelStatus: "not_trained" as const,
+    modelStatus: predictions.has(game.gameId) ? "available" as const : "not_trained" as const,
     latestOdds,
   };
 }
@@ -106,10 +108,14 @@ router.get("/games", async (req, res): Promise<void> => {
     if (season !== current.season || week !== current.week) {
       await saveScheduleGames(games);
     }
-    const latestOdds = await getLatestOddsByGame(games.map((game) => game.gameId));
+    const gameIds = games.map((game) => game.gameId);
+    const [latestOdds, predictions] = await Promise.all([
+      getLatestOddsByGame(gameIds),
+      getLatestValidPredictionSnapshots(gameIds),
+    ]);
     res.json(
       ListGamesResponse.parse(
-        games.map((game) => fromLiveGame(game, latestOdds.get(game.gameId) ?? [])),
+        games.map((game) => fromLiveGame(game, latestOdds.get(game.gameId) ?? [], predictions.has(game.gameId))),
       ),
     );
   } catch (error) {

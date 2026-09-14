@@ -11,11 +11,13 @@ import { getPregameFeatureHealth } from "../lib/features";
 import { getRecentScheduledRuns } from "../lib/sync-runs";
 import { nextFeedUpdate } from "../lib/feed-schedule";
 import { getFeedGameDays } from "../lib/feed-game-days";
+import { getProductionModelStatus } from "../lib/live-predictions";
 
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const { season, week } = await resolveCurrentSeasonWeek();
+  const modelStatus = await getProductionModelStatus();
   let gamesThisWeek = 0;
   try {
     gamesThisWeek = (await fetchSchedule(season, week)).length;
@@ -29,7 +31,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
       season,
       currentWeek: week,
       gamesThisWeek,
-      modelStatus: "not_trained",
+      modelStatus,
       ats: { record: "—", winRate: null, units: null, roi: null },
       moneyline: { record: "—", winRate: null, units: null, roi: null },
       totals: { record: "—", winRate: null, units: null, roi: null },
