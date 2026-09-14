@@ -1,0 +1,224 @@
+Before proceeding to Phase 6, complete a production-model hardening and refit step.
+
+Do NOT change the selected production algorithms based on 2026 outcomes.
+
+The selected algorithms remain:
+
+SPREAD
+
+* Regularized linear regression
+* Include low-sample observations
+
+MONEYLINE
+
+* Logistic regression
+* Include low-sample observations
+
+TOTALS
+
+* Gradient boosting
+* Restrict low-sample observations
+
+The historical walk-forward validation results from Phase 4 must remain unchanged and preserved for auditability.
+
+---
+
+1. REFIT PRODUCTION MODELS THROUGH 2025
+
+---
+
+The current active production models show a training cutoff through 2024.
+
+That was appropriate when 2025 was being used as an out-of-sample validation season.
+
+Now that the model families have been selected for 2026 forward use, create new production-ready versions of the SAME selected algorithms trained on all legitimate historical data available through the end of the 2025 season.
+
+Use:
+
+2021–2025 training data
+
+2026 remains completely forward/out-of-sample.
+
+Do NOT use any completed 2026 games to create these initial refitted production baselines.
+
+Create new model versions rather than overwriting the existing models.
+
+Example:
+
+Spread Production v1.0
+Training cutoff: 2025 season complete
+
+Moneyline Production v1.0
+Training cutoff: 2025 season complete
+
+Totals Production v1.0
+Training cutoff: 2025 season complete
+
+Preserve:
+
+* original Phase 4 validation runs
+* original promotion history
+* previous prediction snapshots
+
+Do not rewrite historical records.
+
+Require administrator approval before replacing the currently active production versions with these refitted versions.
+
+---
+
+2. INVALID MODEL OUTPUT PROTECTION
+
+---
+
+The first live-generation attempt created 33 immutable rows with non-finite spread and moneyline outputs.
+
+Those records correctly remain preserved for auditability and excluded from the live board.
+
+Now add strict validation BEFORE a prediction snapshot can be accepted as valid.
+
+Reject a generated snapshot when any required model output is:
+
+* NaN
+* Infinity
+* negative Infinity
+* null where required
+* outside mathematically valid probability bounds
+
+Probability requirements:
+
+0 <= probability <= 1
+
+Also validate:
+
+* projected margin is finite
+* projected total is finite
+* projected scores are finite when present
+* home probability + away probability is approximately 1
+* market calculations do not divide by zero
+* no-vig calculations contain valid inputs before being computed
+
+Invalid prediction attempts should:
+
+* never appear on Live Predictions
+* never become official
+* never be used in rankings
+* never be graded
+* never affect performance statistics
+
+But preserve an audit record containing:
+
+* game
+* model version
+* timestamp
+* failed field
+* invalid value/type
+* failure reason
+
+---
+
+3. AUTOMATED REGRESSION TESTS
+
+---
+
+Add regression tests covering:
+
+* missing QB features
+* low-sample rows
+* unavailable market data
+* missing DraftKings
+* missing FanDuel
+* missing moneyline
+* missing totals
+* NaN feature values
+* infinite feature values
+* probability normalization
+* model prediction with incomplete optional market data
+
+A game should still receive a valid pure football-model prediction when sportsbook data is missing.
+
+Missing sportsbook data should prevent only market-edge calculations that require that market.
+
+For example:
+
+If moneyline odds are unavailable:
+
+VALID:
+
+* projected score
+* projected margin
+* projected total
+* model win probabilities
+
+UNAVAILABLE:
+
+* no-vig moneyline probability
+* moneyline market edge
+
+Do not label the entire football prediction insufficient_data merely because one sportsbook market is missing.
+
+---
+
+4. CURRENT-WEEK STATUS LOGIC
+
+---
+
+Review the current Denver at Kansas City example.
+
+It currently reports insufficient_data because no-vig moneyline information is unavailable.
+
+Change the status model so each component is evaluated separately.
+
+Example:
+
+MODEL DATA
+Complete
+
+Spread comparison
+Available
+
+Moneyline comparison
+Market unavailable
+
+Totals comparison
+Available
+
+The game itself should not be globally labeled insufficient_data when the production models produced valid football predictions.
+
+---
+
+5. VERSIONED REGENERATION
+
+---
+
+After the 2025-refitted models are manually promoted:
+
+Generate a NEW prediction revision for games that have not kicked off.
+
+Do NOT delete or replace the previous valid snapshots.
+
+Clearly show:
+
+Previous production prediction
+vs.
+Current production prediction
+
+This will allow us to see how including the 2025 season changed projections.
+
+---
+
+6. FINAL AUDIT
+
+---
+
+After implementation report:
+
+1. New refitted model versions
+2. Exact training cutoff
+3. Confirmation that 2026 data was excluded from the initial refit
+4. Whether administrator promotion is required
+5. Invalid-output validation rules
+6. Regression tests added and results
+7. Number of existing invalid audit rows preserved
+8. Updated current-week status logic
+9. Denver–Kansas City football-model outputs even if moneyline market data remains unavailable
+10. Confirmation that no recommendation, confidence, unit-sizing, or Kelly layer was added
