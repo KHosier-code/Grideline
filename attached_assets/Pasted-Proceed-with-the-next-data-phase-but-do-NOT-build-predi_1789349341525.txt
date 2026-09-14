@@ -1,0 +1,124 @@
+Proceed with the next data phase, but do NOT build prediction models yet.
+
+I want the data foundation completed and verified first.
+
+Priority 1: NFLVERSE HISTORICAL INGESTION
+
+Connect nflverse and ingest the historical NFL data needed for future modeling.
+
+At minimum, ingest and normalize:
+
+* play-by-play
+* team game statistics
+* player game statistics
+* snap counts / participation where available
+* historical depth charts where available
+
+Start with seasons 2021 through 2026.
+
+Do not blindly store every raw field if it creates unnecessary database size. Store the raw source files/cache where appropriate, then create normalized feature tables containing the fields we will actually use.
+
+Build derived team-game metrics including:
+
+* EPA/play
+* pass EPA
+* rush EPA
+* offensive success rate
+* defensive EPA allowed/play
+* defensive success rate
+* yards/play
+* turnovers
+* sacks
+* pressure-related fields where available
+* explosive pass rate
+* explosive rush rate
+* third-down rate
+* red-zone rate
+* neutral-script pass rate where calculable
+
+Create separate team-game rows so every team has one record for each game.
+
+Do not use future-game information when calculating rolling metrics.
+
+Priority 2: INJURY SYNCHRONIZATION
+
+Implement current NFL injury ingestion using free ESPN data only.
+
+Capture:
+
+* player
+* team
+* position
+* injury/body part
+* practice status if available
+* game status
+* source update time
+* snapshot timestamp
+
+Never overwrite old injury records.
+
+Each sync should create a historical snapshot only when:
+
+* the player's status changed, or
+* the source information changed materially
+
+Avoid inserting duplicate identical snapshots every few minutes.
+
+Priority 3: DEPTH CHART SYNCHRONIZATION
+
+Implement current NFL depth-chart ingestion using free ESPN data.
+
+Capture:
+
+* team
+* player
+* position
+* depth order
+* starter/back-up role
+* snapshot timestamp
+
+Compare every new snapshot to the prior snapshot.
+
+Flag:
+
+* new starter
+* player moved up
+* player moved down
+* player removed
+* player added
+
+Never overwrite historical depth-chart records.
+
+Priority 4: DATA QUALITY
+
+Update the Data Health page to show:
+
+* NFLverse last successful sync
+* seasons loaded
+* number of games loaded
+* injury last successful sync
+* number of injury records
+* depth chart last successful sync
+* number of teams successfully updated
+* failures by source/team
+
+Add retry handling and error logging.
+
+Do not silently fail.
+
+Priority 5: DATABASE VERIFICATION
+
+After this is complete, give me a plain-English audit showing:
+
+1. Which NFLverse tables/data were loaded
+2. How many seasons and games were loaded
+3. One example team-game historical record
+4. One example injury snapshot history for a player
+5. One example depth-chart history for a player
+6. How duplicate snapshots are prevented
+7. Whether any ESPN injury/depth-chart endpoints failed
+8. Any limitations in the free data sources
+
+Do not build spread, moneyline, totals, confidence scores, or betting recommendations yet.
+
+The data layer must be reliable before model development begins.

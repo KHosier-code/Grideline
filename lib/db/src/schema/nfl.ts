@@ -6,6 +6,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -59,19 +60,34 @@ export const injuriesTable = pgTable("injuries", {
   practiceStatus: text("practice_status"),
   gameStatus: text("game_status"),
   dateReported: date("date_reported", { mode: "string" }),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+  sourceHash: text("source_hash").notNull(),
   snapshotTimestamp: timestamp("snapshot_timestamp", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
-  unique("injuries_player_snapshot_unique").on(table.playerId, table.snapshotTimestamp),
+  unique("injuries_player_source_hash_unique").on(table.playerId, table.teamId, table.sourceHash),
 ]);
 
 export const depthChartSnapshotsTable = pgTable("depth_chart_snapshots", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   teamId: text("team_id").notNull(),
   playerId: text("player_id").notNull(),
+  playerName: text("player_name"),
   position: text("position"),
   depthPosition: integer("depth_position"),
   starter: boolean("starter").notNull().default(false),
+  role: text("role"),
+  changeType: text("change_type"),
+  sourceHash: text("source_hash").notNull(),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
   snapshotTimestamp: timestamp("snapshot_timestamp", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("depth_chart_player_source_hash_unique").on(
+    table.teamId,
+    table.playerId,
+    table.position,
+    table.depthPosition,
+    table.sourceHash,
+  ),
 });
 
 export const sportsbookOddsTable = pgTable("sportsbook_odds", {
@@ -136,6 +152,131 @@ export const dataSyncRunsTable = pgTable("data_sync_runs", {
   recordsProcessed: integer("records_processed").notNull().default(0),
   errorMessage: text("error_message"),
 });
+
+export const nflverseSourceFilesTable = pgTable("nflverse_source_files", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  dataset: text("dataset").notNull(),
+  season: integer("season").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  localPath: text("local_path"),
+  status: text("status").notNull(),
+  fileSizeBytes: integer("file_size_bytes"),
+  rowsProcessed: integer("rows_processed").notNull().default(0),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  errorMessage: text("error_message"),
+}, (table) => [
+  unique("nflverse_source_dataset_season_unique").on(table.dataset, table.season),
+]);
+
+export const teamGameStatsTable = pgTable("team_game_stats", {
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  gameId: text("game_id").notNull(),
+  gameDate: date("game_date", { mode: "string" }),
+  teamId: text("team_id").notNull(),
+  opponentTeamId: text("opponent_team_id").notNull(),
+  isHome: boolean("is_home").notNull(),
+  plays: integer("plays").notNull().default(0),
+  epaPerPlay: doublePrecision("epa_per_play"),
+  passEpa: doublePrecision("pass_epa"),
+  rushEpa: doublePrecision("rush_epa"),
+  offensiveSuccessRate: doublePrecision("offensive_success_rate"),
+  defensiveEpaAllowedPerPlay: doublePrecision("defensive_epa_allowed_per_play"),
+  defensiveSuccessRate: doublePrecision("defensive_success_rate"),
+  yardsPerPlay: doublePrecision("yards_per_play"),
+  turnovers: integer("turnovers").notNull().default(0),
+  sacks: integer("sacks").notNull().default(0),
+  pressures: integer("pressures").notNull().default(0),
+  explosivePassRate: doublePrecision("explosive_pass_rate"),
+  explosiveRushRate: doublePrecision("explosive_rush_rate"),
+  thirdDownRate: doublePrecision("third_down_rate"),
+  redZoneRate: doublePrecision("red_zone_rate"),
+  neutralScriptPassRate: doublePrecision("neutral_script_pass_rate"),
+  sourceDataset: text("source_dataset").notNull().default("nflverse"),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.season, table.week, table.gameId, table.teamId] }),
+]);
+
+export const playerGameStatsTable = pgTable("player_game_stats", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  position: text("position"),
+  teamId: text("team_id"),
+  opponentTeamId: text("opponent_team_id"),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  seasonType: text("season_type").notNull(),
+  completions: integer("completions"),
+  attempts: integer("attempts"),
+  passingYards: doublePrecision("passing_yards"),
+  passingTds: integer("passing_tds"),
+  interceptions: integer("interceptions"),
+  sacks: integer("sacks"),
+  carries: integer("carries"),
+  rushingYards: doublePrecision("rushing_yards"),
+  rushingTds: integer("rushing_tds"),
+  targets: integer("targets"),
+  receptions: integer("receptions"),
+  receivingYards: doublePrecision("receiving_yards"),
+  receivingTds: integer("receiving_tds"),
+  receivingEpa: doublePrecision("receiving_epa"),
+  rushingEpa: doublePrecision("rushing_epa"),
+  passingEpa: doublePrecision("passing_epa"),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("player_game_stats_unique").on(
+    table.playerId,
+    table.season,
+    table.week,
+    table.seasonType,
+    table.opponentTeamId,
+  ),
+]);
+
+export const snapCountsTable = pgTable("snap_counts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  gameId: text("game_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  position: text("position"),
+  teamId: text("team_id").notNull(),
+  opponentTeamId: text("opponent_team_id"),
+  offenseSnaps: integer("offense_snaps"),
+  offensePct: doublePrecision("offense_pct"),
+  defenseSnaps: integer("defense_snaps"),
+  defensePct: doublePrecision("defense_pct"),
+  specialTeamsSnaps: integer("special_teams_snaps"),
+  specialTeamsPct: doublePrecision("special_teams_pct"),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("snap_counts_game_player_unique").on(table.gameId, table.playerId),
+]);
+
+export const historicalDepthChartTable = pgTable("historical_depth_charts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  teamId: text("team_id").notNull(),
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  position: text("position"),
+  depthPosition: integer("depth_position"),
+  role: text("role"),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("historical_depth_chart_unique").on(
+    table.season,
+    table.week,
+    table.teamId,
+    table.playerId,
+    table.position,
+  ),
+]);
 
 export const insertTeamSchema = createInsertSchema(teamsTable);
 export const insertGameSchema = createInsertSchema(gamesTable);

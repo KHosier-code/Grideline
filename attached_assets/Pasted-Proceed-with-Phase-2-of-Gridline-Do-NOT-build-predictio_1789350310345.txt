@@ -1,0 +1,124 @@
+Proceed with Phase 2 of Gridline.
+
+Do NOT build prediction models yet.
+
+Complete and verify the data foundation first.
+
+Priority 1: NFLVERSE HISTORICAL INGESTION
+
+Connect nflverse and ingest the historical NFL data needed for future modeling.
+
+At minimum ingest and normalize:
+
+* play-by-play
+* team game statistics
+* player game statistics
+* snap counts / participation where available
+* historical depth charts where available
+
+Start with seasons 2021 through 2026.
+
+Create derived team-game metrics including:
+
+* EPA/play
+* pass EPA
+* rush EPA
+* offensive success rate
+* defensive EPA allowed/play
+* defensive success rate
+* yards/play
+* turnovers
+* sacks
+* explosive pass rate
+* explosive rush rate
+* third-down rate
+* red-zone rate
+* neutral-script pass rate where calculable
+
+Do not use future information when calculating rolling metrics.
+
+Priority 2: INJURY SYNCHRONIZATION
+
+Implement current NFL injury ingestion using free ESPN data only.
+
+Capture:
+
+* player
+* team
+* position
+* injury/body part
+* practice status if available
+* game status
+* source update time
+* snapshot timestamp
+
+Never overwrite old injury records.
+
+Only create a new snapshot when the player's status or source information changes materially.
+
+Priority 3: DEPTH CHART SYNCHRONIZATION
+
+Implement current NFL depth-chart ingestion using free ESPN data.
+
+Capture:
+
+* team
+* player
+* position
+* depth order
+* starter/back-up role
+* snapshot timestamp
+
+Compare each new snapshot to the prior snapshot and flag:
+
+* new starter
+* player moved up
+* player moved down
+* player removed
+* player added
+
+Never overwrite historical depth-chart data.
+
+Priority 4: AUTOMATIC NFL WEEK ROLLOVER
+
+I should never have to manually tell Gridline to move to the next NFL week.
+
+Requirements:
+
+* automatically determine current NFL season and week from ESPN schedule data
+* do not hardcode week numbers
+* account for Monday Night Football before advancing
+* support Thursday games, bye weeks, playoffs and Super Bowl
+* preserve prior weeks
+* add a week selector so I can browse previous and upcoming weeks
+* detect flex scheduling or kickoff-time changes without duplicating games
+
+Priority 5: DATA QUALITY
+
+Update Data Health to show:
+
+* nflverse last successful sync
+* seasons loaded
+* games loaded
+* injury last successful sync
+* injury record count
+* depth-chart last successful sync
+* teams successfully updated
+* source/team failures
+
+Add retry handling and error logging.
+
+Do not silently fail.
+
+After completion, give me a plain-English audit showing:
+
+1. NFLverse data loaded
+2. seasons and games loaded
+3. one team-game historical example
+4. one injury history example
+5. one depth-chart history example
+6. how duplicate snapshots are prevented
+7. any ESPN failures
+8. any limitations in free data
+
+Do not build spread, moneyline, totals, confidence scores, or betting recommendations yet.
