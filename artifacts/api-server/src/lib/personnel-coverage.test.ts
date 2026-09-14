@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { coveragePercent, isWeatherEligible, latestCoverageAnchor, passesReadinessThreshold } from "./coverage-math";
+import { coveragePercent, isPregameReadinessGame, isWeatherEligible, latestCoverageAnchor, passesReadinessThreshold } from "./coverage-math";
 import { PRODUCTION_READINESS_CONTROLS, READINESS_THRESHOLDS } from "./personnel-coverage";
 
 test("coverage percentages use real denominator and unavailable is zero", () => {
@@ -32,6 +32,14 @@ test("readiness threshold math is inclusive and null-safe", () => {
   assert.equal(passesReadinessThreshold(80, 80), true);
   assert.equal(passesReadinessThreshold(79.99, 80), false);
   assert.equal(passesReadinessThreshold(null, 80), false);
+});
+
+test("readiness cohort contains only games that are still pre-kickoff", () => {
+  const now = new Date("2026-09-14T19:00:00.000Z");
+  assert.equal(isPregameReadinessGame({ kickoffTime: new Date("2026-09-14T20:00:00.000Z") }, now), true);
+  assert.equal(isPregameReadinessGame({ kickoffTime: new Date("2026-09-14T19:00:00.000Z") }, now), false);
+  assert.equal(isPregameReadinessGame({ kickoffTime: new Date("2026-09-13T20:00:00.000Z") }, now), false);
+  assert.equal(isPregameReadinessGame({ kickoffTime: null }, now), false);
 });
 
 test("production control limitation is reported but does not alter live-data thresholds", () => {

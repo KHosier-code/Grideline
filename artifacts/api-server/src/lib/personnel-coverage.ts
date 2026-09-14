@@ -1,6 +1,6 @@
-import { db, dataSyncRunsTable, gamesTable } from "@workspace/db";
+import { db, dataSyncRunsTable, gamesTable, oddsApiRequestsTable } from "@workspace/db";
 import { getPersonnelContextForGame } from "./personnel-context";
-import { coveragePercent, isWeatherEligible, latestCoverageAnchor, passesReadinessThreshold } from "./coverage-math";
+import { coveragePercent, isPregameReadinessGame, isWeatherEligible, latestCoverageAnchor, passesReadinessThreshold } from "./coverage-math";
 import { stadiumFor } from "./stadiums";
 
 const REQUIRED_STARTER_SLOT_COUNT = 14;
@@ -222,7 +222,10 @@ type FeedFamily = "personnel" | "injury" | "sportsbook" | "weather";
  * healthy. This is an evaluation gate, not a feed availability fallback.
  */
 async function assessFeedHealth(now: Date) {
-  const runs = await db.select().from(dataSyncRunsTable);
+  const [runs, oddsRequests] = await Promise.all([
+    db.select().from(dataSyncRunsTable),
+    db.select().from(oddsApiRequestsTable),
+  ]);
   const definitions: Array<{ family: FeedFamily; providers: string[]; freshnessHours: number; label: string }> = [
     { family: "personnel", providers: ["espn-depth-charts", "nflverse"], freshnessHours: PERSONNEL_FEED_FRESHNESS_HOURS, label: "personnel" },
     { family: "injury", providers: ["espn-injuries"], freshnessHours: PERSONNEL_FEED_FRESHNESS_HOURS, label: "injury" },
@@ -230,6 +233,30 @@ async function assessFeedHealth(now: Date) {
     { family: "weather", providers: ["nws-weather"], freshnessHours: WEATHER_FEED_FRESHNESS_HOURS, label: "weather" },
   ];
   const assessments = definitions.map((definition) => {
+    if (definition.family === "sportsbook") {
+      const sorted = [...oddsRequests].sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+      const latest = sorted[0];
+      const latestSuccess = sorted.find((request) => request.status === "success");
+      const ageHours = latestSuccess
+        ? Math.max(0, (now.getTime() - latestSuccess.requestedAt.getTime()) / 3_600_000)
+        : null;
+      const latestFailed = latest?.status === "failed";
+      const stale = ageHours === null || ageHours > definition.freshnessHours;
+      const failed = latestFailed || stale;
+      return {
+        family: definition.family,
+        failed,
+        status: failed ? "failed_or_unproven" : "evidenced_current",
+        latestRunAt: latest?.requestedAt.toISOString() ?? null,
+        latestSuccessfulRunAt: latestSuccess?.requestedAt.toISOString() ?? null,
+        freshnessBoundHours: definition.freshnessHours,
+        reason: latestFailed
+          ? `sportsbook feed latest persisted request failed${latest.errorMessage ? `: ${latest.errorMessage}` : "."}`
+          : stale
+            ? `No successful sportsbook request is evidenced within the ${definition.freshnessHours}-hour freshness bound.`
+            : null,
+      };
+    }
     const familyRuns = runs
       .filter((run) => definition.providers.includes(run.provider))
       .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
@@ -311,7 +338,14 @@ export async function getChallengerReadinessReport(now = new Date()) {
       kickoffTime: game.kickoffTime?.toISOString() ?? null,
     };
   });
-  const currentGames = contextGames.filter((game) => game.season === anchor.season && game.week === anchor.week);
+  const currentGames = contextGames.filter((game) =>
+    game.season === anchor.season
+    && game.week === anchor.week
+    && isPregameReadinessGame(
+      { kickoffTime: game.kickoffTime ? new Date(game.kickoffTime) : null },
+      now,
+    ),
+  );
   const current = currentGames;
   const values = {
     personnelCompleteness: median(current.map((game) => game.personnelCompleteness)),

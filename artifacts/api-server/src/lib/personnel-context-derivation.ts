@@ -72,6 +72,7 @@ export type PersonnelQbRow = {
   season: number;
   week: number;
   playerId: string;
+  playerName?: string | null;
   teamId: string;
   sourceTeamId?: string | null;
   dropbacks: number;
@@ -535,6 +536,14 @@ function deriveQb(
   snaps: PersonnelSnapRow[],
   cutoff: Date,
 ) {
+  const normalizedPlayerName = (value: string | null | undefined) =>
+    value?.trim().toLowerCase().replace(/[^a-z0-9]/g, "") || null;
+  const sameQuarterback = (row: PersonnelQbRow, starter: ProbableStarter) =>
+    row.playerId === starter.playerId
+    || Boolean(
+      normalizedPlayerName(row.playerName)
+      && normalizedPlayerName(row.playerName) === normalizedPlayerName(starter.playerName),
+    );
   const teamRows = qbs.filter((row) =>
     row.teamId === teamId
     && (time(row.kickoffTime) ?? -1) < cutoff.getTime()
@@ -546,7 +555,11 @@ function deriveQb(
   const primary = [...byGame.values()]
     .map((rows) => rows.sort((a, b) => b.dropbacks - a.dropbacks)[0])
     .filter((row) => row.dropbacks > 0)
-    .sort((a, b) => (time(b.kickoffTime) ?? -1) - (time(a.kickoffTime) ?? -1));
+    .sort((a, b) =>
+      b.season - a.season
+      || b.week - a.week
+      || (time(b.kickoffTime) ?? -1) - (time(a.kickoffTime) ?? -1),
+    );
   const projected = starters.find((row) => row.position === "QB") ?? (primary[0] ? {
     playerId: primary[0].playerId,
     teamId,
@@ -572,7 +585,7 @@ function deriveQb(
     evidence: ["qb_game_stats participation inference", `Most recent pre-cutoff game: ${iso(primary[0].kickoffTime) ?? "unknown"}.`],
     unavailableReason: "No current depth-chart QB starter was available.",
   } : null);
-  const recent = projected ? primary.filter((row) => row.playerId === projected.playerId).slice(0, 5) : [];
+  const recent = projected ? primary.filter((row) => sameQuarterback(row, projected)).slice(0, 5) : [];
   const totals = recent.reduce((sum, row) => ({
     dropbacks: sum.dropbacks + row.dropbacks,
     passAttempts: sum.passAttempts + row.passAttempts,
@@ -585,11 +598,11 @@ function deriveQb(
   }), { dropbacks: 0, passAttempts: 0, passEpa: 0, passSuccesses: 0, interceptions: 0, sacks: 0, rushAttempts: 0, rushEpa: 0 });
   let consecutiveStarts = 0;
   for (const row of primary) {
-    if (!projected || row.playerId !== projected.playerId) break;
+    if (!projected || !sameQuarterback(row, projected)) break;
     consecutiveStarts += 1;
   }
   const prior = primary[0] ?? null;
-  const historicalStarts = new Set(primary.map((row) => row.playerId)).size ? primary.filter((row) => row.playerId === projected?.playerId).length : 0;
+  const historicalStarts = projected ? primary.filter((row) => sameQuarterback(row, projected)).length : 0;
   const certainty = projected
     ? clamp((projected.official ? 88 : 62) + (recent.length >= 3 ? 8 : recent.length ? 2 : -15) - (projected.unavailableReason ? 20 : 0))
     : 0;
@@ -600,7 +613,7 @@ function deriveQb(
     projectedStarter: projected,
     starterCertainty: certainty,
     priorGameStarter: prior?.playerId ?? null,
-    starterChange: projected && prior ? projected.playerId !== prior.playerId : null,
+    starterChange: projected && prior ? !sameQuarterback(prior, projected) : null,
     consecutiveStarts,
     recentSnapShare: qbSnapShare,
     recentDropbacks: totals.dropbacks || null,

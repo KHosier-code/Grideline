@@ -24,3 +24,10 @@ export function latestCoverageAnchor<T extends { season: number; week: number; k
     ?? withKickoff.sort((a, b) => b.kickoffTime!.getTime() - a.kickoffTime!.getTime())[0]
     ?? null;
 }
+
+export function isPregameReadinessGame(
+  game: { kickoffTime: Date | null },
+  now: Date,
+) {
+  return Boolean(game.kickoffTime && game.kickoffTime.getTime() > now.getTime());
+}

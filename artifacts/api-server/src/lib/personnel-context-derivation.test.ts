@@ -275,3 +275,55 @@ test("post-cutoff participation backfills cannot change QB or OL context", () =>
   assert.equal(context.teams.h.starters.find((starter) => starter.playerId === "lt-depth")?.recentSnapShare, null);
   assert.equal(context.teams.h.olContinuity.returningStartersFromPriorWeek, null);
 });
+
+test("QB history joins to a projected starter across source ID namespaces by cutoff-safe name", () => {
+  const context = derivePersonnelContext({
+    now: new Date("2026-09-14T12:00:00.000Z"),
+    game: {
+      gameId: "namespace-game",
+      season: 2026,
+      week: 1,
+      kickoffTime: "2026-09-15T00:00:00.000Z",
+      homeTeamId: "h",
+      awayTeamId: "a",
+    },
+    depth: [{
+      teamId: "h",
+      playerId: "PfrPl00",
+      playerName: "Example Quarterback",
+      position: "QB",
+      depthPosition: 1,
+      starter: true,
+      source: "espn_depth_chart",
+      classification: "published_secondary",
+      snapshotTimestamp: "2026-09-14T01:00:00.000Z",
+      sourceUpdatedAt: "2026-09-14T01:00:00.000Z",
+    }],
+    injuries: [],
+    snaps: [],
+    qbs: [1, 2, 3].map((week) => ({
+      gameId: `prior-${week}`,
+      season: 2025,
+      week,
+      playerId: "00-0000001",
+      playerName: "Example Quarterback",
+      teamId: "h",
+      dropbacks: 30,
+      passAttempts: 28,
+      passEpa: 2,
+      passSuccesses: 15,
+      interceptions: 0,
+      sacks: 2,
+      rushAttempts: 2,
+      rushEpa: 0.5,
+      kickoffTime: null,
+      sourceUpdatedAt: "2026-09-14T01:00:00.000Z",
+    })),
+    priorGames: [],
+    odds: [],
+  });
+  assert.equal(context.teams.h.qb.projectedStarter?.playerId, "PfrPl00");
+  assert.equal(context.teams.h.qb.metricsSampleGames, 3);
+  assert.equal(context.teams.h.qb.recentDropbacks, 90);
+  assert.equal(context.teams.h.qb.starterCertainty, 70);
+});

@@ -1,0 +1,139 @@
+Continue Gridline Phase 7 live-data maturity work.
+
+Do not train, score, refit, promote, or replace any model.
+
+Do not change active Phase 6 production models.
+
+Do not add new modeling families or betting features.
+
+The only goal is to improve the live-data readiness metrics that currently block Phase 8.
+
+Current blockers:
+
+- Median QB certainty: 47% — target >=70%
+- Injury coverage: 6.25% — target >=90%
+- Sportsbook freshness: 6.25% — target >=90%
+- Eligible weather coverage: 9.09% — target >=80%
+- Median Data Confidence: 25.5 — target >=65
+- Sportsbook source health: failing/unproven
+
+PRIORITY 1: QB CERTAINTY
+
+Audit why median QB certainty is only 47%.
+
+Improve the existing QB starter-certainty derivation using only legitimate pregame evidence, including:
+
+- prior game starter
+- recent QB snap share
+- recent dropbacks
+- recent participation
+- injury status
+- historical starter continuity
+- current roster membership
+- depth evidence where available
+
+Do not inflate certainty artificially.
+
+For each current game report:
+- projected starting QB
+- certainty score
+- evidence
+- missing evidence
+- reason certainty is below 70 where applicable
+
+PRIORITY 2: INJURY COVERAGE
+
+Audit why injury coverage is only 6.25%.
+
+Verify:
+- production ESPN injury scheduler cadence
+- team coverage
+- current-week game matching
+- snapshot freshness logic
+- identifier normalization
+- whether valid current injury records exist but are being excluded incorrectly
+
+Fix only genuine ingestion/matching/freshness problems.
+
+Do not fabricate injury status.
+
+Target >=90% current-game injury coverage.
+
+PRIORITY 3: SPORTSBOOK FRESHNESS
+
+Audit why sportsbook freshness is only 6.25%.
+
+Verify:
+- scheduled odds jobs are running
+- Odds API requests are succeeding
+- current games match production schedule IDs
+- snapshots are persisted
+- freshness windows are correct
+- valid odds are not incorrectly excluded
+- quota remains within safe bounds
+
+Do not manually burn large amounts of paid quota.
+
+Use the existing conservative cadence unless a bug is found.
+
+Report:
+- latest successful sportsbook sync
+- games covered
+- books covered
+- snapshots saved
+- duplicates skipped
+- quota used
+- quota remaining
+- failures
+
+Target >=90% current-game sportsbook freshness.
+
+PRIORITY 4: WEATHER COVERAGE
+
+Audit why eligible weather coverage is only 9.09%.
+
+Verify:
+- NWS scheduler is running
+- upcoming outdoor/retractable games are identified correctly
+- stadium aliases and coordinates resolve
+- kickoff-time forecast selection works
+- future games are included
+- indoor games are excluded appropriately
+- neutral/international games remain unsupported where required
+
+Do not backfill past games using post-kickoff forecasts.
+
+Target >=80% eligible upcoming-game weather coverage.
+
+PRIORITY 5: DATA CONFIDENCE
+
+After improving the above feeds, recalculate Data Confidence.
+
+Do not change component weights merely to make the score pass.
+
+The score should rise only because real data coverage improved.
+
+PRIORITY 6: SOURCE HEALTH
+
+Resolve any systematic source failure only if a genuine ingestion/scheduler/matching issue exists.
+
+Do not mark a source healthy without persisted evidence.
+
+FINAL REPORT
+
+Return:
+
+1. Current QB certainty
+2. Current injury coverage
+3. Current sportsbook freshness
+4. Current eligible weather coverage
+5. Current median Data Confidence
+6. Source-health status
+7. Each threshold pass/fail
+8. Root cause of any remaining failures
+9. Any bugs fixed
+10. Any new cost introduced
+11. Confirmation Phase 6 is unchanged
+12. Whether Phase 8 is now eligible
+
+Do not mark Phase 8 eligible unless every configured threshold passes.

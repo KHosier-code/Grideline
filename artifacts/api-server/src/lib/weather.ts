@@ -94,14 +94,18 @@ export async function syncNwsWeather(options?: { now?: Date; jobKey?: string; sc
         }
         const forecastProps = properties(forecast);
         const periods = Array.isArray(forecastProps.periods) ? forecastProps.periods.map(object) : [];
-        const fetchedAt = new Date();
+        const fetchedAt = now;
         for (const { game } of entries) {
           const kickoff = game.kickoffTime!;
           const period = periods.find((candidate) => {
             const start = Date.parse(String(candidate.startTime ?? ""));
             const end = Date.parse(String(candidate.endTime ?? ""));
             return Number.isFinite(start) && Number.isFinite(end) && start <= kickoff.getTime() && kickoff.getTime() < end;
-          }) ?? periods[0];
+          });
+          if (!period && stadium.indoorOutdoor === "outdoor") {
+            failures.push(`${game.gameId}: NWS forecast did not contain a period covering kickoff`);
+            continue;
+          }
           const periodProps = object(period);
           const validTime = new Date(Date.parse(String(periodProps.startTime ?? kickoff.toISOString())));
           const summary = text(periodProps.shortForecast);
