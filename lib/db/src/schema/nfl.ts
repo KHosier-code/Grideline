@@ -380,6 +380,34 @@ export const historicalDepthChartTable = pgTable("historical_depth_charts", {
   unique("historical_depth_chart_source_key_unique").on(table.sourceKey),
 ]);
 
+export type PregameFeatureValues = Record<string, number | null>;
+export type PregameFeatureSamples = Record<string, number>;
+
+/**
+ * Versioned, point-in-time feature rows. Each row is generated from games
+ * strictly before kickoffTime; features are JSON so a new definition can be
+ * added without rewriting historical versions.
+ */
+export const pregameTeamFeaturesTable = pgTable("pregame_team_features", {
+  featureVersion: text("feature_version").notNull(),
+  gameId: text("game_id").notNull(),
+  teamId: text("team_id").notNull(),
+  opponentTeamId: text("opponent_team_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  kickoffTime: timestamp("kickoff_time", { withTimezone: true }).notNull(),
+  isHome: boolean("is_home").notNull(),
+  features: jsonb("features").$type<PregameFeatureValues>().notNull().default({}),
+  sampleCounts: jsonb("sample_counts").$type<PregameFeatureSamples>().notNull().default({}),
+  lowSample: boolean("low_sample").notNull().default(true),
+  sourceCutoff: timestamp("source_cutoff", { withTimezone: true }).notNull(),
+  generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.featureVersion, table.gameId, table.teamId] }),
+  index("pregame_features_game_idx").on(table.gameId, table.featureVersion),
+  index("pregame_features_team_kickoff_idx").on(table.teamId, table.kickoffTime),
+]);
+
 export const insertTeamSchema = createInsertSchema(teamsTable);
 export const insertGameSchema = createInsertSchema(gamesTable);
 export type InsertTeam = z.infer<typeof insertTeamSchema>;

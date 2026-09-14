@@ -7,6 +7,7 @@ import { getAvailabilityHealth } from "../lib/availability";
 import { getOddsApiHealth } from "../lib/odds";
 import { getScheduleHealth } from "../lib/schedule";
 import { getSchedulerHealth } from "../lib/scheduler";
+import { getPregameFeatureHealth } from "../lib/features";
 
 const router: IRouter = Router();
 
@@ -42,6 +43,7 @@ router.get("/data-health", async (req, res): Promise<void> => {
   const availability = await getAvailabilityHealth();
   const odds = await getOddsApiHealth();
   const scheduler = await getSchedulerHealth();
+  const features = await getPregameFeatureHealth();
   const schedulerJob = (provider: string) =>
     scheduler.jobs
       .filter((job) => job.provider === provider && job.enabled)
@@ -139,6 +141,20 @@ router.get("/data-health", async (req, res): Promise<void> => {
           scheduledRuns: scheduler.runs.filter((run) => run.provider === "odds-api").slice(0, 20),
           timezone: scheduler.timezone,
         },
+      },
+      {
+        provider: "pregame-features",
+        label: "Historical pregame features",
+        status: features.rows > 0 ? "current" : "stale",
+        detail: features.rows > 0
+          ? `${features.rows} versioned team/game rows; ${features.lowSampleRows} low-sample observations flagged.`
+          : "Feature generation has not completed yet.",
+        lastUpdated: features.latestGeneratedAt,
+        nextUpdate: null,
+        requestsToday: 0,
+        requestsThisMonth: 0,
+        remainingQuota: "Local database",
+        metadata: features,
       },
       {
         provider: "espn-injuries",

@@ -196,6 +196,50 @@ paths:
                 $ref: "#/components/schemas/ScheduleSyncResult"
         "502":
           description: Schedule synchronization failed
+  /features/pregame/health:
+    get:
+      operationId: getPregameFeatureHealth
+      tags: [dashboard]
+      summary: Read historical pregame feature coverage and limitations
+      responses:
+        "200":
+          description: Feature definition and generated row counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PregameFeatureHealth"
+  /features/pregame/game/{gameId}:
+    get:
+      operationId: getPregameFeaturesForGame
+      tags: [nfl]
+      summary: Read versioned pregame features for one game
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Team-level pregame feature rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PregameFeatureRow"
+  /features/pregame/build:
+    post:
+      operationId: buildPregameFeatures
+      tags: [dashboard]
+      summary: Build an immutable version of historical pregame features
+      description: Requires authenticated administrator access. Never trains or scores a betting model.
+      responses:
+        "200":
+          description: Feature build result
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
   /teams:
     get:
       operationId: listTeams
@@ -496,4 +540,31 @@ components:
         minimumConfidence: { type: number, minimum: 0, maximum: 100 }
         unitSize: { type: number, minimum: 0.1 }
         kellyEnabled: { type: boolean }
+    PregameFeatureRow:
+      type: object
+      required: [featureVersion, gameId, teamId, opponentTeamId, season, week, kickoffTime, isHome, features, sampleCounts, lowSample, sourceCutoff]
+      properties:
+        featureVersion: { type: string }
+        gameId: { type: string }
+        teamId: { type: string }
+        opponentTeamId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        kickoffTime: { type: string, format: date-time }
+        isHome: { type: boolean }
+        features: { type: object, additionalProperties: { type: ["number", "null"] } }
+        sampleCounts: { type: object, additionalProperties: { type: integer } }
+        lowSample: { type: boolean }
+        sourceCutoff: { type: string, format: date-time }
+        generatedAt: { type: string, format: date-time }
+    PregameFeatureHealth:
+      type: object
+      required: [featureVersion, definition, rows, games, lowSampleRows]
+      properties:
+        featureVersion: { type: string }
+        definition: { type: object, additionalProperties: true }
+        rows: { type: integer }
+        games: { type: integer }
+        lowSampleRows: { type: integer }
+        latestGeneratedAt: { type: ["string", "null"], format: date-time }
 

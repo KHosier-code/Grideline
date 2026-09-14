@@ -18,6 +18,7 @@ import {
 } from "@workspace/db";
 import { syncEspnInjuries } from "./availability";
 import { syncNflverseHistory } from "./nflverse";
+import { rebuildPregameFeatures } from "./features";
 import { captureOddsSnapshots } from "./odds";
 import { syncEspnScheduleCoverage } from "./schedule";
 import { logger } from "./logger";
@@ -646,6 +647,11 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
           (result as { handledMissingSeason?: boolean } | null)?.handledMissingSeason === true
         ) {
           nflverseCheckpointed = true;
+          const featureResult = await rebuildPregameFeatures();
+          result = {
+            ...(resultMetadata(result) as Record<string, unknown>),
+            pregameFeatures: featureResult,
+          };
         }
       }
     } else {

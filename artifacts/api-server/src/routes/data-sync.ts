@@ -10,10 +10,11 @@ import { syncEspnDepthCharts, syncEspnInjuries } from "../lib/availability";
 import { syncNflverseHistory } from "../lib/nflverse";
 import { captureOddsSnapshots, getOddsEventAudits } from "../lib/odds";
 import { syncEspnScheduleCoverage } from "../lib/schedule";
+import { requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
 
-router.post("/data-sync/nflverse", async (req, res): Promise<void> => {
+router.post("/data-sync/nflverse", requireAdmin, async (req, res): Promise<void> => {
   try {
     const seasons = Array.isArray(req.body?.seasons)
       ? req.body.seasons.map(Number).filter((value: number) => Number.isInteger(value) && value >= 2021 && value <= 2026)
@@ -25,7 +26,7 @@ router.post("/data-sync/nflverse", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/data-sync/injuries", async (req, res): Promise<void> => {
+router.post("/data-sync/injuries", requireAdmin, async (req, res): Promise<void> => {
   try {
     res.json(await syncEspnInjuries());
   } catch (error) {
@@ -34,7 +35,7 @@ router.post("/data-sync/injuries", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/data-sync/depth-charts", async (req, res): Promise<void> => {
+router.post("/data-sync/depth-charts", requireAdmin, async (req, res): Promise<void> => {
   try {
     const result = await syncEspnDepthCharts();
     res.status(result.status === "failed" ? 502 : 200).json(result);
@@ -44,7 +45,7 @@ router.post("/data-sync/depth-charts", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/data-sync/schedule", async (req, res): Promise<void> => {
+router.post("/data-sync/schedule", requireAdmin, async (req, res): Promise<void> => {
   try {
     const parsed = SyncScheduleBody.safeParse(req.body ?? {});
     if (!parsed.success) {
@@ -62,7 +63,7 @@ router.post("/data-sync/schedule", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/odds/capture", async (req, res): Promise<void> => {
+router.post("/odds/capture", requireAdmin, async (req, res): Promise<void> => {
   try {
     const result = await captureOddsSnapshots();
     res
