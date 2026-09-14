@@ -676,7 +676,7 @@ function Backtesting() {
 }
 
 function ModelLab() {
-  const { getToken } = useAuth();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const authHeaders = async (): Promise<Record<string, string>> => {
     const token = await getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -701,13 +701,14 @@ function ModelLab() {
     staleTime: 30000,
   });
   const adminStatus = useQuery({
-    queryKey: ['admin-status'],
+    queryKey: ['admin-status', isSignedIn ? 'signed-in' : 'signed-out'],
     queryFn: async () => {
       const response = await fetch('/api/auth/admin-status', { credentials: 'include', headers: await authHeaders() });
       if (!response.ok) throw new Error('Admin status unavailable');
       return response.json() as Promise<any>;
     },
     staleTime: 30000,
+    enabled: isLoaded,
   });
   const drift = useQuery({
     queryKey: ['model-drift'],
@@ -760,7 +761,7 @@ function ModelLab() {
         </div>
       </div>
        <Panel eyebrow="Authorization audit" title={adminStatus.data?.isAdmin ? 'Administrator recognized' : 'Administrator access not recognized'} className="mt-5">
-         {adminStatus.isLoading ? <LoadingPanel label="Checking Clerk session" /> : adminStatus.isError ? <ErrorPanel message="The current Clerk authorization could not be checked." /> : <div className="grid gap-3 text-xs md:grid-cols-3"><div><p className="eyebrow">Clerk user ID</p><p className="mt-1 break-all font-mono text-ink">{adminStatus.data?.userId ?? 'Not signed in'}</p></div><div><p className="eyebrow">Session role</p><p className="mt-1 font-mono text-ink">{adminStatus.data?.sessionRole ?? 'Not present'}{adminStatus.data?.clerkRoleAdmin ? ' · admin' : ''}</p></div><div><p className="eyebrow">ADMIN_USER_IDS</p><p className="mt-1 text-ink">{adminStatus.data?.adminUserIdsConfigured ? 'Configured' : 'Not configured'}</p></div><div className="md:col-span-3"><p className="text-muted-foreground">{adminStatus.data?.isAdmin ? 'This session may use the protected promotion endpoint.' : adminStatus.data?.requiredAdminUserId ? `Add this exact Clerk user ID to ADMIN_USER_IDS: ${adminStatus.data.requiredAdminUserId}` : 'Sign in with Clerk before attempting promotion.'}</p></div></div>}
+         {!isLoaded || adminStatus.isLoading ? <LoadingPanel label="Checking Clerk session" /> : adminStatus.isError ? <ErrorPanel message="The current Clerk authorization could not be checked." /> : <div className="grid gap-3 text-xs md:grid-cols-3"><div><p className="eyebrow">Clerk user ID</p><p className="mt-1 break-all font-mono text-ink">{adminStatus.data?.userId ?? 'Not signed in'}</p></div><div><p className="eyebrow">Session role</p><p className="mt-1 font-mono text-ink">{adminStatus.data?.sessionRole ?? 'Not present'}{adminStatus.data?.clerkRoleAdmin ? ' · admin' : ''}</p></div><div><p className="eyebrow">ADMIN_USER_IDS</p><p className="mt-1 text-ink">{adminStatus.data?.adminUserIdsConfigured ? 'Configured' : 'Not configured'}</p></div><div className="md:col-span-3"><p className="text-muted-foreground">{adminStatus.data?.isAdmin ? 'This session may use the protected promotion endpoint.' : adminStatus.data?.requiredAdminUserId ? `Add this exact Clerk user ID to ADMIN_USER_IDS: ${adminStatus.data.requiredAdminUserId}` : isSignedIn ? 'Clerk shows you as signed in, but the API did not receive a usable session. Sign out and back in from this preview.' : 'Sign in with Clerk before attempting promotion.'}</p></div></div>}
        </Panel>
       {Object.keys(promotions.data?.current ?? {}).length ? <Panel eyebrow="Current production" title="Active model by market" className="mt-5"><div className="grid gap-3 md:grid-cols-3">{families.map((family) => { const active = promotions.data?.current?.[family.key]; return <div className="rounded-lg border border-border bg-secondary/30 p-3" key={family.key}><p className="eyebrow">{family.label}</p><p className="mt-2 font-semibold text-ink">{active?.algorithm?.replaceAll('_', ' ') ?? 'Not configured'}</p><p className="mt-1 truncate font-mono text-[10px] text-muted-foreground" title={active?.modelVersion}>{active?.modelVersion ?? '—'}</p><p className="mt-2 text-[11px] text-muted-foreground">Promoted {active ? formatDate(active.promotedAt, true) : '—'}</p></div>; })}</div></Panel> : null}
       <Panel eyebrow="Monitoring" title="Model drift" className="mt-5" action={<span className="section-meta">No automatic promotion</span>}>{drift.data?.results?.length ? <div className="grid gap-3 md:grid-cols-3">{drift.data.results.map((item: any) => <div className="rounded-lg border border-border bg-secondary/30 p-3" key={`${item.family}-${item.modelVersion}`}><div className="flex items-center justify-between gap-3"><p className="eyebrow">{item.family}</p><StatusPill status={item.status === 'elevated' ? 'warning' : item.status === 'stable' ? 'success' : 'not_configured'}>{item.status.replaceAll('_', ' ')}</StatusPill></div><p className="mt-2 truncate font-mono text-[10px] text-ink" title={item.modelVersion}>{item.modelVersion}</p><p className="mt-2 text-xs text-muted-foreground">Recent {item.recentMetric === null ? '—' : item.recentMetric.toFixed(3)} vs baseline {item.baselineMetric === null ? '—' : item.baselineMetric.toFixed(3)} · {item.completedPredictions} completed</p></div>)}</div> : <p className="text-sm text-muted-foreground">Drift monitoring becomes measurable after official production predictions are graded across more than one chronological window.</p>}</Panel>
