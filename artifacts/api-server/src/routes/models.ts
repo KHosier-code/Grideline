@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspace/db";
 import { getAuth } from "@clerk/express";
 import { generateLivePredictions, getModelDriftMonitoring } from "../lib/live-predictions";
-import { getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models } from "../lib/modeling";
+import { getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate } from "../lib/modeling";
 import { runPromotionSafetyGate } from "../lib/promotion-safety-gate";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 
@@ -74,11 +74,18 @@ router.post("/models/promote", requireAdmin, async (req, res): Promise<void> => 
       res.status(404).json({ error: "The requested model run does not exist." });
       return;
     }
+    const candidateValidation = validateProductionCandidate(run);
+    if (!candidateValidation.valid) {
+      res.status(409).json({
+        error: "Model promotion rejected: the selected run is not compatible with the production model policy.",
+        reason: "incompatible_model",
+        candidateValidation,
+      });
+      return;
+    }
     const safetyGate = await runPromotionSafetyGate();
     const auth = getAuth(req);
-    const trainingCutoff = run.trainingSeasons.length
-      ? `through-${Math.max(...run.trainingSeasons)}`
-      : "unavailable";
+    const trainingCutoff = candidateValidation.trainingCutoff ?? "unavailable";
     const [promotion] = await db.insert(modelPromotionHistoryTable).values({
       family: run.family,
       modelVersion: run.modelVersion,
@@ -99,6 +106,7 @@ router.post("/models/promote", requireAdmin, async (req, res): Promise<void> => 
       activeProductionModel: current[0] ?? null,
       revision,
       safetyGate,
+      candidateValidation,
       note: "Promotion is explicit and append-only. The latest production promotion for this family is used; no automatic promotion occurred.",
     });
   } catch (error) {

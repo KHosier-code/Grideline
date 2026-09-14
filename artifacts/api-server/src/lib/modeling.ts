@@ -12,6 +12,11 @@ import { PREGAME_FEATURE_VERSION } from "./features";
 export type Algorithm = "linear_regression" | "logistic_regression" | "random_forest" | "gradient_boosting";
 export type Family = "spread" | "moneyline" | "totals";
 export type SamplePolicy = "include_low_sample" | "exclude_low_sample";
+export type ProductionCandidateValidation = {
+  valid: boolean;
+  failures: string[];
+  trainingCutoff: string | null;
+};
 export type Example = {
   gameId: string;
   season: number;
@@ -32,6 +37,75 @@ export type MatrixModel = {
 const TEST_SEASONS = [2022, 2023, 2024, 2025, 2026];
 const FEATURE_PREFIXES = ["season_to_date", "last_8", "last_5", "last_3"];
 const MAX_FEATURES = 24;
+const SUPPORTED_ALGORITHMS: Record<Family, readonly Algorithm[]> = {
+  spread: ["linear_regression", "random_forest", "gradient_boosting"],
+  moneyline: ["logistic_regression", "random_forest", "gradient_boosting"],
+  totals: ["linear_regression", "random_forest", "gradient_boosting"],
+};
+const PHASE6_ALGORITHMS: Record<Family, Algorithm> = {
+  spread: "linear_regression",
+  moneyline: "logistic_regression",
+  totals: "gradient_boosting",
+};
+const PHASE6_SAMPLE_POLICIES: Record<Family, SamplePolicy> = {
+  spread: "include_low_sample",
+  moneyline: "include_low_sample",
+  totals: "exclude_low_sample",
+};
+const PHASE6_TRAINING_SEASONS = [2021, 2022, 2023, 2024, 2025];
+
+export function validateProductionCandidate(
+  run: typeof modelTrainingRunsTable.$inferSelect,
+): ProductionCandidateValidation {
+  const failures: string[] = [];
+  const family = run.family as Family;
+  const algorithm = run.algorithm as Algorithm;
+  const seasons = Array.isArray(run.trainingSeasons) ? run.trainingSeasons : [];
+  const sortedSeasons = [...seasons].sort((left, right) => left - right);
+  const uniqueSeasons = [...new Set(sortedSeasons)];
+  const trainingCutoff = uniqueSeasons.length ? `through-${Math.max(...uniqueSeasons)}` : null;
+
+  if (!Object.hasOwn(SUPPORTED_ALGORITHMS, family)) {
+    failures.push(`family "${run.family}" is not supported for production`);
+  } else if (!SUPPORTED_ALGORITHMS[family].includes(algorithm)) {
+    failures.push(`algorithm "${run.algorithm}" is not supported for the ${run.family} family`);
+  }
+  if (run.featureVersion !== PREGAME_FEATURE_VERSION) {
+    failures.push(`feature version "${run.featureVersion}" does not match ${PREGAME_FEATURE_VERSION}`);
+  }
+  if (!seasons.length || seasons.some((season) => !Number.isInteger(season) || season < 2021 || season > 2025) || uniqueSeasons.length !== seasons.length) {
+    failures.push("training seasons must be unique integer seasons from 2021 through 2025");
+  }
+  if (run.sampleSize <= 0) failures.push("the candidate must contain at least one training row");
+
+  if (run.status === "refit_candidate") {
+    if (!run.modelVersion.startsWith("phase6-refit-")) failures.push("refit candidates must use a phase6-refit model version");
+    if (Object.hasOwn(PHASE6_ALGORITHMS, family) && algorithm !== PHASE6_ALGORITHMS[family]) {
+      failures.push(`Phase 6 ${family} refits must use ${PHASE6_ALGORITHMS[family]}`);
+    }
+    if (Object.hasOwn(PHASE6_SAMPLE_POLICIES, family) && run.samplePolicy !== PHASE6_SAMPLE_POLICIES[family]) {
+      failures.push(`Phase 6 ${family} refits must use ${PHASE6_SAMPLE_POLICIES[family]}`);
+    }
+    if (run.recencyWeighting !== "none") failures.push("Phase 6 refits must not use recency weighting");
+    if (run.testSeason !== 2025) failures.push("Phase 6 refits must use 2025 as the validation cutoff");
+    if (JSON.stringify(sortedSeasons) !== JSON.stringify(PHASE6_TRAINING_SEASONS)) {
+      failures.push("Phase 6 refits must be trained on exactly 2021 through 2025");
+    }
+    if (run.metrics?.outputValidation !== "finite") failures.push("Phase 6 refit output validation must be finite");
+  } else if (run.status === "challenger") {
+    if (!run.modelVersion.startsWith("phase4-")) failures.push("supported challengers must use a phase4 model version");
+    if (!Number.isInteger(run.testSeason) || run.testSeason < 2022 || run.testSeason > 2025) {
+      failures.push("supported challengers must have a historical test season from 2022 through 2025");
+    }
+    if (Number.isInteger(run.testSeason) && uniqueSeasons.some((season) => season >= run.testSeason)) {
+      failures.push("challenger training seasons must precede the test season");
+    }
+  } else {
+    failures.push(`status "${run.status}" is not eligible for production promotion`);
+  }
+
+  return { valid: failures.length === 0, failures, trainingCutoff };
+}
 
 export function mean(values: number[]) {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
