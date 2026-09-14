@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "test:pregame-leakage": "tsx ./src/pregame-leakage.test.ts",
+    "test:prediction-safety": "tsx ../artifacts/api-server/src/lib/prediction-validation.test.ts && tsx ./src/pregame-leakage.test.ts",
     "report:pregame-leakage": "tsx ./src/pregame-leakage-report.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

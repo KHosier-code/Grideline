@@ -4,6 +4,7 @@ import { db, modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspa
 import { getAuth } from "@clerk/express";
 import { generateLivePredictions, getModelDriftMonitoring } from "../lib/live-predictions";
 import { getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models } from "../lib/modeling";
+import { runPromotionSafetyGate } from "../lib/promotion-safety-gate";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
@@ -73,6 +74,7 @@ router.post("/models/promote", requireAdmin, async (req, res): Promise<void> => 
       res.status(404).json({ error: "The requested model run does not exist." });
       return;
     }
+    const safetyGate = await runPromotionSafetyGate();
     const auth = getAuth(req);
     const trainingCutoff = run.trainingSeasons.length
       ? `through-${Math.max(...run.trainingSeasons)}`
@@ -96,11 +98,18 @@ router.post("/models/promote", requireAdmin, async (req, res): Promise<void> => 
       promotion,
       activeProductionModel: current[0] ?? null,
       revision,
+      safetyGate,
       note: "Promotion is explicit and append-only. The latest production promotion for this family is used; no automatic promotion occurred.",
     });
   } catch (error) {
     req.log.error({ error }, "Model promotion failed");
-    res.status(500).json({ error: error instanceof Error ? error.message : "Model promotion failed" });
+    const message = error instanceof Error ? error.message : "Model promotion failed";
+    const safetyGateFailure = message.startsWith("Promotion safety gate failed.");
+    res.status(safetyGateFailure ? 412 : 500).json({
+      error: safetyGateFailure ? "Promotion blocked: the prediction safety gate failed. No promotion was recorded." : message,
+      safetyGate: safetyGateFailure ? "failed" : "not_run",
+      detail: safetyGateFailure ? message : undefined,
+    });
   }
 });
 
