@@ -1,0 +1,90 @@
+Complete the remaining pre-production verification work for Gridline.
+
+Do not rebuild functionality that is already implemented.
+
+First audit the existing queued tasks.
+
+The following appear to already be complete:
+
+* recurring injury/historical synchronization through the persistent Gridline data worker
+* administrator protection for manual sync endpoints through Clerk/admin authorization
+
+Verify those implementations still work and mark those tasks satisfied rather than duplicating or replacing them.
+
+Then complete these remaining items:
+
+1. AUTHENTICATED PHASE 6 PROMOTION TEST
+
+Using the existing authenticated administrator workflow, allow me to manually promote the three Phase 6 refit candidates:
+
+Spread:
+
+* phase6 refit
+* regularized linear regression
+* include low-sample observations
+
+Moneyline:
+
+* phase6 refit
+* logistic regression
+* include low-sample observations
+
+Totals:
+
+* phase6 refit
+* gradient boosting
+* exclude low-sample observations
+
+Do not promote them automatically.
+
+After promotion, verify:
+
+* all three append-only promotion records are created
+* the Phase 6 versions become active production
+* the previous Phase 4 promotion history remains intact
+* new future-game prediction revisions can be generated
+* previous valid prediction snapshots remain unchanged
+* Live Predictions visibly shows previous vs current model versions and projections
+
+2. MODEL LAB SAFETY-GATE VISIBILITY
+
+When an administrator attempts promotion, show the prediction-safety result in Model Lab.
+
+Display:
+
+* PASS or FAIL
+* prediction-validation tests passed
+* leakage tests passed
+* timestamp
+* candidate model version
+* failure details when applicable
+
+Do not expose internal secrets or unnecessary logs.
+
+3. FAILED SAFETY-GATE PROOF
+
+Create a dedicated automated failure-path test that intentionally makes the prediction-safety gate fail.
+
+Verify:
+
+* promotion returns HTTP 412
+* no new model_promotion_history record is created
+* currently active production model remains unchanged
+* no prediction snapshot is regenerated from the rejected candidate
+
+Return the system to its normal passing state after the test.
+
+4. FINAL READINESS AUDIT
+
+Report:
+
+* recurring worker status
+* manual-sync authorization status
+* production models before and after authenticated promotion
+* prediction revisions created
+* previous snapshots preserved
+* safety-gate UI status
+* failure-path test result
+* remaining blockers before production deployment
+
+Do not add any new betting recommendation, confidence, staking, player-prop, or automated wagering functionality.

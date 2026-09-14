@@ -730,6 +730,7 @@ function ModelLab() {
   });
   const [promoting, setPromoting] = useState<string | null>(null);
   const [promotionMessage, setPromotionMessage] = useState<string | null>(null);
+  const [promotionSafetyResult, setPromotionSafetyResult] = useState<any>(null);
   const [refitting, setRefitting] = useState(false);
   const refit = async () => {
     setRefitting(true);
@@ -754,6 +755,14 @@ function ModelLab() {
   const promote = async (run: any) => {
     setPromoting(run.modelVersion);
     setPromotionMessage(null);
+    setPromotionSafetyResult({
+      status: 'running',
+      checkedAt: null,
+      candidateModelVersion: run.modelVersion,
+      predictionValidation: { passed: 0, total: 0 },
+      leakage: { passed: 0, total: 0 },
+      failureDetails: [],
+    });
     try {
       const response = await fetch('/api/models/promote', {
         method: 'POST',
@@ -762,7 +771,11 @@ function ModelLab() {
         body: JSON.stringify({ modelVersion: run.modelVersion, notes: 'Explicit administrator review from Model Lab.' }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? 'Promotion was rejected');
+      if (body.safetyGate && typeof body.safetyGate === 'object') setPromotionSafetyResult(body.safetyGate);
+      if (!response.ok) {
+        setPromotionMessage(body.error ?? 'Promotion was rejected');
+        return;
+      }
       setPromotionMessage(`${run.family} production model promoted. New live snapshots will use this version.`);
       await Promise.all([promotions.refetch(), lab.refetch()]);
     } catch (error) {
@@ -793,6 +806,15 @@ function ModelLab() {
          <p className="text-xs leading-5 text-muted-foreground">These are the unchanged selected algorithms refit on legitimate 2021–2025 data. They remain challengers until an administrator promotes each family explicitly. Promotion creates a new future-game prediction revision; prior snapshots remain preserved.</p>
          {lab.data?.refitCandidates?.length ? <div className="mt-4 grid gap-3 md:grid-cols-3">{lab.data.refitCandidates.map((candidate: any) => <div className="rounded-lg border border-border bg-secondary/30 p-3" key={candidate.modelVersion}><div className="flex items-center justify-between gap-2"><p className="eyebrow">{candidate.family}</p><StatusPill status="not_configured">Review</StatusPill></div><p className="mt-2 font-semibold capitalize text-ink">{String(candidate.algorithm).replaceAll('_', ' ')}</p><p className="mt-1 text-xs text-muted-foreground">Training cutoff {candidate.trainingCutoff} · {candidate.sampleSize} rows</p><p className="mt-2 truncate font-mono text-[10px] text-muted-foreground" title={candidate.modelVersion}>{candidate.modelVersion}</p><button type="button" className="button button-subtle mt-3 w-full" disabled={promoting === candidate.modelVersion} onClick={() => promote(candidate)}>{promoting === candidate.modelVersion ? 'Promoting…' : 'Promote after review'}</button></div>)}</div> : <EmptyPanel title="No Phase 6 candidates yet" detail="An administrator can create the refit candidates with the button above. No production model is replaced automatically." icon={History} />}
        </Panel>
+        <Panel eyebrow="Promotion safety gate" title={promotionSafetyResult?.status === 'passed' ? 'PASS' : promotionSafetyResult?.status === 'failed' ? 'FAIL' : promotionSafetyResult?.status === 'running' ? 'Running checks' : 'No promotion attempt in this session'} className="mt-5" action={promotionSafetyResult ? <StatusPill status={promotionSafetyResult.status === 'passed' ? 'success' : promotionSafetyResult.status === 'failed' ? 'warning' : 'not_configured'}>{String(promotionSafetyResult.status).toUpperCase()}</StatusPill> : null}>
+          {promotionSafetyResult ? <div className="grid gap-3 text-xs md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Prediction validation</p><p className="mt-2 font-semibold text-ink">{promotionSafetyResult.status === 'running' ? 'Running…' : `${promotionSafetyResult.predictionValidation?.passed ?? 0} / ${promotionSafetyResult.predictionValidation?.total ?? 0} passed`}</p></div>
+            <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Pregame leakage</p><p className="mt-2 font-semibold text-ink">{promotionSafetyResult.status === 'running' ? 'Waiting…' : `${promotionSafetyResult.leakage?.passed ?? 0} / ${promotionSafetyResult.leakage?.total ?? 0} passed`}</p></div>
+            <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Checked</p><p className="mt-2 text-ink">{promotionSafetyResult.checkedAt ? formatDate(promotionSafetyResult.checkedAt, true) : 'In progress'}</p></div>
+            <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Candidate model</p><p className="mt-2 truncate font-mono text-[10px] text-ink" title={promotionSafetyResult.candidateModelVersion}>{promotionSafetyResult.candidateModelVersion}</p></div>
+            {promotionSafetyResult.failureDetails?.length ? <div className="rounded-lg border border-border bg-secondary/30 p-3 md:col-span-2 xl:col-span-4"><p className="eyebrow">Failure details</p><ul className="mt-2 space-y-1 text-muted-foreground">{promotionSafetyResult.failureDetails.map((detail: string, index: number) => <li key={`${detail}-${index}`}>{detail}</li>)}</ul></div> : null}
+          </div> : <p className="text-sm text-muted-foreground">The prediction-validation and pregame-leakage suites run before every administrator promotion. Results appear here without exposing command output or secrets.</p>}
+        </Panel>
       </div>
        <Panel eyebrow="Authorization audit" title={adminStatus.data?.isAdmin ? 'Administrator recognized' : 'Administrator access not recognized'} className="mt-5">
          {!isLoaded || adminStatus.isLoading ? <LoadingPanel label="Checking Clerk session" /> : adminStatus.isError ? <ErrorPanel message="The current Clerk authorization could not be checked." /> : <div className="grid gap-3 text-xs md:grid-cols-3"><div><p className="eyebrow">Clerk user ID</p><p className="mt-1 break-all font-mono text-ink">{adminStatus.data?.userId ?? 'Not signed in'}</p></div><div><p className="eyebrow">Session role</p><p className="mt-1 font-mono text-ink">{adminStatus.data?.sessionRole ?? 'Not present'}{adminStatus.data?.clerkRoleAdmin ? ' · admin' : ''}</p></div><div><p className="eyebrow">ADMIN_USER_IDS</p><p className="mt-1 text-ink">{adminStatus.data?.adminUserIdsConfigured ? 'Configured' : 'Not configured'}</p></div><div className="md:col-span-3"><p className="text-muted-foreground">{adminStatus.data?.isAdmin ? 'This session may use the protected promotion endpoint.' : adminStatus.data?.requiredAdminUserId ? `Add this exact Clerk user ID to ADMIN_USER_IDS: ${adminStatus.data.requiredAdminUserId}` : isSignedIn ? 'Clerk shows you as signed in, but the API did not receive a usable session. Sign out and back in from this preview.' : 'Sign in with Clerk before attempting promotion.'}</p></div></div>}
