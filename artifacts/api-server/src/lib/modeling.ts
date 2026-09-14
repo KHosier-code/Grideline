@@ -56,13 +56,19 @@ function logLoss(actual: number[], predicted: number[]) {
 }
 export function standardize(train: number[][], test: number[][]) {
   const width = train[0]?.length ?? 0;
-  const centers = Array.from({ length: width }, (_, column) => mean(train.map((row) => row[column])));
+  const normalizeRow = (row: number[]) => Array.from(
+    { length: width },
+    (_, column) => Number.isFinite(row[column]) ? row[column] : 0,
+  );
+  const safeTrain = train.map(normalizeRow);
+  const safeTest = test.map(normalizeRow);
+  const centers = Array.from({ length: width }, (_, column) => mean(safeTrain.map((row) => row[column])));
   const scales = centers.map((center, column) => {
-    const variance = mean(train.map((row) => (row[column] - center) ** 2));
+    const variance = mean(safeTrain.map((row) => (row[column] - center) ** 2));
     return variance > 1e-9 ? Math.sqrt(variance) : 1;
   });
   const transform = (rows: number[][]) => rows.map((row) => row.map((value, column) => (value - centers[column]) / scales[column]));
-  return { train: transform(train), test: transform(test) };
+  return { train: transform(safeTrain), test: transform(safeTest) };
 }
 function solve(matrix: number[][], target: number[]) {
   const size = target.length;
