@@ -7,4 +7,4 @@ Compare each observation with the latest state, never deduplicate against all hi
 
 **Why:** The user requires complete movement history without consecutive duplicates; an all-time hash would lose A-B-A movement.
 
-**How to apply:** Preserve first-observed terminology, exclude post-kickoff observations from closing eligibility, and use fixture tests rather than repeated live requests. The user explicitly limited live verification calls and requested no automatic odds polling in this implementation.
+**How to apply:** Preserve first-observed terminology, exclude post-kickoff observations from closing eligibility, and use fixture tests rather than repeated live requests. The user subsequently authorized seven conservative weekly odds slots, not continuous polling. Do not add live verification calls unnecessarily.

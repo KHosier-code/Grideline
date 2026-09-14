@@ -84,6 +84,7 @@ const navGroups = [
   {
     label: 'Review',
     items: [
+      { href: '/data-health', label: 'Data health', icon: Database },
       { href: '/performance', label: 'Performance', icon: BarChart3 },
       { href: '/settings', label: 'Settings', icon: Settings2 },
     ],
@@ -273,8 +274,11 @@ function MetricCard({ label, value, detail, icon: Icon, accent = false }: { labe
 function FreshnessCard({ item }: { item: any }) {
   const status = item?.status;
   const metadataEntries = Object.entries(item?.metadata ?? {})
-    .filter(([key, value]) => key !== 'failures' && value !== null && value !== undefined)
+    .filter(([key, value]) => key !== 'failures' && value !== null && value !== undefined && typeof value !== 'object')
     .slice(0, 4);
+  const detailedMetadata = Object.entries(item?.metadata ?? {})
+    .filter(([key, value]) => key !== 'failures' && value !== null && value !== undefined && typeof value === 'object')
+    .filter(([_, value]) => Array.isArray(value) ? value.length > 0 : Object.keys(value as object).length > 0);
   const failures = Array.isArray(item?.metadata?.failures) ? item.metadata.failures : [];
   return (
     <div data-testid={`health-card-${item.provider}`} className="health-row">
@@ -287,11 +291,13 @@ function FreshnessCard({ item }: { item: any }) {
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
           {metadataEntries.length > 0 && <div className="health-metadata">{metadataEntries.map(([key, value]) => <span key={key}><strong>{String(value)}</strong> {key.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>)}</div>}
+           {detailedMetadata.length > 0 && <div className="mt-2 space-y-1">{detailedMetadata.map(([key, value]) => <details className="health-failures" key={key}><summary>{key.replace(/([A-Z])/g, ' $1')} ({Array.isArray(value) ? value.length : 'detail'})</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-[10px] leading-4">{JSON.stringify(value, null, 2)}</pre></details>)}</div>}
           {failures.length > 0 && <details className="health-failures"><summary>{failures.length} recorded failure{failures.length === 1 ? '' : 's'}</summary><ul>{failures.slice(0, 10).map((failure: string, index: number) => <li key={`${failure}-${index}`}>{failure}</li>)}</ul></details>}
         </div>
       </div>
       <div className="shrink-0 text-right text-xs text-muted-foreground">
         <p>{item.lastUpdated ? `Updated ${formatDate(item.lastUpdated, true)}` : 'No capture yet'}</p>
+         {item.nextUpdate && <p className="mt-1">Next {formatDate(item.nextUpdate, true)}</p>}
         {item.remainingQuota && <p className="mt-1 font-mono text-[10px]">{item.remainingQuota} remaining</p>}
       </div>
     </div>
@@ -598,7 +604,7 @@ function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string;
   return (
     <>
       <PageHeader eyebrow={eyebrow} title={title} detail={detail} actions={<button type="button" className="button button-subtle" onClick={() => health.refetch()} data-testid={`button-refresh-${kind}`}><RefreshCw className={cx('h-4 w-4', health.isFetching && 'animate-spin')} /> Refresh</button>} />
-      <div className="readiness-header"><div className="readiness-header-icon"><Database className="h-5 w-5" /></div><div><p className="eyebrow text-accent">OPERATING PRINCIPLE</p><h2 className="text-lg font-semibold text-ink">Show the capture state. Never imply a signal.</h2><p className="mt-1 text-sm text-muted-foreground">This surface is ready for live data and stays honest while the provider is not configured.</p></div></div>
+      <div className="readiness-header"><div className="readiness-header-icon"><Database className="h-5 w-5" /></div><div><p className="eyebrow text-accent">OPERATING PRINCIPLE</p><h2 className="text-lg font-semibold text-ink">Show the capture state. Never imply a signal.</h2><p className="mt-1 text-sm text-muted-foreground">This surface is ready for live data and stays honest while the provider is not configured.</p><p className="mt-2 text-xs font-medium text-accent">Scheduler timezone: America/New_York (DST-aware). Odds are seven scheduled weekly slots, not continuous polling.</p></div></div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <Panel eyebrow="Provider monitor" title="Data health" action={health.data && <span className="section-meta">{health.data.length} providers</span>}>{health.isLoading ? <div className="space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : health.isError ? <ErrorPanel /> : focused?.length ? <div className="space-y-3">{focused.map((item) => <FreshnessCard item={item} key={item.provider} />)}</div> : <EmptyPanel title="No provider record matches this surface" detail="Once the backend exposes a provider health record, it will be listed here with its last and next update." icon={Database} />}</Panel>
         <Panel eyebrow="Readiness" title={`${title} readiness`}><EmptyPanel title="Capture not populated" detail={kind === 'odds' ? 'Odds API configuration is required before sportsbook snapshots can be shown.' : `No ${title.toLowerCase()} records are available yet. This is an honest empty state, not a prediction.`} icon={kind === 'line-movement' ? LineChart : Activity} /></Panel>

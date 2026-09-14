@@ -27,6 +27,10 @@ function hashMaterial(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+export function shouldInsertLatestState(previousHash: string | null | undefined, nextHash: string) {
+  return previousHash !== nextHash;
+}
+
 async function fetchJsonWithRetry(path: string, attempts = 3): Promise<RecordValue> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -56,10 +60,15 @@ function athleteId(athlete: RecordValue, fallback: string) {
   return fallback;
 }
 
-async function beginRun(provider: string) {
+async function beginRun(provider: string, options?: { jobKey?: string; scheduledFor?: Date }) {
   const [run] = await db
     .insert(dataSyncRunsTable)
-    .values({ provider, status: "running" })
+    .values({
+      provider,
+      status: "running",
+      jobKey: options?.jobKey ?? null,
+      scheduledFor: options?.scheduledFor ?? null,
+    })
     .returning({ id: dataSyncRunsTable.id });
   return run.id;
 }
@@ -71,8 +80,8 @@ async function finishRun(id: number, status: string, recordsProcessed: number, e
     .where(eq(dataSyncRunsTable.id, id));
 }
 
-export async function syncEspnInjuries() {
-  const runId = await beginRun("espn-injuries");
+export async function syncEspnInjuries(options?: { jobKey?: string; scheduledFor?: Date }) {
+  const runId = await beginRun("espn-injuries", options);
   try {
     const payload = await fetchJsonWithRetry("/injuries");
     const sourceUpdatedAt = text(payload.timestamp) ? new Date(String(payload.timestamp)) : new Date();
@@ -105,42 +114,48 @@ export async function syncEspnInjuries() {
           side: text(details.side),
         };
         const sourceHash = hashMaterial(material);
-        const [existing] = await db
-          .select({ id: injuriesTable.id })
-          .from(injuriesTable)
-          .where(and(eq(injuriesTable.playerId, playerId), eq(injuriesTable.teamId, teamId), eq(injuriesTable.sourceHash, sourceHash)))
-          .limit(1);
-        if (existing) {
-          unchanged += 1;
-          continue;
-        }
-        await db
-          .insert(playersTable)
-          .values({
+        const changed = await db.transaction(async (tx) => {
+          // The latest-state check and immutable insert share one advisory
+          // transaction lock. This permits A-B-A while preventing concurrent
+          // captures from appending the same current state twice.
+          await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`injury:${teamId}:${playerId}`}))`);
+          const [latest] = await tx
+            .select({ sourceHash: injuriesTable.sourceHash })
+            .from(injuriesTable)
+            .where(and(eq(injuriesTable.playerId, playerId), eq(injuriesTable.teamId, teamId)))
+            .orderBy(desc(injuriesTable.snapshotTimestamp), desc(injuriesTable.id))
+            .limit(1);
+          if (!shouldInsertLatestState(latest?.sourceHash, sourceHash)) return false;
+          await tx
+            .insert(playersTable)
+            .values({
+              playerId,
+              name: playerName,
+              teamId,
+              position: text(position.abbreviation),
+              activeStatus: gameStatus,
+              sourceUpdatedAt,
+            })
+            .onConflictDoUpdate({
+              target: playersTable.playerId,
+              set: { name: playerName, teamId, position: text(position.abbreviation), activeStatus: gameStatus, sourceUpdatedAt },
+            });
+          await tx.insert(injuriesTable).values({
             playerId,
-            name: playerName,
             teamId,
             position: text(position.abbreviation),
-            activeStatus: gameStatus,
+            injury,
+            practiceStatus,
+            gameStatus,
+            dateReported: text(entry.date)?.slice(0, 10) ?? null,
             sourceUpdatedAt,
-          })
-          .onConflictDoUpdate({
-            target: playersTable.playerId,
-            set: { name: playerName, teamId, position: text(position.abbreviation), activeStatus: gameStatus, sourceUpdatedAt },
+            sourceHash,
+            snapshotTimestamp: new Date(),
           });
-        await db.insert(injuriesTable).values({
-          playerId,
-          teamId,
-          position: text(position.abbreviation),
-          injury,
-          practiceStatus,
-          gameStatus,
-          dateReported: text(entry.date)?.slice(0, 10) ?? null,
-          sourceUpdatedAt,
-          sourceHash,
-          snapshotTimestamp: new Date(),
+          return true;
         });
-        inserted += 1;
+        if (changed) inserted += 1;
+        else unchanged += 1;
       }
     }
     await finishRun(runId, "success", inserted, null);
@@ -186,8 +201,8 @@ function parseDepthEntries(payload: RecordValue): DepthEntry[] {
   return entries;
 }
 
-export async function syncEspnDepthCharts() {
-  const runId = await beginRun("espn-depth-charts");
+export async function syncEspnDepthCharts(options?: { jobKey?: string; scheduledFor?: Date }) {
+  const runId = await beginRun("espn-depth-charts", options);
   const teams = await fetchTeams();
   const failures: string[] = [];
   let teamsUpdated = 0;
@@ -316,5 +331,15 @@ export async function getAvailabilityHealth() {
       lastUpdated: depthSummary?.lastUpdated ? new Date(depthSummary.lastUpdated).toISOString() : null,
       failures: depthRun?.errorMessage?.split("; ").filter(Boolean) ?? [],
     },
+    runs: recentRuns.map((run) => ({
+      id: run.id,
+      provider: run.provider,
+      status: run.status,
+      startedAt: run.startedAt.toISOString(),
+      completedAt: run.completedAt?.toISOString() ?? null,
+      recordsProcessed: run.recordsProcessed,
+      errorMessage: run.errorMessage,
+      skipReason: run.skipReason,
+    })),
   };
 }

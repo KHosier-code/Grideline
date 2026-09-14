@@ -126,6 +126,7 @@ export const OddsCaptureResultStatus = {
   success: 'success',
   failed: 'failed',
   not_configured: 'not_configured',
+  skipped: 'skipped',
 } as const;
 
 export interface OddsCaptureResult {
@@ -146,6 +147,8 @@ export interface OddsCaptureResult {
   creditsUsed: number | null;
   /** @nullable */
   creditsRemaining: number | null;
+  /** @nullable */
+  skipReason?: string | null;
   /** @nullable */
   error: string | null;
 }

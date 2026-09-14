@@ -26,5 +26,7 @@ export interface OddsCaptureResult {
   /** @nullable */
   creditsRemaining: number | null;
   /** @nullable */
+  skipReason?: string | null;
+  /** @nullable */
   error: string | null;
 }

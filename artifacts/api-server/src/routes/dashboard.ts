@@ -5,6 +5,8 @@ import { getNflverseHealth } from "../lib/nflverse";
 import { resolveCurrentSeasonWeek } from "../lib/season";
 import { getAvailabilityHealth } from "../lib/availability";
 import { getOddsApiHealth } from "../lib/odds";
+import { getScheduleHealth } from "../lib/schedule";
+import { getSchedulerHealth } from "../lib/scheduler";
 
 const router: IRouter = Router();
 
@@ -34,31 +36,75 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 });
 
 router.get("/data-health", async (req, res): Promise<void> => {
-  const current = await resolveCurrentSeasonWeek();
-  try {
-    await fetchSchedule(current.season, current.week);
-  } catch (error) {
-    logEspnFailure(error);
-    req.log.warn({ error }, "Data health could not refresh ESPN");
-  }
   const espn = getEspnHealth();
+  const schedule = await getScheduleHealth();
   const nflverse = await getNflverseHealth();
   const availability = await getAvailabilityHealth();
   const odds = await getOddsApiHealth();
+  const scheduler = await getSchedulerHealth();
+  const schedulerJob = (provider: string) =>
+    scheduler.jobs
+      .filter((job) => job.provider === provider && job.enabled)
+      .sort((left, right) => (left.nextRunAt ?? "").localeCompare(right.nextRunAt ?? ""))[0];
+  const scheduleJob = schedulerJob("espn-schedule");
+  const injuryJob = schedulerJob("espn-injuries");
+  const nflverseJob = schedulerJob("nflverse");
+  const oddsJob = schedulerJob("odds-api");
   res.json(
     GetDataHealthResponse.parse([
       {
+        provider: "scheduler",
+        label: "Recurring synchronization",
+        status: scheduler.activeInThisProcess ? "current" : "stale",
+        detail: scheduler.activeInThisProcess
+          ? "The in-process scheduler is active. Persisted locks prevent duplicate work across server processes."
+          : "The API process is not running its recurring scheduler; no missed work is claimed automatically.",
+        lastUpdated: scheduler.processStartedAt,
+        nextUpdate: scheduler.jobs
+          .map((job) => job.nextRunAt)
+          .filter((value): value is string => Boolean(value))
+          .sort()[0] ?? null,
+        requestsToday: 0,
+        requestsThisMonth: 0,
+        remainingQuota: null,
+        metadata: {
+          timezone: scheduler.timezone,
+          activeInThisProcess: scheduler.activeInThisProcess,
+          alwaysOnServiceRequired: scheduler.alwaysOnServiceRequired,
+          jobs: scheduler.jobs,
+          recentRuns: scheduler.runs.slice(0, 40),
+          note: scheduler.note,
+        },
+      },
+      {
         provider: "espn",
         label: "ESPN schedule & teams",
-        status: espn.lastSuccessfulRequest ? "current" : "unavailable",
-        detail: espn.lastSuccessfulRequest
-          ? "Live schedule and team feed is responding."
-          : "No successful live request yet.",
-        lastUpdated: espn.lastSuccessfulRequest?.toISOString() ?? null,
-        nextUpdate: null,
+        status: schedule.latestRun?.status === "success"
+          ? "current"
+          : schedule.latestRun?.status === "partial"
+            ? "stale"
+            : schedule.latestRun?.status === "failed"
+              ? "unavailable"
+              : espn.lastSuccessfulRequest
+                ? "current"
+                : "unavailable",
+        detail: schedule.latestRun
+          ? `${schedule.records} persisted games; ${schedule.unfinished} unfinished windows remain refreshable.`
+          : espn.lastSuccessfulRequest
+            ? "Live schedule and team feed is responding."
+            : "No successful schedule synchronization yet.",
+        lastUpdated: schedule.lastUpdated ?? espn.lastSuccessfulRequest?.toISOString() ?? null,
+        nextUpdate: scheduleJob?.nextRunAt ?? null,
         requestsToday: espn.requestsToday,
         requestsThisMonth: espn.requestsThisMonth,
         remainingQuota: "Public endpoint",
+        metadata: {
+          records: schedule.records,
+          unfinished: schedule.unfinished,
+          lastRun: schedule.latestRun,
+          recentRuns: schedule.runs,
+          timezone: scheduler.timezone,
+        },
       },
       {
         provider: "nflverse",
@@ -66,11 +112,16 @@ router.get("/data-health", async (req, res): Promise<void> => {
         status: nflverse.status,
         detail: nflverse.detail,
         lastUpdated: nflverse.lastUpdated,
-        nextUpdate: null,
+        nextUpdate: nflverseJob?.nextRunAt ?? null,
         requestsToday: nflverse.requestsToday,
         requestsThisMonth: nflverse.requestsThisMonth,
         remainingQuota: nflverse.remainingQuota,
-        metadata: nflverse.metadata,
+        metadata: {
+          ...nflverse.metadata,
+          lastRun: scheduler.runs.find((run) => run.provider === "nflverse") ?? null,
+          recentRuns: scheduler.runs.filter((run) => run.provider === "nflverse").slice(0, 20),
+          timezone: scheduler.timezone,
+        },
       },
       {
         provider: "odds-api",
@@ -78,11 +129,16 @@ router.get("/data-health", async (req, res): Promise<void> => {
         status: odds.status,
         detail: odds.detail,
         lastUpdated: odds.lastUpdated,
-        nextUpdate: null,
+        nextUpdate: oddsJob?.nextRunAt ?? null,
         requestsToday: odds.requestsToday,
         requestsThisMonth: odds.requestsThisMonth,
         remainingQuota: odds.remainingQuota,
-        metadata: odds.metadata,
+        metadata: {
+          ...odds.metadata,
+          scheduledLastRun: scheduler.runs.find((run) => run.provider === "odds-api") ?? null,
+          scheduledRuns: scheduler.runs.filter((run) => run.provider === "odds-api").slice(0, 20),
+          timezone: scheduler.timezone,
+        },
       },
       {
         provider: "espn-injuries",
@@ -92,11 +148,16 @@ router.get("/data-health", async (req, res): Promise<void> => {
           ? `${availability.injury.records} immutable injury snapshots captured.`
           : availability.injury.failure ?? "The first injury synchronization is pending.",
         lastUpdated: availability.injury.lastUpdated,
-        nextUpdate: null,
+        nextUpdate: injuryJob?.nextRunAt ?? null,
         requestsToday: 0,
         requestsThisMonth: 0,
         remainingQuota: "Public endpoint",
-        metadata: { records: availability.injury.records, failures: availability.injury.failure ? [availability.injury.failure] : [] },
+        metadata: {
+          records: availability.injury.records,
+          failures: availability.injury.failure ? [availability.injury.failure] : [],
+          lastRun: scheduler.runs.find((run) => run.provider === "espn-injuries") ?? null,
+          timezone: scheduler.timezone,
+        },
       },
       {
         provider: "espn-depth-charts",
@@ -112,7 +173,13 @@ router.get("/data-health", async (req, res): Promise<void> => {
         requestsToday: 0,
         requestsThisMonth: 0,
         remainingQuota: "Public endpoint",
-        metadata: { teamsUpdated: availability.depth.teams, records: availability.depth.records, failures: availability.depth.failures },
+        metadata: {
+          teamsUpdated: availability.depth.teams,
+          records: availability.depth.records,
+          failures: availability.depth.failures,
+          recentRuns: availability.runs.filter((run) => run.provider === "espn-depth-charts"),
+          timezone: scheduler.timezone,
+        },
       },
     ]),
   );

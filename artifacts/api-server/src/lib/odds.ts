@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { and, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
+import { createHash, randomUUID } from "node:crypto";
+import { and, desc, eq, gte, inArray, or, sql, type SQL } from "drizzle-orm";
 import {
   db,
   gamesTable,
@@ -12,6 +12,10 @@ import {
 
 export const SUPPORTED_SPORTSBOOKS = ["DraftKings", "FanDuel"] as const;
 export const SUPPORTED_MARKETS = ["spread", "moneyline", "total"] as const;
+// The configured request asks for all three markets in one region. Keep this
+// conservative even for an eventIds-filtered request: narrowing events does
+// not reduce the market/region allowance cost.
+export const ODDS_EXPECTED_REQUEST_COST = SUPPORTED_MARKETS.length;
 
 export type SupportedSportsbook = (typeof SUPPORTED_SPORTSBOOKS)[number];
 export type SupportedMarket = (typeof SUPPORTED_MARKETS)[number];
@@ -44,6 +48,9 @@ type OddsApiEvent = {
 };
 
 type OddsApiHeaders = {
+  /** Cost of this response. This is not the cumulative account counter. */
+  requestsLast: number | null;
+  /** Cumulative account counter returned by the provider. */
   requestsUsed: number | null;
   requestsRemaining: number | null;
 };
@@ -173,7 +180,7 @@ export type OddsHistory = {
 };
 
 export type OddsCaptureResult = {
-  status: "success" | "failed" | "not_configured";
+  status: "success" | "failed" | "not_configured" | "skipped";
   requestedAt: Date;
   requestId: number | null;
   requestCount: number;
@@ -187,6 +194,7 @@ export type OddsCaptureResult = {
   failedSportsbooks: string[];
   creditsUsed: number | null;
   creditsRemaining: number | null;
+  skipReason?: string | null;
   error: string | null;
 };
 
@@ -540,9 +548,23 @@ function parseQuotaHeaders(headers: Headers): OddsApiHeaders {
     return Number.isFinite(numberValue) ? numberValue : null;
   };
   return {
+    requestsLast: parse("x-requests-last"),
     requestsUsed: parse("x-requests-used"),
     requestsRemaining: parse("x-requests-remaining"),
   };
+}
+
+export function calculatePaidRequestCredits(
+  requestsLast: number | null,
+  requestsUsed: number | null,
+  priorCumulative: number | null,
+) {
+  if (requestsLast !== null) return requestsLast;
+  if (requestsUsed !== null && priorCumulative !== null) {
+    const delta = requestsUsed - priorCumulative;
+    return delta >= 0 ? delta : null;
+  }
+  return null;
 }
 
 async function findExistingGames(): Promise<MatchedGame[]> {
@@ -566,6 +588,27 @@ async function findExistingGames(): Promise<MatchedGame[]> {
       awayTeamName: away.teamName,
     }];
   });
+}
+
+async function findUpcomingGames(now: Date, requestedGameId?: string) {
+  const games = await findExistingGames();
+  return games.filter((game) =>
+    (!requestedGameId || game.gameId === requestedGameId) &&
+    Boolean(game.kickoffTime && game.kickoffTime.getTime() > now.getTime()),
+  );
+}
+
+async function findProviderEventId(gameId: string) {
+  const [audit] = await db
+    .select({ providerEventId: oddsEventAuditsTable.providerEventId })
+    .from(oddsEventAuditsTable)
+    .where(and(
+      eq(oddsEventAuditsTable.matchedGridlineGameId, gameId),
+      sql`${oddsEventAuditsTable.providerEventId} is not null`,
+    ))
+    .orderBy(desc(oddsEventAuditsTable.auditedAt), desc(oddsEventAuditsTable.id))
+    .limit(1);
+  return audit?.providerEventId ?? null;
 }
 
 function candidateForGame(
@@ -748,30 +791,149 @@ async function insertIfChanged(
   });
 }
 
-async function recordRequest(values: {
+async function updateRequest(
+  requestId: number,
+  values: {
+    status: "running" | "success" | "failed" | "skipped";
+    httpStatus?: number | null;
+    recordsProcessed?: number;
+    creditsUsed?: number | null;
+    creditsRemaining?: number | null;
+    errorMessage?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  await db.update(oddsApiRequestsTable).set({
+    status: values.status,
+    httpStatus: values.httpStatus ?? null,
+    recordsProcessed: values.recordsProcessed ?? 0,
+    creditsUsed: values.creditsUsed ?? null,
+    creditsRemaining: values.creditsRemaining ?? null,
+    errorMessage: values.errorMessage ?? null,
+    metadata: values.metadata,
+  }).where(eq(oddsApiRequestsTable.id, requestId));
+}
+
+type PaidRequestAdmission = {
+  requestId: number;
+  admitted: boolean;
+  skipped: boolean;
+  creditsRemaining: number | null;
+  priorCumulative: number | null;
+  reason?: string;
+};
+
+async function admitPaidRequest(input: {
+  intentKey: string;
   requestedAt: Date;
-  status: "success" | "failed";
-  httpStatus?: number | null;
-  recordsProcessed?: number;
-  creditsUsed?: number | null;
-  creditsRemaining?: number | null;
-  errorMessage?: string | null;
-  metadata?: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  expectedRequestCost: number;
+}): Promise<PaidRequestAdmission> {
+  return db.transaction(async (tx) => {
+    // One DB-wide admission lock serializes quota reads and intent inserts
+    // across API processes. The intent row is durable before fetch() starts.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('odds-api-paid-admission'))`);
+    const [existing] = await tx
+      .select({
+        id: oddsApiRequestsTable.id,
+        status: oddsApiRequestsTable.status,
+        creditsRemaining: oddsApiRequestsTable.creditsRemaining,
+      })
+      .from(oddsApiRequestsTable)
+      .where(eq(oddsApiRequestsTable.intentKey, input.intentKey))
+      .limit(1);
+    if (existing) {
+      return {
+        requestId: existing.id,
+        admitted: false,
+        skipped: true,
+        creditsRemaining: existing.creditsRemaining,
+        priorCumulative: null,
+        reason: "This capture intent was already durably admitted; it will not be replayed.",
+      };
+    }
+    const [latest] = await tx
+      .select({
+        id: oddsApiRequestsTable.id,
+        status: oddsApiRequestsTable.status,
+        creditsRemaining: oddsApiRequestsTable.creditsRemaining,
+        metadata: oddsApiRequestsTable.metadata,
+      })
+      .from(oddsApiRequestsTable)
+      .where(sql`${oddsApiRequestsTable.status} <> 'skipped'`)
+      .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id))
+      .limit(1);
+    const unresolvedPriorAdmission =
+      latest &&
+      (latest.status === "admitted" ||
+        latest.status === "running" ||
+        (latest.status === "failed" && latest.creditsRemaining === null));
+    if (unresolvedPriorAdmission) {
+      const reason = "A prior paid request has unresolved admission state; no second upstream request was started.";
+      const [skipped] = await tx.insert(oddsApiRequestsTable).values({
+        intentKey: input.intentKey,
+        requestedAt: input.requestedAt,
+        status: "skipped",
+        errorMessage: reason,
+        metadata: { ...input.metadata, skipReason: reason, expectedRequestCost: input.expectedRequestCost, blockedByRequestId: latest.id },
+      }).returning({ id: oddsApiRequestsTable.id });
+      return { requestId: skipped.id, admitted: false, skipped: true, creditsRemaining: latest.creditsRemaining, priorCumulative: null, reason };
+    }
+    if (
+      latest?.creditsRemaining !== null &&
+      latest?.creditsRemaining !== undefined &&
+      latest.creditsRemaining < input.expectedRequestCost
+    ) {
+      const reason = `Insufficient Odds API credits (${latest.creditsRemaining} remaining; ${input.expectedRequestCost} required).`;
+      const [skipped] = await tx.insert(oddsApiRequestsTable).values({
+        intentKey: input.intentKey,
+        requestedAt: input.requestedAt,
+        status: "skipped",
+        creditsRemaining: latest.creditsRemaining,
+        errorMessage: reason,
+        metadata: { ...input.metadata, skipReason: reason, expectedRequestCost: input.expectedRequestCost },
+      }).returning({ id: oddsApiRequestsTable.id });
+      return { requestId: skipped.id, admitted: false, skipped: true, creditsRemaining: latest.creditsRemaining, priorCumulative: null, reason };
+    }
+    const [admitted] = await tx.insert(oddsApiRequestsTable).values({
+      intentKey: input.intentKey,
+      requestedAt: input.requestedAt,
+      status: "admitted",
+      creditsRemaining: latest?.creditsRemaining ?? null,
+      metadata: { ...input.metadata, expectedRequestCost: input.expectedRequestCost, admission: "durable-before-upstream" },
+    }).returning({ id: oddsApiRequestsTable.id });
+    return {
+      requestId: admitted.id,
+      admitted: true,
+      skipped: false,
+      creditsRemaining: latest?.creditsRemaining ?? null,
+      priorCumulative: Number.isFinite(Number(latest?.metadata?.requestsUsedCumulative))
+        ? Number(latest?.metadata?.requestsUsedCumulative)
+        : null,
+    };
+  });
+}
+
+async function recordSkippedIntent(input: {
+  intentKey: string;
+  requestedAt: Date;
+  errorMessage: string;
+  metadata: Record<string, unknown>;
 }) {
-  const [request] = await db
-    .insert(oddsApiRequestsTable)
-    .values({
-      requestedAt: values.requestedAt,
-      status: values.status,
-      httpStatus: values.httpStatus ?? null,
-      recordsProcessed: values.recordsProcessed ?? 0,
-      creditsUsed: values.creditsUsed ?? null,
-      creditsRemaining: values.creditsRemaining ?? null,
-      errorMessage: values.errorMessage ?? null,
-      metadata: values.metadata,
-    })
-    .returning({ id: oddsApiRequestsTable.id });
-  return request.id;
+  const [inserted] = await db.insert(oddsApiRequestsTable).values({
+    intentKey: input.intentKey,
+    requestedAt: input.requestedAt,
+    status: "skipped",
+    errorMessage: input.errorMessage,
+    metadata: { ...input.metadata, skipReason: input.errorMessage },
+  }).onConflictDoNothing({ target: oddsApiRequestsTable.intentKey }).returning({ id: oddsApiRequestsTable.id });
+  if (inserted) return inserted.id;
+  const [existing] = await db
+    .select({ id: oddsApiRequestsTable.id })
+    .from(oddsApiRequestsTable)
+    .where(eq(oddsApiRequestsTable.intentKey, input.intentKey))
+    .limit(1);
+  return existing?.id ?? null;
 }
 
 async function recordEventAudits(
@@ -802,9 +964,30 @@ async function recordEventAudits(
   );
 }
 
-async function runOddsCapture(): Promise<OddsCaptureResult> {
+export type OddsCaptureOptions = {
+  /**
+   * A scheduled capture can target one known future Gridline game. The
+   * provider event id is reused when a prior audit established it; otherwise
+   * commenceTimeFrom still keeps the request future-only.
+   */
+  gameId?: string;
+  scheduledFor?: Date;
+  jobKey?: string;
+  /** Stable key for a scheduled/manual intent when callers need replay safety. */
+  intentKey?: string;
+};
+
+async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCaptureResult> {
   const requestedAt = new Date();
-  const emptyResult = (status: OddsCaptureResult["status"], error: string | null): OddsCaptureResult => ({
+  const intentKey = options.intentKey ??
+    (options.jobKey && options.scheduledFor
+      ? `${options.jobKey}:${options.scheduledFor.toISOString()}`
+      : `manual:${randomUUID()}`);
+  const emptyResult = (
+    status: OddsCaptureResult["status"],
+    error: string | null,
+    skipReason: string | null = null,
+  ): OddsCaptureResult => ({
     status,
     requestedAt,
     requestId: null,
@@ -819,10 +1002,54 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     failedSportsbooks: [],
     creditsUsed: null,
     creditsRemaining: null,
+    skipReason,
     error,
   });
   const apiKey = process.env.ODDS_API_KEY;
   if (!apiKey) return emptyResult("not_configured", "ODDS_API_KEY is not configured.");
+
+  const upcomingGames = await findUpcomingGames(requestedAt, options.gameId);
+  if (upcomingGames.length === 0) {
+    const skipReason = options.gameId
+      ? "No future kickoff remains for the requested game."
+      : "No future NFL kickoff is persisted; the Odds API was not called.";
+    const requestId = await recordSkippedIntent({
+      intentKey,
+      requestedAt,
+      errorMessage: skipReason,
+      metadata: {
+        jobKey: options.jobKey ?? null,
+        scheduledFor: options.scheduledFor?.toISOString() ?? null,
+        skipReason,
+        expectedRequestCost: ODDS_EXPECTED_REQUEST_COST,
+      },
+    });
+    return {
+      ...emptyResult("skipped", skipReason, skipReason),
+      requestId,
+    };
+  }
+
+  const expectedRequestCost = ODDS_EXPECTED_REQUEST_COST;
+  const admission = await admitPaidRequest({
+    intentKey,
+    requestedAt,
+    expectedRequestCost,
+    metadata: {
+      jobKey: options.jobKey ?? null,
+      scheduledFor: options.scheduledFor?.toISOString() ?? null,
+    },
+  });
+  if (!admission.admitted) {
+    const skipReason = admission.reason ?? "This capture was not admitted for an upstream request.";
+    return {
+      ...emptyResult("skipped", skipReason, skipReason),
+      requestId: admission.requestId,
+      creditsRemaining: admission.creditsRemaining,
+    };
+  }
+  const requestId = admission.requestId;
+  await updateRequest(requestId, { status: "running", metadata: { jobKey: options.jobKey ?? null, scheduledFor: options.scheduledFor?.toISOString() ?? null, expectedRequestCost, admission: "durable-before-upstream" } });
 
   const query = new URLSearchParams({
     apiKey,
@@ -831,10 +1058,23 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     oddsFormat: "american",
     dateFormat: "iso",
     bookmakers: "draftkings,fanduel",
+    commenceTimeFrom: requestedAt.toISOString(),
   });
+  if (upcomingGames.length === 1) {
+    const providerEventId = await findProviderEventId(upcomingGames[0].gameId);
+    if (providerEventId) query.set("eventIds", providerEventId);
+  }
   const url = `${oddsApiBaseUrl}?${query.toString()}`;
+  let headers: OddsApiHeaders = { requestsLast: null, requestsUsed: null, requestsRemaining: null };
+  const priorCumulative = admission.priorCumulative ?? Number.NaN;
+  const requestCreditsUsed = () => {
+    return calculatePaidRequestCredits(
+      headers.requestsLast,
+      headers.requestsUsed,
+      Number.isFinite(priorCumulative) ? priorCumulative : null,
+    );
+  };
   let response: Response;
-  let headers: OddsApiHeaders = { requestsUsed: null, requestsRemaining: null };
   try {
     // Exactly one request is made by this capture. There is intentionally no
     // retry loop: the free API allowance must not be consumed implicitly.
@@ -846,40 +1086,52 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     headers = parseQuotaHeaders(response.headers);
   } catch (error) {
     const message = safeErrorMessage(error, "Odds API request failed");
-    const requestId = await recordRequest({
-      requestedAt,
+    await updateRequest(requestId, {
       status: "failed",
       errorMessage: message,
-      creditsUsed: headers.requestsUsed,
+      creditsUsed: requestCreditsUsed(),
       creditsRemaining: headers.requestsRemaining,
+      metadata: {
+        jobKey: options.jobKey ?? null,
+        scheduledFor: options.scheduledFor?.toISOString() ?? null,
+        requestsLast: headers.requestsLast,
+        requestsUsedCumulative: headers.requestsUsed,
+        expectedRequestCost,
+      },
     });
     lastCaptureFailure = message;
     return {
       ...emptyResult("failed", message),
       requestId,
       requestCount: 1,
-      creditsUsed: headers.requestsUsed,
+      creditsUsed: requestCreditsUsed(),
       creditsRemaining: headers.requestsRemaining,
     };
   }
 
   if (!response.ok) {
     const message = `The Odds API returned HTTP ${response.status}.`;
-    const requestId = await recordRequest({
-      requestedAt,
+    await updateRequest(requestId, {
       status: "failed",
       httpStatus: response.status,
       errorMessage: message,
-      creditsUsed: headers.requestsUsed,
+      creditsUsed: requestCreditsUsed(),
       creditsRemaining: headers.requestsRemaining,
+      metadata: {
+        jobKey: options.jobKey ?? null,
+        scheduledFor: options.scheduledFor?.toISOString() ?? null,
+        requestsLast: headers.requestsLast,
+        requestsUsedCumulative: headers.requestsUsed,
+        expectedRequestCost,
+      },
     });
     lastCaptureFailure = message;
     return {
       ...emptyResult("failed", message),
       requestId,
       requestCount: 1,
-      creditsUsed: headers.requestsUsed,
       creditsRemaining: headers.requestsRemaining,
+      creditsUsed: requestCreditsUsed(),
     };
   }
 
@@ -888,21 +1140,27 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     payload = await response.json();
   } catch {
     const message = "The Odds API returned an unreadable response.";
-    const requestId = await recordRequest({
-      requestedAt,
+    await updateRequest(requestId, {
       status: "failed",
       httpStatus: response.status,
       errorMessage: message,
-      creditsUsed: headers.requestsUsed,
+      creditsUsed: requestCreditsUsed(),
       creditsRemaining: headers.requestsRemaining,
+      metadata: {
+        jobKey: options.jobKey ?? null,
+        scheduledFor: options.scheduledFor?.toISOString() ?? null,
+        requestsLast: headers.requestsLast,
+        requestsUsedCumulative: headers.requestsUsed,
+        expectedRequestCost,
+      },
     });
     lastCaptureFailure = message;
     return {
       ...emptyResult("failed", message),
       requestId,
       requestCount: 1,
-      creditsUsed: headers.requestsUsed,
       creditsRemaining: headers.requestsRemaining,
+      creditsUsed: requestCreditsUsed(),
     };
   }
 
@@ -1084,14 +1342,27 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     counts[audit.reason] = (counts[audit.reason] ?? 0) + 1;
     return counts;
   }, {});
-  const requestId = await recordRequest({
-    requestedAt,
+  await updateRequest(requestId, {
     status: "success",
     httpStatus: response.status,
     recordsProcessed,
-    creditsUsed: headers.requestsUsed,
+    creditsUsed: requestCreditsUsed(),
     creditsRemaining: headers.requestsRemaining,
     metadata: {
+      jobKey: options.jobKey ?? null,
+      scheduledFor: options.scheduledFor?.toISOString() ?? null,
+      commenceTimeFrom: requestedAt.toISOString(),
+      eventIds: upcomingGames.length === 1 ? "single-future-game-when-known" : null,
+      requestsLast: headers.requestsLast,
+      requestsUsedCumulative: headers.requestsUsed,
+      creditsUsedSemantics: "x-requests-last (per call); x-requests-used (cumulative)",
+      expectedRequestCost,
+      eventsReturned: events.length,
+      snapshotsCreated,
+      duplicateSnapshots,
+      unmatchedEvents,
+      skippedPostKickoff,
+      recordsProcessed,
       missingMarkets: [...missingMarkets].sort(),
       failedSportsbooks: [...failedSportsbooks].sort(),
       auditedEvents: eventAudits.length,
@@ -1113,15 +1384,15 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     skippedPostKickoff,
     missingMarkets: [...missingMarkets].sort(),
     failedSportsbooks: [...failedSportsbooks].sort(),
-    creditsUsed: headers.requestsUsed,
+    creditsUsed: requestCreditsUsed(),
     creditsRemaining: headers.requestsRemaining,
     error: null,
   };
 }
 
-export function captureOddsSnapshots(): Promise<OddsCaptureResult> {
+export function captureOddsSnapshots(options: OddsCaptureOptions = {}): Promise<OddsCaptureResult> {
   if (captureInFlight) return captureInFlight;
-  captureInFlight = runOddsCapture().finally(() => {
+  captureInFlight = runOddsCapture(options).finally(() => {
     captureInFlight = null;
   });
   return captureInFlight;
@@ -1305,7 +1576,12 @@ export async function getOddsApiHealth(): Promise<OddsHealth> {
       requestsToday: 0,
       requestsThisMonth: 0,
       remainingQuota: null,
-      metadata: { requestsMade: 0, failedRequests: [], missingMarkets: [] },
+      metadata: {
+        requestsMade: 0,
+        failedRequests: [],
+        missingMarkets: [],
+        expectedRequestCost: ODDS_EXPECTED_REQUEST_COST,
+      },
     };
   }
   const [latestSuccess] = await db
@@ -1324,12 +1600,19 @@ export async function getOddsApiHealth(): Promise<OddsHealth> {
     .limit(1);
   const [counts] = await db
     .select({
-      requestsMade: sql<number>`count(*)`,
+      requestsMade: sql<number>`count(*) filter (where ${oddsApiRequestsTable.status} <> 'skipped')`,
       failedRequests: sql<number>`count(*) filter (where ${oddsApiRequestsTable.status} = 'failed')`,
-      requestsToday: sql<number>`count(*) filter (where ${oddsApiRequestsTable.requestedAt} >= current_date)`,
-      requestsThisMonth: sql<number>`count(*) filter (where ${oddsApiRequestsTable.requestedAt} >= date_trunc('month', current_timestamp))`,
+      skippedRequests: sql<number>`count(*) filter (where ${oddsApiRequestsTable.status} = 'skipped')`,
+      requestsToday: sql<number>`count(*) filter (where ${oddsApiRequestsTable.status} <> 'skipped' and ${oddsApiRequestsTable.requestedAt} >= current_date)`,
+      requestsThisMonth: sql<number>`count(*) filter (where ${oddsApiRequestsTable.status} <> 'skipped' and ${oddsApiRequestsTable.requestedAt} >= date_trunc('month', current_timestamp))`,
     })
     .from(oddsApiRequestsTable);
+  const [snapshotCounts] = await db
+    .select({
+      snapshotsToday: sql<number>`count(*)::int`,
+    })
+    .from(sportsbookOddsTable)
+    .where(gte(sportsbookOddsTable.capturedAt, sql`current_date`));
   const [latestFailure] = await db
     .select()
     .from(oddsApiRequestsTable)
@@ -1346,8 +1629,23 @@ export async function getOddsApiHealth(): Promise<OddsHealth> {
     .where(eq(oddsApiRequestsTable.status, "failed"))
     .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id))
     .limit(10);
+  const recentRequests = await db
+    .select({
+      id: oddsApiRequestsTable.id,
+      requestedAt: oddsApiRequestsTable.requestedAt,
+      status: oddsApiRequestsTable.status,
+      recordsProcessed: oddsApiRequestsTable.recordsProcessed,
+      creditsUsed: oddsApiRequestsTable.creditsUsed,
+      creditsRemaining: oddsApiRequestsTable.creditsRemaining,
+      errorMessage: oddsApiRequestsTable.errorMessage,
+      metadata: oddsApiRequestsTable.metadata,
+    })
+    .from(oddsApiRequestsTable)
+    .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id))
+    .limit(20);
   const requestsMade = Number(counts?.requestsMade ?? 0);
   const failedRequests = Number(counts?.failedRequests ?? 0);
+  const skippedRequests = Number(counts?.skippedRequests ?? 0);
   const requestsToday = Number(counts?.requestsToday ?? 0);
   const requestsThisMonth = Number(counts?.requestsThisMonth ?? 0);
   const remaining =
@@ -1363,7 +1661,7 @@ export async function getOddsApiHealth(): Promise<OddsHealth> {
     status,
     detail: latestSuccess
       ? latestSuccess.recordsProcessed > 0
-        ? "The last successful capture preserved DraftKings and FanDuel observations. Capture is manual; no polling is enabled."
+        ? "The last successful capture preserved DraftKings and FanDuel observations. Recurring scheduler captures run while the API process is alive."
         : "The last request succeeded but returned no matched sportsbook observations."
       : lastCaptureFailure ?? latestFailure?.errorMessage ?? "No successful Odds API request has been captured.",
     lastUpdated: latestSuccess?.requestedAt ?? null,
@@ -1373,10 +1671,20 @@ export async function getOddsApiHealth(): Promise<OddsHealth> {
     metadata: {
       requestsMade,
       failedRequests,
+      skippedRequests,
+      snapshotsProcessedToday: Number(snapshotCounts?.snapshotsToday ?? 0),
       creditsUsed: latestRequest?.creditsUsed ?? latestSuccess?.creditsUsed ?? latestFailure?.creditsUsed ?? null,
       creditsRemaining: remaining,
+      creditsUsedPerCall: latestRequest?.metadata?.requestsLast ?? null,
+      requestsUsedCumulative: latestRequest?.metadata?.requestsUsedCumulative ?? null,
+      expectedRequestCost: ODDS_EXPECTED_REQUEST_COST,
+      latestCapture: latestSuccess?.metadata ?? null,
       lastRequestAt: latestRequest?.requestedAt?.toISOString() ?? null,
       lastFailure: latestFailure?.errorMessage ?? null,
+      requests: recentRequests.map((request) => ({
+        ...request,
+        requestedAt: request.requestedAt.toISOString(),
+      })),
       failures: failures.map((failure) =>
         `${failure.requestedAt.toISOString()}${failure.httpStatus ? ` HTTP ${failure.httpStatus}` : ""}: ${failure.errorMessage ?? "Unknown provider failure"}`,
       ),

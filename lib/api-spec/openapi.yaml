@@ -340,7 +340,7 @@ components:
          auditedEvents, duplicateSnapshots, unmatchedEvents, skippedPostKickoff,
          missingMarkets, failedSportsbooks, creditsUsed, creditsRemaining, error]
       properties:
-        status: { type: string, enum: [success, failed, not_configured] }
+        status: { type: string, enum: [success, failed, not_configured, skipped] }
         requestedAt: { type: string, format: date-time }
         requestId: { type: ["integer", "null"] }
         requestCount: { type: integer }
@@ -358,6 +358,7 @@ components:
           items: { type: string }
         creditsUsed: { type: ["integer", "null"] }
         creditsRemaining: { type: ["integer", "null"] }
+        skipReason: { type: ["string", "null"] }
         error: { type: ["string", "null"] }
     OddsAuditCandidate:
       type: object

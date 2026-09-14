@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import {
   dataSyncRunsTable,
   db,
@@ -21,6 +21,7 @@ import { logger } from "./logger";
  */
 export const MAX_EXPOSED_NFL_WEEK = 22;
 export const FUTURE_SCHEDULE_WEEKS = 2;
+export const SCHEDULE_TIMEZONE = "America/New_York";
 
 export function getExposedScheduleWeeks(
   currentWeek: number,
@@ -105,10 +106,15 @@ export async function saveScheduleGames(games: EspnGame[]) {
   }
 }
 
-async function beginRun() {
+async function beginRun(jobKey?: string, scheduledFor?: Date) {
   const [run] = await db
     .insert(dataSyncRunsTable)
-    .values({ provider: "espn-schedule", status: "running" })
+    .values({
+      provider: "espn-schedule",
+      status: "running",
+      jobKey: jobKey ?? null,
+      scheduledFor: scheduledFor ?? null,
+    })
     .returning({ id: dataSyncRunsTable.id });
   return run.id;
 }
@@ -132,13 +138,15 @@ async function finishRun(
 export async function syncEspnScheduleCoverage(input?: {
   season?: number;
   currentWeek?: number;
+  jobKey?: string;
+  scheduledFor?: Date;
 }) {
-  const runId = await beginRun();
+  const runId = await beginRun(input?.jobKey, input?.scheduledFor);
   try {
     const current = input?.season !== undefined && input.currentWeek !== undefined
       ? { season: input.season, week: input.currentWeek }
       : await fetchCurrentSeasonWeek();
-    const weeks = getExposedScheduleWeeks(current.week);
+    const weeks = await getCoverageWeeks(current.season, current.week);
     const gamesByWeek: Record<string, number> = {};
     const failures: string[] = [];
     let totalGames = 0;
@@ -173,4 +181,69 @@ export async function syncEspnScheduleCoverage(input?: {
     await finishRun(runId, "failed", 0, message);
     throw error;
   }
+}
+
+/**
+ * Keep the current and next two weeks warm, but also retain a previous week
+ * while ESPN still reports an unfinished game. This is what lets a delayed
+ * game or a late score transition through finals without asking the caller to
+ * manually pick an old week.
+ */
+async function getCoverageWeeks(season: number, currentWeek: number) {
+  const weeks = getExposedScheduleWeeks(currentWeek);
+  if (currentWeek <= 1) return weeks;
+  const unfinished = await db
+    .select({ week: gamesTable.week })
+    .from(gamesTable)
+    .where(and(
+      eq(gamesTable.season, season),
+      eq(gamesTable.week, currentWeek - 1),
+      sql`lower(${gamesTable.gameStatus}) not like '%final%' and lower(${gamesTable.gameStatus}) not like '%completed%' and lower(${gamesTable.gameStatus}) not like '%postponed%'`,
+    ))
+  if (unfinished.length > 0) {
+    return [...new Set([...unfinished.map((item) => item.week), ...weeks])]
+      .filter((week) => week >= 1 && week <= MAX_EXPOSED_NFL_WEEK)
+      .sort((left, right) => left - right);
+  }
+  return weeks;
+}
+
+export async function getScheduleHealth() {
+  const [summary] = await db
+    .select({
+      games: sql<number>`count(*)::int`,
+      latestUpdated: sql<Date | null>`max(${gamesTable.sourceUpdatedAt})`,
+      unfinished: sql<number>`count(*) filter (where lower(${gamesTable.gameStatus}) not like '%final%' and lower(${gamesTable.gameStatus}) not like '%completed%' and lower(${gamesTable.gameStatus}) not like '%postponed%')::int`,
+    })
+    .from(gamesTable);
+  const runs = await db
+    .select()
+    .from(dataSyncRunsTable)
+    .where(eq(dataSyncRunsTable.provider, "espn-schedule"))
+    .orderBy(desc(dataSyncRunsTable.startedAt), desc(dataSyncRunsTable.id))
+    .limit(10);
+  const latest = runs[0];
+  return {
+    records: summary?.games ?? 0,
+    unfinished: summary?.unfinished ?? 0,
+    lastUpdated: summary?.latestUpdated ? new Date(summary.latestUpdated).toISOString() : null,
+    latestRun: latest
+      ? {
+          id: latest.id,
+          status: latest.status,
+          startedAt: latest.startedAt.toISOString(),
+          completedAt: latest.completedAt?.toISOString() ?? null,
+          recordsProcessed: latest.recordsProcessed,
+          errorMessage: latest.errorMessage,
+        }
+      : null,
+    runs: runs.map((run) => ({
+      id: run.id,
+      status: run.status,
+      startedAt: run.startedAt.toISOString(),
+      completedAt: run.completedAt?.toISOString() ?? null,
+      recordsProcessed: run.recordsProcessed,
+      errorMessage: run.errorMessage,
+    })),
+  };
 }

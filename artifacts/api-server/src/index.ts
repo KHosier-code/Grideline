@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startDataScheduler } from "./lib/scheduler";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,8 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  // The recurring data layer is intentionally in-process. Replit/deployed
+  // environments must keep this API service always-on for scheduled work;
+  // a stopped process does not claim missed jobs or report them as runs.
+  void startDataScheduler();
 });

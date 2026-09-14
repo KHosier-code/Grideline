@@ -226,7 +226,7 @@ export const GetOddsHistoryResponse = zod.object({
  * @summary Make one explicit Odds API capture
  */
 export const CaptureOddsResponse = zod.object({
-  "status": zod.enum(['success', 'failed', 'not_configured']),
+  "status": zod.enum(['success', 'failed', 'not_configured', 'skipped']),
   "requestedAt": zod.coerce.date(),
   "requestId": zod.number().int().nullable(),
   "requestCount": zod.number().int(),
@@ -240,6 +240,7 @@ export const CaptureOddsResponse = zod.object({
   "failedSportsbooks": zod.array(zod.string()),
   "creditsUsed": zod.number().int().nullable(),
   "creditsRemaining": zod.number().int().nullable(),
+  "skipReason": zod.string().nullish(),
   "error": zod.string().nullable()
 })
 

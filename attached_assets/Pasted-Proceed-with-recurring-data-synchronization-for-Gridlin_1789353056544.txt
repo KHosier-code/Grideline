@@ -1,0 +1,111 @@
+Proceed with recurring data synchronization for Gridline.
+
+Do not add prediction models yet.
+
+I want the data layer to maintain itself automatically.
+
+Automate:
+
+1. ESPN schedule refresh
+2. ESPN injury refresh
+3. NFLverse historical refresh
+4. Future-week schedule persistence
+5. Sportsbook odds capture
+6. Final game-result refresh
+
+Requirements:
+
+* Preserve all historical snapshots.
+* Never overwrite prior injury or odds history.
+* Avoid duplicate snapshots when nothing changed.
+* Keep current week plus at least two future NFL weeks persisted.
+* Update game status and final scores automatically.
+* Record every sync run and any failures on Data Health.
+
+SPORTSBOOK API CREDIT CONTROL
+
+The Odds API free tier is limited, so use a conservative schedule.
+
+Initial odds cadence:
+
+Tuesday:
+
+* one full NFL odds capture
+
+Thursday:
+
+* one full NFL odds capture
+
+Saturday:
+
+* one full NFL odds capture
+
+Sunday:
+
+* one morning capture
+* one late-morning capture
+* one final capture before the early Sunday games
+
+Monday:
+
+* one final capture before Monday Night Football
+
+Do not continuously poll.
+
+Do not request odds for games that have already kicked off.
+
+If only one relevant future game remains, avoid unnecessary requests for completed games where possible.
+
+Track:
+
+* requests
+* credits used
+* credits remaining
+* events returned
+* snapshots created
+* duplicates skipped
+* failed events
+
+INJURY CADENCE
+
+Refresh more frequently because injury data is free:
+
+Tuesday:
+
+* initial injury snapshot
+
+Wednesday:
+
+* injury refresh
+
+Thursday:
+
+* morning and afternoon refresh
+
+Friday:
+
+* morning and afternoon refresh
+
+Saturday:
+
+* one refresh
+
+Sunday:
+
+* morning refresh
+* late-morning refresh
+* final refresh before applicable kickoffs
+
+Monday:
+
+* refresh before MNF
+
+NFLVERSE
+
+Refresh after completed game windows rather than repeatedly throughout the day.
+
+SCHEDULE
+
+Refresh regularly enough to catch:
+
+* flex s

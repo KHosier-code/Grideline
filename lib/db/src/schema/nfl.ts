@@ -65,7 +65,7 @@ export const injuriesTable = pgTable("injuries", {
   sourceHash: text("source_hash").notNull(),
   snapshotTimestamp: timestamp("snapshot_timestamp", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
-  unique("injuries_player_source_hash_unique").on(table.playerId, table.teamId, table.sourceHash),
+  index("injuries_latest_state_idx").on(table.playerId, table.teamId, table.snapshotTimestamp, table.id),
 ]);
 
 export const depthChartSnapshotsTable = pgTable("depth_chart_snapshots", {
@@ -116,6 +116,12 @@ export const sportsbookOddsTable = pgTable("sportsbook_odds", {
  */
 export const oddsApiRequestsTable = pgTable("odds_api_requests", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  /**
+   * A scheduled occurrence is admitted exactly once before the upstream
+   * request. NULL is reserved for legacy/manual rows that predate admission
+   * intents; scheduled rows always carry a unique key.
+   */
+  intentKey: text("intent_key"),
   requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
   status: text("status").notNull(),
   httpStatus: integer("http_status"),
@@ -124,7 +130,9 @@ export const oddsApiRequestsTable = pgTable("odds_api_requests", {
   creditsRemaining: integer("credits_remaining"),
   errorMessage: text("error_message"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-});
+}, (table) => [
+  unique("odds_api_requests_intent_key_unique").on(table.intentKey),
+]);
 
 export type OddsAuditCandidate = {
   gridlineGameId: string;
@@ -212,11 +220,44 @@ export const dataSyncRunsTable = pgTable("data_sync_runs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   provider: text("provider").notNull(),
   status: text("status").notNull(),
+  jobKey: text("job_key"),
+  scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   recordsProcessed: integer("records_processed").notNull().default(0),
   errorMessage: text("error_message"),
+  skipReason: text("skip_reason"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
+
+/**
+ * Durable scheduler state. A row represents one recurring feed/slot rather
+ * than one process, so a restart can continue from the persisted nextRunAt
+ * and two server processes cannot both claim the same occurrence. The
+ * lockUntil column also makes abandoned work recoverable after a process stop.
+ */
+export const schedulerJobsTable = pgTable("scheduler_jobs", {
+  jobKey: text("job_key").primaryKey(),
+  provider: text("provider").notNull(),
+  kind: text("kind").notNull(),
+  timezone: text("timezone").notNull().default("America/New_York"),
+  cadence: text("cadence").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  nextRunAt: timestamp("next_run_at", { withTimezone: true }),
+  lastScheduledAt: timestamp("last_scheduled_at", { withTimezone: true }),
+  lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  lastStatus: text("last_status"),
+  lastError: text("last_error"),
+  lastResult: jsonb("last_result").$type<Record<string, unknown>>(),
+  lockOwner: text("lock_owner"),
+  lockAcquiredAt: timestamp("lock_acquired_at", { withTimezone: true }),
+  lockUntil: timestamp("lock_until", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("scheduler_jobs_due_idx").on(table.enabled, table.nextRunAt),
+  index("scheduler_jobs_lock_idx").on(table.lockUntil),
+]);
 
 export const nflverseSourceFilesTable = pgTable("nflverse_source_files", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

@@ -13,4 +13,5 @@ export const OddsCaptureResultStatus = {
   success: 'success',
   failed: 'failed',
   not_configured: 'not_configured',
+  skipped: 'skipped',
 } as const;

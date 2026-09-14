@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
@@ -21,6 +21,23 @@ const defaultSeasons = [2021, 2022, 2023, 2024, 2025, 2026];
 
 type CsvRow = Record<string, string>;
 type NflverseDataset = "pbp" | "player_stats" | "snap_counts" | "depth_charts";
+class NflverseSourceMissingError extends Error {}
+
+export class NflverseMissingSeasonError extends Error {
+  readonly season: number;
+  readonly dataset: NflverseDataset;
+
+  constructor(dataset: NflverseDataset, season: number) {
+    super(`${dataset} ${season}: source is not published yet`);
+    this.name = "NflverseMissingSeasonError";
+    this.dataset = dataset;
+    this.season = season;
+  }
+}
+
+export function shouldRefreshNflverseSource(options?: { refresh?: boolean }) {
+  return options?.refresh === true;
+}
 type TeamGameAccumulator = {
   season: number;
   week: number;
@@ -143,9 +160,13 @@ async function fetchWithRetry(url: string, attempts = 3) {
         headers: { Accept: "application/octet-stream", "User-Agent": "Gridline/0.2" },
         signal: AbortSignal.timeout(120_000),
       });
+      if (response.status === 404) {
+        throw new NflverseSourceMissingError("NFLverse source is not published yet");
+      }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response;
     } catch (error) {
+      if (error instanceof NflverseSourceMissingError) throw error;
       lastError = error;
       logger.warn({ error, url, attempt }, "NFLverse download attempt failed");
       if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, attempt * 1_000));
@@ -154,7 +175,7 @@ async function fetchWithRetry(url: string, attempts = 3) {
   throw lastError instanceof Error ? lastError : new Error("NFLverse download failed");
 }
 
-async function acquireDataset(dataset: NflverseDataset, season: number) {
+async function acquireDataset(dataset: NflverseDataset, season: number, options?: { refresh?: boolean }) {
   await mkdir(cacheDirectory, { recursive: true });
   const url = datasetUrl(dataset, season);
   const filePath = join(cacheDirectory, basename(new URL(url).pathname));
@@ -167,10 +188,12 @@ async function acquireDataset(dataset: NflverseDataset, season: number) {
     });
   try {
     let fileStats = await stat(filePath).catch(() => null);
-    if (!fileStats || fileStats.size === 0) {
+    if (!fileStats || fileStats.size === 0 || shouldRefreshNflverseSource(options)) {
       const response = await fetchWithRetry(url);
       const bytes = Buffer.from(await response.arrayBuffer());
-      await writeFile(filePath, bytes);
+      const temporaryPath = `${filePath}.${process.pid}.tmp`;
+      await writeFile(temporaryPath, bytes);
+      await rename(temporaryPath, filePath);
       fileStats = await stat(filePath);
     }
     await db
@@ -182,8 +205,13 @@ async function acquireDataset(dataset: NflverseDataset, season: number) {
     const message = error instanceof Error ? error.message : String(error);
     await db
       .update(nflverseSourceFilesTable)
-      .set({ status: "failed", errorMessage: message, completedAt: new Date() })
+      .set({
+        status: error instanceof NflverseMissingSeasonError ? "missing" : "failed",
+        errorMessage: message,
+        completedAt: new Date(),
+      })
       .where(and(eq(nflverseSourceFilesTable.dataset, dataset), eq(nflverseSourceFilesTable.season, season)));
+    if (error instanceof NflverseSourceMissingError) throw new NflverseMissingSeasonError(dataset, season);
     throw new Error(`${dataset} ${season}: ${message}`);
   }
 }
@@ -514,18 +542,27 @@ async function ingestHistoricalDepthCharts(season: number, filePath: string) {
   return { sourceRows: rows, records: inserted };
 }
 
-export async function syncNflverseHistory(seasons = defaultSeasons) {
+export async function syncNflverseHistory(
+  seasons = defaultSeasons,
+  options?: { jobKey?: string; scheduledFor?: Date; refresh?: boolean; completedWindow?: string },
+) {
   const [run] = await db
     .insert(dataSyncRunsTable)
-    .values({ provider: "nflverse", status: "running" })
+    .values({
+      provider: "nflverse",
+      status: "running",
+      jobKey: options?.jobKey ?? null,
+      scheduledFor: options?.scheduledFor ?? null,
+    })
     .returning({ id: dataSyncRunsTable.id });
   const failures: string[] = [];
+  const missingDatasets: string[] = [];
   let recordsProcessed = 0;
   try {
     for (const season of seasons) {
       for (const dataset of ["pbp", "player_stats", "snap_counts", "depth_charts"] as const) {
         try {
-          const source = await acquireDataset(dataset, season);
+          const source = await acquireDataset(dataset, season, { refresh: options?.refresh });
           const result =
             dataset === "pbp"
               ? await ingestPlayByPlay(season, source.filePath)
@@ -545,6 +582,7 @@ export async function syncNflverseHistory(seasons = defaultSeasons) {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           failures.push(message);
+          if (error instanceof NflverseMissingSeasonError) missingDatasets.push(`${dataset}:${season}`);
           await db
             .update(nflverseSourceFilesTable)
             .set({ status: "failed", errorMessage: message, completedAt: new Date() })
@@ -553,22 +591,36 @@ export async function syncNflverseHistory(seasons = defaultSeasons) {
         }
       }
     }
-    const status = failures.length === 0 ? "success" : recordsProcessed > 0 ? "partial" : "failed";
+    const handledMissingSeason = failures.length > 0 && failures.length === missingDatasets.length;
+    const status = failures.length === 0
+      ? "success"
+      : handledMissingSeason
+        ? "skipped"
+        : recordsProcessed > 0
+          ? "partial"
+          : "failed";
     await db
       .update(dataSyncRunsTable)
       .set({
         status,
         completedAt: new Date(),
         recordsProcessed,
-        errorMessage: failures.length ? failures.join("; ").slice(0, 8_000) : null,
+        errorMessage: failures.length && !handledMissingSeason ? failures.join("; ").slice(0, 8_000) : null,
+        skipReason: handledMissingSeason ? "NFLverse has not published the requested season yet." : null,
+        metadata: {
+          refresh: Boolean(options?.refresh),
+          completedWindow: options?.completedWindow ?? null,
+          handledMissingSeason,
+          missingDatasets,
+        },
       })
       .where(eq(dataSyncRunsTable.id, run.id));
-    return { status, recordsProcessed, failures };
+    return { status, recordsProcessed, failures, handledMissingSeason, missingDatasets, completedWindow: options?.completedWindow ?? null };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await db
       .update(dataSyncRunsTable)
-      .set({ status: "failed", completedAt: new Date(), recordsProcessed, errorMessage: message })
+      .set({ status: "failed", completedAt: new Date(), recordsProcessed, errorMessage: message, metadata: { refresh: Boolean(options?.refresh), completedWindow: options?.completedWindow ?? null } })
       .where(eq(dataSyncRunsTable.id, run.id));
     throw error;
   }
