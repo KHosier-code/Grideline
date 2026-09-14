@@ -2,8 +2,8 @@ import { Router, type IRouter } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db, modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspace/db";
 import { getAuth } from "@clerk/express";
-import { getModelDriftMonitoring } from "../lib/live-predictions";
-import { getPhase4ModelLab, trainPhase4Models } from "../lib/modeling";
+import { generateLivePredictions, getModelDriftMonitoring } from "../lib/live-predictions";
+import { getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models } from "../lib/modeling";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
@@ -27,6 +27,16 @@ router.post("/models/train", requireAdmin, async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Phase 4 model training failed");
     res.status(500).json({ error: error instanceof Error ? error.message : "Phase 4 model training failed" });
+  }
+});
+
+router.post("/models/refit-production", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    const featureVersion = typeof req.body?.featureVersion === "string" ? req.body.featureVersion.trim() : undefined;
+    res.status(201).json(await refitPhase6ProductionModels(featureVersion));
+  } catch (error) {
+    req.log.error({ error }, "Phase 6 production refit failed");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Phase 6 production refit failed" });
   }
 });
 
@@ -81,9 +91,11 @@ router.post("/models/promote", requireAdmin, async (req, res): Promise<void> => 
       .where(and(eq(modelPromotionHistoryTable.family, run.family), eq(modelPromotionHistoryTable.role, "production")))
       .orderBy(desc(modelPromotionHistoryTable.promotedAt), desc(modelPromotionHistoryTable.id))
       .limit(1);
+    const revision = await generateLivePredictions(new Date());
     res.status(201).json({
       promotion,
       activeProductionModel: current[0] ?? null,
+      revision,
       note: "Promotion is explicit and append-only. The latest production promotion for this family is used; no automatic promotion occurred.",
     });
   } catch (error) {

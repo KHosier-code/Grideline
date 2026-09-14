@@ -246,16 +246,16 @@ export async function loadExamples(featureVersion: string) {
     const features = names.map((name) => {
       const homeValue = home.features[name];
       const awayValue = away.features[name];
-      return Number.isFinite(homeValue) && Number.isFinite(awayValue) ? homeValue - awayValue : 0;
+      return typeof homeValue === "number" && Number.isFinite(homeValue) && typeof awayValue === "number" && Number.isFinite(awayValue) ? homeValue - awayValue : 0;
     });
-    const homeQb = Number.isFinite(home.features["qb_data_confidence"]) ? home.features["qb_data_confidence"] : 0;
-    const awayQb = Number.isFinite(away.features["qb_data_confidence"]) ? away.features["qb_data_confidence"] : 0;
+    const homeQb = typeof home.features["qb_data_confidence"] === "number" && Number.isFinite(home.features["qb_data_confidence"]) ? home.features["qb_data_confidence"] : 0;
+    const awayQb = typeof away.features["qb_data_confidence"] === "number" && Number.isFinite(away.features["qb_data_confidence"]) ? away.features["qb_data_confidence"] : 0;
     examples.push({
       gameId: home.gameId,
       season: home.season,
       week: home.week,
       kickoffTime: home.kickoffTime,
-      x: [...features, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb],
+    x: [...features, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb],
       lowSample: home.lowSample || away.lowSample,
       qbConfidence: (homeQb + awayQb) / 2,
       margin: homeScore - awayScore,
@@ -335,6 +335,61 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
   return { featureVersion, examples: examples.length, runsCreated: runs.length, testSeasons: availableSeasons, bettingEvaluation: { status: "unavailable", reason: "Historical DraftKings/FanDuel snapshots are insufficient for a complete pre-prediction market evaluation; no lines were fabricated." } };
 }
 
+export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATURE_VERSION) {
+  const { examples, names } = await loadExamples(featureVersion);
+  const trainingSeasons = [...new Set(examples.map((example) => example.season).filter((season) => season >= 2021 && season <= 2025))].sort();
+  const forwardSeasonsPresent = [...new Set(examples.map((example) => example.season).filter((season) => season >= 2026))].sort();
+  const selected: Array<{ family: Family; algorithm: Algorithm; samplePolicy: SamplePolicy; target: (example: Example) => number; classification: boolean }> = [
+    { family: "spread", algorithm: "linear_regression", samplePolicy: "include_low_sample", target: (example) => example.margin, classification: false },
+    { family: "moneyline", algorithm: "logistic_regression", samplePolicy: "include_low_sample", target: (example) => example.homeWin, classification: true },
+    { family: "totals", algorithm: "gradient_boosting", samplePolicy: "exclude_low_sample", target: (example) => example.total, classification: false },
+  ];
+  const runs: Array<typeof modelTrainingRunsTable.$inferInsert> = [];
+  for (const config of selected) {
+    const rows = examples.filter((example) =>
+      trainingSeasons.includes(example.season) &&
+      (config.samplePolicy === "include_low_sample" || !example.lowSample),
+    );
+    if (rows.length < 20) continue;
+    const scaled = standardize(rows.map((row) => row.x), rows.map((row) => row.x));
+    const model = modelFor(config.algorithm, scaled.train, rows.map(config.target), config.classification);
+    const trainingPredictions = scaled.test.map((row) => model.predict(row));
+    const finiteOutputs = trainingPredictions.every(Number.isFinite);
+    if (!finiteOutputs) continue;
+    const modelVersion = `phase6-refit-${config.family}-${config.algorithm}-through-2025-${Date.now()}-${runs.length}`;
+    runs.push({
+      modelVersion,
+      family: config.family,
+      algorithm: config.algorithm,
+      featureVersion,
+      trainingSeasons,
+      testSeason: 2025,
+      samplePolicy: config.samplePolicy,
+      recencyWeighting: "none",
+      status: "refit_candidate",
+      sampleSize: rows.length,
+      metrics: {
+        status: "training_only",
+        trainingSampleSize: rows.length,
+        outputValidation: finiteOutputs ? "finite" : "failed",
+        forwardSeasonsExcluded: forwardSeasonsPresent,
+      },
+      calibration: config.classification ? { status: "training_only", note: "No 2026 outcomes were used for refit or calibration." } : { status: "not_applicable" },
+      featureImportance: normalizeImportance(model.importance, names),
+      notes: "Phase 6 production refit of the unchanged selected Phase 4 algorithm using legitimate 2021-2025 data only. 2026 remains forward/out-of-sample. Administrator promotion required.",
+    });
+  }
+  for (let index = 0; index < runs.length; index += 200) await db.insert(modelTrainingRunsTable).values(runs.slice(index, index + 200));
+  return {
+    featureVersion,
+    trainingSeasons,
+    forwardSeasonsExcluded: forwardSeasonsPresent,
+    runsCreated: runs.length,
+    candidates: runs.map((run) => ({ modelVersion: run.modelVersion, family: run.family, algorithm: run.algorithm, samplePolicy: run.samplePolicy, trainingSeasons: run.trainingSeasons, status: run.status })),
+    promotion: { required: true, automatic: false },
+  };
+}
+
 export async function getPhase4ModelLab() {
   const runs = await db.select().from(modelTrainingRunsTable).orderBy(asc(modelTrainingRunsTable.family), asc(modelTrainingRunsTable.testSeason), asc(modelTrainingRunsTable.algorithm));
   const latest = new Map<string, typeof runs[number]>();
@@ -381,6 +436,16 @@ export async function getPhase4ModelLab() {
       totals: recommendation("totals"),
     },
     promotion: { automatic: false, status: "challenger_only", note: "No candidate is active until explicitly promoted by an administrator." },
+    refitCandidates: current.filter((run) => run.status === "refit_candidate").map((run) => ({
+      modelVersion: run.modelVersion,
+      family: run.family,
+      algorithm: run.algorithm,
+      samplePolicy: run.samplePolicy,
+      trainingSeasons: run.trainingSeasons,
+      trainingCutoff: run.trainingSeasons.length ? `through-${Math.max(...run.trainingSeasons)}` : "unavailable",
+      sampleSize: run.sampleSize,
+      notes: run.notes,
+    })),
     marketEvaluation: { status: "unavailable", reason: "Complete legitimate historical sportsbook lines are not available; ATS/Over-Under betting performance is not inferred." },
   };
 }

@@ -143,7 +143,7 @@ async function marketData(gameId: string, capturedAt: Date, home: { teamId: stri
   return { capturedAt: capturedAt.toISOString(), quotes: quotes.map((quote) => serializeQuote(quote, marketPoint(quote, quote.market, home))), markets };
 }
 
-function comparisonData(
+export function comparisonData(
   marketSnapshot: Record<string, any>,
   projectedMargin: number | null,
   projectedTotal: number | null,
@@ -252,17 +252,17 @@ function snapshotLabel(now: Date, kickoff: Date) {
   return "final-pre-kickoff";
 }
 
-function vectorForRows(rows: Array<{ gameId: string; isHome: boolean; features: PregameFeatureValues; lowSample: boolean }>, names: string[]) {
+export function vectorForRows(rows: Array<{ gameId: string; isHome: boolean; features: PregameFeatureValues; lowSample: boolean }>, names: string[]) {
   const home = rows.find((row) => row.isHome);
   const away = rows.find((row) => !row.isHome);
   if (!home || !away) return null;
   const x = names.map((name) => {
     const homeValue = home.features[name];
     const awayValue = away.features[name];
-    return Number.isFinite(homeValue) && Number.isFinite(awayValue) ? homeValue - awayValue : 0;
+    return typeof homeValue === "number" && Number.isFinite(homeValue) && typeof awayValue === "number" && Number.isFinite(awayValue) ? homeValue - awayValue : 0;
   });
-  const homeQb = Number.isFinite(home.features.qb_data_confidence) ? home.features.qb_data_confidence : 0;
-  const awayQb = Number.isFinite(away.features.qb_data_confidence) ? away.features.qb_data_confidence : 0;
+  const homeQb = typeof home.features.qb_data_confidence === "number" && Number.isFinite(home.features.qb_data_confidence) ? home.features.qb_data_confidence : 0;
+  const awayQb = typeof away.features.qb_data_confidence === "number" && Number.isFinite(away.features.qb_data_confidence) ? away.features.qb_data_confidence : 0;
   return {
     x: [...x, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb],
     lowSample: home.lowSample || away.lowSample,
@@ -332,7 +332,7 @@ export async function generateLivePredictions(now = new Date()) {
       await db.insert(predictionValidationFailuresTable).values(validationFailures.map((failure) => ({
         gameId: game.gameId,
         predictionTimestamp: now,
-        snapshotLabel: snapshotLabel(now, game.kickoffTime),
+        snapshotLabel: snapshotLabel(now, game.kickoffTime!),
         featureVersion,
         spreadModelVersion: models.get("spread")?.modelVersion ?? null,
         moneylineModelVersion: models.get("moneyline")?.modelVersion ?? null,
@@ -358,9 +358,9 @@ export async function generateLivePredictions(now = new Date()) {
       name: home.teamName,
       abbreviation: home.abbreviation,
     });
-    const label = snapshotLabel(now, game.kickoffTime);
+    const label = snapshotLabel(now, game.kickoffTime!);
     const insert = await db.insert(predictionSnapshotsTable).values({
-      snapshotKey: `${game.gameId}:${label}:validated-v2`,
+      snapshotKey: `${game.gameId}:${label}:${models.get("spread")!.modelVersion}:${models.get("moneyline")!.modelVersion}:${models.get("totals")!.modelVersion}`,
       gameId: game.gameId,
       predictionTimestamp: now,
       snapshotLabel: label,
@@ -375,7 +375,7 @@ export async function generateLivePredictions(now = new Date()) {
       projectedMargin: margin,
       projectedTotal: total,
       homeWinProbability: homeProbability,
-      awayWinProbability: 1 - homeProbability,
+      awayWinProbability: 1 - homeProbability!,
       marketSnapshot,
       marketComparison: comparisonData(marketSnapshot, margin, total, homeProbability),
       lowSample: vector.lowSample,
@@ -653,16 +653,20 @@ export async function getCurrentWeekValidationReport() {
       .where(inArray(predictionSnapshotsTable.gameId, gameIds))
       .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id))
     : [];
-  const latest = new Map<string, typeof snapshots[number]>();
+   const latest = new Map<string, typeof snapshots[number]>();
+   const previous = new Map<string, typeof snapshots[number]>();
    for (const snapshot of snapshots) {
      const valid = [snapshot.projectedMargin, snapshot.projectedTotal, snapshot.homeWinProbability, snapshot.awayWinProbability]
        .every((value) => typeof value === "number" && Number.isFinite(value));
-     if (valid && !latest.has(snapshot.gameId)) latest.set(snapshot.gameId, snapshot);
+      if (!valid) continue;
+      if (!latest.has(snapshot.gameId)) latest.set(snapshot.gameId, snapshot);
+      else if (!previous.has(snapshot.gameId)) previous.set(snapshot.gameId, snapshot);
    }
   const teamRows = await db.select().from(teamsTable);
   const teams = new Map(teamRows.map((team) => [team.teamId, team]));
   const records = games.map((game) => {
     const snapshot = latest.get(game.gameId);
+    const previousSnapshot = previous.get(game.gameId);
     const comparison = snapshot?.marketComparison as Record<string, any> | undefined;
     const marketSnapshot = snapshot?.marketSnapshot as Record<string, any> | undefined;
     const missing: string[] = [];
@@ -672,6 +676,12 @@ export async function getCurrentWeekValidationReport() {
     if (snapshot && comparison?.totals?.marketTotal === null) missing.push("current_total");
     const home = teams.get(game.homeTeamId);
     const away = teams.get(game.awayTeamId);
+    const componentStatus = {
+      modelData: snapshot ? "complete" : "unavailable",
+      spreadComparison: snapshot && comparison?.spread?.marketLine !== null ? "available" : "market_unavailable",
+      moneylineComparison: snapshot && comparison?.moneyline?.noVigHomeProbability !== null ? "available" : "market_unavailable",
+      totalsComparison: snapshot && comparison?.totals?.marketTotal !== null ? "available" : "market_unavailable",
+    };
     return {
       gameId: game.gameId,
       season: game.season,
@@ -679,7 +689,8 @@ export async function getCurrentWeekValidationReport() {
       kickoffTime: game.kickoffTime?.toISOString() ?? null,
       homeTeam: home?.teamName ?? game.homeTeamId,
       awayTeam: away?.teamName ?? game.awayTeamId,
-      status: missing.length ? "insufficient_data" : "measured",
+      status: !snapshot ? "insufficient_data" : missing.length ? "partial_market_data" : "measured",
+      componentStatus,
       missing,
       model: snapshot ? {
         spreadModelVersion: snapshot.spreadModelVersion,
@@ -711,6 +722,18 @@ export async function getCurrentWeekValidationReport() {
         moneyline: comparison?.moneyline?.homeProbabilityEdge ?? null,
         total: comparison?.totals?.pointEdge ?? null,
       } : { spread: null, moneyline: null, total: null },
+      previousPrediction: previousSnapshot ? {
+        predictionTimestamp: previousSnapshot.predictionTimestamp.toISOString(),
+        spreadModelVersion: previousSnapshot.spreadModelVersion,
+        moneylineModelVersion: previousSnapshot.moneylineModelVersion,
+        totalsModelVersion: previousSnapshot.totalsModelVersion,
+        projectedHomeScore: previousSnapshot.projectedHomeScore,
+        projectedAwayScore: previousSnapshot.projectedAwayScore,
+        projectedMargin: previousSnapshot.projectedMargin,
+        projectedTotal: previousSnapshot.projectedTotal,
+        homeWinProbability: previousSnapshot.homeWinProbability,
+        awayWinProbability: previousSnapshot.awayWinProbability,
+      } : null,
     };
   });
   const rank = (key: "spread" | "moneyline" | "total") => [...records]
@@ -724,7 +747,7 @@ export async function getCurrentWeekValidationReport() {
     })
     .map((game, index) => ({ rank: index + 1, ...game }));
   return {
-    status: records.some((game) => game.status === "measured") ? "measured" : "insufficient_data",
+    status: records.some((game) => game.status === "measured" || game.status === "partial_market_data") ? "measured" : "insufficient_data",
     season: currentWeek.season,
     week: currentWeek.week,
     games: records,
