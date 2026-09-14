@@ -8,6 +8,9 @@ import { getOddsApiHealth } from "../lib/odds";
 import { getScheduleHealth } from "../lib/schedule";
 import { getSchedulerHealth } from "../lib/scheduler";
 import { getPregameFeatureHealth } from "../lib/features";
+import { getRecentScheduledRuns } from "../lib/sync-runs";
+import { nextFeedUpdate } from "../lib/feed-schedule";
+import { getFeedGameDays } from "../lib/feed-game-days";
 
 const router: IRouter = Router();
 
@@ -41,6 +44,11 @@ router.get("/data-health", async (req, res): Promise<void> => {
   const schedule = await getScheduleHealth();
   const nflverse = await getNflverseHealth();
   const availability = await getAvailabilityHealth();
+
+  const [scheduledInjuryRuns, scheduledNflverseRuns] = await Promise.all([
+    getRecentScheduledRuns("scheduled:injuries"),
+    getRecentScheduledRuns("scheduled:nflverse"),
+  ]);
   const odds = await getOddsApiHealth();
   const scheduler = await getSchedulerHealth();
   const features = await getPregameFeatureHealth();
@@ -204,3 +212,50 @@ router.get("/data-health", async (req, res): Promise<void> => {
 });
 
 export default router;
+
+  const latestFailureMessage = (scheduledFailureAt && nativeFailureAt && nativeFailureAt > scheduledFailureAt
+    ? availability.injury.failure
+    : latestFailedScheduledInjuryRun?.error ?? availability.injury.failure)
+    ?? (latestFailureAt ? "Injury synchronization failed." : null);
+
+  const lastSuccessfulInjuryAt = availability.injury.lastUpdated ? new Date(availability.injury.lastUpdated) : null;
+
+  const latestFailureIsCurrent = Boolean(
+    latestFailureAt
+    && (!lastSuccessfulInjuryAt || latestFailureAt >= lastSuccessfulInjuryAt),
+  );
+
+  const maxInjuryAge = (month >= 3 && month <= 7 ? 8 * 24 : 30) * 60 * 60 * 1000;
+
+  const nativeFailureAt = availability.injury.failureAt ? new Date(availability.injury.failureAt) : null;
+
+  const injuryStatus = latestFailureIsCurrent
+    ? availability.injury.records > 0 ? "stale" : "unavailable"
+    : injuryIsFresh ? "current" : "stale";
+
+  const injuryDetail = latestFailureMessage && latestFailureIsCurrent
+    ? latestFailureMessage
+    : latestFailureMessage
+      ? `Latest failed attempt: ${latestFailureMessage}`
+      : availability.injury.records > 0
+        ? `${availability.injury.records} immutable injury snapshots captured.`
+        : lastSuccessfulInjuryAt
+          ? "The latest injury synchronization completed successfully with no reported injuries."
+          : "The first injury synchronization is pending.";
+
+  const injuryIsFresh = Boolean(
+    lastSuccessfulInjuryAt
+    && Date.now() - lastSuccessfulInjuryAt.getTime() <= maxInjuryAge,
+  );
+
+  const scheduledFailureAt = latestFailedScheduledInjuryRun
+    ? latestFailedScheduledInjuryRun.completedAt ?? latestFailedScheduledInjuryRun.startedAt
+    : null;
+
+  const latestFailureAt = scheduledFailureAt && nativeFailureAt
+    ? scheduledFailureAt >= nativeFailureAt ? scheduledFailureAt : nativeFailureAt
+    : scheduledFailureAt ?? nativeFailureAt;
+
+  const latestFailedScheduledInjuryRun = scheduledInjuryRuns.find((run) => run.status === "failed");
+
+  const month = new Date().getUTCMonth() + 1;

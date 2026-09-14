@@ -61,12 +61,22 @@ export const GetDataHealthResponseItem = zod.object({
   "label": zod.string(),
   "status": zod.enum(['current', 'stale', 'not_configured', 'unavailable']),
   "detail": zod.string(),
+  "schedule": zod.string().nullish(),
+  "retryPolicy": zod.string().nullish(),
   "lastUpdated": zod.coerce.date().nullish(),
   "nextUpdate": zod.coerce.date().nullish(),
   "requestsToday": zod.number().int().optional(),
   "requestsThisMonth": zod.number().int().optional(),
   "remainingQuota": zod.string().nullish(),
-  "metadata": zod.record(zod.string(), zod.unknown()).optional()
+  "metadata": zod.record(zod.string(), zod.unknown()).optional(),
+  "scheduledRuns": zod.array(zod.object({
+  "id": zod.number().int(),
+  "provider": zod.string(),
+  "status": zod.string(),
+  "error": zod.string().nullable(),
+  "startedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})).optional()
 })
 export const GetDataHealthResponse = zod.array(GetDataHealthResponseItem)
 
@@ -313,6 +323,85 @@ export const SyncScheduleResponse = zod.object({
   "totalGames": zod.number().int(),
   "failures": zod.array(zod.string())
 })
+
+
+/**
+ * @summary Read historical pregame feature coverage and limitations
+ */
+export const GetPregameFeatureHealthResponse = zod.object({
+  "featureVersion": zod.string(),
+  "definition": zod.record(zod.string(), zod.unknown()),
+  "rows": zod.number().int(),
+  "games": zod.number().int(),
+  "lowSampleRows": zod.number().int(),
+  "latestGeneratedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Read versioned pregame features for one game
+ */
+export const GetPregameFeaturesForGameParams = zod.object({
+  "gameId": zod.coerce.string()
+})
+
+export const GetPregameFeaturesForGameResponseItem = zod.object({
+  "featureVersion": zod.string(),
+  "gameId": zod.string(),
+  "teamId": zod.string(),
+  "opponentTeamId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date(),
+  "isHome": zod.boolean(),
+  "features": zod.record(zod.string(), zod.number().nullable()),
+  "sampleCounts": zod.record(zod.string(), zod.number().int()),
+  "featureAudit": zod.record(zod.string(), zod.unknown()),
+  "lowSample": zod.boolean(),
+  "sourceCutoff": zod.coerce.date(),
+  "generatedAt": zod.coerce.date().optional()
+})
+export const GetPregameFeaturesForGameResponse = zod.array(GetPregameFeaturesForGameResponseItem)
+
+
+/**
+ * @summary Read feature values and point-in-time source audit metadata
+ */
+export const ListPregameFeatureAuditQueryParams = zod.object({
+  "season": zod.coerce.number().int().optional(),
+  "week": zod.coerce.number().int().optional(),
+  "gameId": zod.coerce.string().optional(),
+  "teamId": zod.coerce.string().optional(),
+  "featureVersion": zod.coerce.string().optional()
+})
+
+export const ListPregameFeatureAuditResponseItem = zod.object({
+  "featureVersion": zod.string(),
+  "gameId": zod.string(),
+  "teamId": zod.string(),
+  "opponentTeamId": zod.string().optional(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date(),
+  "featureName": zod.string(),
+  "value": zod.number().nullable(),
+  "sourceDataset": zod.string(),
+  "lookbackWindow": zod.string(),
+  "gamesIncluded": zod.number().int(),
+  "lastSourceGame": zod.string().nullish(),
+  "lastSourceDate": zod.string().nullish(),
+  "sampleSize": zod.number().int(),
+  "quality": zod.enum(['high', 'low_sample', 'unavailable']),
+  "unavailableReason": zod.string().nullish()
+})
+export const ListPregameFeatureAuditResponse = zod.array(ListPregameFeatureAuditResponseItem)
+
+
+/**
+ * Requires authenticated administrator access. Never trains or scores a betting model.
+ * @summary Build an immutable version of historical pregame features
+ */
+export const BuildPregameFeaturesResponse = zod.unknown()
 
 
 /**

@@ -523,9 +523,22 @@
   .health-metadata { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
   .health-metadata span { border-radius: 5px; background: hsl(var(--secondary)); padding: 4px 7px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; }
   .health-metadata strong { color: hsl(var(--foreground)); }
+  .health-schedule { margin-top: 8px; color: hsl(var(--muted-foreground)); font-size: 10px; line-height: 1.55; }
+  .health-schedule strong { color: hsl(var(--foreground)); font-weight: 700; }
   .health-failures { margin-top: 9px; color: hsl(0 56% 42%); font-size: 10px; }
   .health-failures summary { cursor: pointer; font-weight: 700; }
   .health-failures ul { max-height: 150px; overflow: auto; margin: 7px 0 0; padding-left: 18px; color: hsl(var(--muted-foreground)); line-height: 1.6; }
+  .scheduled-runs { margin-top: 12px; border-top: 1px solid hsl(var(--border)); padding-top: 11px; }
+  .scheduled-runs-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+  .scheduled-runs-heading strong { color: hsl(var(--foreground)); font-weight: 500; }
+  .scheduled-run-list { margin-top: 6px; }
+  .scheduled-run-row { display: grid; grid-template-columns: minmax(180px, 1fr) 145px 145px; align-items: start; gap: 12px; border-bottom: 1px solid hsl(var(--border) / .72); padding: 8px 0; }
+  .scheduled-run-row:last-child { border-bottom: 0; }
+  .scheduled-run-time { display: flex; flex-direction: column; gap: 3px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; }
+  .scheduled-run-time strong { color: hsl(var(--foreground)); font-weight: 500; }
+  .scheduled-run-error { margin-top: 6px; color: hsl(0 56% 42%); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
+  .scheduled-runs-more { margin-top: 6px; border-top: 1px solid hsl(var(--border) / .72); padding-top: 7px; color: hsl(var(--muted-foreground)); font-size: 10px; }
+  .scheduled-runs-more summary { cursor: pointer; font-weight: 700; }
   .provider-mark, .readiness-header-icon { display: grid; height: 32px; width: 32px; flex-shrink: 0; place-items: center; border-radius: 8px; background: hsl(var(--accent) / .1); color: hsl(var(--accent)); }
   .provider-good { background: hsl(169 47% 42% / .12); color: hsl(169 47% 30%); }
   .provider-warn { background: hsl(38 80% 48% / .12); color: hsl(34 72% 34%); }
@@ -645,5 +658,7 @@
   .settings-form { grid-template-columns: 1fr 105px; gap: 6px 11px; }
   .health-row { flex-direction: column; }
   .health-row > :last-child { padding-left: 44px; text-align: left; }
+  .scheduled-run-row { grid-template-columns: 1fr; gap: 7px; }
+  .scheduled-run-row > .scheduled-run-time { display: inline-flex; flex-direction: row; gap: 6px; }
   .readiness-header, .feature-intro { padding: 15px; }
 }

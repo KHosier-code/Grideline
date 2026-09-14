@@ -42,6 +42,8 @@ import {
   getHealthCheckQueryKey,
   getListGamesQueryKey,
   getListTeamsQueryKey,
+  type DataHealth,
+  type ScheduledDataHealthRun,
   useGetDashboardSummary,
   useGetDataHealth,
   useGetGame,
@@ -175,7 +177,7 @@ function marketLabel(market: string) {
 
 function statusTone(status?: string | null) {
   if (status === 'current' || status === 'available' || status === 'healthy' || status === 'success') return 'good';
-  if (status === 'stale' || status === 'warning') return 'warn';
+  if (status === 'stale' || status === 'warning' || status === 'running' || status === 'partial') return 'warn';
   if (status === 'not_configured' || status === 'not_trained') return 'neutral';
   return 'bad';
 }
@@ -275,7 +277,10 @@ function MetricCard({ label, value, detail, icon: Icon, accent = false }: { labe
   );
 }
 
-function FreshnessCard({ item }: { item: any }) {
+function formatStatusLabel(status?: string | null) {
+  return status ? status.replace(/[_-]/g, ' ') : 'unknown';
+}
+function FreshnessCard({ item }: { item: DataHealth }) {
   const status = item?.status;
   const metadataEntries = Object.entries(item?.metadata ?? {})
     .filter(([key, value]) => key !== 'failures' && value !== null && value !== undefined && typeof value !== 'object')
@@ -294,9 +299,13 @@ function FreshnessCard({ item }: { item: any }) {
             <StatusPill status={status}>{status === 'not_configured' ? 'Not configured' : status}</StatusPill>
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
+           {item.schedule && <p className="health-schedule"><strong>Cadence:</strong> {item.schedule}</p>}
+           {item.retryPolicy && <p className="health-schedule"><strong>Retries:</strong> {item.retryPolicy}</p>}
+           {item.schedule && <p className="health-schedule"><strong>Next attempt:</strong> {item.nextUpdate ? formatDate(item.nextUpdate, true) : 'In progress'}</p>}
           {metadataEntries.length > 0 && <div className="health-metadata">{metadataEntries.map(([key, value]) => <span key={key}><strong>{String(value)}</strong> {key.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>)}</div>}
            {detailedMetadata.length > 0 && <div className="mt-2 space-y-1">{detailedMetadata.map(([key, value]) => <details className="health-failures" key={key}><summary>{key.replace(/([A-Z])/g, ' $1')} ({Array.isArray(value) ? value.length : 'detail'})</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-[10px] leading-4">{JSON.stringify(value, null, 2)}</pre></details>)}</div>}
           {failures.length > 0 && <details className="health-failures"><summary>{failures.length} recorded failure{failures.length === 1 ? '' : 's'}</summary><ul>{failures.slice(0, 10).map((failure: string, index: number) => <li key={`${failure}-${index}`}>{failure}</li>)}</ul></details>}
+           <ScheduledRuns runs={item.scheduledRuns} />
         </div>
       </div>
       <div className="shrink-0 text-right text-xs text-muted-foreground">
@@ -369,7 +378,7 @@ function Shell({ children }: { children: ReactNode }) {
 
 function Dashboard() {
   const summary = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey(), staleTime: 30000 } });
-  const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000 } });
+  const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000, refetchInterval: 60000 } });
   if (summary.isLoading) return <><PageHeader eyebrow="Overview" title="The weekly read" detail="A clear view of the current market before you make a decision." /><div className="grid gap-4 md:grid-cols-3"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div><div className="mt-5"><LoadingPanel /></div></>;
   if (summary.isError || !summary.data) return <><PageHeader eyebrow="Overview" title="The weekly read" detail="A clear view of the current market before you make a decision." /><ErrorPanel /></>;
   const data = summary.data;
@@ -605,7 +614,7 @@ function ReadinessTile({ icon: Icon, title, detail }: { icon: IconType; title: s
 }
 
 function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string; title: string; detail: string; eyebrow: string; preferred?: string }) {
-  const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000 } });
+  const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000, refetchInterval: 60000 } });
   const focused = useMemo(() => preferred ? health.data?.filter((item) => `${item.provider} ${item.label}`.toLowerCase().includes(preferred)) : health.data, [health.data, preferred]);
   return (
     <>
@@ -975,3 +984,36 @@ function App() {
 }
 
 export default App;
+
+function ScheduledRuns({ runs }: { runs?: ScheduledDataHealthRun[] }) {
+  if (!runs?.length) return null;
+  const visibleRuns = runs.slice(0, 4);
+  return (
+    <div className="scheduled-runs">
+      <div className="scheduled-runs-heading">
+        <span>Scheduled feed attempts</span>
+        <strong>{runs.length} recent</strong>
+      </div>
+      <div className="scheduled-run-list">{visibleRuns.map((run) => <ScheduledRunRow key={run.id} run={run} />)}</div>
+      {runs.length > visibleRuns.length && (
+        <details className="scheduled-runs-more">
+          <summary>Show {runs.length - visibleRuns.length} older attempts</summary>
+          <div className="scheduled-run-list">{runs.slice(visibleRuns.length).map((run) => <ScheduledRunRow key={run.id} run={run} />)}</div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function ScheduledRunRow({ run }: { run: ScheduledDataHealthRun }) {
+  return (
+    <div className="scheduled-run-row">
+      <div className="min-w-0">
+        <StatusPill status={run.status}>{formatStatusLabel(run.status)}</StatusPill>
+        {run.error && <p className="scheduled-run-error">{run.error}</p>}
+      </div>
+      <div className="scheduled-run-time"><span>Started</span><strong>{formatDate(run.startedAt, true)}</strong></div>
+      <div className="scheduled-run-time"><span>Completed</span><strong>{run.completedAt ? formatDate(run.completedAt, true) : 'In progress'}</strong></div>
+    </div>
+  );
+}

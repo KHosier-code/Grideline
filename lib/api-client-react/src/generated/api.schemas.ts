@@ -259,11 +259,26 @@ export const DataHealthStatus = {
 
 export type DataHealthMetadata = { [key: string]: unknown };
 
+export interface ScheduledDataHealthRun {
+  id: number;
+  provider: string;
+  status: string;
+  /** @nullable */
+  error: string | null;
+  startedAt: string;
+  /** @nullable */
+  completedAt: string | null;
+}
+
 export interface DataHealth {
   provider: string;
   label: string;
   status: DataHealthStatus;
   detail: string;
+  /** @nullable */
+  schedule?: string | null;
+  /** @nullable */
+  retryPolicy?: string | null;
   /** @nullable */
   lastUpdated?: string | null;
   /** @nullable */
@@ -273,6 +288,7 @@ export interface DataHealth {
   /** @nullable */
   remainingQuota?: string | null;
   metadata?: DataHealthMetadata;
+  scheduledRuns?: ScheduledDataHealthRun[];
 }
 
 export interface PerformanceSummary {
@@ -351,6 +367,74 @@ export interface AppSettingsUpdate {
   kellyEnabled?: boolean;
 }
 
+export type PregameFeatureRowFeatures = {[key: string]: number | null};
+
+export type PregameFeatureRowSampleCounts = {[key: string]: number};
+
+export type PregameFeatureRowFeatureAudit = { [key: string]: unknown };
+
+export interface PregameFeatureRow {
+  featureVersion: string;
+  gameId: string;
+  teamId: string;
+  opponentTeamId: string;
+  season: number;
+  week: number;
+  kickoffTime: string;
+  isHome: boolean;
+  features: PregameFeatureRowFeatures;
+  sampleCounts: PregameFeatureRowSampleCounts;
+  featureAudit: PregameFeatureRowFeatureAudit;
+  lowSample: boolean;
+  sourceCutoff: string;
+  generatedAt?: string;
+}
+
+export type PregameFeatureHealthDefinition = { [key: string]: unknown };
+
+export interface PregameFeatureHealth {
+  featureVersion: string;
+  definition: PregameFeatureHealthDefinition;
+  rows: number;
+  games: number;
+  lowSampleRows: number;
+  /** @nullable */
+  latestGeneratedAt?: string | null;
+}
+
+export type PregameFeatureAuditRowQuality = typeof PregameFeatureAuditRowQuality[keyof typeof PregameFeatureAuditRowQuality];
+
+
+export const PregameFeatureAuditRowQuality = {
+  high: 'high',
+  low_sample: 'low_sample',
+  unavailable: 'unavailable',
+} as const;
+
+export interface PregameFeatureAuditRow {
+  featureVersion: string;
+  gameId: string;
+  teamId: string;
+  opponentTeamId?: string;
+  season: number;
+  week: number;
+  kickoffTime: string;
+  featureName: string;
+  /** @nullable */
+  value: number | null;
+  sourceDataset: string;
+  lookbackWindow: string;
+  gamesIncluded: number;
+  /** @nullable */
+  lastSourceGame?: string | null;
+  /** @nullable */
+  lastSourceDate?: string | null;
+  sampleSize: number;
+  quality: PregameFeatureAuditRowQuality;
+  /** @nullable */
+  unavailableReason?: string | null;
+}
+
 export type ListGamesParams = {
 /**
  * @minimum 2020
@@ -384,4 +468,12 @@ export const ListOddsAuditsOutcome = {
   matched_post_kickoff_skipped: 'matched_post_kickoff_skipped',
   unmatched: 'unmatched',
 } as const;
+
+export type ListPregameFeatureAuditParams = {
+season?: number;
+week?: number;
+gameId?: string;
+teamId?: string;
+featureVersion?: string;
+};
 

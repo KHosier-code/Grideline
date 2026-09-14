@@ -11,6 +11,7 @@ import { syncNflverseHistory } from "../lib/nflverse";
 import { captureOddsSnapshots, getOddsEventAudits } from "../lib/odds";
 import { syncEspnScheduleCoverage } from "../lib/schedule";
 import { requireAdmin } from "../middlewares/admin";
+import { withFeedLock } from "../lib/feed-scheduler";
 
 const router: IRouter = Router();
 
@@ -19,7 +20,9 @@ router.post("/data-sync/nflverse", requireAdmin, async (req, res): Promise<void>
     const seasons = Array.isArray(req.body?.seasons)
       ? req.body.seasons.map(Number).filter((value: number) => Number.isInteger(value) && value >= 2021 && value <= 2026)
       : undefined;
-    res.json(await syncNflverseHistory(seasons));
+    const result = await withFeedLock("nflverse", () => syncNflverseHistory(seasons));
+    if (result === null) { res.status(409).json({ error: "NFLverse sync already running" }); return; }
+    res.json(result);
   } catch (error) {
     req.log.error({ error }, "NFLverse synchronization failed");
     res.status(500).json({ error: error instanceof Error ? error.message : "NFLverse synchronization failed" });
@@ -28,7 +31,9 @@ router.post("/data-sync/nflverse", requireAdmin, async (req, res): Promise<void>
 
 router.post("/data-sync/injuries", requireAdmin, async (req, res): Promise<void> => {
   try {
-    res.json(await syncEspnInjuries());
+    const result = await withFeedLock("injuries", () => syncEspnInjuries());
+    if (result === null) { res.status(409).json({ error: "Injury sync already running" }); return; }
+    res.json(result);
   } catch (error) {
     req.log.error({ error }, "Injury synchronization failed");
     res.status(502).json({ error: error instanceof Error ? error.message : "Injury synchronization failed" });

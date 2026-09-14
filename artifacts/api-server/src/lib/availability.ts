@@ -84,8 +84,11 @@ export async function syncEspnInjuries(options?: { jobKey?: string; scheduledFor
   const runId = await beginRun("espn-injuries", options);
   try {
     const payload = await fetchJsonWithRetry("/injuries");
+    if (!Array.isArray(payload.injuries)) {
+      throw new Error("ESPN returned malformed injury payload: injuries must be an array");
+    }
     const sourceUpdatedAt = text(payload.timestamp) ? new Date(String(payload.timestamp)) : new Date();
-    const groups = Array.isArray(payload.injuries) ? payload.injuries : [];
+    const groups = payload.injuries;
     let inserted = 0;
     let unchanged = 0;
     for (const groupValue of groups) {
@@ -301,7 +304,6 @@ export async function getAvailabilityHealth() {
   const [injurySummary] = await db
     .select({
       records: sql<number>`count(*)::int`,
-      lastUpdated: sql<Date | null>`max(${injuriesTable.snapshotTimestamp})`,
     })
     .from(injuriesTable);
   const [depthSummary] = await db
@@ -311,25 +313,45 @@ export async function getAvailabilityHealth() {
       lastUpdated: sql<Date | null>`max(${depthChartSnapshotsTable.snapshotTimestamp})`,
     })
     .from(depthChartSnapshotsTable);
-  const recentRuns = await db
-    .select()
-    .from(dataSyncRunsTable)
-    .where(sql`${dataSyncRunsTable.provider} in ('espn-injuries', 'espn-depth-charts')`)
-    .orderBy(desc(dataSyncRunsTable.startedAt))
-    .limit(20);
-  const injuryRun = recentRuns.find((run) => run.provider === "espn-injuries");
-  const depthRun = recentRuns.find((run) => run.provider === "espn-depth-charts");
+  const [[latestInjurySuccess], [latestInjuryFailure], [latestDepthFailure]] = await Promise.all([
+    db
+      .select({ completedAt: dataSyncRunsTable.completedAt })
+      .from(dataSyncRunsTable)
+      .where(and(eq(dataSyncRunsTable.provider, "espn-injuries"), eq(dataSyncRunsTable.status, "success")))
+      .orderBy(desc(dataSyncRunsTable.completedAt))
+      .limit(1),
+    db
+      .select({
+        errorMessage: dataSyncRunsTable.errorMessage,
+        startedAt: dataSyncRunsTable.startedAt,
+        completedAt: dataSyncRunsTable.completedAt,
+      })
+      .from(dataSyncRunsTable)
+      .where(and(eq(dataSyncRunsTable.provider, "espn-injuries"), eq(dataSyncRunsTable.status, "failed")))
+      .orderBy(desc(dataSyncRunsTable.startedAt))
+      .limit(1),
+    db
+      .select({ errorMessage: dataSyncRunsTable.errorMessage })
+      .from(dataSyncRunsTable)
+      .where(and(eq(dataSyncRunsTable.provider, "espn-depth-charts"), eq(dataSyncRunsTable.status, "failed")))
+      .orderBy(desc(dataSyncRunsTable.startedAt))
+      .limit(1),
+  ]);
+  const latestInjuryFailureAt = latestInjuryFailure?.completedAt ?? latestInjuryFailure?.startedAt ?? null;
   return {
     injury: {
       records: injurySummary?.records ?? 0,
-      lastUpdated: injurySummary?.lastUpdated ? new Date(injurySummary.lastUpdated).toISOString() : null,
-      failure: injuryRun?.status === "failed" ? injuryRun.errorMessage : null,
+      lastUpdated: latestInjurySuccess?.completedAt ? new Date(latestInjurySuccess.completedAt).toISOString() : null,
+      failure: latestInjuryFailure
+        ? latestInjuryFailure.errorMessage ?? "Injury synchronization failed."
+        : null,
+      failureAt: latestInjuryFailureAt ? new Date(latestInjuryFailureAt).toISOString() : null,
     },
     depth: {
       records: depthSummary?.records ?? 0,
       teams: depthSummary?.teams ?? 0,
       lastUpdated: depthSummary?.lastUpdated ? new Date(depthSummary.lastUpdated).toISOString() : null,
-      failures: depthRun?.errorMessage?.split("; ").filter(Boolean) ?? [],
+      failures: latestDepthFailure?.errorMessage?.split("; ").filter(Boolean) ?? [],
     },
     runs: recentRuns.map((run) => ({
       id: run.id,

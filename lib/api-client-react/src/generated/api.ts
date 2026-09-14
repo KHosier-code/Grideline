@@ -28,9 +28,13 @@ import type {
   HealthStatus,
   ListGamesParams,
   ListOddsAuditsParams,
+  ListPregameFeatureAuditParams,
   OddsCaptureResult,
   OddsEventAudit,
   OddsHistory,
+  PregameFeatureAuditRow,
+  PregameFeatureHealth,
+  PregameFeatureRow,
   ScheduleSyncRequest,
   ScheduleSyncResult,
   Team
@@ -780,6 +784,319 @@ export const useSyncSchedule = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSyncScheduleMutationOptions(options));
+    }
+
+export const getGetPregameFeatureHealthUrl = () => {
+
+
+
+
+  return `/api/features/pregame/health`
+}
+
+/**
+ * @summary Read historical pregame feature coverage and limitations
+ */
+export const getPregameFeatureHealth = async ( options?: Parameters<typeof customFetch>[1]): Promise<PregameFeatureHealth> => {
+
+  return customFetch<PregameFeatureHealth>(getGetPregameFeatureHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPregameFeatureHealthQueryKey = () => {
+    return [
+    `/api/features/pregame/health`
+    ] as const;
+    }
+
+
+export const getGetPregameFeatureHealthQueryOptions = <TData = Awaited<ReturnType<typeof getPregameFeatureHealth>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPregameFeatureHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPregameFeatureHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPregameFeatureHealth>>> = ({ signal }) => getPregameFeatureHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPregameFeatureHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPregameFeatureHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getPregameFeatureHealth>>>
+export type GetPregameFeatureHealthQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read historical pregame feature coverage and limitations
+ */
+
+export function useGetPregameFeatureHealth<TData = Awaited<ReturnType<typeof getPregameFeatureHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPregameFeatureHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPregameFeatureHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPregameFeaturesForGameUrl = (gameId: string,) => {
+
+
+
+
+  return `/api/features/pregame/game/${gameId}`
+}
+
+/**
+ * @summary Read versioned pregame features for one game
+ */
+export const getPregameFeaturesForGame = async (gameId: string, options?: Parameters<typeof customFetch>[1]): Promise<PregameFeatureRow[]> => {
+
+  return customFetch<PregameFeatureRow[]>(getGetPregameFeaturesForGameUrl(gameId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPregameFeaturesForGameQueryKey = (gameId: string,) => {
+    return [
+    `/api/features/pregame/game/${gameId}`
+    ] as const;
+    }
+
+
+export const getGetPregameFeaturesForGameQueryOptions = <TData = Awaited<ReturnType<typeof getPregameFeaturesForGame>>, TError = ErrorType<unknown>>(gameId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPregameFeaturesForGame>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPregameFeaturesForGameQueryKey(gameId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPregameFeaturesForGame>>> = ({ signal }) => getPregameFeaturesForGame(gameId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPregameFeaturesForGame>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPregameFeaturesForGameQueryResult = NonNullable<Awaited<ReturnType<typeof getPregameFeaturesForGame>>>
+export type GetPregameFeaturesForGameQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read versioned pregame features for one game
+ */
+
+export function useGetPregameFeaturesForGame<TData = Awaited<ReturnType<typeof getPregameFeaturesForGame>>, TError = ErrorType<unknown>>(
+ gameId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPregameFeaturesForGame>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPregameFeaturesForGameQueryOptions(gameId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPregameFeatureAuditUrl = (params?: ListPregameFeatureAuditParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/features/audit?${stringifiedParams}` : `/api/features/audit`
+}
+
+/**
+ * @summary Read feature values and point-in-time source audit metadata
+ */
+export const listPregameFeatureAudit = async (params?: ListPregameFeatureAuditParams, options?: Parameters<typeof customFetch>[1]): Promise<PregameFeatureAuditRow[]> => {
+
+  return customFetch<PregameFeatureAuditRow[]>(getListPregameFeatureAuditUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPregameFeatureAuditQueryKey = (params?: ListPregameFeatureAuditParams,) => {
+    return [
+    `/api/features/audit`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPregameFeatureAuditQueryOptions = <TData = Awaited<ReturnType<typeof listPregameFeatureAudit>>, TError = ErrorType<unknown>>(params?: ListPregameFeatureAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPregameFeatureAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPregameFeatureAuditQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPregameFeatureAudit>>> = ({ signal }) => listPregameFeatureAudit(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPregameFeatureAudit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPregameFeatureAuditQueryResult = NonNullable<Awaited<ReturnType<typeof listPregameFeatureAudit>>>
+export type ListPregameFeatureAuditQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read feature values and point-in-time source audit metadata
+ */
+
+export function useListPregameFeatureAudit<TData = Awaited<ReturnType<typeof listPregameFeatureAudit>>, TError = ErrorType<unknown>>(
+ params?: ListPregameFeatureAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPregameFeatureAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPregameFeatureAuditQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBuildPregameFeaturesUrl = () => {
+
+
+
+
+  return `/api/features/pregame/build`
+}
+
+/**
+ * Requires authenticated administrator access. Never trains or scores a betting model.
+ * @summary Build an immutable version of historical pregame features
+ */
+export const buildPregameFeatures = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getBuildPregameFeaturesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getBuildPregameFeaturesMutationKey = () => ['buildPregameFeatures'] as const;
+
+export const getBuildPregameFeaturesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof buildPregameFeatures>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof buildPregameFeatures>>, TError,void, TContext> => {
+
+const mutationKey = getBuildPregameFeaturesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof buildPregameFeatures>>, void> = () => {
+
+
+          return  buildPregameFeatures(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BuildPregameFeaturesMutationResult = NonNullable<Awaited<ReturnType<typeof buildPregameFeatures>>>
+
+    export type BuildPregameFeaturesMutationError = ErrorType<void>
+
+
+    /**
+ * @summary Build an immutable version of historical pregame features
+ */
+export const useBuildPregameFeatures = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof buildPregameFeatures>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof buildPregameFeatures>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getBuildPregameFeaturesMutationOptions(options));
     }
 
 export const getListTeamsUrl = () => {

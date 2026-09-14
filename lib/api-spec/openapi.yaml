@@ -513,6 +513,8 @@ components:
         label: { type: string }
         status: { type: string, enum: [current, stale, not_configured, unavailable] }
         detail: { type: string }
+        schedule: { type: ["string", "null"] }
+        retryPolicy: { type: ["string", "null"] }
         lastUpdated: { type: ["string", "null"], format: date-time }
         nextUpdate: { type: ["string", "null"], format: date-time }
         requestsToday: { type: integer }
@@ -521,6 +523,20 @@ components:
         metadata:
           type: object
           additionalProperties: true
+        scheduledRuns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduledDataHealthRun"
+    ScheduledDataHealthRun:
+      type: object
+      required: [id, provider, status, error, startedAt, completedAt]
+      properties:
+        id: { type: integer }
+        provider: { type: string }
+        status: { type: string }
+        error: { type: ["string", "null"] }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: ["string", "null"], format: date-time }
     PerformanceSummary:
       type: object
       required: [record, winRate, units, roi]
@@ -624,4 +640,3 @@ components:
         sampleSize: { type: integer }
         quality: { type: string, enum: [high, low_sample, unavailable] }
         unavailableReason: { type: ["string", "null"] }
-

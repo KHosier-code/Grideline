@@ -7,12 +7,17 @@
  */
 import type { DataHealthMetadata } from './dataHealthMetadata';
 import type { DataHealthStatus } from './dataHealthStatus';
+import type { ScheduledDataHealthRun } from './scheduledDataHealthRun';
 
 export interface DataHealth {
   provider: string;
   label: string;
   status: DataHealthStatus;
   detail: string;
+  /** @nullable */
+  schedule?: string | null;
+  /** @nullable */
+  retryPolicy?: string | null;
   /** @nullable */
   lastUpdated?: Date | null;
   /** @nullable */
@@ -22,4 +27,5 @@ export interface DataHealth {
   /** @nullable */
   remainingQuota?: string | null;
   metadata?: DataHealthMetadata;
+  scheduledRuns?: ScheduledDataHealthRun[];
 }
