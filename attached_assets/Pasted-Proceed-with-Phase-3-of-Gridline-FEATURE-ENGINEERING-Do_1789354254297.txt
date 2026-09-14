@@ -1,0 +1,71 @@
+Proceed with Phase 3 of Gridline: FEATURE ENGINEERING.
+
+Do not train betting models yet.
+
+First complete these two Phase 2 cleanup items:
+
+1. Restrict all manual synchronization endpoints so they require authenticated admin access and cannot be triggered anonymously.
+2. Keep the current live-depth-chart limitation clearly documented in Data Health. Do not fabricate current depth-chart data.
+
+Then build the historical feature-engineering layer that will feed future Spread, Moneyline, and Totals models.
+
+The primary requirement is strict chronological integrity.
+
+For every historical NFL game, all pregame features must contain ONLY information available before that game's kickoff.
+
+Never use the current game's outcome or future games when creating pregame features.
+
+Create a dedicated model-feature table with one row per team/game or matchup, with versioned feature definitions.
+
+Build pregame rolling metrics using:
+
+* season-to-date
+* last 8 games
+* last 5 games
+* last 3 games
+
+Require appropriate minimum sample sizes and identify low-sample observations.
+
+OFFENSE FEATURES
+
+Create pregame metrics where supported by the data:
+
+* EPA per play
+* pass EPA per dropback/play
+* rush EPA per rush
+* offensive success rate
+* passing success rate
+* rushing success rate
+* explosive pass rate
+* explosive rush rate
+* yards per play
+* points per drive
+* third-down conversion rate
+* red-zone touchdown rate
+* turnover rate
+* sack rate allowed
+* pressure rate allowed where reliable
+* neutral-script pass rate
+* pace / seconds per play where calculable
+* early-down pass rate
+* early-down success rate
+
+DEFENSE FEATURES
+
+Create:
+
+* EPA allowed per play
+* pass EPA allowed
+* rush EPA allowed
+* defensive success rate
+* pass success rate allowed
+* rush success rate allowed
+* explosive pass rate allowed
+* explosive rush rate allowed
+* yards per play allowed
+* points allowed per drive
+* third-down defense
+* red-zone touchdown rate allowed
+* sack rate
+* pressure rate where supported
+* tu
