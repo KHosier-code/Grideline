@@ -676,6 +676,11 @@ function Backtesting() {
 }
 
 function ModelLab() {
+  const { getToken } = useAuth();
+  const authHeaders = async (): Promise<Record<string, string>> => {
+    const token = await getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
   const lab = useQuery({
     queryKey: ['model-lab'],
     queryFn: async () => {
@@ -689,7 +694,7 @@ function ModelLab() {
   const promotions = useQuery({
     queryKey: ['model-promotions'],
     queryFn: async () => {
-      const response = await fetch('/api/models/promotions', { credentials: 'include' });
+      const response = await fetch('/api/models/promotions', { credentials: 'include', headers: await authHeaders() });
       if (!response.ok) throw new Error('Promotion history unavailable');
       return response.json() as Promise<any>;
     },
@@ -698,7 +703,7 @@ function ModelLab() {
   const adminStatus = useQuery({
     queryKey: ['admin-status'],
     queryFn: async () => {
-      const response = await fetch('/api/auth/admin-status', { credentials: 'include' });
+      const response = await fetch('/api/auth/admin-status', { credentials: 'include', headers: await authHeaders() });
       if (!response.ok) throw new Error('Admin status unavailable');
       return response.json() as Promise<any>;
     },
@@ -722,7 +727,7 @@ function ModelLab() {
       const response = await fetch('/api/models/promote', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ modelVersion: run.modelVersion, notes: 'Explicit administrator review from Model Lab.' }),
       });
       const body = await response.json().catch(() => ({}));
