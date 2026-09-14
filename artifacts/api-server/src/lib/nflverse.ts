@@ -7,6 +7,7 @@ import { and, eq, sql } from "drizzle-orm";
 import {
   dataSyncRunsTable,
   db,
+  historicalDepthChartTable,
   nflverseSourceFilesTable,
   playerGameStatsTable,
   snapCountsTable,
@@ -19,6 +20,7 @@ const cacheDirectory = join(process.cwd(), ".cache", "nflverse");
 const defaultSeasons = [2021, 2022, 2023, 2024, 2025, 2026];
 
 type CsvRow = Record<string, string>;
+type NflverseDataset = "pbp" | "player_stats" | "snap_counts" | "depth_charts";
 type TeamGameAccumulator = {
   season: number;
   week: number;
@@ -79,7 +81,9 @@ async function forEachCsvRow(
   filePath: string,
   handler: (row: CsvRow, rowNumber: number) => Promise<void> | void,
 ) {
-  const input = createReadStream(filePath).pipe(createGunzip());
+  const input = filePath.endsWith(".gz")
+    ? createReadStream(filePath).pipe(createGunzip())
+    : createReadStream(filePath);
   const lines = createInterface({ input, crlfDelay: Infinity });
   let headers: string[] = [];
   let rowNumber = 0;
@@ -119,9 +123,13 @@ function ratio(numerator: number, denominator: number) {
   return denominator > 0 ? numerator / denominator : null;
 }
 
-function datasetUrl(dataset: "pbp" | "player_stats" | "snap_counts", season: number) {
+function datasetUrl(dataset: NflverseDataset, season: number) {
   if (dataset === "player_stats" && season >= 2025) {
     return `${nflverseBaseUrl}/player_stats/player_stats.csv.gz`;
+  }
+  if (dataset === "depth_charts") {
+    const extension = season >= 2024 ? "csv.gz" : "csv";
+    return `${nflverseBaseUrl}/depth_charts/depth_charts_${season}.${extension}`;
   }
   const filePrefix = dataset === "pbp" ? "play_by_play" : dataset;
   return `${nflverseBaseUrl}/${dataset}/${filePrefix}_${season}.csv.gz`;
@@ -146,7 +154,7 @@ async function fetchWithRetry(url: string, attempts = 3) {
   throw lastError instanceof Error ? lastError : new Error("NFLverse download failed");
 }
 
-async function acquireDataset(dataset: "pbp" | "player_stats" | "snap_counts", season: number) {
+async function acquireDataset(dataset: NflverseDataset, season: number) {
   await mkdir(cacheDirectory, { recursive: true });
   const url = datasetUrl(dataset, season);
   const filePath = join(cacheDirectory, basename(new URL(url).pathname));
@@ -454,6 +462,58 @@ async function ingestSnapCounts(season: number, filePath: string) {
   return { sourceRows: rows, records: inserted };
 }
 
+async function ingestHistoricalDepthCharts(season: number, filePath: string) {
+  const values: Array<typeof historicalDepthChartTable.$inferInsert> = [];
+  let inserted = 0;
+  const flush = async () => {
+    if (values.length === 0) return;
+    const batch = [...new Map(values.splice(0).map((item) => [item.sourceKey, item])).values()];
+    await db.insert(historicalDepthChartTable).values(batch).onConflictDoUpdate({
+      target: historicalDepthChartTable.sourceKey,
+      set: {
+        playerName: sql`excluded.player_name`,
+        depthPosition: sql`excluded.depth_position`,
+        role: sql`excluded.role`,
+        sourceSnapshotAt: sql`excluded.source_snapshot_at`,
+        sourceUpdatedAt: new Date(),
+      },
+    });
+    inserted += batch.length;
+  };
+  const rows = await forEachCsvRow(filePath, async (row) => {
+    const modernSnapshot = Boolean(row.dt && row.team);
+    const teamId = modernSnapshot ? row.team : row.club_code;
+    const week = modernSnapshot ? 0 : integerValue(row.week);
+    if (!teamId || week === null || row.game_type === "PRE") return;
+    const depthPosition = integerValue(modernSnapshot ? row.pos_rank : row.depth_team);
+    const playerName = modernSnapshot
+      ? row.player_name
+      : row.full_name || [row.first_name, row.last_name].filter(Boolean).join(" ");
+    if (!playerName) return;
+    const playerId = row.gsis_id || row.espn_id || row.elias_id || `${teamId}:${playerName.toLowerCase().replace(/\s+/g, "-")}`;
+    const position = modernSnapshot ? row.pos_abb || row.pos_name : row.position || row.depth_position;
+    const sourceSnapshotAt = modernSnapshot && row.dt ? new Date(row.dt) : null;
+    const sourceKey = modernSnapshot
+      ? `${season}:${row.dt}:${teamId}:${playerId}:${position}`
+      : `${season}:${week}:${teamId}:${playerId}:${position}`;
+    values.push({
+      sourceKey,
+      season: integerValue(row.season) ?? season,
+      week,
+      teamId,
+      playerId,
+      playerName,
+      position: position || null,
+      depthPosition,
+      role: depthPosition === 1 ? "starter" : "backup",
+      sourceSnapshotAt,
+    });
+    if (values.length >= 500) await flush();
+  });
+  await flush();
+  return { sourceRows: rows, records: inserted };
+}
+
 export async function syncNflverseHistory(seasons = defaultSeasons) {
   const [run] = await db
     .insert(dataSyncRunsTable)
@@ -463,7 +523,7 @@ export async function syncNflverseHistory(seasons = defaultSeasons) {
   let recordsProcessed = 0;
   try {
     for (const season of seasons) {
-      for (const dataset of ["pbp", "player_stats", "snap_counts"] as const) {
+      for (const dataset of ["pbp", "player_stats", "snap_counts", "depth_charts"] as const) {
         try {
           const source = await acquireDataset(dataset, season);
           const result =
@@ -471,7 +531,12 @@ export async function syncNflverseHistory(seasons = defaultSeasons) {
               ? await ingestPlayByPlay(season, source.filePath)
               : dataset === "player_stats"
                 ? await ingestPlayerStats(season, source.filePath)
-                : await ingestSnapCounts(season, source.filePath);
+                : dataset === "snap_counts"
+                  ? await ingestSnapCounts(season, source.filePath)
+                  : await ingestHistoricalDepthCharts(season, source.filePath);
+          if (result.records === 0) {
+            throw new Error(`${dataset} ${season}: source contains no usable rows for the requested season`);
+          }
           recordsProcessed += result.records;
           await db
             .update(nflverseSourceFilesTable)
@@ -480,6 +545,10 @@ export async function syncNflverseHistory(seasons = defaultSeasons) {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           failures.push(message);
+          await db
+            .update(nflverseSourceFilesTable)
+            .set({ status: "failed", errorMessage: message, completedAt: new Date() })
+            .where(and(eq(nflverseSourceFilesTable.dataset, dataset), eq(nflverseSourceFilesTable.season, season)));
           logger.error({ error, dataset, season }, "NFLverse dataset ingestion failed");
         }
       }
@@ -506,14 +575,19 @@ export async function syncNflverseHistory(seasons = defaultSeasons) {
 }
 
 export async function getNflverseHealth() {
-  const [summary] = await db
-    .select({
-      seasons: sql<number>`count(distinct ${teamGameStatsTable.season})::int`,
-      games: sql<number>`count(distinct ${teamGameStatsTable.gameId})::int`,
-      teamGames: sql<number>`count(*)::int`,
-      lastUpdated: sql<Date | null>`max(${teamGameStatsTable.sourceUpdatedAt})`,
-    })
-    .from(teamGameStatsTable);
+  const [[summary], [playerSummary], [snapSummary], [depthSummary]] = await Promise.all([
+    db
+      .select({
+        seasons: sql<number>`count(distinct ${teamGameStatsTable.season})::int`,
+        games: sql<number>`count(distinct ${teamGameStatsTable.gameId})::int`,
+        teamGames: sql<number>`count(*)::int`,
+        lastUpdated: sql<Date | null>`max(${teamGameStatsTable.sourceUpdatedAt})`,
+      })
+      .from(teamGameStatsTable),
+    db.select({ records: sql<number>`count(*)::int` }).from(playerGameStatsTable),
+    db.select({ records: sql<number>`count(*)::int` }).from(snapCountsTable),
+    db.select({ records: sql<number>`count(*)::int` }).from(historicalDepthChartTable),
+  ]);
   const failures = await db
     .select({ dataset: nflverseSourceFilesTable.dataset, season: nflverseSourceFilesTable.season, error: nflverseSourceFilesTable.errorMessage })
     .from(nflverseSourceFilesTable)
@@ -532,6 +606,9 @@ export async function getNflverseHealth() {
       seasonsLoaded: summary?.seasons ?? 0,
       gamesLoaded: summary?.games ?? 0,
       teamGameRows: summary?.teamGames ?? 0,
+      playerGameRows: playerSummary?.records ?? 0,
+      snapCountRows: snapSummary?.records ?? 0,
+      historicalDepthRows: depthSummary?.records ?? 0,
       failures: failures.map((item) => `${item.dataset} ${item.season}: ${item.error ?? "failed"}`),
     },
   };

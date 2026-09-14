@@ -259,6 +259,7 @@ export const snapCountsTable = pgTable("snap_counts", {
 
 export const historicalDepthChartTable = pgTable("historical_depth_charts", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sourceKey: text("source_key").notNull(),
   season: integer("season").notNull(),
   week: integer("week").notNull(),
   teamId: text("team_id").notNull(),
@@ -267,15 +268,10 @@ export const historicalDepthChartTable = pgTable("historical_depth_charts", {
   position: text("position"),
   depthPosition: integer("depth_position"),
   role: text("role"),
+  sourceSnapshotAt: timestamp("source_snapshot_at", { withTimezone: true }),
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
-  unique("historical_depth_chart_unique").on(
-    table.season,
-    table.week,
-    table.teamId,
-    table.playerId,
-    table.position,
-  ),
+  unique("historical_depth_chart_source_key_unique").on(table.sourceKey),
 ]);
 
 export const insertTeamSchema = createInsertSchema(teamsTable);

@@ -1,0 +1,1 @@
+- [NFLverse availability semantics](nflverse-availability.md) — validate requested-season rows; downloaded files can be valid but lack that season, and depth formats change by era.
