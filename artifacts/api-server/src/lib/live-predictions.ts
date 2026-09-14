@@ -226,7 +226,9 @@ function predictWithModel(model: ProductionModel, examples: Example[], vector: n
   const scaled = standardize(rows.map((row) => row.x), [vector]);
   const fitted = modelFor(model.algorithm, scaled.train, rows.map((row) => targetFor(model.family, row)), model.family === "moneyline");
   const value = fitted.predict(scaled.test[0]);
-  return model.family === "moneyline" ? clamp(value) : value;
+  if (!Number.isFinite(value)) return null;
+  const prediction = model.family === "moneyline" ? clamp(value) : value;
+  return Number.isFinite(prediction) ? prediction : null;
 }
 
 function snapshotLabel(now: Date, kickoff: Date) {
@@ -294,7 +296,8 @@ export async function generateLivePredictions(now = new Date()) {
     const margin = predictWithModel(models.get("spread")!, examplesResult.examples, vector.x);
     const total = predictWithModel(models.get("totals")!, examplesResult.examples, vector.x);
     const homeProbability = predictWithModel(models.get("moneyline")!, examplesResult.examples, vector.x);
-    if (margin === null || total === null || homeProbability === null) continue;
+    if (margin === null || total === null || homeProbability === null ||
+      !Number.isFinite(margin) || !Number.isFinite(total) || !Number.isFinite(homeProbability)) continue;
     const home = teamById.get(game.homeTeamId);
     if (!home) continue;
     const marketSnapshot = await marketData(game.gameId, now, {
@@ -306,7 +309,7 @@ export async function generateLivePredictions(now = new Date()) {
     const projectedAwayScore = (total - margin) / 2;
     const label = snapshotLabel(now, game.kickoffTime);
     const insert = await db.insert(predictionSnapshotsTable).values({
-      snapshotKey: `${game.gameId}:${label}`,
+      snapshotKey: `${game.gameId}:${label}:validated-v2`,
       gameId: game.gameId,
       predictionTimestamp: now,
       snapshotLabel: label,
@@ -567,7 +570,11 @@ export async function getLivePredictionBoard() {
     .where(sql`${predictionSnapshotsTable.kickoffTime} > ${now}`)
     .orderBy(asc(predictionSnapshotsTable.kickoffTime), desc(predictionSnapshotsTable.predictionTimestamp));
   const latest = new Map<string, typeof rows[number]>();
-  for (const row of rows) if (!latest.has(row.gameId)) latest.set(row.gameId, row);
+  for (const row of rows) {
+    const valid = [row.projectedMargin, row.projectedTotal, row.homeWinProbability, row.awayWinProbability]
+      .every((value) => typeof value === "number" && Number.isFinite(value));
+    if (valid && !latest.has(row.gameId)) latest.set(row.gameId, row);
+  }
   return [...latest.values()];
 }
 
@@ -592,7 +599,11 @@ export async function getCurrentWeekValidationReport() {
       .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id))
     : [];
   const latest = new Map<string, typeof snapshots[number]>();
-  for (const snapshot of snapshots) if (!latest.has(snapshot.gameId)) latest.set(snapshot.gameId, snapshot);
+   for (const snapshot of snapshots) {
+     const valid = [snapshot.projectedMargin, snapshot.projectedTotal, snapshot.homeWinProbability, snapshot.awayWinProbability]
+       .every((value) => typeof value === "number" && Number.isFinite(value));
+     if (valid && !latest.has(snapshot.gameId)) latest.set(snapshot.gameId, snapshot);
+   }
   const teamRows = await db.select().from(teamsTable);
   const teams = new Map(teamRows.map((team) => [team.teamId, team]));
   const records = games.map((game) => {

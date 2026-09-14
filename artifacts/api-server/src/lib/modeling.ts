@@ -88,7 +88,7 @@ function ridge(train: number[][], target: number[], lambda: number): MatrixModel
     return row === column && row > 0 ? value + lambda : value;
   }));
   const vector = Array.from({ length: width + 1 }, (_, row) => mean(train.map((item, index) => (row === 0 ? 1 : item[row - 1]) * target[index])));
-  const coefficients = solve(matrix, vector);
+  const coefficients = solve(matrix, vector).map((value) => Number.isFinite(value) ? Math.max(-1000, Math.min(1000, value)) : 0);
   return {
     predict: (row) => coefficients[0] + row.reduce((sum, value, index) => sum + value * coefficients[index + 1], 0),
     importance: Object.fromEntries(coefficients.slice(1).map((value, index) => [`${index}`, Math.abs(value)])),
@@ -106,7 +106,10 @@ function logistic(train: number[][], target: number[]): MatrixModel {
       row.forEach((value, column) => { gradient[column + 1] += error * value + 0.02 * coefficients[column + 1]; });
     });
     const rate = 0.08 / Math.max(1, train.length);
-    gradient.forEach((value, index) => { coefficients[index] -= rate * value; });
+    gradient.forEach((value, index) => {
+      const next = coefficients[index] - rate * value;
+      coefficients[index] = Number.isFinite(next) ? Math.max(-30, Math.min(30, next)) : 0;
+    });
   }
   return {
     predict: (row) => sigmoid(coefficients[0] + row.reduce((sum, value, index) => sum + value * coefficients[index + 1], 0)),
