@@ -1,0 +1,131 @@
+Approve and assign all four isolated Gridline tasks for parallel execution:
+
+- Task #18 — Production Stability & QA
+- Task #32 — Evaluation Retention & Performance
+- Task #33 — Consumer Data/API Layer
+- Task #35 — Consumer UI Foundation
+
+Run all four concurrently in their isolated task environments.
+
+Additional coordination rules before execution:
+
+1. TASK #18
+Owns:
+- worker
+- scheduler
+- personnel-context concurrency
+- lifecycle safety
+- promotion/lifecycle portions of shared model routes
+- production reliability tests
+
+Do not change evaluation calculations owned by Task #32.
+
+2. TASK #32
+Owns:
+- evaluation persistence
+- evaluation schema
+- evaluation calculations
+- historical reporting
+- evaluation-specific tests
+
+For `routes/models.ts`, modify only evaluation-reporting concerns.
+
+Do not change promotion or production lifecycle behavior owned by Task #18.
+
+3. TASK #33
+Owns:
+- consumer-safe API endpoints
+- serialization
+- OpenAPI contracts
+- generated clients
+- consumer API tests
+
+Task #33 may expose Task #32 evaluation results but must NOT:
+- duplicate evaluation calculations
+- independently redesign evaluation schemas
+- invent fields that Task #32 does not actually persist
+
+Where Task #32 output is not yet available, keep the interface bounded and clearly document the dependency.
+
+4. TASK #35
+Owns:
+- consumer frontend
+- navigation
+- game cards
+- game-detail presentation
+- consumer performance/trends pages
+- mobile/responsive behavior
+- loading, empty, and safe error states
+
+Task #35 must:
+- consume existing/generated API interfaces
+- not edit generated API files
+- not invent backend data that does not exist
+- use graceful unavailable states when a field is not yet supplied
+- leave Admin page designs intact
+
+5. SHARED FILE SAFETY
+
+The main known overlap is `routes/models.ts`.
+
+Task #18 owns:
+- promotion
+- production lifecycle
+- safety behavior
+
+Task #32 owns:
+- evaluation reporting
+
+Do not allow either task to rewrite the other task’s concerns.
+
+If a real conflict occurs:
+- stop at the conflict
+- document it
+- do not create duplicate implementations
+
+6. PARTIAL DEVELOPMENT WORK
+
+Inspect and reuse the valid partial work already present.
+
+Do not create second versions of:
+- consumer endpoints
+- consumer layouts
+- evaluation tables
+- evaluation writers
+- personnel-context concurrency logic
+
+Correct the existing implementation instead.
+
+7. DO NOT PUBLISH
+
+No task should publish or merge directly to production.
+
+Each task must finish in Ready state for review.
+
+8. COMPLETION REPORT FOR EACH TASK
+
+For each task return:
+
+- summary of changes
+- files/domains changed
+- existing partial work reused
+- bugs corrected
+- tests run
+- typecheck/build status
+- screenshots or preview for UI work
+- known conflicts
+- outstanding dependencies
+- whether safe to apply
+
+9. REVIEW/APPLICATION ORDER
+
+When all four are Ready, recommend application in this order unless a discovered dependency requires otherwise:
+
+1. Task #18 — Production Stability & QA
+2. Task #32 — Evaluation Retention & Performance
+3. Task #33 — Consumer Data/API Layer
+4. Task #35 — Consumer UI Foundation
+
+Do not automatically apply them.
+
+Begin all four tasks now.
