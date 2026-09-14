@@ -215,6 +215,9 @@ components:
         requestsToday: { type: integer }
         requestsThisMonth: { type: integer }
         remainingQuota: { type: ["string", "null"] }
+        metadata:
+          type: object
+          additionalProperties: true
     PerformanceSummary:
       type: object
       required: [record, winRate, units, roi]

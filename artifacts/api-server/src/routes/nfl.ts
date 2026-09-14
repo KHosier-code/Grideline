@@ -20,7 +20,7 @@ import {
   type EspnGame,
   type EspnTeam,
 } from "../lib/espn";
-import { getCurrentSeasonWeek } from "../lib/season";
+import { resolveCurrentSeasonWeek } from "../lib/season";
 
 const router: IRouter = Router();
 
@@ -158,7 +158,7 @@ router.get("/games", async (req, res): Promise<void> => {
     return;
   }
 
-  const current = getCurrentSeasonWeek();
+  const current = await resolveCurrentSeasonWeek();
   const season = parsed.data.season ?? current.season;
   const week = parsed.data.week ?? current.week;
   try {

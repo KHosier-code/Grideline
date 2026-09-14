@@ -214,6 +214,10 @@ function MetricCard({ label, value, detail, icon: Icon, accent = false }: { labe
 
 function FreshnessCard({ item }: { item: any }) {
   const status = item?.status;
+  const metadataEntries = Object.entries(item?.metadata ?? {})
+    .filter(([key, value]) => key !== 'failures' && value !== null && value !== undefined)
+    .slice(0, 4);
+  const failures = Array.isArray(item?.metadata?.failures) ? item.metadata.failures : [];
   return (
     <div data-testid={`health-card-${item.provider}`} className="health-row">
       <div className="flex min-w-0 items-start gap-3">
@@ -224,6 +228,8 @@ function FreshnessCard({ item }: { item: any }) {
             <StatusPill status={status}>{status === 'not_configured' ? 'Not configured' : status}</StatusPill>
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
+          {metadataEntries.length > 0 && <div className="health-metadata">{metadataEntries.map(([key, value]) => <span key={key}><strong>{String(value)}</strong> {key.replace(/([A-Z])/g, ' $1').toLowerCase()}</span>)}</div>}
+          {failures.length > 0 && <details className="health-failures"><summary>{failures.length} recorded failure{failures.length === 1 ? '' : 's'}</summary><ul>{failures.slice(0, 10).map((failure: string, index: number) => <li key={`${failure}-${index}`}>{failure}</li>)}</ul></details>}
         </div>
       </div>
       <div className="shrink-0 text-right text-xs text-muted-foreground">
@@ -346,12 +352,14 @@ function GameRow({ game }: { game: any }) {
 function ThisWeek() {
   const summary = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey(), staleTime: 30000 } });
   const season = summary.data?.season ?? new Date().getFullYear();
-  const week = summary.data?.currentWeek ?? undefined;
+  const currentWeek = summary.data?.currentWeek ?? 1;
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const week = selectedWeek ?? currentWeek;
   const games = useListGames({ season, week }, { query: { queryKey: getListGamesQueryKey({ season, week }), staleTime: 30000 } });
   const teams = useListTeams({ query: { queryKey: getListTeamsQueryKey(), staleTime: 300000 } });
   return (
     <>
-      <PageHeader eyebrow={`Season ${season} / Week ${week ?? '—'}`} title="This week" detail="Every scheduled game, with market coverage and model readiness made explicit." actions={<button type="button" className="button button-subtle" onClick={() => games.refetch()} data-testid="button-refresh-games"><RefreshCw className={cx('h-4 w-4', games.isFetching && 'animate-spin')} /> Refresh</button>} />
+      <PageHeader eyebrow={`Season ${season} / Week ${week}`} title="This week" detail="Browse preserved regular-season and postseason slates. The current week follows ESPN automatically after the Monday game window closes." actions={<><select className="week-select" aria-label="Select NFL week" value={week} onChange={(event) => setSelectedWeek(Number(event.target.value))} data-testid="select-week">{Array.from({ length: 22 }, (_, index) => index + 1).map((value) => <option value={value} key={value}>{value <= 18 ? `Week ${value}` : `Postseason ${value - 18}`}</option>)}</select><button type="button" className="button button-subtle" onClick={() => games.refetch()} data-testid="button-refresh-games"><RefreshCw className={cx('h-4 w-4', games.isFetching && 'animate-spin')} /> Refresh</button></>} />
       <div className="signal-strip"><div><span className="strip-label">SCHEDULE COVERAGE</span><strong>{games.data?.length ?? '—'} games</strong></div><div><span className="strip-label">TEAM INDEX</span><strong>{teams.data?.length ?? '—'} teams</strong></div><div><span className="strip-label">MODEL STATE</span><StatusPill status={summary.data?.modelStatus}>{summary.data?.modelStatus === 'not_trained' ? 'Not trained' : summary.data?.modelStatus ?? 'Checking'}</StatusPill></div><div className="hidden md:block"><span className="strip-label">CAPTURE WINDOW</span><strong>Current quotes</strong></div></div>
       <Panel className="mt-5" title="Current-week slate" eyebrow="Market board" action={<span className="section-meta">Click a game for detail</span>}>
         {games.isLoading ? <div className="space-y-2"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : games.isError ? <ErrorPanel /> : games.data?.length ? <div className="game-list">{games.data.map((game) => <GameRow key={game.gameId} game={game} />)}</div> : <EmptyPanel title="No games returned for this week" detail="The live schedule is empty for the current season and week. Check the API connection or return when the schedule is published." icon={CalendarDays} />}

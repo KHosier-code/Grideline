@@ -12,6 +12,7 @@ export * from './appSettingsUpdate';
 export * from './appSettingsUpdateSportsbooksItem';
 export * from './dashboardSummary';
 export * from './dataHealth';
+export * from './dataHealthMetadata';
 export * from './dataHealthStatus';
 export * from './game';
 export * from './gameModelStatus';

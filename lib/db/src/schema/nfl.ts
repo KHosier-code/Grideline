@@ -88,7 +88,7 @@ export const depthChartSnapshotsTable = pgTable("depth_chart_snapshots", {
     table.depthPosition,
     table.sourceHash,
   ),
-});
+]);
 
 export const sportsbookOddsTable = pgTable("sportsbook_odds", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { DataHealthMetadata } from './dataHealthMetadata';
 import type { DataHealthStatus } from './dataHealthStatus';
 
 export interface DataHealth {
@@ -20,4 +21,5 @@ export interface DataHealth {
   requestsThisMonth?: number;
   /** @nullable */
   remainingQuota?: string | null;
+  metadata?: DataHealthMetadata;
 }

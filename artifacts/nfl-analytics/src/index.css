@@ -520,6 +520,12 @@
   .edge-row:hover { margin: 0 -10px; padding: 12px; border-radius: 7px; background: hsl(var(--secondary)); }
   .edge-index, .feature-number { display: grid; height: 27px; width: 27px; flex-shrink: 0; place-items: center; border-radius: 6px; background: hsl(var(--accent) / .12); color: hsl(var(--accent)); font-family: var(--app-font-mono); font-size: 10px; }
   .health-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border: 1px solid hsl(var(--border)); border-radius: 9px; padding: 13px; }
+  .health-metadata { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+  .health-metadata span { border-radius: 5px; background: hsl(var(--secondary)); padding: 4px 7px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; }
+  .health-metadata strong { color: hsl(var(--foreground)); }
+  .health-failures { margin-top: 9px; color: hsl(0 56% 42%); font-size: 10px; }
+  .health-failures summary { cursor: pointer; font-weight: 700; }
+  .health-failures ul { max-height: 150px; overflow: auto; margin: 7px 0 0; padding-left: 18px; color: hsl(var(--muted-foreground)); line-height: 1.6; }
   .provider-mark, .readiness-header-icon { display: grid; height: 32px; width: 32px; flex-shrink: 0; place-items: center; border-radius: 8px; background: hsl(var(--accent) / .1); color: hsl(var(--accent)); }
   .provider-good { background: hsl(169 47% 42% / .12); color: hsl(169 47% 30%); }
   .provider-warn { background: hsl(38 80% 48% / .12); color: hsl(34 72% 34%); }
@@ -580,6 +586,7 @@
   .field-label { color: hsl(var(--foreground)); font-size: 13px; font-weight: 700; }
   .field-label span { display: block; margin-top: 3px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; font-weight: 400; text-transform: uppercase; }
   .field-input { width: 100%; height: 38px; border: 1px solid hsl(var(--input)); border-radius: 7px; background: hsl(var(--card)); padding: 0 10px; color: hsl(var(--foreground)); font-family: var(--app-font-mono); font-size: 12px; outline: none; }
+  .week-select { height: 37px; border: 1px solid hsl(var(--border)); border-radius: 7px; background: hsl(var(--card)); padding: 0 30px 0 11px; color: hsl(var(--foreground)); font-size: 12px; font-weight: 700; }
   .field-input:focus { border-color: hsl(var(--accent)); box-shadow: 0 0 0 3px hsl(var(--accent) / .1); }
   .field-help { grid-column: 1 / -1; margin: -3px 0 10px; color: hsl(var(--muted-foreground)); font-size: 11px; }
   .toggle-line { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid hsl(var(--border)); margin-top: 8px; padding-top: 19px; }

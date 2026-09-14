@@ -79,6 +79,8 @@ export const DataHealthStatus = {
   unavailable: 'unavailable',
 } as const;
 
+export type DataHealthMetadata = { [key: string]: unknown };
+
 export interface DataHealth {
   provider: string;
   label: string;
@@ -92,6 +94,7 @@ export interface DataHealth {
   requestsThisMonth?: number;
   /** @nullable */
   remainingQuota?: string | null;
+  metadata?: DataHealthMetadata;
 }
 
 export interface PerformanceSummary {

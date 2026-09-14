@@ -65,7 +65,8 @@ export const GetDataHealthResponseItem = zod.object({
   "nextUpdate": zod.coerce.date().nullish(),
   "requestsToday": zod.number().int().optional(),
   "requestsThisMonth": zod.number().int().optional(),
-  "remainingQuota": zod.string().nullish()
+  "remainingQuota": zod.string().nullish(),
+  "metadata": zod.record(zod.string(), zod.unknown()).optional()
 })
 export const GetDataHealthResponse = zod.array(GetDataHealthResponseItem)
 

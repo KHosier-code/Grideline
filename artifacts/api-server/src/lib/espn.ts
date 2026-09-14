@@ -27,6 +27,8 @@ export type EspnGame = {
 
 type EspnResponse = {
   events?: unknown[];
+  season?: { year?: number; type?: number };
+  week?: { number?: number };
   sports?: Array<{
     leagues?: Array<{
       teams?: Array<{ team?: Record<string, unknown> }>;
@@ -123,12 +125,32 @@ export async function fetchSchedule(season: number, week: number): Promise<EspnG
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.value as EspnGame[];
 
-  const data = await fetchEspn(`/scoreboard?limit=1000&dates=${season}&seasontype=2&week=${week}`);
+  const seasonType = week > 18 ? 3 : 2;
+  const sourceWeek = week > 18 ? week - 18 : week;
+  const data = await fetchEspn(`/scoreboard?limit=1000&dates=${season}&seasontype=${seasonType}&week=${sourceWeek}`);
   const games = (data.events ?? [])
-    .map((event) => parseGame(event, season, week))
+    .map((event) => {
+      const game = parseGame(event, season, week);
+      return game ? { ...game, week } : null;
+    })
     .filter((game): game is EspnGame => game !== null);
   cache.set(cacheKey, { expiresAt: Date.now() + 5 * 60_000, value: games });
   return games;
+}
+
+export async function fetchCurrentSeasonWeek() {
+  const data = await fetchEspn("/scoreboard?limit=1000");
+  const season = Number(data.season?.year);
+  const sourceWeek = Number(data.week?.number);
+  const seasonType = Number(data.season?.type);
+  if (!Number.isInteger(season) || !Number.isInteger(sourceWeek)) {
+    throw new Error("ESPN did not return a current NFL season and week");
+  }
+  return {
+    season,
+    week: seasonType === 3 ? 18 + sourceWeek : sourceWeek,
+    seasonType,
+  };
 }
 
 export async function fetchTeams(): Promise<EspnTeam[]> {

@@ -2,12 +2,13 @@ import { Router, type IRouter } from "express";
 import { GetDashboardSummaryResponse, GetDataHealthResponse } from "@workspace/api-zod";
 import { fetchSchedule, getEspnHealth, logEspnFailure } from "../lib/espn";
 import { getNflverseHealth } from "../lib/nflverse";
-import { getCurrentSeasonWeek } from "../lib/season";
+import { resolveCurrentSeasonWeek } from "../lib/season";
+import { getAvailabilityHealth } from "../lib/availability";
 
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", async (req, res): Promise<void> => {
-  const { season, week } = getCurrentSeasonWeek();
+  const { season, week } = await resolveCurrentSeasonWeek();
   let gamesThisWeek = 0;
   try {
     gamesThisWeek = (await fetchSchedule(season, week)).length;
@@ -32,7 +33,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 });
 
 router.get("/data-health", async (req, res): Promise<void> => {
-  const current = getCurrentSeasonWeek();
+  const current = await resolveCurrentSeasonWeek();
   try {
     await fetchSchedule(current.season, current.week);
   } catch (error) {
@@ -40,7 +41,8 @@ router.get("/data-health", async (req, res): Promise<void> => {
     req.log.warn({ error }, "Data health could not refresh ESPN");
   }
   const espn = getEspnHealth();
-  const nflverse = getNflverseHealth();
+  const nflverse = await getNflverseHealth();
+  const availability = await getAvailabilityHealth();
   const oddsConfigured = Boolean(process.env.ODDS_API_KEY);
   res.json(
     GetDataHealthResponse.parse([
@@ -67,6 +69,7 @@ router.get("/data-health", async (req, res): Promise<void> => {
         requestsToday: nflverse.requestsToday,
         requestsThisMonth: nflverse.requestsThisMonth,
         remainingQuota: nflverse.remainingQuota,
+        metadata: nflverse.metadata,
       },
       {
         provider: "odds-api",
@@ -82,15 +85,34 @@ router.get("/data-health", async (req, res): Promise<void> => {
         remainingQuota: null,
       },
       {
-        provider: "injuries-depth",
-        label: "Injuries & depth charts",
-        status: "stale",
-        detail: "Historical snapshot tables are ready; the first scheduled sync is pending.",
-        lastUpdated: null,
+        provider: "espn-injuries",
+        label: "ESPN injuries",
+        status: availability.injury.records > 0 ? "current" : availability.injury.failure ? "unavailable" : "stale",
+        detail: availability.injury.records > 0
+          ? `${availability.injury.records} immutable injury snapshots captured.`
+          : availability.injury.failure ?? "The first injury synchronization is pending.",
+        lastUpdated: availability.injury.lastUpdated,
         nextUpdate: null,
         requestsToday: 0,
         requestsThisMonth: 0,
-        remainingQuota: "ESPN adapter planned",
+        remainingQuota: "Public endpoint",
+        metadata: { records: availability.injury.records, failures: availability.injury.failure ? [availability.injury.failure] : [] },
+      },
+      {
+        provider: "espn-depth-charts",
+        label: "ESPN depth charts",
+        status: availability.depth.teams > 0 ? "current" : availability.depth.failures.length ? "unavailable" : "stale",
+        detail: availability.depth.teams > 0
+          ? `${availability.depth.teams} teams updated; ${availability.depth.records} historical rows retained.`
+          : availability.depth.failures.length
+            ? `No structured rows captured; ${availability.depth.failures.length} team failures recorded.`
+            : "The first depth-chart synchronization is pending.",
+        lastUpdated: availability.depth.lastUpdated,
+        nextUpdate: null,
+        requestsToday: 0,
+        requestsThisMonth: 0,
+        remainingQuota: "Public endpoint",
+        metadata: { teamsUpdated: availability.depth.teams, records: availability.depth.records, failures: availability.depth.failures },
       },
     ]),
   );
