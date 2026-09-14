@@ -1,0 +1,157 @@
+Fix the Phase 7.1 production migration inconsistency.
+
+Do not retrain, score, promote, or modify any production model.
+
+Current production state:
+
+* `weather_forecast_snapshots` table exists.
+* `depth_chart_snapshots.source` exists.
+* `depth_chart_snapshots.classification` exists.
+* Production migration ledger ends at `0009`.
+* `0010_weather_forecast_snapshots.sql` is missing from ledger.
+* `0011_personnel_provenance_and_weather_immutability.sql` is missing from ledger.
+* Production does NOT currently have the append-only trigger on `weather_forecast_snapshots`.
+* 16 valid weather snapshots already exist.
+* Existing Phase 6 models and prediction history are unchanged.
+
+Goal:
+
+Reconcile production so the physical schema, migration ledger, and safety controls all agree.
+
+1. INSPECT FIRST
+
+Before changing anything, compare the current production schema against migration files `0010` and `0011`.
+
+For each statement in each migration, classify it as:
+
+* already satisfied
+* missing but safe to apply
+* conflicting
+* destructive
+
+Do not re-create existing columns/tables blindly.
+
+2. APPLY ONLY MISSING SAFE OPERATIONS
+
+For `0010` and `0011`, apply only operations that are genuinely missing and safe.
+
+Expected missing control includes:
+
+* append-only trigger/function protecting `weather_forecast_snapshots` from UPDATE and DELETE
+
+Do not delete or rewrite any existing weather rows.
+
+Do not drop or truncate any table.
+
+3. MIGRATION LEDGER RECONCILIATION
+
+Only after verifying the physical production schema matches the intended result of each migration:
+
+* record `0010_weather_forecast_snapshots.sql`
+* record `0011_personnel_provenance_and_weather_immutability.sql`
+
+in `gridline_migration_history`
+
+Use the exact development checksums:
+
+0010:
+e6935229a5c09d6a7d065f263d9ca594a4b38f6a148938aba5bb1ac93769f380
+
+0011:
+db1c65570d2273964653933b81957ad24f1cfa1717dd158e59fb4a6ea85347f0
+
+Do not insert ledger records unless the resulting production schema truly matches the intended migration state.
+
+4. VERIFY APPEND-ONLY PROTECTION
+
+Confirm the production trigger exists.
+
+Test the protection safely inside a transaction that is rolled back.
+
+Prove that:
+
+* UPDATE on an existing weather snapshot is rejected
+* DELETE on an existing weather snapshot is rejected
+* INSERT of a valid new snapshot remains allowed
+
+Do not permanently modify or delete any existing production row during the test.
+
+5. VERIFY MIGRATION STATE
+
+After reconciliation verify:
+
+* ledger contains `0001` through `0011`
+* checksums match
+* no unknown migration records
+* no pending production schema diff
+* no destructive change occurred
+
+6. VERIFY DATA PRESERVATION
+
+Confirm row counts remain unchanged for:
+
+* games
+* prediction_snapshots
+* model_training_runs
+* model_promotion_history
+* sportsbook_odds
+* injuries
+* pregame_team_features
+
+Weather snapshot count may increase only if the scheduled worker legitimately collected additional rows during verification.
+
+7. VERIFY PHASE 6 IS UNCHANGED
+
+Confirm active production model versions remain exactly unchanged for:
+
+* spread
+* moneyline
+* totals
+
+Confirm:
+
+* no Phase 8 training
+* no Phase 8 promotion
+* no production prediction rewrite
+
+8. PRODUCTION READINESS ACCESS
+
+Because the private Replit protection layer prevents anonymous retrieval of the computed Challenger Readiness endpoint, do not weaken deployment security.
+
+Instead provide one of these safe methods:
+
+A. authenticated production-admin retrieval through the existing Clerk session
+
+or
+
+B. a read-only production readiness script that executes inside the production environment and prints only non-sensitive aggregate readiness metrics
+
+Do not create a public unauthenticated endpoint.
+
+The output must include:
+
+* median personnel completeness
+* median QB certainty
+* injury coverage
+* sportsbook freshness
+* eligible weather coverage
+* median Data Confidence
+* systematic source failure status
+* Phase 8 eligibility
+
+9. FINAL REPORT
+
+Return:
+
+* 0010 reconciliation status
+* 0011 reconciliation status
+* migration ledger status
+* append-only trigger status
+* rollback-safe mutation-test result
+* critical row-count preservation
+* active Phase 6 versions
+* production readiness metrics
+* Phase 8 eligibility
+* any remaining blockers
+
+Do not mark Phase 8 eligible unless every configured readiness threshold passes.
