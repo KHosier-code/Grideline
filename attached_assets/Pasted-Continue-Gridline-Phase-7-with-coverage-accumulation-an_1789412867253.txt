@@ -1,0 +1,85 @@
+Continue Gridline Phase 7 with coverage accumulation and challenger-readiness gating.
+
+Do not retrain or promote any model yet.
+
+The goal is to determine when `pregame-v4-personnel-context` has enough trustworthy live and historical coverage to justify Phase 8 challenger evaluation.
+
+1. Publish the current Phase 7.1 schema, worker, weather, personnel, and audit changes to production.
+
+2. Verify production migrations:
+
+* 0010_weather_forecast_snapshots.sql
+* 0011_personnel_provenance_and_weather_immutability.sql
+
+Confirm:
+
+* no destructive schema changes
+* migration checksums match
+* production row counts remain valid
+* worker starts new weather synchronization
+* existing Phase 6 models remain unchanged
+
+3. Add a Challenger Readiness panel.
+
+Track for each upcoming game and weekly aggregate:
+
+* personnel completeness
+* QB certainty
+* injury freshness
+* sportsbook freshness
+* weather coverage
+* sample quality
+* overall Data Confidence
+
+4. Define readiness thresholds for evaluation only, not betting.
+
+Suggested initial thresholds:
+
+* median personnel completeness >= 80
+* median QB certainty >= 70
+* current injury coverage >= 90%
+* sportsbook freshness >= 90%
+* weather coverage for eligible outdoor/retractable games >= 80%
+* median overall Data Confidence >= 65
+* no systematic source failure affecting one major feature family
+
+Do not treat these thresholds as performance guarantees.
+
+5. Track published vs inferred personnel separately.
+
+Do not block Phase 8 solely because published league-wide depth charts are unavailable if inferred coverage is strong and historically auditable.
+
+6. Continue collecting append-only data for upcoming games.
+
+Do not backfill historical weather or personnel using information that became available after kickoff.
+
+7. Add weekly coverage trend reporting.
+
+Show:
+
+* Week
+* personnel coverage
+* QB certainty
+* injury coverage
+* sportsbook freshness
+* weather coverage
+* median Data Confidence
+* games below 50 Data Confidence
+* games above 70 Data Confidence
+
+8. When readiness thresholds are met, mark Phase 8 challenger evaluation as eligible.
+
+Do not automatically start model training.
+
+FINAL REPORT
+
+Return:
+
+* production publish status
+* migration status
+* worker/weather status
+* current coverage metrics
+* readiness threshold status
+* which thresholds pass/fail
+* whether Phase 8 is eligible
+* confirmation that Phase 6 remains unchanged

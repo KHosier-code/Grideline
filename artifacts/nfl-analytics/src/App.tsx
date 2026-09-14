@@ -58,6 +58,8 @@ import {
   useListTeams,
   useUpdateSettings,
   useCaptureOdds,
+  useGetChallengerReadinessReport,
+  getGetChallengerReadinessReportQueryKey,
 } from '@workspace/api-client-react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -741,6 +743,158 @@ function FeatureAuditPage() {
   );
 }
 
+function ChallengerReadinessPanel() {
+  const readiness = useGetChallengerReadinessReport({ query: { queryKey: getGetChallengerReadinessReportQueryKey(), staleTime: 30000 } });
+
+  if (readiness.isLoading) return <Panel eyebrow="Model Audit" title="Challenger Readiness"><LoadingPanel label="Loading challenger readiness report" /></Panel>;
+  if (readiness.isError || !readiness.data) return <Panel eyebrow="Model Audit" title="Challenger Readiness"><ErrorPanel message="Challenger readiness report could not be loaded." /></Panel>;
+
+  const data = readiness.data;
+  const decimal = (value: unknown, digits = 1) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '—';
+
+  return (
+    <Panel eyebrow="Model Audit" title="Challenger Readiness" className="mb-5">
+      <div className="overview-banner">
+        <div>
+          <p className="eyebrow text-accent">EVALUATION ONLY</p>
+          <h2 className="banner-title">
+            {data.eligible ? 'Ready for Evaluation' : 'Not Ready for Evaluation'}
+          </h2>
+          <p className="banner-copy">
+            This evaluation-only check verifies that accumulated pregame evidence is sufficient to begin a separate challenger evaluation. It is <strong>not a performance guarantee</strong>, <strong>not betting confidence</strong>, and <strong>does not start training</strong>.
+          </p>
+        </div>
+        <div className="banner-side">
+          <StatusPill status={data.eligible ? 'success' : 'bad'}>
+            {data.eligible ? 'Eligible' : 'Not Eligible'}
+          </StatusPill>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="rounded-xl border border-border bg-secondary/20 p-4">
+          <h3 className="font-semibold text-ink text-sm mb-3">Thresholds</h3>
+          <div className="space-y-3">
+            {data.thresholds.map((t, idx) => (
+              <div key={idx} className="text-xs">
+                <div className="flex justify-between items-center font-medium text-ink">
+                  <span>{t.metric.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+                  <StatusPill status={t.pass ? 'success' : 'bad'}>{t.pass ? 'Pass' : 'Fail'}</StatusPill>
+                </div>
+                <div className="flex justify-between mt-1 text-muted-foreground text-[10px]">
+                  <span>Observed: {typeof t.observed === 'boolean' ? (t.observed ? 'Yes' : 'No') : decimal(t.observed)}</span>
+                  <span>Target: {typeof t.threshold === 'boolean' ? (t.threshold ? 'Yes' : 'No') : decimal(t.threshold)}</span>
+                </div>
+                <div className="text-muted-foreground mt-1 text-[10px] leading-4">{t.interpretation}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-secondary/20 p-4 flex flex-col gap-5">
+          <div>
+            <h3 className="font-semibold text-ink text-sm mb-3">Systematic Source Failures</h3>
+            {data.systematicSourceFailures.length > 0 ? (
+              <div className="space-y-3">
+                {data.systematicSourceFailures.map((f, idx) => (
+                  <div key={idx} className="text-xs">
+                    <div className="flex justify-between items-center font-medium text-ink">
+                      <span>{f.family.charAt(0).toUpperCase() + f.family.slice(1)}</span>
+                      <StatusPill status={f.failed ? 'bad' : 'success'}>{f.status}</StatusPill>
+                    </div>
+                    {f.reason && <div className="text-muted-foreground mt-1 text-[10px] leading-4">{f.reason}</div>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">No systematic source failures.</p>
+            )}
+          </div>
+          <div>
+            <h3 className="font-semibold text-ink text-sm mb-1">Failure Rule</h3>
+            <p className="text-xs text-muted-foreground">{data.failureRule}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-xl border border-border bg-secondary/20 p-4 overflow-x-auto">
+        <h3 className="font-semibold text-ink text-sm mb-3">Weekly Coverage Trends</h3>
+        <table className="w-full text-left text-xs whitespace-nowrap">
+          <thead className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+            <tr>
+              <th className="pb-2 pr-4 font-medium">Wk</th>
+              <th className="pb-2 pr-4 font-medium">Pers Cov</th>
+              <th className="pb-2 pr-4 font-medium">Pers Comp</th>
+              <th className="pb-2 pr-4 font-medium">QB Cert</th>
+              <th className="pb-2 pr-4 font-medium">Inj Cov</th>
+              <th className="pb-2 pr-4 font-medium">SB Fresh</th>
+              <th className="pb-2 pr-4 font-medium">Wx Cov</th>
+              <th className="pb-2 pr-4 font-medium">Med Conf</th>
+              <th className="pb-2 pr-4 font-medium">&lt;50</th>
+              <th className="pb-2 font-medium">&gt;70</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {data.weeklyTrend.map((t, idx) => (
+              <tr key={idx} className="text-ink">
+                <td className="py-2 pr-4 font-mono">{t.season}-{t.week}</td>
+                <td className="py-2 pr-4 font-mono">{decimal(t.personnelCoverage)}%</td>
+                <td className="py-2 pr-4 font-mono">{decimal(t.personnelCompleteness)}%</td>
+                <td className="py-2 pr-4 font-mono">{decimal(t.medianQbCertainty)}%</td>
+                <td className="py-2 pr-4 font-mono">{decimal(t.injuryCoverage)}%</td>
+                <td className="py-2 pr-4 font-mono">{decimal(t.sportsbookFreshness)}%</td>
+                <td className="py-2 pr-4 font-mono">{decimal(t.weatherCoverage)}%</td>
+                <td className="py-2 pr-4 font-mono">{decimal(t.medianDataConfidence)}</td>
+                <td className="py-2 pr-4 font-mono">{t.gamesBelow50}</td>
+                <td className="py-2 font-mono">{t.gamesAbove70}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {data.games.length > 0 && (
+        <div className="mt-5 rounded-xl border border-border bg-secondary/20 p-4 overflow-x-auto">
+          <h3 className="font-semibold text-ink text-sm mb-3">Current-Game Component Metrics</h3>
+          <table className="w-full text-left text-xs whitespace-nowrap">
+            <thead className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+              <tr>
+                <th className="pb-2 pr-4 font-medium">Game</th>
+                <th className="pb-2 pr-4 font-medium">Pub Starter</th>
+                <th className="pb-2 pr-4 font-medium">Inf Starter</th>
+                <th className="pb-2 pr-4 font-medium">Pers Comp</th>
+                <th className="pb-2 pr-4 font-medium">QB Cert</th>
+                <th className="pb-2 pr-4 font-medium">Inj Fresh</th>
+                <th className="pb-2 pr-4 font-medium">SB Fresh</th>
+                <th className="pb-2 pr-4 font-medium">Wx Elig</th>
+                <th className="pb-2 pr-4 font-medium">Samp Qual</th>
+                <th className="pb-2 font-medium">Data Conf</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {data.games.map((g) => (
+                <tr key={g.gameId} className="text-ink">
+                  <td className="py-2 pr-4 font-mono">{g.gameId}</td>
+                  <td className="py-2 pr-4 font-mono">{decimal(g.publishedStarterCoverage)}%</td>
+                  <td className="py-2 pr-4 font-mono">{decimal(g.inferredStarterCoverage)}%</td>
+                  <td className="py-2 pr-4 font-mono">{decimal(g.personnelCompleteness)}%</td>
+                  <td className="py-2 pr-4 font-mono">{decimal(g.qbCertainty)}%</td>
+                  <td className="py-2 pr-4 font-mono">{decimal(g.injuryFreshness)}%</td>
+                  <td className="py-2 pr-4 font-mono">{decimal(g.sportsbookFreshness)}%</td>
+                  <td className="py-2 pr-4 font-mono"><StatusPill status={g.weatherEligible ? 'success' : 'neutral'}>{g.weatherEligible ? 'Y' : 'N'}</StatusPill></td>
+                  <td className="py-2 pr-4 font-mono">{decimal(g.sampleQuality)}</td>
+                  <td className="py-2 font-mono">{decimal(g.overallDataConfidence)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+
 function PersonnelContextCoveragePanel() {
   const coverage = useGetPersonnelContextCoverage({ query: { queryKey: getGetPersonnelContextCoverageQueryKey(), staleTime: 30000 } });
 
@@ -841,6 +995,7 @@ function PersonnelContextPage() {
         detail="Inspect the timestamped evidence available before kickoff. Inferred roles remain clearly separated from official source records."
         actions={<button type="button" className="button button-subtle" onClick={() => context.refetch()} disabled={!selectedGameId || context.isFetching}><RefreshCw className={cx('h-4 w-4', context.isFetching && 'animate-spin')} /> Refresh</button>}
       />
+      <ChallengerReadinessPanel />
       <PersonnelContextCoveragePanel />
       <Panel eyebrow="Point-in-time game record" title="Choose a matchup" className="mb-5">
         {games.isLoading ? <Skeleton className="h-10" /> : games.isError ? <ErrorPanel message="The current schedule could not be loaded." /> : games.data?.length ? (

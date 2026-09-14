@@ -348,6 +348,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PersonnelContextCoverage"
+  /features/personnel-context/challenger-readiness:
+    get:
+      operationId: getChallengerReadinessReport
+      tags: [dashboard]
+      summary: Read evaluation-only challenger readiness coverage
+      description: >
+        Returns cutoff-safe personnel coverage for the selected season/week,
+        chronological weekly aggregates, bounded persisted feed-health evidence,
+        and explicit evaluation-only readiness thresholds. This endpoint never
+        trains, promotes, or starts a model and is not betting confidence.
+      responses:
+        "200":
+          description: Challenger readiness report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengerReadinessReport"
   /teams:
     get:
       operationId: listTeams
@@ -745,7 +762,7 @@ components:
         sources: { type: array, items: { type: string } }
     PersonnelContextCoverage:
       type: object
-      required: [season, week, games, teams, requiredStarterSlots, observedStarterSlots, publishedStarterSlots, inferredStarterSlots, teamPublishedDepthPercent, starterPublishedPercent, starterInferredPercent, gameWeatherPercent, currentInjuryPercent, currentSportsbookPercent, medianConfidence, gameCoverage, lowestConfidenceGames, sourceAssessments, weather]
+      required: [season, week, games, teams, requiredStarterSlots, observedStarterSlots, publishedStarterSlots, inferredStarterSlots, teamPublishedDepthPercent, starterPublishedPercent, starterInferredPercent, gameWeatherPercent, eligibleWeatherPercent, currentInjuryPercent, currentSportsbookPercent, medianConfidence, gameCoverage, lowestConfidenceGames, sourceAssessments, weather]
       properties:
         season: { type: ["integer", "null"] }
         week: { type: ["integer", "null"] }
@@ -759,6 +776,7 @@ components:
         starterPublishedPercent: { type: number }
         starterInferredPercent: { type: number }
         gameWeatherPercent: { type: number }
+        eligibleWeatherPercent: { type: number }
         currentInjuryPercent: { type: number }
         currentSportsbookPercent: { type: number }
         medianConfidence: { type: ["number", "null"] }
@@ -782,6 +800,103 @@ components:
         weather:
           type: object
           additionalProperties: true
+    ChallengerReadinessGame:
+      type: object
+      required:
+        [gameId, personnelCompleteness, qbCertainty, injuryFreshness,
+         injuryCurrent, sportsbookFreshness, sportsbookCurrent, weatherAvailable,
+         weatherEligible, sampleQuality, overallDataConfidence,
+         publishedStarterCoverage, inferredStarterCoverage, below50, above70,
+         reasons]
+      properties:
+        gameId: { type: string }
+        personnelCompleteness: { type: number }
+        qbCertainty: { type: number }
+        injuryFreshness: { type: number }
+        injuryCurrent: { type: boolean }
+        sportsbookFreshness: { type: number }
+        sportsbookCurrent: { type: boolean }
+        weatherAvailable: { type: boolean }
+        weatherEligible: { type: boolean }
+        sampleQuality: { type: number }
+        overallDataConfidence: { type: number }
+        publishedStarterCoverage: { type: number }
+        inferredStarterCoverage: { type: number }
+        below50: { type: boolean }
+        above70: { type: boolean }
+        latestInjurySnapshot: { type: ["string", "null"], format: date-time }
+        latestSportsbookHours: { type: ["number", "null"] }
+        reasons: { type: array, items: { type: string } }
+    ChallengerReadinessWeeklyTrend:
+      type: object
+      required:
+        [season, week, gameCount, personnelCoverage, personnelCompleteness,
+         medianQbCertainty, currentInjuryCoverage, injuryCoverage,
+         sportsbookFreshness, sportsbookCoverage, weatherCoverage,
+         eligibleWeatherGames, medianDataConfidence, gamesBelow50,
+         gamesAbove70, publishedStarterCoverage, inferredStarterCoverage]
+      properties:
+        season: { type: integer }
+        week: { type: integer }
+        gameCount: { type: integer }
+        personnelCoverage: { type: number }
+        personnelCompleteness: { type: number }
+        medianQbCertainty: { type: ["number", "null"] }
+        currentInjuryCoverage: { type: number }
+        injuryCoverage: { type: number }
+        sportsbookFreshness: { type: number }
+        sportsbookCoverage: { type: number }
+        weatherCoverage: { type: number }
+        eligibleWeatherGames: { type: integer }
+        medianDataConfidence: { type: ["number", "null"] }
+        gamesBelow50: { type: integer }
+        gamesAbove70: { type: integer }
+        publishedStarterCoverage: { type: ["number", "null"] }
+        inferredStarterCoverage: { type: ["number", "null"] }
+    ChallengerReadinessThreshold:
+      type: object
+      required: [metric, observed, threshold, pass, interpretation]
+      properties:
+        metric: { type: string }
+        observed: { type: ["number", "boolean", "null"] }
+        threshold: { type: ["number", "boolean"] }
+        pass: { type: boolean }
+        interpretation: { type: string }
+    ChallengerSourceFailure:
+      type: object
+      required: [family, failed, status, latestRunAt, latestSuccessfulRunAt, freshnessBoundHours, reason]
+      properties:
+        family: { type: string, enum: [personnel, injury, sportsbook, weather] }
+        failed: { type: boolean }
+        status: { type: string }
+        latestRunAt: { type: ["string", "null"], format: date-time }
+        latestSuccessfulRunAt: { type: ["string", "null"], format: date-time }
+        freshnessBoundHours: { type: integer }
+        reason: { type: ["string", "null"] }
+    ChallengerReadinessReport:
+      type: object
+      required:
+        [evaluationOnly, label, season, week, games, weeklyTrend, thresholds,
+         eligible, systematicSourceFailures, failureRule]
+      properties:
+        evaluationOnly: { type: boolean, const: true }
+        label: { type: string }
+        season: { type: ["integer", "null"] }
+        week: { type: ["integer", "null"] }
+        games:
+          type: array
+          items: { $ref: "#/components/schemas/ChallengerReadinessGame" }
+        weeklyTrend:
+          type: array
+          items: { $ref: "#/components/schemas/ChallengerReadinessWeeklyTrend" }
+        thresholds:
+          type: array
+          items: { $ref: "#/components/schemas/ChallengerReadinessThreshold" }
+        eligible: { type: boolean }
+        systematicSourceFailures:
+          type: array
+          items: { $ref: "#/components/schemas/ChallengerSourceFailure" }
+        failureRule: { type: string }
     PregameFeatureBuildInput:
       type: object
       properties:

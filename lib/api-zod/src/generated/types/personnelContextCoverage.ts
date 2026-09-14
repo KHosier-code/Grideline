@@ -25,6 +25,7 @@ export interface PersonnelContextCoverage {
   starterPublishedPercent: number;
   starterInferredPercent: number;
   gameWeatherPercent: number;
+  eligibleWeatherPercent: number;
   currentInjuryPercent: number;
   currentSportsbookPercent: number;
   /** @nullable */

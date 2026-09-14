@@ -483,6 +483,7 @@ export const GetPersonnelContextCoverageResponse = zod.object({
   "starterPublishedPercent": zod.number(),
   "starterInferredPercent": zod.number(),
   "gameWeatherPercent": zod.number(),
+  "eligibleWeatherPercent": zod.number(),
   "currentInjuryPercent": zod.number(),
   "currentSportsbookPercent": zod.number(),
   "medianConfidence": zod.number().nullable(),
@@ -494,6 +495,75 @@ export const GetPersonnelContextCoverageResponse = zod.object({
 })),
   "sourceAssessments": zod.array(zod.record(zod.string(), zod.unknown())),
   "weather": zod.record(zod.string(), zod.unknown())
+})
+
+
+/**
+ * Returns cutoff-safe personnel coverage for the selected season/week, chronological weekly aggregates, bounded persisted feed-health evidence, and explicit evaluation-only readiness thresholds. This endpoint never trains, promotes, or starts a model and is not betting confidence.
+ * @summary Read evaluation-only challenger readiness coverage
+ */
+export const GetChallengerReadinessReportResponse = zod.object({
+  "evaluationOnly": zod.literal(true),
+  "label": zod.string(),
+  "season": zod.number().int().nullable(),
+  "week": zod.number().int().nullable(),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "personnelCompleteness": zod.number(),
+  "qbCertainty": zod.number(),
+  "injuryFreshness": zod.number(),
+  "injuryCurrent": zod.boolean(),
+  "sportsbookFreshness": zod.number(),
+  "sportsbookCurrent": zod.boolean(),
+  "weatherAvailable": zod.boolean(),
+  "weatherEligible": zod.boolean(),
+  "sampleQuality": zod.number(),
+  "overallDataConfidence": zod.number(),
+  "publishedStarterCoverage": zod.number(),
+  "inferredStarterCoverage": zod.number(),
+  "below50": zod.boolean(),
+  "above70": zod.boolean(),
+  "latestInjurySnapshot": zod.coerce.date().nullish(),
+  "latestSportsbookHours": zod.number().nullish(),
+  "reasons": zod.array(zod.string())
+})),
+  "weeklyTrend": zod.array(zod.object({
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "gameCount": zod.number().int(),
+  "personnelCoverage": zod.number(),
+  "personnelCompleteness": zod.number(),
+  "medianQbCertainty": zod.number().nullable(),
+  "currentInjuryCoverage": zod.number(),
+  "injuryCoverage": zod.number(),
+  "sportsbookFreshness": zod.number(),
+  "sportsbookCoverage": zod.number(),
+  "weatherCoverage": zod.number(),
+  "eligibleWeatherGames": zod.number().int(),
+  "medianDataConfidence": zod.number().nullable(),
+  "gamesBelow50": zod.number().int(),
+  "gamesAbove70": zod.number().int(),
+  "publishedStarterCoverage": zod.number().nullable(),
+  "inferredStarterCoverage": zod.number().nullable()
+})),
+  "thresholds": zod.array(zod.object({
+  "metric": zod.string(),
+  "observed": zod.union([zod.number(),zod.boolean()]).nullable(),
+  "threshold": zod.union([zod.number(),zod.boolean()]),
+  "pass": zod.boolean(),
+  "interpretation": zod.string()
+})),
+  "eligible": zod.boolean(),
+  "systematicSourceFailures": zod.array(zod.object({
+  "family": zod.enum(['personnel', 'injury', 'sportsbook', 'weather']),
+  "failed": zod.boolean(),
+  "status": zod.string(),
+  "latestRunAt": zod.coerce.date().nullable(),
+  "latestSuccessfulRunAt": zod.coerce.date().nullable(),
+  "freshnessBoundHours": zod.number().int(),
+  "reason": zod.string().nullable()
+})),
+  "failureRule": zod.string()
 })
 
 

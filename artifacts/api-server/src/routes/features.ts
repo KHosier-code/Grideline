@@ -7,12 +7,15 @@ import {
   rebuildPregamePersonnelContextFeatures,
 } from "../lib/personnel-context";
 import { requireAdmin } from "../middlewares/admin";
-import { getCurrentPersonnelCoverage } from "../lib/personnel-coverage";
+import { getChallengerReadinessReport, getCurrentPersonnelCoverage } from "../lib/personnel-coverage";
 
 const router: IRouter = Router();
 type PersonnelCoverageResult = Awaited<ReturnType<typeof getCurrentPersonnelCoverage>>;
 let personnelCoverageCache: { expiresAt: number; value: PersonnelCoverageResult } | null = null;
 let personnelCoverageRequest: Promise<PersonnelCoverageResult> | null = null;
+type ChallengerReadinessResult = Awaited<ReturnType<typeof getChallengerReadinessReport>>;
+let challengerReadinessCache: { expiresAt: number; value: ChallengerReadinessResult } | null = null;
+let challengerReadinessRequest: Promise<ChallengerReadinessResult> | null = null;
 
 router.get("/features/pregame/health", async (req, res): Promise<void> => {
   const featureVersion = typeof req.query.featureVersion === "string" ? req.query.featureVersion : undefined;
@@ -75,6 +78,19 @@ router.get("/features/personnel-context/coverage", async (_req, res): Promise<vo
   });
   const value = await personnelCoverageRequest;
   personnelCoverageCache = { expiresAt: Date.now() + 60_000, value };
+  res.json(value);
+});
+
+router.get("/features/personnel-context/challenger-readiness", async (_req, res): Promise<void> => {
+  if (challengerReadinessCache && challengerReadinessCache.expiresAt > Date.now()) {
+    res.json(challengerReadinessCache.value);
+    return;
+  }
+  challengerReadinessRequest ??= getChallengerReadinessReport().finally(() => {
+    challengerReadinessRequest = null;
+  });
+  const value = await challengerReadinessRequest;
+  challengerReadinessCache = { expiresAt: Date.now() + 5 * 60_000, value };
   res.json(value);
 });
 

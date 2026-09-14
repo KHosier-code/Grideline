@@ -1,5 +1,16 @@
 export function coveragePercent(numerator: number, denominator: number) {
-  return denominator > 0 ? numerator / denominator * 100 : 0;
+  return denominator > 0
+    ? Math.max(0, Math.min(100, numerator / denominator * 100))
+    : 0;
+}
+
+export function isWeatherEligible(indoorOutdoor: string | null | undefined, roofStatus: string | null | undefined) {
+  const kind = indoorOutdoor?.toLowerCase();
+  return kind === "outdoor" || roofStatus?.toLowerCase() === "retractable";
+}
+
+export function passesReadinessThreshold(observed: number | null, threshold: number) {
+  return observed !== null && observed >= threshold;
 }
 
 export function latestCoverageAnchor<T extends { season: number; week: number; kickoffTime: Date | null }>(

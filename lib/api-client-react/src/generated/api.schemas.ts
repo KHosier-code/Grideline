@@ -518,6 +518,7 @@ export interface PersonnelContextCoverage {
   starterPublishedPercent: number;
   starterInferredPercent: number;
   gameWeatherPercent: number;
+  eligibleWeatherPercent: number;
   currentInjuryPercent: number;
   currentSportsbookPercent: number;
   /** @nullable */
@@ -526,6 +527,100 @@ export interface PersonnelContextCoverage {
   lowestConfidenceGames: PersonnelContextCoverageLowestConfidenceGamesItem[];
   sourceAssessments: PersonnelContextCoverageSourceAssessmentsItem[];
   weather: PersonnelContextCoverageWeather;
+}
+
+export interface ChallengerReadinessGame {
+  gameId: string;
+  personnelCompleteness: number;
+  qbCertainty: number;
+  injuryFreshness: number;
+  injuryCurrent: boolean;
+  sportsbookFreshness: number;
+  sportsbookCurrent: boolean;
+  weatherAvailable: boolean;
+  weatherEligible: boolean;
+  sampleQuality: number;
+  overallDataConfidence: number;
+  publishedStarterCoverage: number;
+  inferredStarterCoverage: number;
+  below50: boolean;
+  above70: boolean;
+  /** @nullable */
+  latestInjurySnapshot?: string | null;
+  /** @nullable */
+  latestSportsbookHours?: number | null;
+  reasons: string[];
+}
+
+export interface ChallengerReadinessWeeklyTrend {
+  season: number;
+  week: number;
+  gameCount: number;
+  personnelCoverage: number;
+  personnelCompleteness: number;
+  /** @nullable */
+  medianQbCertainty: number | null;
+  currentInjuryCoverage: number;
+  injuryCoverage: number;
+  sportsbookFreshness: number;
+  sportsbookCoverage: number;
+  weatherCoverage: number;
+  eligibleWeatherGames: number;
+  /** @nullable */
+  medianDataConfidence: number | null;
+  gamesBelow50: number;
+  gamesAbove70: number;
+  /** @nullable */
+  publishedStarterCoverage: number | null;
+  /** @nullable */
+  inferredStarterCoverage: number | null;
+}
+
+export interface ChallengerReadinessThreshold {
+  metric: string;
+  /** @nullable */
+  observed: number | boolean | null;
+  threshold: number | boolean;
+  pass: boolean;
+  interpretation: string;
+}
+
+export type ChallengerSourceFailureFamily = typeof ChallengerSourceFailureFamily[keyof typeof ChallengerSourceFailureFamily];
+
+
+export const ChallengerSourceFailureFamily = {
+  personnel: 'personnel',
+  injury: 'injury',
+  sportsbook: 'sportsbook',
+  weather: 'weather',
+} as const;
+
+export interface ChallengerSourceFailure {
+  family: ChallengerSourceFailureFamily;
+  failed: boolean;
+  status: string;
+  /** @nullable */
+  latestRunAt: string | null;
+  /** @nullable */
+  latestSuccessfulRunAt: string | null;
+  freshnessBoundHours: number;
+  /** @nullable */
+  reason: string | null;
+}
+
+export interface ChallengerReadinessReport {
+  evaluationOnly: true;
+  label: string;
+  /** @nullable */
+  season: number | null;
+  /** @nullable */
+  week: number | null;
+  games: ChallengerReadinessGame[];
+  weeklyTrend: ChallengerReadinessWeeklyTrend[];
+  thresholds: ChallengerReadinessThreshold[];
+  eligible: boolean;
+  systematicSourceFailures: ChallengerSourceFailure[];
+  failureRule: string;
 }
 
 export type PregameFeatureBuildInputFeatureVersion = typeof PregameFeatureBuildInputFeatureVersion[keyof typeof PregameFeatureBuildInputFeatureVersion];

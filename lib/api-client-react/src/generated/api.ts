@@ -22,6 +22,7 @@ import type {
 import type {
   AppSettings,
   AppSettingsUpdate,
+  ChallengerReadinessReport,
   DashboardSummary,
   DataHealth,
   Game,
@@ -1353,6 +1354,84 @@ export function useGetPersonnelContextCoverage<TData = Awaited<ReturnType<typeof
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetPersonnelContextCoverageQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetChallengerReadinessReportUrl = () => {
+
+
+
+
+  return `/api/features/personnel-context/challenger-readiness`
+}
+
+/**
+ * Returns cutoff-safe personnel coverage for the selected season/week, chronological weekly aggregates, bounded persisted feed-health evidence, and explicit evaluation-only readiness thresholds. This endpoint never trains, promotes, or starts a model and is not betting confidence.
+ * @summary Read evaluation-only challenger readiness coverage
+ */
+export const getChallengerReadinessReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<ChallengerReadinessReport> => {
+
+  return customFetch<ChallengerReadinessReport>(getGetChallengerReadinessReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetChallengerReadinessReportQueryKey = () => {
+    return [
+    `/api/features/personnel-context/challenger-readiness`
+    ] as const;
+    }
+
+
+export const getGetChallengerReadinessReportQueryOptions = <TData = Awaited<ReturnType<typeof getChallengerReadinessReport>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChallengerReadinessReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetChallengerReadinessReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChallengerReadinessReport>>> = ({ signal }) => getChallengerReadinessReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChallengerReadinessReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetChallengerReadinessReportQueryResult = NonNullable<Awaited<ReturnType<typeof getChallengerReadinessReport>>>
+export type GetChallengerReadinessReportQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read evaluation-only challenger readiness coverage
+ */
+
+export function useGetChallengerReadinessReport<TData = Awaited<ReturnType<typeof getChallengerReadinessReport>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getChallengerReadinessReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetChallengerReadinessReportQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
