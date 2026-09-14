@@ -8,6 +8,7 @@ const INJURY_FRESHNESS_HOURS = 7 * 24;
 const SPORTSBOOK_FRESHNESS_HOURS = 24;
 const PERSONNEL_FEED_FRESHNESS_HOURS = 7 * 24;
 const WEATHER_FEED_FRESHNESS_HOURS = 24;
+const CONTEXT_QUERY_CONCURRENCY = 4;
 export const READINESS_THRESHOLDS = {
   medianPersonnelCompleteness: 80,
   medianQbCertainty: 70,
@@ -337,7 +338,7 @@ export async function getChallengerReadinessReport(now = new Date()) {
       week: game.week,
       kickoffTime: game.kickoffTime?.toISOString() ?? null,
     };
-  });
+  }, CONTEXT_QUERY_CONCURRENCY);
   const currentGames = contextGames.filter((game) =>
     game.season === anchor.season
     && game.week === anchor.week
@@ -399,7 +400,7 @@ export async function getCurrentPersonnelCoverage(now = new Date()) {
   // Always use the complete slate for the selected season/week, including
   // games that have already kicked off.
   const games = allGames.filter((game) => game.season === anchor.season && game.week === anchor.week);
-  const contexts = (await Promise.all(games.map((game) => getPersonnelContextForGame(game.gameId, now))))
+  const contexts = (await mapContexts(games, (game) => getPersonnelContextForGame(game.gameId, now), CONTEXT_QUERY_CONCURRENCY))
     .filter((context): context is NonNullable<typeof context> => Boolean(context));
   const metrics = coverageFromContexts(contexts, now);
   return {

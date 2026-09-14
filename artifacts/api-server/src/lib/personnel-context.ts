@@ -181,9 +181,13 @@ export async function rebuildPregamePersonnelContextFeatures(now = new Date()) {
   const rows: Array<typeof pregameTeamFeaturesTable.$inferInsert> = [];
   let contextsBuilt = 0;
   let unavailableGames = 0;
+  const rowsByGame = new Map<string, typeof v3Rows>();
   for (const row of v3Rows) {
     if (!isEligibleForPregamePersonnelContextBuild(row.kickoffTime, now)) continue;
-    const context = await getPersonnelContextForGame(row.gameId, now);
+    rowsByGame.set(row.gameId, [...(rowsByGame.get(row.gameId) ?? []), row]);
+  }
+  for (const gameRows of rowsByGame.values()) {
+    const context = await getPersonnelContextForGame(gameRows[0].gameId, now);
     if (!context) {
       unavailableGames += 1;
       continue;
@@ -192,27 +196,29 @@ export async function rebuildPregamePersonnelContextFeatures(now = new Date()) {
     const numeric = personnelNumericFeatures(context);
     const audit = auditForNumericFeatures(context, numeric);
     const sourceCutoff = new Date(context.sourceCutoff);
-    rows.push({
-      featureVersion: PREGAME_PERSONNEL_CONTEXT_VERSION,
-      gameId: row.gameId,
-      teamId: row.teamId,
-      opponentTeamId: row.opponentTeamId,
-      season: row.season,
-      week: row.week,
-      kickoffTime: row.kickoffTime,
-      isHome: row.isHome,
-      // v3 is never updated.  v4 is an additive immutable row.
-      features: { ...row.features, ...numeric },
-      sampleCounts: { ...row.sampleCounts, ...Object.fromEntries(Object.entries(numeric).map(([key, value]) => [key, value === null ? 0 : 1])) },
-      featureAudit: {
-        ...row.featureAudit,
-        ...audit,
-        _personnel_context: context as unknown as PregameFeatureAuditEntry,
-      },
-      lowSample: row.lowSample || Object.values(numeric).some((value) => value === null),
-      sourceCutoff,
-      generatedAt: now,
-    });
+    for (const row of gameRows) {
+      rows.push({
+        featureVersion: PREGAME_PERSONNEL_CONTEXT_VERSION,
+        gameId: row.gameId,
+        teamId: row.teamId,
+        opponentTeamId: row.opponentTeamId,
+        season: row.season,
+        week: row.week,
+        kickoffTime: row.kickoffTime,
+        isHome: row.isHome,
+        // v3 is never updated.  v4 is an additive immutable row.
+        features: { ...row.features, ...numeric },
+        sampleCounts: { ...row.sampleCounts, ...Object.fromEntries(Object.entries(numeric).map(([key, value]) => [key, value === null ? 0 : 1])) },
+        featureAudit: {
+          ...row.featureAudit,
+          ...audit,
+          _personnel_context: context as unknown as PregameFeatureAuditEntry,
+        },
+        lowSample: row.lowSample || Object.values(numeric).some((value) => value === null),
+        sourceCutoff,
+        generatedAt: now,
+      });
+    }
   }
   for (let index = 0; index < rows.length; index += 250) {
     await db.insert(pregameTeamFeaturesTable).values(rows.slice(index, index + 250)).onConflictDoNothing({
