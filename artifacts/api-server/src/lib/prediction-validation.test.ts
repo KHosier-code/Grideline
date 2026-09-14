@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { comparisonData, vectorForRows } from "./live-predictions";
+import { comparisonData, isValidPredictionSnapshot, vectorForRows } from "./live-predictions";
 import { safeNoVigProbabilities, validatePredictionOutputs } from "./prediction-validation";
 import { standardize } from "./modeling";
 
@@ -59,4 +59,43 @@ test("missing sportsbook data leaves football projections but removes market edg
   assert.equal(comparison.moneyline.homeProbabilityEdge, null);
   assert.equal(comparison.totals.pointEdge, null);
   assert.equal(safeNoVigProbabilities(0, 0), null);
+});
+
+test("DraftKings and FanDuel are independently optional per market", () => {
+  const draftKingsOnly = comparisonData({
+    markets: {
+      spread: { bestAvailable: { point: -3 } },
+      total: {},
+      moneyline: {},
+    },
+  }, 4, 44, 0.6);
+  assert.equal(draftKingsOnly.spread.marketAvailable, true);
+  assert.equal(draftKingsOnly.totals.marketAvailable, false);
+  assert.equal(draftKingsOnly.moneyline.marketAvailable, false);
+
+  const fanDuelOnly = comparisonData({
+    markets: {
+      spread: {},
+      total: { bestAvailable: { point: 44.5 } },
+      moneyline: { noVigHomeProbability: 0.55, noVigAwayProbability: 0.45 },
+    },
+  }, 4, 44, 0.6);
+  assert.equal(fanDuelOnly.spread.marketAvailable, false);
+  assert.equal(fanDuelOnly.totals.marketAvailable, true);
+  assert.equal(fanDuelOnly.moneyline.marketAvailable, true);
+});
+
+test("invalid legacy snapshots are excluded from official prediction views", () => {
+  const valid = {
+    projectedHomeScore: 24,
+    projectedAwayScore: 20,
+    projectedMargin: 4,
+    projectedTotal: 44,
+    homeWinProbability: 0.6,
+    awayWinProbability: 0.4,
+  };
+  assert.equal(isValidPredictionSnapshot(valid), true);
+  assert.equal(isValidPredictionSnapshot({ ...valid, projectedMargin: Number.NaN }), false);
+  assert.equal(isValidPredictionSnapshot({ ...valid, homeWinProbability: 1.1, awayWinProbability: -0.1 }), false);
+  assert.equal(isValidPredictionSnapshot({ ...valid, projectedTotal: null }), false);
 });

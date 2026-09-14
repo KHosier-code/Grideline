@@ -394,13 +394,13 @@ export async function getPhase4ModelLab() {
   const runs = await db.select().from(modelTrainingRunsTable).orderBy(asc(modelTrainingRunsTable.family), asc(modelTrainingRunsTable.testSeason), asc(modelTrainingRunsTable.algorithm));
   const latest = new Map<string, typeof runs[number]>();
   for (const run of runs) {
-    const key = `${run.family}:${run.algorithm}:${run.testSeason}:${run.samplePolicy}:${run.recencyWeighting}`;
+    const key = `${run.family}:${run.algorithm}:${run.testSeason}:${run.samplePolicy}:${run.recencyWeighting}:${run.status}`;
     const previous = latest.get(key);
     if (!previous || run.trainedAt > previous.trainedAt) latest.set(key, run);
   }
   const current = [...latest.values()];
   const recommendation = (family: Family) => {
-    const candidates = current.filter((run) => run.family === family && run.testSeason < 2026);
+    const candidates = current.filter((run) => run.family === family && run.status === "challenger" && run.testSeason < 2026);
     const groups = new Map<string, typeof candidates>();
     for (const run of candidates) {
       const key = `${run.algorithm}:${run.samplePolicy}:${run.recencyWeighting}`;

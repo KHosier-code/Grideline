@@ -215,6 +215,26 @@ function targetFor(family: Family, example: Example) {
   return family === "spread" ? example.margin : family === "totals" ? example.total : example.homeWin;
 }
 
+export function isValidPredictionSnapshot(snapshot: {
+  projectedHomeScore: number | null;
+  projectedAwayScore: number | null;
+  projectedMargin: number | null;
+  projectedTotal: number | null;
+  homeWinProbability: number | null;
+  awayWinProbability: number | null;
+}) {
+  const values = [
+    snapshot.projectedHomeScore,
+    snapshot.projectedAwayScore,
+    snapshot.projectedMargin,
+    snapshot.projectedTotal,
+    snapshot.homeWinProbability,
+    snapshot.awayWinProbability,
+  ];
+  return values.every((value) => typeof value === "number" && Number.isFinite(value)) &&
+    validatePredictionOutputs(snapshot).length === 0;
+}
+
 type PredictionResult = {
   value: number | null;
   reason?: string;
@@ -410,7 +430,9 @@ export async function freezeOfficialFinalPredictions(now = new Date()) {
     sql`${predictionSnapshotsTable.predictionTimestamp} < ${predictionSnapshotsTable.kickoffTime}`,
   )).orderBy(asc(predictionSnapshotsTable.gameId), desc(predictionSnapshotsTable.predictionTimestamp));
   const latest = new Map<string, typeof candidates[number]>();
-  for (const candidate of candidates) if (!latest.has(candidate.gameId)) latest.set(candidate.gameId, candidate);
+  for (const candidate of candidates) {
+    if (isValidPredictionSnapshot(candidate) && !latest.has(candidate.gameId)) latest.set(candidate.gameId, candidate);
+  }
   for (const candidate of latest.values()) {
     await db.update(predictionSnapshotsTable).set({
       officialFinalPrediction: true,
@@ -489,7 +511,8 @@ async function gradeSnapshot(snapshot: typeof predictionSnapshotsTable.$inferSel
 
 export async function gradeCompletedPredictions(now = new Date()) {
   await freezeOfficialFinalPredictions(now);
-  const predictions = await db.select().from(predictionSnapshotsTable).where(eq(predictionSnapshotsTable.officialFinalPrediction, true));
+  const predictions = (await db.select().from(predictionSnapshotsTable).where(eq(predictionSnapshotsTable.officialFinalPrediction, true)))
+    .filter((prediction) => isValidPredictionSnapshot(prediction));
   if (!predictions.length) return { status: "success", graded: 0 };
   const gameIds = [...new Set(predictions.map((prediction) => prediction.gameId))];
   const games = await db.select().from(gamesTable).where(inArray(gamesTable.gameId, gameIds));
@@ -515,12 +538,13 @@ function bucketEdge(value: unknown) {
 }
 
 export async function getPredictionPerformance() {
-  const rows = await db
+  const rows = (await db
     .select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
     .from(predictionSnapshotsTable)
     .leftJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
     .leftJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
-    .where(eq(predictionSnapshotsTable.officialFinalPrediction, true));
+    .where(eq(predictionSnapshotsTable.officialFinalPrediction, true)))
+    .filter((row) => isValidPredictionSnapshot(row.prediction));
   const graded = rows.filter((row) => row.grade);
   const abs = (values: Array<number | null | undefined>) => values.filter((value): value is number => typeof value === "number").map(Math.abs);
   const average = (values: Array<number | null | undefined>) => {
@@ -578,12 +602,13 @@ export async function getPredictionPerformance() {
 }
 
 export async function getModelDriftMonitoring() {
-  const rows = await db
+  const rows = (await db
     .select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable })
     .from(predictionSnapshotsTable)
     .innerJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
     .where(eq(predictionSnapshotsTable.officialFinalPrediction, true))
-    .orderBy(desc(predictionSnapshotsTable.predictionTimestamp));
+    .orderBy(desc(predictionSnapshotsTable.predictionTimestamp)))
+    .filter((row) => isValidPredictionSnapshot(row.prediction));
   const results = (["spread", "moneyline", "totals"] as const).map((family) => {
     const versionKey = family === "spread" ? "spreadModelVersion" : family === "moneyline" ? "moneylineModelVersion" : "totalsModelVersion";
     const groups = new Map<string, typeof rows>();
@@ -656,8 +681,7 @@ export async function getCurrentWeekValidationReport() {
    const latest = new Map<string, typeof snapshots[number]>();
    const previous = new Map<string, typeof snapshots[number]>();
    for (const snapshot of snapshots) {
-     const valid = [snapshot.projectedMargin, snapshot.projectedTotal, snapshot.homeWinProbability, snapshot.awayWinProbability]
-       .every((value) => typeof value === "number" && Number.isFinite(value));
+       const valid = isValidPredictionSnapshot(snapshot);
       if (!valid) continue;
       if (!latest.has(snapshot.gameId)) latest.set(snapshot.gameId, snapshot);
       else if (!previous.has(snapshot.gameId)) previous.set(snapshot.gameId, snapshot);
