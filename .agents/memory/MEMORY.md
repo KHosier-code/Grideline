@@ -9,3 +9,4 @@
 - [Post-merge schema safety](post-merge-schema-safety.md) — non-interactive schema reconciliation must fail closed and never accept destructive truncation.
 - [Clerk environment separation](clerk-environments.md) — production and development users have different Clerk IDs; preserve opaque admin lists with additive production mappings.
 - [Phase 7 context boundary](phase7-context-boundary.md) — keep personnel/context additive and point-in-time; unsupported evidence stays unavailable and never changes Phase 6 models.
+- [Personnel context query fan-out](personnel-context-query-fanout.md) — bound concurrent context builds and compute once per game so scheduled work cannot starve live API queries.

@@ -287,8 +287,8 @@ async function assessFeedHealth(now: Date) {
   return assessments;
 }
 
-async function mapContexts<T>(items: T[], fn: (item: T) => Promise<ReadinessGame | null>, concurrency = 12) {
-  const output: ReadinessGame[] = [];
+async function mapContexts<T, R>(items: T[], fn: (item: T) => Promise<R | null>, concurrency = 12) {
+  const output: R[] = [];
   let next = 0;
   async function worker() {
     while (next < items.length) {
