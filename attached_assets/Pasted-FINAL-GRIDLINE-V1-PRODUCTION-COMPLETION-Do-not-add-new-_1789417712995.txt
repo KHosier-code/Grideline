@@ -1,0 +1,202 @@
+FINAL GRIDLINE V1 PRODUCTION COMPLETION
+
+Do not add new features.
+
+Do not train, refit, score, promote, or replace any model unless explicitly required to repair a broken production workflow.
+
+Do not add:
+- player props
+- betting recommendations
+- staking logic
+- wagering automation
+- new model families
+- UI redesigns
+- new paid data providers
+
+The goal is to finish Gridline V1 production verification and stop development once the system is proven operational.
+
+CURRENT STATE
+
+Development readiness currently passes:
+
+- Personnel completeness: 100%
+- QB certainty: 70%
+- Injury coverage: 100%
+- Sportsbook freshness: 100%
+- Eligible weather coverage: 100%
+- Median Data Confidence: 83
+- No systematic source failure
+
+Active Phase 6 production models must remain unchanged:
+
+Spread:
+`phase6-refit-spread-linear_regression-through-2025-1789389034806-0`
+
+Moneyline:
+`phase6-refit-moneyline-logistic_regression-through-2025-1789389034860-1`
+
+Totals:
+`phase6-refit-totals-gradient_boosting-through-2025-1789389037021-2`
+
+TASK 1 — PUBLISH LATEST PHASE 7 CHANGES
+
+Publish the latest validated Phase 7 readiness, personnel, weather, QB, sportsbook-health, and cutoff logic to production.
+
+Use the supported Replit production deployment path only.
+
+Do not bypass production database safeguards.
+
+After publish, verify:
+- deployment is healthy
+- API is healthy
+- persistent worker is healthy
+- scheduler ownership remains worker-only
+- Phase 6 active models are unchanged
+- production data counts remain intact
+- no prediction history is overwritten
+
+TASK 2 — VERIFY PRODUCTION READINESS
+
+Run the revised readiness evaluation against production.
+
+Report:
+
+- personnel completeness
+- QB certainty
+- injury coverage
+- sportsbook freshness
+- eligible weather coverage
+- median Data Confidence
+- systematic source failure status
+
+Verify all percentages remain between 0% and 100%.
+
+Phase 8 may be marked eligible only if every configured threshold passes.
+
+Do NOT begin Phase 8 training.
+
+TASK 3 — VERIFY TONIGHT'S DENVER AT KANSAS CITY GAME
+
+Game ID:
+`401872931`
+
+Before kickoff verify:
+
+- valid `pregame-v4-personnel-context` context exists
+- current valid prediction snapshot exists
+- Phase 6 model versions are attached
+- projected score/margin/total are available
+- win probabilities are available
+- sportsbook comparisons are shown only when valid
+- prediction timestamp is before kickoff
+- sportsbook timestamp is before kickoff
+- QB certainty is populated
+- Data Confidence is populated
+- weather is cutoff-safe
+- injury evidence is cutoff-safe
+- personnel evidence is cutoff-safe
+
+Do not regenerate a prediction unnecessarily if a valid immutable current snapshot already exists.
+
+TASK 4 — KICKOFF FREEZE
+
+At or immediately after kickoff, verify the real production lifecycle:
+
+- official prediction snapshot is frozen
+- frozen snapshot ID is recorded
+- frozen model versions are recorded
+- frozen market comparison is preserved
+- no later prediction can replace or mutate the official snapshot
+- any post-kickoff write attempt is rejected or excluded by the existing safety architecture
+
+Do not fabricate this evidence before kickoff.
+
+TASK 5 — POSTGAME GRADING
+
+After the game becomes final, verify:
+
+- final score is ingested
+- official frozen prediction is graded
+- spread result is graded where eligible
+- moneyline result is graded where eligible
+- total result is graded where eligible
+- push handling is correct
+- sportsbook comparison uses legitimate preserved pre-kickoff data
+- CLV is calculated only where an eligible closing reference exists
+
+Do not invent CLV if a valid closing comparison does not exist.
+
+TASK 6 — PERFORMANCE UPDATE
+
+Verify the completed game appears in:
+
+- Performance
+- model-family results
+- weekly results
+- edge buckets where applicable
+- Data Confidence breakdowns where applicable
+
+Confirm prediction grade records are append-only and auditable.
+
+TASK 7 — WEEKLY / CHALLENGER PIPELINE
+
+Verify only that the existing weekly learning/challenger process can consume the newly completed game.
+
+Do not promote a challenger.
+
+Do not train Phase 8 unless separately authorized later.
+
+If the challenger job is not scheduled to run yet, report its next expected run instead of forcing it.
+
+TASK 8 — FIX ONLY BLOCKING BUGS
+
+If any step fails, repair only the bug necessary to complete this production lifecycle.
+
+Do not expand scope.
+
+Examples of acceptable fixes:
+- scheduler not firing
+- game not freezing
+- final score not ingesting
+- grading bug
+- CLV eligibility bug
+- production readiness endpoint bug
+- stale API path
+- identifier mismatch
+
+Examples of out-of-scope work:
+- new models
+- player props
+- recommendation engine
+- UI redesign
+- new paid integrations
+- speculative feature engineering
+
+FINAL REPORT
+
+Return a concise final V1 production report containing:
+
+1. Publish status
+2. Production readiness metrics
+3. Active Phase 6 model confirmation
+4. Pregame prediction status for DEN @ KC
+5. Kickoff freeze status
+6. Post-kickoff immutability status
+7. Final-score ingestion status
+8. Grading status
+9. CLV status
+10. Performance-dashboard update status
+11. Challenger/weekly pipeline status
+12. Any blocking bugs fixed
+13. Any remaining blockers
+14. Confirmation that no out-of-scope features were added
+
+Final verdict must be exactly one of:
+
+- NOT READY
+- READY FOR CONTROLLED PRIVATE PRODUCTION
+- V1 PRODUCTION ACCEPTANCE PASSED
+
+Use `V1 PRODUCTION ACCEPTANCE PASSED` only after a real game has successfully completed the full production lifecycle from valid pregame prediction through freeze, final-score ingestion, grading, eligible CLV, and performance update.
+
+Once V1 production acceptance passes, stop development and do not propose additional work unless explicitly requested.
