@@ -1,0 +1,93 @@
+Fix the final Gridline V1 pregame production blocker.
+
+Do not add new features.
+Do not change model logic.
+Do not retrain, refit, score, promote, or replace any model.
+Do not manually backfill production data with post-kickoff information.
+
+ROOT CAUSE
+
+Production has no persisted `pregame-v4-personnel-context` rows for DEN @ KC because the automatic production worker/scheduler does not invoke the v4 feature builder.
+
+The only persistence path currently exists behind the admin-only manual build endpoint.
+
+GOAL
+
+Make `pregame-v4-personnel-context` generation part of the automatic production worker lifecycle.
+
+REQUIREMENTS
+
+1. Reuse the existing v4 feature-building service/function used by the admin endpoint.
+
+2. Do not duplicate feature logic.
+
+3. Add a worker/scheduler job that automatically builds v4 features for upcoming games.
+
+4. Run only for games that are still pre-kickoff.
+
+5. Enforce the existing strict cutoff:
+   earlier of:
+   - current time
+   - kickoff minus 1 millisecond
+
+6. Use only evidence available before that cutoff.
+
+7. Do not generate or overwrite v4 rows after kickoff.
+
+8. Preserve append-only/versioned feature behavior.
+
+9. Do not alter `pregame-v3`.
+
+10. Do not change Phase 6 active production models.
+
+11. Do not create a public or unauthenticated mutation endpoint.
+
+12. Keep the manual admin endpoint available for troubleshooting, but production should not depend on it.
+
+SCHEDULING
+
+Use the persistent Gridline worker.
+
+Recommended behavior:
+- automatically build v4 for upcoming games after relevant source refreshes
+- also run a scheduled pregame refresh window before kickoff
+- avoid duplicate inserts when the computed snapshot/version is unchanged
+- record sync/job outcome in Data Health
+
+VERIFY IN PRODUCTION
+
+For DEN @ KC before kickoff:
+
+- v4 row exists for Denver
+- v4 row exists for Kansas City
+- feature version is `pregame-v4-personnel-context`
+- rows are cutoff-safe
+- no post-cutoff evidence is present
+- readiness endpoint can be evaluated against the current production state
+- Phase 6 model versions remain unchanged
+- no prediction history is overwritten
+
+Also verify:
+
+- worker owns the new v4 job
+- API does not start duplicate scheduling
+- job failures are visible in Data Health
+- repeated successful runs are idempotent
+
+FINAL RESPONSE
+
+Return:
+
+1. Root cause confirmation
+2. Worker/scheduler fix
+3. Production v4 row count for DEN @ KC
+4. Cutoff-safety result
+5. Readiness metrics
+6. Any remaining blocker
+7. Confirmation Phase 6 is unchanged
+
+If the production v4 rows exist and readiness passes before kickoff, return:
+
+READY FOR CONTROLLED PRIVATE PRODUCTION
+
+Do not proceed to postgame acceptance until the real game occurs.

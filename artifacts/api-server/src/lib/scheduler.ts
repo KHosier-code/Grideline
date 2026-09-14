@@ -19,6 +19,7 @@ import {
 import { syncEspnInjuries } from "./availability";
 import { syncNflverseHistory } from "./nflverse";
 import { rebuildPregameFeatures } from "./features";
+import { rebuildPregamePersonnelContextFeatures } from "./personnel-context";
 import { captureOddsSnapshots } from "./odds";
 import { syncEspnScheduleCoverage } from "./schedule";
 import { freezeOfficialFinalPredictions, generateLivePredictions, generateWeeklyLearningReport, gradeCompletedPredictions } from "./live-predictions";
@@ -29,6 +30,7 @@ export const FOOTBALL_TIMEZONE = "America/New_York";
 const LOCK_TTL_MS = 2 * 60 * 60 * 1000;
 const TICK_MS = 60 * 1000;
 const SCHEDULE_INTERVAL_MS = 30 * 60 * 1000;
+const PERSONNEL_CONTEXT_INTERVAL_MS = 30 * 60 * 1000;
 
 type WeeklyDefinition = {
   jobKey: string;
@@ -353,6 +355,30 @@ async function ensureNflverseJob(now: Date) {
   }
 }
 
+async function ensurePersonnelContextJob(now: Date) {
+  const jobKey = "pregame-v4-personnel-context";
+  const [existing] = await db
+    .select()
+    .from(schedulerJobsTable)
+    .where(eq(schedulerJobsTable.jobKey, jobKey))
+    .limit(1);
+  const nextRunAt = existing?.nextRunAt && existing.nextRunAt.getTime() > now.getTime()
+    ? existing.nextRunAt
+    : existing
+      ? new Date(now.getTime() + PERSONNEL_CONTEXT_INTERVAL_MS)
+      : new Date(now.getTime() + TICK_MS);
+  if (!existing) {
+    await db.insert(schedulerJobsTable).values({
+      jobKey,
+      provider: "phase7-personnel-context",
+      kind: "personnel-context",
+      timezone: FOOTBALL_TIMEZONE,
+      cadence: "every 30 minutes for games still before kickoff",
+      nextRunAt,
+    });
+  }
+}
+
 async function ensureKickoffJobs(now: Date) {
   const games = await db
     .select({ gameId: gamesTable.gameId, kickoffTime: gamesTable.kickoffTime, gameStatus: gamesTable.gameStatus })
@@ -523,6 +549,7 @@ async function prepareJobs(now: Date) {
   await ensureWeeklyJobs(now);
   await ensureScheduleJob(now);
   await ensureNflverseJob(now);
+  await ensurePersonnelContextJob(now);
   await ensureKickoffJobs(now);
 }
 
@@ -690,6 +717,8 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
           };
         }
       }
+    } else if (job.kind === "personnel-context") {
+      result = await rebuildPregamePersonnelContextFeatures();
     } else if (job.kind === "prediction") {
       result = await generateLivePredictions();
     } else if (job.kind === "prediction-grade") {
@@ -735,6 +764,8 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
       ? nextIntervalOccurrence(now)
       : job.kind === "nflverse"
         ? nextWeeklyOccurrence(now, 2, 4, 0)
+        : job.kind === "personnel-context"
+          ? new Date(now.getTime() + PERSONNEL_CONTEXT_INTERVAL_MS)
         : definition
           ? await nextOccurrence(definition, now)
           : nextIntervalOccurrence(now);

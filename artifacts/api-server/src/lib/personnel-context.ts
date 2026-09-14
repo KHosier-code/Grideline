@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import {
   db,
   depthChartSnapshotsTable,
@@ -165,14 +165,25 @@ function auditForNumericFeatures(context: PersonnelContext, features: Record<str
   return result;
 }
 
-export async function rebuildPregamePersonnelContextFeatures() {
+export function isEligibleForPregamePersonnelContextBuild(
+  kickoffTime: Date | null,
+  now: Date,
+) {
+  return Boolean(kickoffTime && kickoffTime.getTime() > now.getTime());
+}
+
+export async function rebuildPregamePersonnelContextFeatures(now = new Date()) {
   const v3Rows = await db.select().from(pregameTeamFeaturesTable)
-    .where(eq(pregameTeamFeaturesTable.featureVersion, "pregame-v3"));
+    .where(and(
+      eq(pregameTeamFeaturesTable.featureVersion, "pregame-v3"),
+      gt(pregameTeamFeaturesTable.kickoffTime, now),
+    ));
   const rows: Array<typeof pregameTeamFeaturesTable.$inferInsert> = [];
   let contextsBuilt = 0;
   let unavailableGames = 0;
   for (const row of v3Rows) {
-    const context = await getPersonnelContextForGame(row.gameId);
+    if (!isEligibleForPregamePersonnelContextBuild(row.kickoffTime, now)) continue;
+    const context = await getPersonnelContextForGame(row.gameId, now);
     if (!context) {
       unavailableGames += 1;
       continue;
@@ -200,7 +211,7 @@ export async function rebuildPregamePersonnelContextFeatures() {
       },
       lowSample: row.lowSample || Object.values(numeric).some((value) => value === null),
       sourceCutoff,
-      generatedAt: new Date(),
+      generatedAt: now,
     });
   }
   for (let index = 0; index < rows.length; index += 250) {

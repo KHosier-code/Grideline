@@ -7,6 +7,15 @@ import {
   nflverseTeamCandidates,
   personnelNumericFeatures,
 } from "./personnel-context-derivation";
+import { isEligibleForPregamePersonnelContextBuild } from "./personnel-context";
+
+test("automatic personnel context builds only strictly before kickoff", () => {
+  const now = new Date("2026-09-15T00:14:00.000Z");
+  assert.equal(isEligibleForPregamePersonnelContextBuild(new Date("2026-09-15T00:15:00.000Z"), now), true);
+  assert.equal(isEligibleForPregamePersonnelContextBuild(new Date("2026-09-15T00:14:00.000Z"), now), false);
+  assert.equal(isEligibleForPregamePersonnelContextBuild(new Date("2026-09-15T00:13:59.999Z"), now), false);
+  assert.equal(isEligibleForPregamePersonnelContextBuild(null, now), false);
+});
 
 test("normalizes nflverse abbreviations at the canonical team boundary", () => {
   const mapping = new Map([
