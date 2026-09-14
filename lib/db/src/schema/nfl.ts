@@ -225,6 +225,7 @@ export const modelTrainingRunsTable = pgTable("model_training_runs", {
   trainingSeasons: jsonb("training_seasons").$type<number[]>().notNull().default([]),
   testSeason: integer("test_season").notNull(),
   samplePolicy: text("sample_policy").notNull(),
+  recencyWeighting: text("recency_weighting").notNull().default("none"),
   status: text("status").notNull().default("challenger"),
   sampleSize: integer("sample_size").notNull().default(0),
   metrics: jsonb("metrics").$type<Record<string, unknown>>().notNull().default({}),
@@ -235,6 +236,84 @@ export const modelTrainingRunsTable = pgTable("model_training_runs", {
 }, (table) => [
   index("model_training_runs_family_idx").on(table.family, table.testSeason, table.trainedAt),
   unique("model_training_runs_version_unique").on(table.modelVersion),
+]);
+
+export const modelPromotionHistoryTable = pgTable("model_promotion_history", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  family: text("family").notNull(),
+  modelVersion: text("model_version").notNull(),
+  algorithm: text("algorithm").notNull(),
+  featureVersion: text("feature_version").notNull(),
+  trainingCutoff: text("training_cutoff").notNull(),
+  role: text("role").notNull().default("production"),
+  promotedAt: timestamp("promoted_at", { withTimezone: true }).notNull().defaultNow(),
+  promotedBy: text("promoted_by").notNull(),
+  reason: text("reason"),
+}, (table) => [
+  index("model_promotion_history_family_idx").on(table.family, table.role, table.promotedAt),
+]);
+
+export const predictionSnapshotsTable = pgTable("prediction_snapshots", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  snapshotKey: text("snapshot_key").notNull(),
+  gameId: text("game_id").notNull(),
+  predictionTimestamp: timestamp("prediction_timestamp", { withTimezone: true }).notNull().defaultNow(),
+  snapshotLabel: text("snapshot_label").notNull(),
+  kickoffTime: timestamp("kickoff_time", { withTimezone: true }),
+  featureVersion: text("feature_version").notNull(),
+  spreadModelVersion: text("spread_model_version"),
+  moneylineModelVersion: text("moneyline_model_version"),
+  totalsModelVersion: text("totals_model_version"),
+  trainingCutoff: text("training_cutoff").notNull(),
+  projectedHomeScore: doublePrecision("projected_home_score"),
+  projectedAwayScore: doublePrecision("projected_away_score"),
+  projectedMargin: doublePrecision("projected_margin"),
+  projectedTotal: doublePrecision("projected_total"),
+  homeWinProbability: doublePrecision("home_win_probability"),
+  awayWinProbability: doublePrecision("away_win_probability"),
+  marketSnapshot: jsonb("market_snapshot").$type<Record<string, unknown>>().notNull().default({}),
+  marketComparison: jsonb("market_comparison").$type<Record<string, unknown>>().notNull().default({}),
+  lowSample: boolean("low_sample").notNull().default(false),
+  qbConfidence: doublePrecision("qb_confidence"),
+  officialFinalPrediction: boolean("official_final_prediction").notNull().default(false),
+  frozenAt: timestamp("frozen_at", { withTimezone: true }),
+}, (table) => [
+  unique("prediction_snapshots_key_unique").on(table.snapshotKey),
+  index("prediction_snapshots_game_idx").on(table.gameId, table.predictionTimestamp),
+  index("prediction_snapshots_official_idx").on(table.officialFinalPrediction, table.kickoffTime),
+]);
+
+export const predictionGradesTable = pgTable("prediction_grades", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  predictionId: integer("prediction_id").notNull(),
+  gradedAt: timestamp("graded_at", { withTimezone: true }).notNull().defaultNow(),
+  actualHomeScore: integer("actual_home_score"),
+  actualAwayScore: integer("actual_away_score"),
+  actualMargin: doublePrecision("actual_margin"),
+  actualTotal: doublePrecision("actual_total"),
+  marginError: doublePrecision("margin_error"),
+  totalError: doublePrecision("total_error"),
+  homeWinCorrect: boolean("home_win_correct"),
+  moneylineBrier: doublePrecision("moneyline_brier"),
+  moneylineLogLoss: doublePrecision("moneyline_log_loss"),
+  marketResults: jsonb("market_results").$type<Record<string, unknown>>().notNull().default({}),
+  closingMarkets: jsonb("closing_markets").$type<Record<string, unknown>>().notNull().default({}),
+  clv: jsonb("clv").$type<Record<string, unknown>>().notNull().default({}),
+  whyMiss: jsonb("why_miss").$type<Record<string, unknown>>().notNull().default({}),
+}, (table) => [
+  unique("prediction_grades_prediction_unique").on(table.predictionId),
+  index("prediction_grades_graded_at_idx").on(table.gradedAt),
+]);
+
+export const weeklyLearningReportsTable = pgTable("weekly_learning_reports", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+  report: jsonb("report").$type<Record<string, unknown>>().notNull().default({}),
+  narrative: text("narrative").notNull(),
+}, (table) => [
+  unique("weekly_learning_reports_season_week_unique").on(table.season, table.week),
 ]);
 
 export const dataSyncRunsTable = pgTable("data_sync_runs", {

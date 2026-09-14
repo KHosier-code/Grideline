@@ -9,10 +9,10 @@ import {
 } from "@workspace/db";
 import { PREGAME_FEATURE_VERSION } from "./features";
 
-type Algorithm = "linear_regression" | "logistic_regression" | "random_forest" | "gradient_boosting";
-type Family = "spread" | "moneyline" | "totals";
-type SamplePolicy = "include_low_sample" | "exclude_low_sample";
-type Example = {
+export type Algorithm = "linear_regression" | "logistic_regression" | "random_forest" | "gradient_boosting";
+export type Family = "spread" | "moneyline" | "totals";
+export type SamplePolicy = "include_low_sample" | "exclude_low_sample";
+export type Example = {
   gameId: string;
   season: number;
   week: number;
@@ -24,7 +24,7 @@ type Example = {
   total: number;
   homeWin: number;
 };
-type MatrixModel = {
+export type MatrixModel = {
   predict: (x: number[]) => number;
   importance: Record<string, number>;
 };
@@ -33,7 +33,7 @@ const TEST_SEASONS = [2022, 2023, 2024, 2025, 2026];
 const FEATURE_PREFIXES = ["season_to_date", "last_8", "last_5", "last_3"];
 const MAX_FEATURES = 24;
 
-function mean(values: number[]) {
+export function mean(values: number[]) {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 }
 function sigmoid(value: number) {
@@ -54,7 +54,7 @@ function brier(actual: number[], predicted: number[]) {
 function logLoss(actual: number[], predicted: number[]) {
   return -mean(actual.map((value, index) => value * Math.log(clamp(predicted[index])) + (1 - value) * Math.log(clamp(1 - predicted[index]))));
 }
-function standardize(train: number[][], test: number[][]) {
+export function standardize(train: number[][], test: number[][]) {
   const width = train[0]?.length ?? 0;
   const centers = Array.from({ length: width }, (_, column) => mean(train.map((row) => row[column])));
   const scales = centers.map((center, column) => {
@@ -205,13 +205,13 @@ function normalizeImportance(values: Record<string, number>, names: string[]) {
   const total = Object.values(values).reduce((sum, value) => sum + value, 0) || 1;
   return Object.fromEntries(Object.entries(values).map(([key, value]) => [names[Number(key)] ?? key, value / total]));
 }
-function modelFor(algorithm: Algorithm, train: number[][], target: number[], classification: boolean) {
+export function modelFor(algorithm: Algorithm, train: number[][], target: number[], classification: boolean) {
   if (algorithm === "linear_regression") return ridge(train, target, 1);
   if (algorithm === "logistic_regression") return logistic(train, target);
   if (algorithm === "random_forest") return forest(train, target, classification);
   return boosting(train, target, classification);
 }
-function sourceFeatureNames(rows: Array<{ features: PregameFeatureValues }>) {
+export function sourceFeatureNames(rows: Array<{ features: PregameFeatureValues }>) {
   const counts = new Map<string, number>();
   for (const row of rows) for (const [key, value] of Object.entries(row.features)) {
     if (FEATURE_PREFIXES.some((prefix) => key.startsWith(`${prefix}.`)) && typeof value === "number" && Number.isFinite(value)) counts.set(key, (counts.get(key) ?? 0) + 1);
@@ -219,7 +219,7 @@ function sourceFeatureNames(rows: Array<{ features: PregameFeatureValues }>) {
   return [...counts.entries()].filter(([, count]) => count >= 25).sort((left, right) => right[1] - left[1]).slice(0, MAX_FEATURES).map(([key]) => key).sort();
 }
 
-async function loadExamples(featureVersion: string) {
+export async function loadExamples(featureVersion: string) {
   const rows = await db.select().from(pregameTeamFeaturesTable).where(eq(pregameTeamFeaturesTable.featureVersion, featureVersion));
   const stats = await db.select({ gameId: teamGameStatsTable.gameId, teamId: teamGameStatsTable.teamId, teamScore: teamGameStatsTable.teamScore, opponentScore: teamGameStatsTable.opponentScore }).from(teamGameStatsTable);
   const scoreByTeamGame = new Map(stats.map((row) => [`${row.gameId}:${row.teamId}`, row]));
@@ -265,6 +265,14 @@ function buildMetrics(family: Family, actual: number[], predicted: number[], exa
   return { mae: mae(actual, predicted), rmse: rmse(actual, predicted), sampleSize: actual.length, lowQbMae: mae(actual.filter((_, index) => examples[index].qbConfidence < 0.75), predicted.filter((_, index) => examples[index].qbConfidence < 0.75)), highQbMae: mae(actual.filter((_, index) => examples[index].qbConfidence >= 0.75), predicted.filter((_, index) => examples[index].qbConfidence >= 0.75)) };
 }
 
+function applyRecencyWeighting(rows: Example[], weighting: string) {
+  if (weighting === "none" || !rows.length) return rows;
+  const latestSeason = Math.max(...rows.map((row) => row.season));
+  const multiplier = weighting === "recent_2x" ? 2 : 1.5;
+  const recent = rows.filter((row) => row.season === latestSeason);
+  return [...rows, ...recent.slice(0, Math.ceil(recent.length * (multiplier - 1)))];
+}
+
 export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION) {
   const { examples, names } = await loadExamples(featureVersion);
   const availableSeasons = TEST_SEASONS.filter((season) => examples.some((example) => example.season === season));
@@ -284,27 +292,32 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
       const scaled = standardize(trainRows.map((row) => row.x), testRows.map((row) => row.x));
       for (const config of families) {
         for (const algorithm of config.algorithms) {
-          const target = trainRows.map(config.target);
-          const actual = testRows.map(config.target);
-          const model = modelFor(algorithm, scaled.train, target, config.classification);
-          const predicted = scaled.test.map((row) => config.classification ? clamp(model.predict(row)) : model.predict(row));
-          const metrics = buildMetrics(config.family, actual, predicted, testRows);
-          const modelVersion = `phase4-${config.family}-${algorithm}-${testSeason}-${samplePolicy}-${Date.now()}-${runs.length}`;
-          runs.push({
-            modelVersion,
-            family: config.family,
-            algorithm,
-            featureVersion,
-            trainingSeasons,
-            testSeason,
-            samplePolicy,
-            status: "challenger",
-            sampleSize: testRows.length,
-            metrics,
-            calibration: (config.classification ? calibration(actual, predicted) : { status: "not_applicable" }) as unknown as Record<string, unknown>,
-            featureImportance: normalizeImportance(model.importance, names),
-            notes: "Chronological walk-forward evaluation. No automatic promotion. Betting performance is unavailable unless a legitimate pre-prediction sportsbook line exists.",
-          });
+          for (const recencyWeighting of ["none", "recent_1.5x", "recent_2x"]) {
+            const weightedTrainRows = applyRecencyWeighting(trainRows, recencyWeighting);
+            const weightedScaled = standardize(weightedTrainRows.map((row) => row.x), testRows.map((row) => row.x));
+            const target = weightedTrainRows.map(config.target);
+            const actual = testRows.map(config.target);
+            const model = modelFor(algorithm, weightedScaled.train, target, config.classification);
+            const predicted = weightedScaled.test.map((row) => config.classification ? clamp(model.predict(row)) : model.predict(row));
+            const metrics = buildMetrics(config.family, actual, predicted, testRows);
+            const modelVersion = `phase4-${config.family}-${algorithm}-${testSeason}-${samplePolicy}-${recencyWeighting}-${Date.now()}-${runs.length}`;
+            runs.push({
+              modelVersion,
+              family: config.family,
+              algorithm,
+              featureVersion,
+              trainingSeasons,
+              testSeason,
+              samplePolicy,
+              recencyWeighting,
+              status: "challenger",
+              sampleSize: testRows.length,
+              metrics,
+              calibration: (config.classification ? calibration(actual, predicted) : { status: "not_applicable" }) as unknown as Record<string, unknown>,
+              featureImportance: normalizeImportance(model.importance, names),
+              notes: "Chronological walk-forward evaluation with a controlled recency-weighting challenger variant. No automatic promotion. Betting performance is unavailable unless a legitimate pre-prediction sportsbook line exists.",
+            });
+          }
         }
       }
     }
@@ -317,7 +330,7 @@ export async function getPhase4ModelLab() {
   const runs = await db.select().from(modelTrainingRunsTable).orderBy(asc(modelTrainingRunsTable.family), asc(modelTrainingRunsTable.testSeason), asc(modelTrainingRunsTable.algorithm));
   const latest = new Map<string, typeof runs[number]>();
   for (const run of runs) {
-    const key = `${run.family}:${run.algorithm}:${run.testSeason}:${run.samplePolicy}`;
+    const key = `${run.family}:${run.algorithm}:${run.testSeason}:${run.samplePolicy}:${run.recencyWeighting}`;
     const previous = latest.get(key);
     if (!previous || run.trainedAt > previous.trainedAt) latest.set(key, run);
   }
@@ -326,7 +339,7 @@ export async function getPhase4ModelLab() {
     const candidates = current.filter((run) => run.family === family && run.testSeason < 2026);
     const groups = new Map<string, typeof candidates>();
     for (const run of candidates) {
-      const key = `${run.algorithm}:${run.samplePolicy}`;
+      const key = `${run.algorithm}:${run.samplePolicy}:${run.recencyWeighting}`;
       groups.set(key, [...(groups.get(key) ?? []), run]);
     }
     const aggregates = [...groups.values()].filter((group) => group.length >= 3).map((group) => {

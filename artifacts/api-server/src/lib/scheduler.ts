@@ -21,6 +21,8 @@ import { syncNflverseHistory } from "./nflverse";
 import { rebuildPregameFeatures } from "./features";
 import { captureOddsSnapshots } from "./odds";
 import { syncEspnScheduleCoverage } from "./schedule";
+import { freezeOfficialFinalPredictions, generateLivePredictions, generateWeeklyLearningReport, gradeCompletedPredictions } from "./live-predictions";
+import { trainPhase4Models } from "./modeling";
 import { logger } from "./logger";
 
 export const FOOTBALL_TIMEZONE = "America/New_York";
@@ -66,7 +68,17 @@ export const INJURY_WEEKLY_SLOTS: WeeklyDefinition[] = [
   { jobKey: "injury-monday-final", provider: "espn-injuries", kind: "injury-dynamic", cadence: "weekly Mon 75m before MNF", weekday: 1, hour: 0, minute: 0 },
 ];
 
-const ALL_WEEKLY_SLOTS = [...ODDS_WEEKLY_SLOTS, ...INJURY_WEEKLY_SLOTS];
+export const PREDICTION_WEEKLY_SLOTS: WeeklyDefinition[] = [
+  { jobKey: "predictions-tuesday", provider: "gridline-model", kind: "prediction", cadence: "weekly Tue 11:00 ET", weekday: 2, hour: 11, minute: 0 },
+  { jobKey: "predictions-thursday", provider: "gridline-model", kind: "prediction", cadence: "weekly Thu 12:00 ET", weekday: 4, hour: 12, minute: 0 },
+  { jobKey: "predictions-friday", provider: "gridline-model", kind: "prediction", cadence: "weekly Fri 12:00 ET", weekday: 5, hour: 12, minute: 0 },
+  { jobKey: "predictions-saturday", provider: "gridline-model", kind: "prediction", cadence: "weekly Sat 12:00 ET", weekday: 6, hour: 12, minute: 0 },
+  { jobKey: "predictions-sunday", provider: "gridline-model", kind: "prediction", cadence: "weekly Sun 11:00 ET", weekday: 0, hour: 11, minute: 0 },
+  { jobKey: "predictions-grade", provider: "gridline-model", kind: "prediction-grade", cadence: "weekly Mon 05:00 ET", weekday: 1, hour: 5, minute: 0 },
+  { jobKey: "models-challenger-weekly", provider: "gridline-model", kind: "model-challenger", cadence: "weekly Tue 04:30 ET after completed games", weekday: 2, hour: 4, minute: 30 },
+];
+
+const ALL_WEEKLY_SLOTS = [...ODDS_WEEKLY_SLOTS, ...INJURY_WEEKLY_SLOTS, ...PREDICTION_WEEKLY_SLOTS];
 
 function lockExpired(lockUntil: Date | null, now: Date) {
   return !lockUntil || lockUntil.getTime() <= now.getTime();
@@ -427,6 +439,30 @@ async function ensureKickoffJobs(now: Date) {
         .where(eq(schedulerJobsTable.jobKey, window.key));
     }
   }
+  const futureGames = games.filter((game): game is typeof game & { kickoffTime: Date } =>
+    Boolean(game.kickoffTime) && !isFinishedStatus(game.gameStatus),
+  );
+  for (const game of futureGames) {
+    const jobKey = `prediction-freeze-${game.gameId}`;
+    const [existing] = await db.select().from(schedulerJobsTable)
+      .where(eq(schedulerJobsTable.jobKey, jobKey)).limit(1);
+    if (!existing) {
+      await db.insert(schedulerJobsTable).values({
+        jobKey,
+        provider: "gridline-model",
+        kind: "prediction-freeze",
+        timezone: FOOTBALL_TIMEZONE,
+        cadence: `one-shot official prediction freeze at kickoff (${game.gameId})`,
+        nextRunAt: game.kickoffTime > now ? game.kickoffTime : null,
+        enabled: game.kickoffTime > now,
+      });
+    } else if (existing.enabled && existing.nextRunAt && Math.abs(existing.nextRunAt.getTime() - game.kickoffTime.getTime()) > 60_000) {
+      await db.update(schedulerJobsTable).set({
+        nextRunAt: game.kickoffTime,
+        updatedAt: now,
+      }).where(eq(schedulerJobsTable.jobKey, jobKey));
+    }
+  }
 }
 
 async function recoverMissedJobs(now: Date) {
@@ -654,6 +690,29 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
           };
         }
       }
+    } else if (job.kind === "prediction") {
+      result = await generateLivePredictions();
+    } else if (job.kind === "prediction-grade") {
+      result = await gradeCompletedPredictions();
+      const completed = await db
+        .select({ season: gamesTable.season, week: gamesTable.week })
+        .from(gamesTable)
+        .where(and(
+          sql`${gamesTable.kickoffTime} is not null`,
+          sql`${gamesTable.kickoffTime} < now()`,
+          sql`(lower(${gamesTable.gameStatus}) like '%final%' or lower(${gamesTable.gameStatus}) like '%completed%')`,
+        ))
+        .orderBy(desc(gamesTable.kickoffTime))
+        .limit(1);
+      if (completed[0]) {
+        const report = await generateWeeklyLearningReport(completed[0].season, completed[0].week);
+        result = { ...(result as Record<string, unknown>), report: { season: report.season, week: report.week } };
+      }
+    } else if (job.kind === "prediction-freeze") {
+      result = await freezeOfficialFinalPredictions();
+      disable = true;
+    } else if (job.kind === "model-challenger") {
+      result = await trainPhase4Models();
     } else {
       status = "skipped";
       const reason = `Unknown scheduler job kind "${job.kind}".`;

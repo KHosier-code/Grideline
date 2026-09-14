@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import {
   db,
   gamesTable,
@@ -293,6 +293,23 @@ export async function rebuildPregameFeatures(featureVersion = PREGAME_FEATURE_VE
       gameId: stat.gameId,
       kickoffTime: scheduled?.kickoffTime ?? fallbackDate,
       teams: [],
+    });
+  }
+  const scheduledRows = await db
+    .select()
+    .from(gamesTable)
+    .where(sql`${gamesTable.kickoffTime} is not null`);
+  for (const scheduled of scheduledRows) {
+    if (historicalGames.has(scheduled.gameId) || !scheduled.kickoffTime) continue;
+    historicalGames.set(scheduled.gameId, {
+      season: scheduled.season,
+      week: scheduled.week,
+      gameId: scheduled.gameId,
+      kickoffTime: scheduled.kickoffTime,
+      teams: [
+        { teamId: scheduled.homeTeamId, opponentTeamId: scheduled.awayTeamId, isHome: true },
+        { teamId: scheduled.awayTeamId, opponentTeamId: scheduled.homeTeamId, isHome: false },
+      ],
     });
   }
   for (const game of historicalGames.values()) {
