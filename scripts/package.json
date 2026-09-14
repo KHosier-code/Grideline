@@ -8,8 +8,16 @@
     "test:pregame-leakage": "tsx ./src/pregame-leakage.test.ts",
     "test:model-promotion": "tsx ../artifacts/api-server/src/lib/model-promotion-validation.test.ts && tsx ../artifacts/api-server/src/routes/models-promotion-failure.test.ts",
     "test:prediction-safety": "tsx ../artifacts/api-server/src/lib/prediction-validation.test.ts && tsx ./src/pregame-leakage.test.ts",
+    "test:auth-hardening": "tsx ../artifacts/api-server/src/middlewares/admin.test.ts && tsx ../artifacts/api-server/src/routes/authorization.test.ts",
+    "db:migrate": "tsx ../lib/db/src/migrate.ts",
+    "test:db-migrations": "tsx ../lib/db/src/migrate.test.ts",
     "report:pregame-leakage": "tsx ./src/pregame-leakage-report.ts",
+    "report:production-readiness": "tsx ./src/production-readiness-report.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

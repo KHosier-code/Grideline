@@ -616,13 +616,28 @@ function ReadinessTile({ icon: Icon, title, detail }: { icon: IconType; title: s
 function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string; title: string; detail: string; eyebrow: string; preferred?: string }) {
   const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000, refetchInterval: 60000 } });
   const focused = useMemo(() => preferred ? health.data?.filter((item) => `${item.provider} ${item.label}`.toLowerCase().includes(preferred)) : health.data, [health.data, preferred]);
+  const readinessStatus = focused?.some((item) => item.status === 'stale')
+    ? 'stale'
+    : focused?.some((item) => item.status === 'unavailable' || item.status === 'not_configured')
+      ? 'unavailable'
+      : 'current';
+  const readinessSummary = focused?.reduce<Record<string, number>>((counts, item) => {
+    counts[item.status] = (counts[item.status] ?? 0) + 1;
+    return counts;
+  }, {});
   return (
     <>
       <PageHeader eyebrow={eyebrow} title={title} detail={detail} actions={<button type="button" className="button button-subtle" onClick={() => health.refetch()} data-testid={`button-refresh-${kind}`}><RefreshCw className={cx('h-4 w-4', health.isFetching && 'animate-spin')} /> Refresh</button>} />
       <div className="readiness-header"><div className="readiness-header-icon"><Database className="h-5 w-5" /></div><div><p className="eyebrow text-accent">OPERATING PRINCIPLE</p><h2 className="text-lg font-semibold text-ink">Show the capture state. Never imply a signal.</h2><p className="mt-1 text-sm text-muted-foreground">This surface is ready for live data and stays honest while the provider is not configured.</p><p className="mt-2 text-xs font-medium text-accent">Scheduler timezone: America/New_York (DST-aware). Odds are seven scheduled weekly slots, not continuous polling.</p></div></div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <Panel eyebrow="Provider monitor" title="Data health" action={health.data && <span className="section-meta">{health.data.length} providers</span>}>{health.isLoading ? <div className="space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : health.isError ? <ErrorPanel /> : focused?.length ? <div className="space-y-3">{focused.map((item) => <FreshnessCard item={item} key={item.provider} />)}</div> : <EmptyPanel title="No provider record matches this surface" detail="Once the backend exposes a provider health record, it will be listed here with its last and next update." icon={Database} />}</Panel>
-        <Panel eyebrow="Readiness" title={`${title} readiness`}><EmptyPanel title="Capture not populated" detail={kind === 'odds' ? 'Odds API configuration is required before sportsbook snapshots can be shown.' : `No ${title.toLowerCase()} records are available yet. This is an honest empty state, not a prediction.`} icon={kind === 'line-movement' ? LineChart : Activity} /></Panel>
+        <Panel eyebrow="Readiness" title={`${title} readiness`}>
+          {health.isLoading
+            ? <Skeleton className="h-28" />
+            : focused?.length
+              ? <div className="readiness-block"><div className="readiness-icon"><Activity className="h-5 w-5" /></div><div><StatusPill status={readinessStatus}>{readinessStatus === 'current' ? 'Evidence current' : 'Review required'}</StatusPill><p className="mt-3 text-sm leading-6 text-muted-foreground">{focused.length} provider record{focused.length === 1 ? '' : 's'} loaded. {Object.entries(readinessSummary ?? {}).map(([status, count]) => `${count} ${status.replace('_', ' ')}`).join(' · ')}. Stale and unavailable sources remain visible and are not treated as successful captures.</p></div></div>
+              : <EmptyPanel title="Capture not populated" detail={kind === 'odds' ? 'No Odds API health record is available yet.' : `No ${title.toLowerCase()} provider records are available yet. This is an honest empty state, not a prediction.`} icon={kind === 'line-movement' ? LineChart : Activity} />}
+        </Panel>
       </div>
       <Panel eyebrow="What will appear here" title="Future-ready fields" className="mt-5"><div className="grid gap-3 md:grid-cols-3"><ReadinessTile icon={Clock3} title="Freshness timestamp" detail="Last successful capture and next scheduled update." /><ReadinessTile icon={ShieldCheck} title="Source status" detail="Provider configuration and request budget remain visible." /><ReadinessTile icon={TrendingUp} title="Decision context" detail="Only supported outputs will be promoted into the workspace." /></div></Panel>
     </>

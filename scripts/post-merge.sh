@@ -1,4 +1,4 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
 pnpm install --frozen-lockfile
-pnpm --filter db push
+GRIDLINE_MIGRATION_ENV=development pnpm --filter @workspace/scripts run db:migrate

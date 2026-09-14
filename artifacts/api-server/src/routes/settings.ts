@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { GetSettingsResponse, UpdateSettingsBody, UpdateSettingsResponse } from "@workspace/api-zod";
 import { getAppSettings, updateAppSettings } from "../lib/settings";
+import { requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
 
@@ -19,7 +20,7 @@ router.get("/settings", async (_req, res): Promise<void> => {
   res.json(GetSettingsResponse.parse(safeSettings(await getAppSettings())));
 });
 
-router.patch("/settings", async (req, res): Promise<void> => {
+router.patch("/settings", requireAdmin, async (req, res): Promise<void> => {
   const parsed = UpdateSettingsBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

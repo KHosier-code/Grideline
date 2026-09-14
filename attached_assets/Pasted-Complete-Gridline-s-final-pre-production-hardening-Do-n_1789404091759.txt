@@ -1,0 +1,131 @@
+Complete Gridline's final pre-production hardening.
+
+Do not add new modeling, betting, recommendation, confidence, player-prop, or wagering features.
+
+Priority 1: DATABASE MIGRATIONS
+
+Resolve follow-up task #21.
+
+Replace any schema-push workflow that can trigger destructive truncation prompts with deterministic, versioned, data-preserving migrations.
+
+Requirements:
+
+* Never automatically truncate production data.
+* Never drop a populated table without explicit administrator intent.
+* Preserve all:
+
+  * historical games
+  * feature rows
+  * sportsbook snapshots
+  * injury snapshots
+  * prediction snapshots
+  * model training runs
+  * promotion history
+  * grading history
+* Migrations must be reproducible in development and production.
+* Add a migration history table if one does not already exist.
+* Create a backup/checkpoint procedure before production schema changes.
+* Fail safely if a migration cannot be applied without destructive changes.
+
+Perform a dry-run migration against the current development database and verify row counts remain unchanged for all critical historical tables.
+
+Priority 2: FEED HEALTH VERIFICATION
+
+Verify the persistent worker refreshes:
+
+* ESPN schedule/results
+* ESPN injuries
+* NFLverse
+* sportsbook odds
+* pregame features
+
+Wait only for currently executable scheduled/manual verification paths; do not fabricate successful freshness.
+
+For each feed report:
+
+* last successful sync
+* next scheduled sync
+* status
+* records added
+* duplicates skipped
+* failures
+* whether stale status cleared
+
+Do not treat ESPN live depth charts as healthy if the public endpoint still provides no usable rows.
+
+Keep that limitation visible.
+
+Priority 3: PRODUCTION AUTHENTICATION READINESS
+
+Audit Clerk configuration for production deployment.
+
+Confirm:
+
+* production Clerk keys are separate from development where required
+* sign-in works in the production configuration
+* administrator authorization works
+* ADMIN_USER_IDS or production admin role is correctly configured
+* anonymous users cannot trigger protected mutations
+* manual sync endpoints remain protected
+* promotion endpoints remain protected
+
+Do not expose secret values.
+
+Priority 4: PRODUCTION DEPLOYMENT CHECKLIST
+
+Prepare a go-live checklist covering:
+
+* application deployment
+* persistent worker deployment
+* production database
+* environment secrets
+* authentication
+* scheduled jobs
+* Odds API quota
+* Data Health
+* logging
+* model promotion state
+* prediction safety
+* database backup/recovery
+
+Priority 5: END-TO-END DRY RUN
+
+Run or prepare the system for a complete production-cycle verification:
+
+1. Upcoming NFL game exists
+2. Schedule is current
+3. Injury data refreshes
+4. Sportsbook odds are captured
+5. Pregame features exist
+6. Phase 6 production models resolve
+7. Prediction snapshot is generated
+8. Prediction becomes final before kickoff
+9. Post-kickoff mutation is blocked
+10. Final result is ingested
+11. Prediction is graded
+12. CLV is calculated when eligible
+13. Performance dashboard updates
+14. Challenger retraining runs after completed data is available
+
+Do not fabricate steps that cannot yet occur because a real game has not completed.
+
+FINAL REPORT
+
+Return:
+
+1. Database migration status
+2. Critical table row-count preservation
+3. Backup/recovery strategy
+4. Feed-health status
+5. Production-auth readiness
+6. Persistent-worker readiness
+7. Production model status
+8. Prediction-safety status
+9. Remaining go-live blockers
+10. A clear final verdict:
+
+* NOT READY
+* READY FOR PRIVATE PRODUCTION
+* FULLY UNATTENDED READY
+
+Do not call Gridline fully production-ready unless the database migration risk is resolved.

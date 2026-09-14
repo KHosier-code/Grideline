@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type RequestHandler } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
@@ -7,6 +7,28 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+
+const firstHeaderValue = (value: string | string[] | undefined): string | undefined => {
+  const first = Array.isArray(value) ? value[0] : value;
+  return first?.split(",")[0]?.trim() || undefined;
+};
+
+const enforceProductionSameOrigin: RequestHandler = (req, res, next) => {
+  const requestOrigin = firstHeaderValue(req.headers.origin);
+  if (!requestOrigin) {
+    next();
+    return;
+  }
+
+  const host = firstHeaderValue(req.headers["x-forwarded-host"]) ?? req.get("host");
+  const protocol = firstHeaderValue(req.headers["x-forwarded-proto"]) ?? req.protocol;
+  const expectedOrigin = host && protocol ? `${protocol}://${host}` : null;
+  if (expectedOrigin !== requestOrigin) {
+    res.status(403).json({ error: "Cross-origin requests are not allowed." });
+    return;
+  }
+  next();
+};
 
 app.use(
   pinoHttp({
@@ -27,8 +49,15 @@ app.use(
     },
   }),
 );
+if (process.env.NODE_ENV === "production") {
+  app.use(enforceProductionSameOrigin);
+}
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-app.use(cors({ credentials: true, origin: true }));
+app.use(cors(
+  process.env.NODE_ENV === "production"
+    ? { origin: false }
+    : { credentials: true, origin: true },
+));
 app.use(clerkMiddleware());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
