@@ -1,0 +1,249 @@
+GRIDLINE 2025 OUT-OF-SAMPLE MODEL AUDIT
+
+Create a read-only audit of Gridline's 2025 model performance.
+
+Do not retrain, refit, promote, modify, or generate any model.
+
+Do not fabricate historical sportsbook lines, predictions, grades, or CLV.
+
+The purpose is to determine exactly how the models that were evaluated out-of-sample in 2025 performed across the full season AND week by week.
+
+IMPORTANT
+
+2025 must remain true out-of-sample evaluation.
+
+Use only model runs where:
+- training data ends before the 2025 test games
+- 2025 games were not used to fit the evaluated model
+- feature chronology is valid
+- no future information leaked into predictions
+
+PART 1 — FULL 2025 SEASON SUMMARY
+
+For each model family report:
+
+SPREAD
+- algorithm/model version
+- games evaluated
+- MAE
+- RMSE
+- mean prediction error/bias
+- median absolute error
+- games within 3 points of actual margin
+- games within 7 points of actual margin
+- directional winner accuracy
+- ATS wins/losses/pushes and ATS percentage ONLY if legitimate historical sportsbook spread data exists
+- do not reconstruct or fabricate spreads
+
+MONEYLINE
+- algorithm/model version
+- games evaluated
+- correct winners
+- incorrect winners
+- win-prediction accuracy
+- log loss
+- Brier score
+- calibration if available
+- favorites versus underdogs accuracy
+- home versus away accuracy
+
+TOTALS
+- algorithm/model version
+- games evaluated
+- MAE
+- RMSE
+- mean total prediction error/bias
+- median absolute error
+- games within 3 points of actual total
+- games within 7 points of actual total
+- over/under wins/losses/pushes ONLY if legitimate historical total lines exist
+- do not fabricate totals
+
+Clearly separate:
+
+A. MODEL PREDICTION ACCURACY
+from
+B. BETTING RECORD
+
+A projected winner being correct is not automatically a profitable moneyline bet.
+
+PART 2 — WEEK-BY-WEEK 2025 REPORT
+
+Create one row for every 2025 NFL week available in Gridline.
+
+Include regular season and postseason separately.
+
+For each week report:
+
+- week number/stage
+- games evaluated
+
+Moneyline:
+- wins
+- losses
+- accuracy %
+
+Spread:
+- margin MAE
+- margin RMSE
+- directional winner accuracy
+- ATS W-L-P and ATS % only where real historical spread data exists
+
+Totals:
+- total MAE
+- total RMSE
+- O/U W-L-P and O/U % only where real historical total data exists
+
+Also show:
+- average predicted home win probability
+- average absolute predicted margin
+- average projected total
+- low-sample game count
+- high/medium/low sample-quality breakdown if stored
+
+PART 3 — GAME-BY-GAME DETAIL
+
+Create an expandable/detail table for every 2025 game showing:
+
+- week
+- date
+- away team
+- home team
+- actual score
+- actual margin
+- actual total
+- predicted winner
+- predicted home win probability
+- projected margin
+- projected total
+- moneyline correct/incorrect
+- absolute margin error
+- absolute total error
+
+Where legitimate historical sportsbook data exists, additionally show:
+- spread
+- ATS side implied by Gridline
+- ATS result
+- total line
+- Gridline over/under side
+- total result
+
+If historical market data does not exist, display:
+"Historical market unavailable"
+
+Do not infer it from present-day sources.
+
+PART 4 — CUMULATIVE PERFORMANCE
+
+Calculate cumulative week-by-week performance for 2025.
+
+Show:
+
+- cumulative moneyline record and accuracy
+- cumulative spread directional accuracy
+- cumulative margin MAE
+- cumulative total MAE
+
+If legitimate historical market data exists:
+- cumulative ATS W-L-P
+- cumulative ATS %
+- cumulative O/U W-L-P
+- cumulative O/U %
+
+PART 5 — EDGE ANALYSIS
+
+If valid historical sportsbook prices exist, break results into model-versus-market edge buckets:
+
+- <1 point
+- 1–1.99
+- 2–2.99
+- 3–3.99
+- 4–4.99
+- 5+ points
+
+For moneyline probability edge where legitimate no-vig market probabilities exist:
+
+- <2 percentage points
+- 2–4.99 pp
+- 5–7.49 pp
+- 7.5–9.99 pp
+- 10+ pp
+
+Report sample size and record for every bucket.
+
+Do not display a bucket as meaningful when the sample is too small.
+
+PART 6 — BEST AND WORST WEEKS
+
+Identify:
+
+- best moneyline week
+- worst moneyline week
+- lowest margin-MAE week
+- highest margin-MAE week
+- lowest total-MAE week
+- highest total-MAE week
+
+If ATS/O-U historical data is legitimately available:
+- best ATS week
+- worst ATS week
+- best totals week
+- worst totals week
+
+PART 7 — MODEL COMPARISON
+
+Compare the production Phase 6 model choices against any other legitimate 2025 walk-forward candidates already stored.
+
+Do not retrain models.
+
+Show whether another already-tested candidate actually outperformed the eventual Phase 6 choice during 2025.
+
+Use the appropriate metric for each family:
+
+Spread:
+- MAE
+- RMSE
+- ATS only if valid lines exist
+
+Moneyline:
+- accuracy
+- log loss
+- Brier score
+
+Totals:
+- MAE
+- RMSE
+- O/U only if valid lines exist
+
+PART 8 — HONEST LIMITATIONS
+
+Explicitly report:
+
+- whether historical spread lines exist
+- whether historical total lines exist
+- whether historical moneyline prices exist
+- whether closing lines exist
+- whether CLV can legitimately be calculated
+- number of games missing required data
+- any weeks excluded and why
+
+Do not substitute model accuracy for betting performance.
+
+FINAL OUTPUT
+
+Return:
+
+1. 2025 full-season summary
+2. Week-by-week table
+3. Game-by-game audit
+4. Cumulative weekly performance
+5. Edge-bucket analysis where legitimate
+6. Best/worst weeks
+7. Model-candidate comparison
+8. Historical market-data limitations
+9. Exact sample sizes
+10. A concise assessment of what the 2025 out-of-sample results actually prove
+
+If the data does NOT support a 55–60% ATS or totals claim, say so explicitly.
+
+Do not modify production data while creating this report.
