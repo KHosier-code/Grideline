@@ -761,10 +761,12 @@ export async function getSchedulerHealth() {
     .limit(100);
   return {
     activeInThisProcess: Boolean(timer),
+    processRole: process.env.GRIDLINE_SCHEDULER_WORKER === "1" ? "persistent_worker" : "api",
+    persistentWorkerExpected: true,
     processStartedAt: schedulerStartedAt?.toISOString() ?? null,
     timezone: FOOTBALL_TIMEZONE,
     alwaysOnServiceRequired: true,
-    note: "Recurring jobs run only while this API process is alive; a stopped process does not claim a run.",
+    note: "Critical recurring jobs run in the separate Gridline data worker workflow. The API can be inactive without stopping scheduled work. If the worker stops, database leases prevent duplicate work and missed paid sportsbook jobs are not burst-caught-up.",
     jobs: jobs.map((job) => ({
       jobKey: job.jobKey,
       provider: job.provider,

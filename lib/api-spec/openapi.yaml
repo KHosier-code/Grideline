@@ -227,6 +227,41 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PregameFeatureRow"
+  /features/audit:
+    get:
+      operationId: listPregameFeatureAudit
+      tags: [dashboard]
+      summary: Read feature values and point-in-time source audit metadata
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: week
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: gameId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: teamId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: featureVersion
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Filtered feature audit rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PregameFeatureAuditRow"
   /features/pregame/build:
     post:
       operationId: buildPregameFeatures
@@ -542,7 +577,7 @@ components:
         kellyEnabled: { type: boolean }
     PregameFeatureRow:
       type: object
-      required: [featureVersion, gameId, teamId, opponentTeamId, season, week, kickoffTime, isHome, features, sampleCounts, lowSample, sourceCutoff]
+      required: [featureVersion, gameId, teamId, opponentTeamId, season, week, kickoffTime, isHome, features, sampleCounts, featureAudit, lowSample, sourceCutoff]
       properties:
         featureVersion: { type: string }
         gameId: { type: string }
@@ -554,6 +589,7 @@ components:
         isHome: { type: boolean }
         features: { type: object, additionalProperties: { type: ["number", "null"] } }
         sampleCounts: { type: object, additionalProperties: { type: integer } }
+        featureAudit: { type: object, additionalProperties: true }
         lowSample: { type: boolean }
         sourceCutoff: { type: string, format: date-time }
         generatedAt: { type: string, format: date-time }
@@ -567,4 +603,25 @@ components:
         games: { type: integer }
         lowSampleRows: { type: integer }
         latestGeneratedAt: { type: ["string", "null"], format: date-time }
+    PregameFeatureAuditRow:
+      type: object
+      required: [featureVersion, gameId, teamId, season, week, kickoffTime, featureName, value, sourceDataset, lookbackWindow, gamesIncluded, sampleSize, quality]
+      properties:
+        featureVersion: { type: string }
+        gameId: { type: string }
+        teamId: { type: string }
+        opponentTeamId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        kickoffTime: { type: string, format: date-time }
+        featureName: { type: string }
+        value: { type: ["number", "null"] }
+        sourceDataset: { type: string }
+        lookbackWindow: { type: string }
+        gamesIncluded: { type: integer }
+        lastSourceGame: { type: ["string", "null"] }
+        lastSourceDate: { type: ["string", "null"] }
+        sampleSize: { type: integer }
+        quality: { type: string, enum: [high, low_sample, unavailable] }
+        unavailableReason: { type: ["string", "null"] }
 

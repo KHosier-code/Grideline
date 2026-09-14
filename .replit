@@ -11,6 +11,26 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Gridline data worker"
+
+[[workflows.workflow]]
+name = "Gridline data worker"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "while [ ! -f artifacts/api-server/dist/worker.mjs ]; do sleep 2; done; pnpm --filter @workspace/api-server run worker"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

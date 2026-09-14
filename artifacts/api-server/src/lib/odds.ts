@@ -1661,7 +1661,7 @@ export async function getOddsApiHealth(): Promise<OddsHealth> {
     status,
     detail: latestSuccess
       ? latestSuccess.recordsProcessed > 0
-        ? "The last successful capture preserved DraftKings and FanDuel observations. Recurring scheduler captures run while the API process is alive."
+        ? "The last successful capture preserved DraftKings and FanDuel observations. Recurring captures run in the persistent Gridline data worker."
         : "The last request succeeded but returned no matched sportsbook observations."
       : lastCaptureFailure ?? latestFailure?.errorMessage ?? "No successful Odds API request has been captured.",
     lastUpdated: latestSuccess?.requestedAt ?? null,

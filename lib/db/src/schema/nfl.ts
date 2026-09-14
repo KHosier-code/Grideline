@@ -299,10 +299,53 @@ export const teamGameStatsTable = pgTable("team_game_stats", {
   thirdDownRate: doublePrecision("third_down_rate"),
   redZoneRate: doublePrecision("red_zone_rate"),
   neutralScriptPassRate: doublePrecision("neutral_script_pass_rate"),
+  passDropbacks: integer("pass_dropbacks").notNull().default(0),
+  passAttempts: integer("pass_attempts").notNull().default(0),
+  rushAttempts: integer("rush_attempts").notNull().default(0),
+  passEpaPerDropback: doublePrecision("pass_epa_per_dropback"),
+  rushEpaPerRush: doublePrecision("rush_epa_per_rush"),
+  passingSuccessRate: doublePrecision("passing_success_rate"),
+  rushingSuccessRate: doublePrecision("rushing_success_rate"),
+  sackRateAllowed: doublePrecision("sack_rate_allowed"),
+  earlyDownPassRate: doublePrecision("early_down_pass_rate"),
+  earlyDownSuccessRate: doublePrecision("early_down_success_rate"),
+  earlyDownEpaPerPlay: doublePrecision("early_down_epa_per_play"),
+  secondsPerPlay: doublePrecision("seconds_per_play"),
+  passEpaAllowed: doublePrecision("pass_epa_allowed"),
+  rushEpaAllowed: doublePrecision("rush_epa_allowed"),
+  passSuccessRateAllowed: doublePrecision("pass_success_rate_allowed"),
+  rushSuccessRateAllowed: doublePrecision("rush_success_rate_allowed"),
+  defensiveSackRate: doublePrecision("defensive_sack_rate"),
+  earlyDownDefensiveEpa: doublePrecision("early_down_defensive_epa"),
+  explosivePassRateAllowed: doublePrecision("explosive_pass_rate_allowed"),
+  explosiveRushRateAllowed: doublePrecision("explosive_rush_rate_allowed"),
   sourceDataset: text("source_dataset").notNull().default("nflverse"),
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   primaryKey({ columns: [table.season, table.week, table.gameId, table.teamId] }),
+]);
+
+export const qbGameStatsTable = pgTable("qb_game_stats", {
+  gameId: text("game_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  playerId: text("player_id").notNull(),
+  teamId: text("team_id").notNull(),
+  opponentTeamId: text("opponent_team_id").notNull(),
+  dropbacks: integer("dropbacks").notNull().default(0),
+  passAttempts: integer("pass_attempts").notNull().default(0),
+  completions: integer("completions").notNull().default(0),
+  passEpa: doublePrecision("pass_epa").notNull().default(0),
+  passSuccesses: integer("pass_successes").notNull().default(0),
+  interceptions: integer("interceptions").notNull().default(0),
+  sacks: integer("sacks").notNull().default(0),
+  rushAttempts: integer("rush_attempts").notNull().default(0),
+  rushEpa: doublePrecision("rush_epa").notNull().default(0),
+  participationEvidence: text("participation_evidence"),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.gameId, table.playerId] }),
+  index("qb_game_stats_team_idx").on(table.teamId, table.season, table.week),
 ]);
 
 export const playerGameStatsTable = pgTable("player_game_stats", {
@@ -382,6 +425,17 @@ export const historicalDepthChartTable = pgTable("historical_depth_charts", {
 
 export type PregameFeatureValues = Record<string, number | null>;
 export type PregameFeatureSamples = Record<string, number>;
+export type PregameFeatureAuditEntry = {
+  value: number | null;
+  sourceDataset: string;
+  lookbackWindow: string;
+  gamesIncluded: number;
+  lastSourceGame: string | null;
+  lastSourceDate: string | null;
+  sampleSize: number;
+  quality: "high" | "low_sample" | "unavailable";
+  unavailableReason?: string;
+};
 
 /**
  * Versioned, point-in-time feature rows. Each row is generated from games
@@ -399,6 +453,7 @@ export const pregameTeamFeaturesTable = pgTable("pregame_team_features", {
   isHome: boolean("is_home").notNull(),
   features: jsonb("features").$type<PregameFeatureValues>().notNull().default({}),
   sampleCounts: jsonb("sample_counts").$type<PregameFeatureSamples>().notNull().default({}),
+  featureAudit: jsonb("feature_audit").$type<Record<string, PregameFeatureAuditEntry>>().notNull().default({}),
   lowSample: boolean("low_sample").notNull().default(true),
   sourceCutoff: timestamp("source_cutoff", { withTimezone: true }).notNull(),
   generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),

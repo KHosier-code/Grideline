@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { SignIn, SignUp, UserButton, useAuth } from '@clerk/react';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
   AlertTriangle,
@@ -13,6 +13,7 @@ import {
   Clock3,
   Database,
   Gauge,
+  FileSearch,
   History,
   LayoutDashboard,
   LineChart,
@@ -86,6 +87,7 @@ const navGroups = [
     label: 'Review',
     items: [
       { href: '/data-health', label: 'Data health', icon: Database },
+      { href: '/feature-audit', label: 'Feature audit', icon: FileSearch },
       { href: '/performance', label: 'Performance', icon: BarChart3 },
       { href: '/settings', label: 'Settings', icon: Settings2 },
     ],
@@ -617,6 +619,57 @@ function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string;
   );
 }
 
+function FeatureAuditPage() {
+  const [season, setSeason] = useState('');
+  const [week, setWeek] = useState('');
+  const [gameId, setGameId] = useState('');
+  const [teamId, setTeamId] = useState('');
+  const [featureVersion, setFeatureVersion] = useState('pregame-v3');
+  const query = new URLSearchParams();
+  if (season) query.set('season', season);
+  if (week) query.set('week', week);
+  if (gameId) query.set('gameId', gameId);
+  if (teamId) query.set('teamId', teamId);
+  if (featureVersion) query.set('featureVersion', featureVersion);
+  query.set('limit', '1200');
+  const audit = useQuery({
+    queryKey: ['feature-audit', season, week, gameId, teamId, featureVersion],
+    queryFn: async () => {
+      const response = await fetch(`/api/features/audit?${query.toString()}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Feature audit unavailable');
+      return response.json() as Promise<Array<Record<string, unknown>>>;
+    },
+    staleTime: 30000,
+  });
+  const rows = audit.data ?? [];
+  return (
+    <>
+      <PageHeader eyebrow="Model data / Feature audit" title="Feature audit" detail="Inspect exactly what Gridline had available before a historical kickoff. Unavailable inputs stay visibly unavailable." />
+      <Panel eyebrow="Historical point-in-time filters" title="Choose an observation" className="mb-5">
+        <div className="grid gap-3 md:grid-cols-5">
+          <label className="field-label">Season<input className="field-input mt-2" inputMode="numeric" placeholder="2021" value={season} onChange={(event) => setSeason(event.target.value)} /></label>
+          <label className="field-label">Week<input className="field-input mt-2" inputMode="numeric" placeholder="1" value={week} onChange={(event) => setWeek(event.target.value)} /></label>
+          <label className="field-label">Game ID<input className="field-input mt-2" placeholder="2021_01_DAL_TB" value={gameId} onChange={(event) => setGameId(event.target.value)} /></label>
+          <label className="field-label">Team<input className="field-input mt-2" placeholder="DAL" value={teamId} onChange={(event) => setTeamId(event.target.value.toUpperCase())} /></label>
+          <label className="field-label">Feature-set version<input className="field-input mt-2" value={featureVersion} onChange={(event) => setFeatureVersion(event.target.value)} /></label>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">Showing up to 1,200 feature records. Filter by game ID to inspect one historical matchup in full.</p>
+      </Panel>
+      {audit.isLoading ? <LoadingPanel label="Loading point-in-time features" /> : audit.isError ? <ErrorPanel message="The feature audit could not be loaded." /> : (
+        <Panel eyebrow={`${rows.length} records`} title="Known inputs before kickoff">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1150px] text-left text-xs">
+              <thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Feature</th><th className="px-3 py-3">Value</th><th className="px-3 py-3">Source</th><th className="px-3 py-3">Window</th><th className="px-3 py-3">Games</th><th className="px-3 py-3">Last source</th><th className="px-3 py-3">Sample</th><th className="px-3 py-3">Quality</th><th className="px-3 py-3">Unavailable reason</th></tr></thead>
+              <tbody>{rows.map((row, index) => <tr className="border-b border-border/70 align-top" key={`${String(row.gameId)}-${String(row.teamId)}-${String(row.featureName)}-${index}`}><td className="px-3 py-3 font-semibold text-ink">{String(row.featureName)}</td><td className="px-3 py-3 font-mono">{row.value === null ? '—' : Number(row.value).toFixed(4)}</td><td className="px-3 py-3">{String(row.sourceDataset)}</td><td className="px-3 py-3">{String(row.lookbackWindow)}</td><td className="px-3 py-3">{String(row.gamesIncluded)}</td><td className="px-3 py-3">{String(row.lastSourceGame ?? '—')}<br /><span className="text-muted-foreground">{String(row.lastSourceDate ?? '—')}</span></td><td className="px-3 py-3">{String(row.sampleSize)}</td><td className="px-3 py-3"><StatusPill status={row.quality === 'high' ? 'current' : row.quality === 'unavailable' ? 'not_configured' : 'stale'}>{String(row.quality)}</StatusPill></td><td className="max-w-xs px-3 py-3 text-muted-foreground">{String(row.unavailableReason ?? '—')}</td></tr>)}</tbody>
+            </table>
+          </div>
+          {!rows.length && <EmptyPanel title="No feature records match" detail="Try a different season, week, team, game ID, or feature-set version." icon={FileSearch} />}
+        </Panel>
+      )}
+    </>
+  );
+}
+
 function Backtesting() {
   return <ReadinessPage eyebrow="Research" title="Backtesting" detail="Walk-forward evaluation without hindsight or invented results." icon={History} blocks={['Walk-forward windows', 'Out-of-sample record', 'Calibration by segment']} />;
 }
@@ -669,7 +722,7 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function Router() {
-  return <RoutedErrorBoundary><Switch><Route path="/sign-in/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>} /><Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} /><Route><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/odds" component={OddsBoard} /><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices. Open a game from the Odds board to inspect every preserved change." preferred="odds" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></Route></Switch></RoutedErrorBoundary>;
+  return <RoutedErrorBoundary><Switch><Route path="/sign-in/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>} /><Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} /><Route><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/feature-audit" component={FeatureAuditPage} /><Route path="/odds" component={OddsBoard} /><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices. Open a game from the Odds board to inspect every preserved change." preferred="odds" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></Route></Switch></RoutedErrorBoundary>;
 }
 
 function App() {

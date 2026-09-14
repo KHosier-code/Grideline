@@ -12,6 +12,7 @@ import {
   playerGameStatsTable,
   snapCountsTable,
   teamGameStatsTable,
+  qbGameStatsTable,
 } from "@workspace/db";
 import { logger } from "./logger";
 
@@ -51,11 +52,17 @@ type TeamGameAccumulator = {
   success: number;
   yards: number;
   passPlays: number;
+  passDropbacks: number;
+  passAttempts: number;
+  passSuccesses: number;
   passEpa: number;
   rushPlays: number;
+  rushAttempts: number;
+  rushSuccesses: number;
   rushEpa: number;
   turnovers: number;
   sacks: number;
+  sacksAllowed: number;
   pressures: number;
   explosivePasses: number;
   explosiveRushes: number;
@@ -68,6 +75,38 @@ type TeamGameAccumulator = {
   defensivePlays: number;
   defensiveEpaAllowed: number;
   defensiveStops: number;
+  passEpaAllowed: number;
+  rushEpaAllowed: number;
+  passPlaysAllowed: number;
+  rushPlaysAllowed: number;
+  passSuccessesAllowed: number;
+  rushSuccessesAllowed: number;
+  explosivePassesAllowed: number;
+  explosiveRushesAllowed: number;
+  earlyDownPlays: number;
+  earlyDownPasses: number;
+  earlyDownSuccesses: number;
+  earlyDownEpa: number;
+  secondsElapsed: number;
+  lastGameSecondsRemaining: number | null;
+};
+
+type QbGameAccumulator = {
+  gameId: string;
+  season: number;
+  week: number;
+  playerId: string;
+  teamId: string;
+  opponentTeamId: string;
+  dropbacks: number;
+  passAttempts: number;
+  completions: number;
+  passEpa: number;
+  passSuccesses: number;
+  interceptions: number;
+  sacks: number;
+  rushAttempts: number;
+  rushEpa: number;
 };
 
 function parseCsvLine(line: string): string[] {
@@ -230,11 +269,17 @@ function createAccumulator(row: CsvRow, teamId: string, opponentTeamId: string):
     success: 0,
     yards: 0,
     passPlays: 0,
+    passDropbacks: 0,
+    passAttempts: 0,
+    passSuccesses: 0,
     passEpa: 0,
     rushPlays: 0,
+    rushAttempts: 0,
+    rushSuccesses: 0,
     rushEpa: 0,
     turnovers: 0,
     sacks: 0,
+    sacksAllowed: 0,
     pressures: 0,
     explosivePasses: 0,
     explosiveRushes: 0,
@@ -247,11 +292,26 @@ function createAccumulator(row: CsvRow, teamId: string, opponentTeamId: string):
     defensivePlays: 0,
     defensiveEpaAllowed: 0,
     defensiveStops: 0,
+    passEpaAllowed: 0,
+    rushEpaAllowed: 0,
+    passPlaysAllowed: 0,
+    rushPlaysAllowed: 0,
+    passSuccessesAllowed: 0,
+    rushSuccessesAllowed: 0,
+    explosivePassesAllowed: 0,
+    explosiveRushesAllowed: 0,
+    earlyDownPlays: 0,
+    earlyDownPasses: 0,
+    earlyDownSuccesses: 0,
+    earlyDownEpa: 0,
+    secondsElapsed: 0,
+    lastGameSecondsRemaining: null,
   };
 }
 
 async function ingestPlayByPlay(season: number, filePath: string) {
   const games = new Map<string, TeamGameAccumulator>();
+  const quarterbacks = new Map<string, QbGameAccumulator>();
   const rows = await forEachCsvRow(filePath, (row) => {
     const posteam = row.posteam;
     const defteam = row.defteam;
@@ -270,6 +330,8 @@ async function ingestPlayByPlay(season: number, filePath: string) {
     const epa = numberValue(row.epa) ?? 0;
     const success = numberValue(row.success) ?? (epa > 0 ? 1 : 0);
     const yards = numberValue(row.yards_gained) ?? 0;
+    const down = integerValue(row.down);
+    const earlyDown = down === 1 || down === 2;
     offense.plays += 1;
     offense.epa += epa;
     offense.success += success;
@@ -277,22 +339,88 @@ async function ingestPlayByPlay(season: number, filePath: string) {
     defense.defensivePlays += 1;
     defense.defensiveEpaAllowed += epa;
     defense.defensiveStops += success ? 0 : 1;
+    if (earlyDown) {
+      offense.earlyDownPlays += 1;
+      offense.earlyDownEpa += epa;
+      if (passPlay) offense.earlyDownPasses += 1;
+      if (success) offense.earlyDownSuccesses += 1;
+      defense.earlyDownPlays += 1;
+      defense.earlyDownEpa += epa;
+      if (success) defense.earlyDownSuccesses += 1;
+    }
+    const secondsRemaining = numberValue(row.game_seconds_remaining);
+    if (secondsRemaining !== null && offense.lastGameSecondsRemaining !== null) {
+      const elapsed = offense.lastGameSecondsRemaining - secondsRemaining;
+      if (elapsed > 0 && elapsed <= 60) offense.secondsElapsed += elapsed;
+    }
+    if (secondsRemaining !== null) offense.lastGameSecondsRemaining = secondsRemaining;
     if (passPlay) {
       offense.passPlays += 1;
+      if (boolNumber(row.qb_dropback) || boolNumber(row.sack)) offense.passDropbacks += 1;
+      if (boolNumber(row.pass_attempt)) offense.passAttempts += 1;
+      if (success) offense.passSuccesses += 1;
       offense.passEpa += epa;
       if ((numberValue(row.air_yards) ?? 0) >= 15) offense.explosivePasses += 1;
+      defense.passPlaysAllowed += 1;
+      defense.passEpaAllowed += epa;
+      if (success) defense.passSuccessesAllowed += 1;
+      if ((numberValue(row.air_yards) ?? 0) >= 15) defense.explosivePassesAllowed += 1;
     }
     if (rushPlay) {
       offense.rushPlays += 1;
+      offense.rushAttempts += 1;
+      if (success) offense.rushSuccesses += 1;
       offense.rushEpa += epa;
       if (yards >= 10) offense.explosiveRushes += 1;
+      defense.rushPlaysAllowed += 1;
+      defense.rushEpaAllowed += epa;
+      if (success) defense.rushSuccessesAllowed += 1;
+      if (yards >= 10) defense.explosiveRushesAllowed += 1;
     }
     if (boolNumber(row.interception) || boolNumber(row.fumble_lost)) offense.turnovers += 1;
     if (boolNumber(row.sack)) {
       defense.sacks += 1;
+      offense.sacksAllowed += 1;
       defense.pressures += 1;
     } else if (boolNumber(row.qb_hit)) {
       defense.pressures += 1;
+    }
+    const passer = row.passer_player_id;
+    if (passer && (boolNumber(row.qb_dropback) || boolNumber(row.pass_attempt) || boolNumber(row.sack))) {
+      const qbKey = `${row.game_id}:${passer}`;
+      const qb = quarterbacks.get(qbKey) ?? {
+        gameId: row.game_id,
+        season: Number(row.season),
+        week: Number(row.week),
+        playerId: passer,
+        teamId: posteam,
+        opponentTeamId: defteam,
+        dropbacks: 0,
+        passAttempts: 0,
+        completions: 0,
+        passEpa: 0,
+        passSuccesses: 0,
+        interceptions: 0,
+        sacks: 0,
+        rushAttempts: 0,
+        rushEpa: 0,
+      };
+      if (boolNumber(row.qb_dropback) || boolNumber(row.sack)) qb.dropbacks += 1;
+      if (boolNumber(row.pass_attempt)) qb.passAttempts += 1;
+      if (boolNumber(row.complete_pass)) qb.completions += 1;
+      qb.passEpa += epa;
+      if (success) qb.passSuccesses += 1;
+      if (boolNumber(row.interception)) qb.interceptions += 1;
+      if (boolNumber(row.sack)) qb.sacks += 1;
+      quarterbacks.set(qbKey, qb);
+    }
+    const rusher = row.rusher_player_id;
+    if (rusher && rushPlay) {
+      const qb = quarterbacks.get(`${row.game_id}:${rusher}`);
+      if (qb) {
+        qb.rushAttempts += 1;
+        qb.rushEpa += epa;
+      }
     }
     if (boolNumber(row.third_down_converted) || boolNumber(row.third_down_failed)) {
       offense.thirdDownAttempts += 1;
@@ -334,6 +462,26 @@ async function ingestPlayByPlay(season: number, filePath: string) {
     thirdDownRate: ratio(item.thirdDownConversions, item.thirdDownAttempts),
     redZoneRate: ratio(item.redZoneTouchdowns, item.redZonePlays),
     neutralScriptPassRate: ratio(item.neutralPasses, item.neutralPlays),
+    passDropbacks: item.passDropbacks,
+    passAttempts: item.passAttempts,
+    rushAttempts: item.rushAttempts,
+    passEpaPerDropback: ratio(item.passEpa, item.passDropbacks),
+    rushEpaPerRush: ratio(item.rushEpa, item.rushAttempts),
+    passingSuccessRate: ratio(item.passSuccesses, item.passPlays),
+    rushingSuccessRate: ratio(item.rushSuccesses, item.rushAttempts),
+    sackRateAllowed: ratio(item.sacksAllowed, item.passDropbacks),
+    earlyDownPassRate: ratio(item.earlyDownPasses, item.earlyDownPlays),
+    earlyDownSuccessRate: ratio(item.earlyDownSuccesses, item.earlyDownPlays),
+    earlyDownEpaPerPlay: ratio(item.earlyDownEpa, item.earlyDownPlays),
+    secondsPerPlay: ratio(item.secondsElapsed, item.plays),
+    passEpaAllowed: ratio(item.passEpaAllowed, item.passPlaysAllowed),
+    rushEpaAllowed: ratio(item.rushEpaAllowed, item.rushPlaysAllowed),
+    passSuccessRateAllowed: ratio(item.passSuccessesAllowed, item.passPlaysAllowed),
+    rushSuccessRateAllowed: ratio(item.rushSuccessesAllowed, item.rushPlaysAllowed),
+    defensiveSackRate: ratio(item.sacks, item.passPlaysAllowed),
+    earlyDownDefensiveEpa: ratio(item.earlyDownEpa, item.earlyDownPlays),
+    explosivePassRateAllowed: ratio(item.explosivePassesAllowed, item.passPlaysAllowed),
+    explosiveRushRateAllowed: ratio(item.explosiveRushesAllowed, item.rushPlaysAllowed),
     sourceUpdatedAt: new Date(),
   }));
   for (let index = 0; index < values.length; index += 250) {
@@ -362,11 +510,58 @@ async function ingestPlayByPlay(season: number, filePath: string) {
         thirdDownRate: sql`excluded.third_down_rate`,
         redZoneRate: sql`excluded.red_zone_rate`,
         neutralScriptPassRate: sql`excluded.neutral_script_pass_rate`,
+        passDropbacks: sql`excluded.pass_dropbacks`,
+        passAttempts: sql`excluded.pass_attempts`,
+        rushAttempts: sql`excluded.rush_attempts`,
+        passEpaPerDropback: sql`excluded.pass_epa_per_dropback`,
+        rushEpaPerRush: sql`excluded.rush_epa_per_rush`,
+        passingSuccessRate: sql`excluded.passing_success_rate`,
+        rushingSuccessRate: sql`excluded.rushing_success_rate`,
+        sackRateAllowed: sql`excluded.sack_rate_allowed`,
+        earlyDownPassRate: sql`excluded.early_down_pass_rate`,
+        earlyDownSuccessRate: sql`excluded.early_down_success_rate`,
+        earlyDownEpaPerPlay: sql`excluded.early_down_epa_per_play`,
+        secondsPerPlay: sql`excluded.seconds_per_play`,
+        passEpaAllowed: sql`excluded.pass_epa_allowed`,
+        rushEpaAllowed: sql`excluded.rush_epa_allowed`,
+        passSuccessRateAllowed: sql`excluded.pass_success_rate_allowed`,
+        rushSuccessRateAllowed: sql`excluded.rush_success_rate_allowed`,
+        defensiveSackRate: sql`excluded.defensive_sack_rate`,
+        earlyDownDefensiveEpa: sql`excluded.early_down_defensive_epa`,
+        explosivePassRateAllowed: sql`excluded.explosive_pass_rate_allowed`,
+        explosiveRushRateAllowed: sql`excluded.explosive_rush_rate_allowed`,
         sourceUpdatedAt: new Date(),
       },
     });
   }
-  return { sourceRows: rows, records: values.length };
+  const qbValues = [...quarterbacks.values()].map((item) => ({
+    ...item,
+    participationEvidence: "play_by_play_passer_or_rusher",
+    sourceUpdatedAt: new Date(),
+  }));
+  for (let index = 0; index < qbValues.length; index += 250) {
+    await db.insert(qbGameStatsTable).values(qbValues.slice(index, index + 250)).onConflictDoUpdate({
+      target: [qbGameStatsTable.gameId, qbGameStatsTable.playerId],
+      set: {
+        season: sql`excluded.season`,
+        week: sql`excluded.week`,
+        teamId: sql`excluded.team_id`,
+        opponentTeamId: sql`excluded.opponent_team_id`,
+        dropbacks: sql`excluded.dropbacks`,
+        passAttempts: sql`excluded.pass_attempts`,
+        completions: sql`excluded.completions`,
+        passEpa: sql`excluded.pass_epa`,
+        passSuccesses: sql`excluded.pass_successes`,
+        interceptions: sql`excluded.interceptions`,
+        sacks: sql`excluded.sacks`,
+        rushAttempts: sql`excluded.rush_attempts`,
+        rushEpa: sql`excluded.rush_epa`,
+        participationEvidence: sql`excluded.participation_evidence`,
+        sourceUpdatedAt: new Date(),
+      },
+    });
+  }
+  return { sourceRows: rows, records: values.length, quarterbackRecords: qbValues.length };
 }
 
 async function ingestPlayerStats(season: number, filePath: string) {
@@ -624,6 +819,26 @@ export async function syncNflverseHistory(
       .where(eq(dataSyncRunsTable.id, run.id));
     throw error;
   }
+}
+
+export async function refreshNflversePlayByPlay(seasons = defaultSeasons) {
+  let recordsProcessed = 0;
+  const failures: string[] = [];
+  for (const season of seasons) {
+    try {
+      const source = await acquireDataset("pbp", season);
+      const result = await ingestPlayByPlay(season, source.filePath);
+      recordsProcessed += result.records;
+      await db.update(nflverseSourceFilesTable)
+        .set({ status: "success", rowsProcessed: result.sourceRows, completedAt: new Date(), errorMessage: null })
+        .where(and(eq(nflverseSourceFilesTable.dataset, "pbp"), eq(nflverseSourceFilesTable.season, season)));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(message);
+      logger.error({ error, season }, "NFLverse play-by-play refresh failed");
+    }
+  }
+  return { seasons, recordsProcessed, failures, status: failures.length ? "partial" : "success" };
 }
 
 export async function getNflverseHealth() {

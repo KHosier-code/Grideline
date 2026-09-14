@@ -1,0 +1,159 @@
+{
+  "generatedAt": "2026-09-14T03:16:20.733Z",
+  "featureVersion": "pregame-v3",
+  "checks": [
+    {
+      "name": "2021 current game excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2021 future games excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2021 rolling 3/5/8 windows use prior games",
+      "status": "PASS"
+    },
+    {
+      "name": "2021 season-to-date excludes current game",
+      "status": "PASS"
+    },
+    {
+      "name": "2021 fallback ordering excludes same-kickoff future",
+      "status": "PASS"
+    },
+    {
+      "name": "2021 opponent-adjusted inputs use prior opponent rows",
+      "status": "PASS"
+    },
+    {
+      "name": "2022 current game excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2022 future games excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2022 rolling 3/5/8 windows use prior games",
+      "status": "PASS"
+    },
+    {
+      "name": "2022 season-to-date excludes current game",
+      "status": "PASS"
+    },
+    {
+      "name": "2022 fallback ordering excludes same-kickoff future",
+      "status": "PASS"
+    },
+    {
+      "name": "2022 opponent-adjusted inputs use prior opponent rows",
+      "status": "PASS"
+    },
+    {
+      "name": "2023 current game excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2023 future games excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2023 rolling 3/5/8 windows use prior games",
+      "status": "PASS"
+    },
+    {
+      "name": "2023 season-to-date excludes current game",
+      "status": "PASS"
+    },
+    {
+      "name": "2023 fallback ordering excludes same-kickoff future",
+      "status": "PASS"
+    },
+    {
+      "name": "2023 opponent-adjusted inputs use prior opponent rows",
+      "status": "PASS"
+    },
+    {
+      "name": "2024 current game excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2024 future games excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2024 rolling 3/5/8 windows use prior games",
+      "status": "PASS"
+    },
+    {
+      "name": "2024 season-to-date excludes current game",
+      "status": "PASS"
+    },
+    {
+      "name": "2024 fallback ordering excludes same-kickoff future",
+      "status": "PASS"
+    },
+    {
+      "name": "2024 opponent-adjusted inputs use prior opponent rows",
+      "status": "PASS"
+    },
+    {
+      "name": "2025 current game excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2025 future games excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2025 rolling 3/5/8 windows use prior games",
+      "status": "PASS"
+    },
+    {
+      "name": "2025 season-to-date excludes current game",
+      "status": "PASS"
+    },
+    {
+      "name": "2025 fallback ordering excludes same-kickoff future",
+      "status": "PASS"
+    },
+    {
+      "name": "2025 opponent-adjusted inputs use prior opponent rows",
+      "status": "PASS"
+    },
+    {
+      "name": "2026 current game excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2026 future games excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "2026 rolling 3/5/8 windows use prior games",
+      "status": "PASS"
+    },
+    {
+      "name": "2026 season-to-date excludes current game",
+      "status": "PASS"
+    },
+    {
+      "name": "2026 fallback ordering excludes same-kickoff future",
+      "status": "PASS"
+    },
+    {
+      "name": "2026 opponent-adjusted inputs use prior opponent rows",
+      "status": "PASS"
+    },
+    {
+      "name": "post-kickoff injury snapshots excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "post-kickoff sportsbook snapshots excluded",
+      "status": "PASS"
+    }
+  ],
+  "note": "The runtime feature set does not join injury or sportsbook snapshots; those sources therefore cannot leak into these rows."
+}
