@@ -201,6 +201,11 @@ paths:
       operationId: getPregameFeatureHealth
       tags: [dashboard]
       summary: Read historical pregame feature coverage and limitations
+      parameters:
+        - name: featureVersion
+          in: query
+          required: false
+          schema: { type: string, enum: [pregame-v3, pregame-v4-personnel-context] }
       responses:
         "200":
           description: Feature definition and generated row counts
@@ -267,7 +272,13 @@ paths:
       operationId: buildPregameFeatures
       tags: [dashboard]
       summary: Build an immutable version of historical pregame features
-      description: Requires authenticated administrator access. Never trains or scores a betting model.
+      description: Requires authenticated administrator access. The optional featureVersion pregame-v4-personnel-context creates additive rows from pregame-v3 and never overwrites v3. Never trains or scores a betting model.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PregameFeatureBuildInput"
       responses:
         "200":
           description: Feature build result
@@ -275,6 +286,56 @@ paths:
           description: Authentication required
         "403":
           description: Administrator access required
+  /features/personnel-context/game/{gameId}:
+    get:
+      operationId: getPersonnelContextForGame
+      tags: [dashboard]
+      summary: Read auditable point-in-time personnel and context intelligence
+      description: Returns probable starters, QB certainty, injury impacts, OL continuity, unit matchups, explicit weather/schedule limitations, immutable market movement, and non-betting data confidence.
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Personnel and context audit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonnelContext"
+        "404":
+          description: Game not found
+  /features/personnel-context/audit:
+    get:
+      operationId: listPersonnelContextAudit
+      tags: [dashboard]
+      summary: List persisted Phase 7 personnel-context audit rows
+      parameters:
+        - name: gameId
+          in: query
+          schema: { type: string }
+        - name: teamId
+          in: query
+          schema: { type: string }
+        - name: season
+          in: query
+          schema: { type: integer }
+        - name: week
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 200 }
+      responses:
+        "200":
+          description: Personnel-context audit rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PersonnelContextAuditRow"
   /teams:
     get:
       operationId: listTeams
@@ -640,3 +701,39 @@ components:
         sampleSize: { type: integer }
         quality: { type: string, enum: [high, low_sample, unavailable] }
         unavailableReason: { type: ["string", "null"] }
+    PersonnelContext:
+      type: object
+      required: [version, gameId, kickoffTime, sourceCutoff, teams, matchup, weather, market, dataConfidence, sources, limitations]
+      properties:
+        version: { type: string, enum: [pregame-v4-personnel-context] }
+        gameId: { type: string }
+        kickoffTime: { type: ["string", "null"], format: date-time }
+        sourceCutoff: { type: string, format: date-time }
+        teams: { type: object, additionalProperties: true }
+        matchup: { type: array, items: { type: object, additionalProperties: true } }
+        weather: { type: object, additionalProperties: true }
+        market: { type: object, additionalProperties: true }
+        dataConfidence: { type: object, additionalProperties: true }
+        sources: { type: array, items: { type: string } }
+        limitations: { type: array, items: { type: string } }
+    PersonnelContextAuditRow:
+      type: object
+      required: [featureVersion, gameId, teamId, opponentTeamId, season, week, kickoffTime, sourceCutoff, dataConfidence, featureAudit, sources]
+      properties:
+        featureVersion: { type: string, enum: [pregame-v4-personnel-context] }
+        gameId: { type: string }
+        teamId: { type: string }
+        opponentTeamId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        kickoffTime: { type: string, format: date-time }
+        sourceCutoff: { type: string, format: date-time }
+        dataConfidence: { type: ["number", "null"] }
+        featureAudit: { type: object, additionalProperties: true }
+        sources: { type: array, items: { type: string } }
+    PregameFeatureBuildInput:
+      type: object
+      properties:
+        featureVersion:
+          type: string
+          enum: [pregame-v3, pregame-v4-personnel-context]

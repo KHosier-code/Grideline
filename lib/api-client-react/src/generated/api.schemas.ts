@@ -435,6 +435,74 @@ export interface PregameFeatureAuditRow {
   unavailableReason?: string | null;
 }
 
+export type PersonnelContextVersion = typeof PersonnelContextVersion[keyof typeof PersonnelContextVersion];
+
+
+export const PersonnelContextVersion = {
+  'pregame-v4-personnel-context': 'pregame-v4-personnel-context',
+} as const;
+
+export type PersonnelContextTeams = { [key: string]: unknown };
+
+export type PersonnelContextMatchupItem = { [key: string]: unknown };
+
+export type PersonnelContextWeather = { [key: string]: unknown };
+
+export type PersonnelContextMarket = { [key: string]: unknown };
+
+export type PersonnelContextDataConfidence = { [key: string]: unknown };
+
+export interface PersonnelContext {
+  version: PersonnelContextVersion;
+  gameId: string;
+  /** @nullable */
+  kickoffTime: string | null;
+  sourceCutoff: string;
+  teams: PersonnelContextTeams;
+  matchup: PersonnelContextMatchupItem[];
+  weather: PersonnelContextWeather;
+  market: PersonnelContextMarket;
+  dataConfidence: PersonnelContextDataConfidence;
+  sources: string[];
+  limitations: string[];
+}
+
+export type PersonnelContextAuditRowFeatureVersion = typeof PersonnelContextAuditRowFeatureVersion[keyof typeof PersonnelContextAuditRowFeatureVersion];
+
+
+export const PersonnelContextAuditRowFeatureVersion = {
+  'pregame-v4-personnel-context': 'pregame-v4-personnel-context',
+} as const;
+
+export type PersonnelContextAuditRowFeatureAudit = { [key: string]: unknown };
+
+export interface PersonnelContextAuditRow {
+  featureVersion: PersonnelContextAuditRowFeatureVersion;
+  gameId: string;
+  teamId: string;
+  opponentTeamId: string;
+  season: number;
+  week: number;
+  kickoffTime: string;
+  sourceCutoff: string;
+  /** @nullable */
+  dataConfidence: number | null;
+  featureAudit: PersonnelContextAuditRowFeatureAudit;
+  sources: string[];
+}
+
+export type PregameFeatureBuildInputFeatureVersion = typeof PregameFeatureBuildInputFeatureVersion[keyof typeof PregameFeatureBuildInputFeatureVersion];
+
+
+export const PregameFeatureBuildInputFeatureVersion = {
+  'pregame-v3': 'pregame-v3',
+  'pregame-v4-personnel-context': 'pregame-v4-personnel-context',
+} as const;
+
+export interface PregameFeatureBuildInput {
+  featureVersion?: PregameFeatureBuildInputFeatureVersion;
+}
+
 export type ListGamesParams = {
 /**
  * @minimum 2020
@@ -469,11 +537,35 @@ export const ListOddsAuditsOutcome = {
   unmatched: 'unmatched',
 } as const;
 
+export type GetPregameFeatureHealthParams = {
+featureVersion?: GetPregameFeatureHealthFeatureVersion;
+};
+
+export type GetPregameFeatureHealthFeatureVersion = typeof GetPregameFeatureHealthFeatureVersion[keyof typeof GetPregameFeatureHealthFeatureVersion];
+
+
+export const GetPregameFeatureHealthFeatureVersion = {
+  'pregame-v3': 'pregame-v3',
+  'pregame-v4-personnel-context': 'pregame-v4-personnel-context',
+} as const;
+
 export type ListPregameFeatureAuditParams = {
 season?: number;
 week?: number;
 gameId?: string;
 teamId?: string;
 featureVersion?: string;
+};
+
+export type ListPersonnelContextAuditParams = {
+gameId?: string;
+teamId?: string;
+season?: number;
+week?: number;
+/**
+ * @minimum 1
+ * @maximum 1000
+ */
+limit?: number;
 };
 

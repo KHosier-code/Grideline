@@ -328,6 +328,10 @@ export const SyncScheduleResponse = zod.object({
 /**
  * @summary Read historical pregame feature coverage and limitations
  */
+export const GetPregameFeatureHealthQueryParams = zod.object({
+  "featureVersion": zod.enum(['pregame-v3', 'pregame-v4-personnel-context']).optional()
+})
+
 export const GetPregameFeatureHealthResponse = zod.object({
   "featureVersion": zod.string(),
   "definition": zod.record(zod.string(), zod.unknown()),
@@ -398,10 +402,69 @@ export const ListPregameFeatureAuditResponse = zod.array(ListPregameFeatureAudit
 
 
 /**
- * Requires authenticated administrator access. Never trains or scores a betting model.
+ * Requires authenticated administrator access. The optional featureVersion pregame-v4-personnel-context creates additive rows from pregame-v3 and never overwrites v3. Never trains or scores a betting model.
  * @summary Build an immutable version of historical pregame features
  */
+export const BuildPregameFeaturesBody = zod.object({
+  "featureVersion": zod.enum(['pregame-v3', 'pregame-v4-personnel-context']).optional()
+})
+
 export const BuildPregameFeaturesResponse = zod.unknown()
+
+
+/**
+ * Returns probable starters, QB certainty, injury impacts, OL continuity, unit matchups, explicit weather/schedule limitations, immutable market movement, and non-betting data confidence.
+ * @summary Read auditable point-in-time personnel and context intelligence
+ */
+export const GetPersonnelContextForGameParams = zod.object({
+  "gameId": zod.coerce.string()
+})
+
+export const GetPersonnelContextForGameResponse = zod.object({
+  "version": zod.enum(['pregame-v4-personnel-context']),
+  "gameId": zod.string(),
+  "kickoffTime": zod.coerce.date().nullable(),
+  "sourceCutoff": zod.coerce.date(),
+  "teams": zod.record(zod.string(), zod.unknown()),
+  "matchup": zod.array(zod.record(zod.string(), zod.unknown())),
+  "weather": zod.record(zod.string(), zod.unknown()),
+  "market": zod.record(zod.string(), zod.unknown()),
+  "dataConfidence": zod.record(zod.string(), zod.unknown()),
+  "sources": zod.array(zod.string()),
+  "limitations": zod.array(zod.string())
+})
+
+
+/**
+ * @summary List persisted Phase 7 personnel-context audit rows
+ */
+export const listPersonnelContextAuditQueryLimitDefault = 200;
+export const listPersonnelContextAuditQueryLimitMax = 1000;
+
+
+
+export const ListPersonnelContextAuditQueryParams = zod.object({
+  "gameId": zod.coerce.string().optional(),
+  "teamId": zod.coerce.string().optional(),
+  "season": zod.coerce.number().int().optional(),
+  "week": zod.coerce.number().int().optional(),
+  "limit": zod.coerce.number().int().min(1).max(listPersonnelContextAuditQueryLimitMax).default(listPersonnelContextAuditQueryLimitDefault)
+})
+
+export const ListPersonnelContextAuditResponseItem = zod.object({
+  "featureVersion": zod.enum(['pregame-v4-personnel-context']),
+  "gameId": zod.string(),
+  "teamId": zod.string(),
+  "opponentTeamId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date(),
+  "sourceCutoff": zod.coerce.date(),
+  "dataConfidence": zod.number().nullable(),
+  "featureAudit": zod.record(zod.string(), zod.unknown()),
+  "sources": zod.array(zod.string())
+})
+export const ListPersonnelContextAuditResponse = zod.array(ListPersonnelContextAuditResponseItem)
 
 
 /**
