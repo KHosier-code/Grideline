@@ -213,7 +213,13 @@ function targetFor(family: Family, example: Example) {
   return family === "spread" ? example.margin : family === "totals" ? example.total : example.homeWin;
 }
 
-function predictWithModel(model: ProductionModel, examples: Example[], vector: number[]) {
+type PredictionResult = {
+  value: number | null;
+  reason?: string;
+  diagnostics?: Record<string, unknown>;
+};
+
+function predictWithModel(model: ProductionModel, examples: Example[], vector: number[]): PredictionResult {
   const baseRows = examples.filter((example) =>
     model.trainingSeasons.includes(example.season) &&
     (model.samplePolicy === "include_low_sample" || !example.lowSample),
@@ -222,13 +228,16 @@ function predictWithModel(model: ProductionModel, examples: Example[], vector: n
   const rows = !latestSeason || model.recencyWeighting === "none"
     ? baseRows
     : [...baseRows, ...baseRows.filter((row) => row.season === latestSeason).slice(0, Math.ceil(baseRows.filter((row) => row.season === latestSeason).length * (model.recencyWeighting === "recent_2x" ? 1 : 0.5)))];
-  if (rows.length < 20) return null;
+  if (rows.length < 20) return { value: null, reason: "insufficient_training_rows", diagnostics: { rows: rows.length } };
   const scaled = standardize(rows.map((row) => row.x), [vector]);
+  if (!scaled.train.flat().every(Number.isFinite) || !scaled.test[0]?.every(Number.isFinite)) {
+    return { value: null, reason: "nonfinite_scaled_features" };
+  }
   const fitted = modelFor(model.algorithm, scaled.train, rows.map((row) => targetFor(model.family, row)), model.family === "moneyline");
   const value = fitted.predict(scaled.test[0]);
-  if (!Number.isFinite(value)) return null;
+  if (!Number.isFinite(value)) return { value: null, reason: "nonfinite_model_output" };
   const prediction = model.family === "moneyline" ? clamp(value) : value;
-  return Number.isFinite(prediction) ? prediction : null;
+  return Number.isFinite(prediction) ? { value: prediction } : { value: null, reason: "nonfinite_clamped_output" };
 }
 
 function snapshotLabel(now: Date, kickoff: Date) {
@@ -300,9 +309,12 @@ export async function generateLivePredictions(now = new Date()) {
       skippedNoVector += 1;
       continue;
     }
-    const margin = predictWithModel(models.get("spread")!, examplesResult.examples, vector.x);
-    const total = predictWithModel(models.get("totals")!, examplesResult.examples, vector.x);
-    const homeProbability = predictWithModel(models.get("moneyline")!, examplesResult.examples, vector.x);
+    const marginResult = predictWithModel(models.get("spread")!, examplesResult.examples, vector.x);
+    const totalResult = predictWithModel(models.get("totals")!, examplesResult.examples, vector.x);
+    const homeProbabilityResult = predictWithModel(models.get("moneyline")!, examplesResult.examples, vector.x);
+    const margin = marginResult.value;
+    const total = totalResult.value;
+    const homeProbability = homeProbabilityResult.value;
     if (margin === null || total === null || homeProbability === null ||
       !Number.isFinite(margin) || !Number.isFinite(total) || !Number.isFinite(homeProbability)) {
       skippedNonFinite += 1;
@@ -310,6 +322,11 @@ export async function generateLivePredictions(now = new Date()) {
         gameId: game.gameId,
         vectorLength: vector.x.length,
         finiteVector: vector.x.every(Number.isFinite),
+        failures: {
+          spread: marginResult,
+          totals: totalResult,
+          moneyline: homeProbabilityResult,
+        },
         margin,
         total,
         homeProbability,
