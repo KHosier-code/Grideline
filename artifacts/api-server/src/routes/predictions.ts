@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { generateWeeklyLearningReport, generateLivePredictions, getLatestLearningReports, getLivePredictionBoard, getPredictionPerformance, gradeCompletedPredictions } from "../lib/live-predictions";
+import { generateWeeklyLearningReport, generateLivePredictions, getCurrentWeekValidationReport, getLatestLearningReports, getLivePredictionBoard, getPredictionPerformance, gradeCompletedPredictions } from "../lib/live-predictions";
 import { requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
@@ -9,6 +9,14 @@ router.get("/predictions/live", async (_req, res): Promise<void> => {
     res.json({ status: "success", predictions: await getLivePredictionBoard() });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Live predictions unavailable" });
+  }
+});
+
+router.get("/predictions/current-week", async (_req, res): Promise<void> => {
+  try {
+    res.json(await getCurrentWeekValidationReport());
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Current-week validation unavailable" });
   }
 });
 

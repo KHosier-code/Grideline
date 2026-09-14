@@ -571,6 +571,106 @@ export async function getLivePredictionBoard() {
   return [...latest.values()];
 }
 
+export async function getCurrentWeekValidationReport() {
+  const now = new Date();
+  const upcoming = await db.select().from(gamesTable)
+    .where(and(
+      sql`${gamesTable.kickoffTime} > ${now}`,
+      sql`lower(${gamesTable.gameStatus}) not like '%final%'`,
+      sql`lower(${gamesTable.gameStatus}) not like '%completed%'`,
+      sql`lower(${gamesTable.gameStatus}) not like '%postponed%'`,
+      sql`lower(${gamesTable.gameStatus}) not like '%canceled%'`,
+    ))
+    .orderBy(asc(gamesTable.kickoffTime), asc(gamesTable.gameId));
+  const currentWeek = upcoming[0] ? { season: upcoming[0].season, week: upcoming[0].week } : null;
+  if (!currentWeek) return { status: "not_configured", season: null, week: null, games: [], rankings: { spread: [], moneyline: [], totals: [] } };
+  const games = upcoming.filter((game) => game.season === currentWeek.season && game.week === currentWeek.week);
+  const gameIds = games.map((game) => game.gameId);
+  const snapshots = gameIds.length
+    ? await db.select().from(predictionSnapshotsTable)
+      .where(inArray(predictionSnapshotsTable.gameId, gameIds))
+      .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id))
+    : [];
+  const latest = new Map<string, typeof snapshots[number]>();
+  for (const snapshot of snapshots) if (!latest.has(snapshot.gameId)) latest.set(snapshot.gameId, snapshot);
+  const teamRows = await db.select().from(teamsTable);
+  const teams = new Map(teamRows.map((team) => [team.teamId, team]));
+  const records = games.map((game) => {
+    const snapshot = latest.get(game.gameId);
+    const comparison = snapshot?.marketComparison as Record<string, any> | undefined;
+    const marketSnapshot = snapshot?.marketSnapshot as Record<string, any> | undefined;
+    const missing: string[] = [];
+    if (!snapshot) missing.push("production_prediction");
+    if (snapshot && comparison?.spread?.marketLine === null) missing.push("current_spread");
+    if (snapshot && comparison?.moneyline?.noVigHomeProbability === null) missing.push("no_vig_moneyline");
+    if (snapshot && comparison?.totals?.marketTotal === null) missing.push("current_total");
+    const home = teams.get(game.homeTeamId);
+    const away = teams.get(game.awayTeamId);
+    return {
+      gameId: game.gameId,
+      season: game.season,
+      week: game.week,
+      kickoffTime: game.kickoffTime?.toISOString() ?? null,
+      homeTeam: home?.teamName ?? game.homeTeamId,
+      awayTeam: away?.teamName ?? game.awayTeamId,
+      status: missing.length ? "insufficient_data" : "measured",
+      missing,
+      model: snapshot ? {
+        spreadModelVersion: snapshot.spreadModelVersion,
+        moneylineModelVersion: snapshot.moneylineModelVersion,
+        totalsModelVersion: snapshot.totalsModelVersion,
+        featureVersion: snapshot.featureVersion,
+        predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
+        sportsbookSnapshotTimestamp: marketSnapshot?.capturedAt ?? null,
+      } : null,
+      prediction: snapshot ? {
+        projectedHomeScore: snapshot.projectedHomeScore,
+        projectedAwayScore: snapshot.projectedAwayScore,
+        projectedMargin: snapshot.projectedMargin,
+        projectedTotal: snapshot.projectedTotal,
+        homeWinProbability: snapshot.homeWinProbability,
+        awayWinProbability: snapshot.awayWinProbability,
+        qbConfidence: snapshot.qbConfidence,
+        lowSample: snapshot.lowSample,
+      } : null,
+      market: snapshot ? {
+        spread: marketSnapshot?.markets?.spread?.bestAvailable ?? null,
+        moneyline: marketSnapshot?.markets?.moneyline?.bestAvailable ?? null,
+        total: marketSnapshot?.markets?.total?.bestAvailable ?? null,
+        noVigHomeProbability: comparison?.moneyline?.noVigHomeProbability ?? null,
+        noVigAwayProbability: comparison?.moneyline?.noVigAwayProbability ?? null,
+      } : null,
+      difference: snapshot ? {
+        spread: comparison?.spread?.pointEdge ?? null,
+        moneyline: comparison?.moneyline?.homeProbabilityEdge ?? null,
+        total: comparison?.totals?.pointEdge ?? null,
+      } : { spread: null, moneyline: null, total: null },
+    };
+  });
+  const rank = (key: "spread" | "moneyline" | "total") => [...records]
+    .sort((left, right) => {
+      const leftValue = left.difference[key];
+      const rightValue = right.difference[key];
+      if (typeof leftValue !== "number" && typeof rightValue !== "number") return left.gameId.localeCompare(right.gameId);
+      if (typeof leftValue !== "number") return 1;
+      if (typeof rightValue !== "number") return -1;
+      return Math.abs(rightValue) - Math.abs(leftValue) || left.gameId.localeCompare(right.gameId);
+    })
+    .map((game, index) => ({ rank: index + 1, ...game }));
+  return {
+    status: records.some((game) => game.status === "measured") ? "measured" : "insufficient_data",
+    season: currentWeek.season,
+    week: currentWeek.week,
+    games: records,
+    rankings: {
+      spread: rank("spread"),
+      moneyline: rank("moneyline"),
+      totals: rank("total"),
+    },
+    note: "Rankings are independent analysis views. A difference is not a betting recommendation, and unavailable values are not imputed.",
+  };
+}
+
 export async function generateWeeklyLearningReport(season: number, week: number) {
   const performance = await getPredictionPerformance();
   const rows = await db.select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
