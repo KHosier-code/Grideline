@@ -1,0 +1,155 @@
+Complete Phase 3 before any prediction model is trained.
+
+Do NOT train spread, moneyline, totals, or confidence models yet.
+
+Priority 1: DATA LEAKAGE REGRESSION TESTS
+
+Build automated regression tests proving that historical pregame features use only information available before kickoff.
+
+Test a meaningful sample across:
+
+* 2021
+* 2022
+* 2023
+* 2024
+* 2025
+* 2026
+
+Include regular season and postseason where available.
+
+For selected games verify:
+
+* current game stats are excluded
+* future games are excluded
+* rolling 3/5/8 windows contain only prior games
+* season-to-date excludes the current game
+* post-kickoff injury snapshots are excluded
+* post-kickoff sportsbook snapshots are excluded
+* opponent-adjusted ratings use only prior opponent information
+* historical games with fallback kickoff ordering do not accidentally leak same-week future information
+
+Create a leakage-test report that clearly shows PASS/FAIL for each test.
+
+If any leakage is found, fix it before continuing.
+
+Priority 2: FEATURE AUDIT PAGE
+
+Build a frontend page called:
+
+Model Data / Feature Audit
+
+Allow filters for:
+
+* season
+* week
+* game
+* team
+* feature-set version
+
+For every feature show:
+
+* feature name
+* feature value
+* source dataset
+* lookback window
+* games included
+* last source game/date
+* sample size
+* quality/confidence flag
+* unavailable reason when applicable
+
+I should be able to choose any historical game and see exactly what Gridline would have known before kickoff.
+
+Priority 3: RICHER PLAY-LEVEL FEATURES
+
+Use the existing nflverse play-by-play data to derive additional features where reliable.
+
+Prioritize:
+
+OFFENSE
+
+* pass EPA/dropback
+* rush EPA/rush
+* passing success rate
+* rushing success rate
+* sack rate allowed
+* early-down EPA
+* early-down success rate
+* neutral-script pass rate
+* pace / seconds per play where timestamps permit
+* explosive pass rate
+* explosive rush rate
+
+DEFENSE
+
+* pass EPA allowed
+* rush EPA allowed
+* pass success allowed
+* rush success allowed
+* sack rate
+* early-down defensive EPA
+* explosive pass allowed
+* explosive rush allowed
+
+Do not invent pressure-rate metrics if true pressure data is unavailable.
+
+Clearly distinguish:
+
+* directly sourced
+* reliably derived
+* unavailable
+
+Priority 4: QB FEATURES
+
+Improve quarterback historical features using play-by-play where possible:
+
+* likely starter based on prior starts / participation
+* EPA/dropback
+* passing success rate
+* interception rate
+* sack rate
+* rushing EPA / contribution
+* recent start count
+* QB continuity indicator
+* starter-change indicator
+
+Do not pretend historical starter certainty is perfect.
+
+Add a QB-data-confidence flag.
+
+Priority 5: PERSISTENT SCHEDULING
+
+Move critical recurring data and feature-refresh jobs to a persistent/background worker or deployment strategy that does not depend on the interactive API server staying awake.
+
+Critical jobs include:
+
+* schedule refresh
+* injury refresh
+* NFLverse refresh
+* feature rebuild
+* sportsbook captures
+
+Preserve all existing quota safeguards.
+
+Missed paid sportsbook jobs should NOT burst-catch-up later.
+
+Document exactly what happens if the app/API frontend is inactive.
+
+VALIDATION OUTPUT
+
+After completion, give me a plain-English audit containing:
+
+1. Leakage test results
+2. Any leakage defects found and fixed
+3. Feature Audit page status
+4. Newly added features
+5. Features still unavailable and why
+6. QB feature coverage and confidence limitations
+7. Number of pregame feature rows regenerated
+8. Feature-set version used
+9. How the persistent scheduler works
+10. Confirmation that no prediction model has yet been trained
+
+Do not optimize anything for betting performance yet.
+
+The purpose of this task is trustworthy historical inputs, not better-looking results.
