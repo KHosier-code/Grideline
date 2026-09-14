@@ -848,7 +848,9 @@ function LivePredictions() {
       const response = await fetch('/api/predictions/generate', { method: 'POST', credentials: 'include', headers: token ? { Authorization: `Bearer ${token}` } : {} });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? 'Official snapshot generation was rejected');
-      setGenerationMessage(`${body.snapshotsCreated ?? 0} immutable snapshot${body.snapshotsCreated === 1 ? '' : 's'} created across ${body.gamesConsidered ?? 0} upcoming games.`);
+      const skipped = (body.skippedNoVector ?? 0) + (body.skippedNoHomeTeam ?? 0) + (body.skippedNonFinite ?? 0);
+      const diagnostic = body.firstNonFinite ? ` Diagnostic: ${JSON.stringify(body.firstNonFinite)}` : '';
+      setGenerationMessage(`${body.snapshotsCreated ?? 0} immutable snapshot${body.snapshotsCreated === 1 ? '' : 's'} created across ${body.gamesConsidered ?? 0} upcoming games.${skipped ? ` ${skipped} game${skipped === 1 ? '' : 's'} skipped.${diagnostic}` : ''}`);
       await board.refetch();
     } catch (error) {
       setGenerationMessage(error instanceof Error ? error.message : 'Official snapshot generation failed');

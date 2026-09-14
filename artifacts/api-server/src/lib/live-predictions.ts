@@ -288,18 +288,39 @@ export async function generateLivePredictions(now = new Date()) {
   const teamRows = await db.select().from(teamsTable);
   const teamById = new Map(teamRows.map((team) => [team.teamId, team]));
   let snapshotsCreated = 0;
+  let skippedNoVector = 0;
+  let skippedNoHomeTeam = 0;
+  let skippedNonFinite = 0;
+  let firstNonFinite: Record<string, unknown> | null = null;
   const considered = [];
   for (const game of games.filter((candidate) => isFutureGame(candidate, now))) {
     if (!game.kickoffTime) continue;
     const vector = vectorForRows(rowsByGame.get(game.gameId) ?? [], names);
-    if (!vector) continue;
+    if (!vector) {
+      skippedNoVector += 1;
+      continue;
+    }
     const margin = predictWithModel(models.get("spread")!, examplesResult.examples, vector.x);
     const total = predictWithModel(models.get("totals")!, examplesResult.examples, vector.x);
     const homeProbability = predictWithModel(models.get("moneyline")!, examplesResult.examples, vector.x);
     if (margin === null || total === null || homeProbability === null ||
-      !Number.isFinite(margin) || !Number.isFinite(total) || !Number.isFinite(homeProbability)) continue;
+      !Number.isFinite(margin) || !Number.isFinite(total) || !Number.isFinite(homeProbability)) {
+      skippedNonFinite += 1;
+      if (!firstNonFinite) firstNonFinite = {
+        gameId: game.gameId,
+        vectorLength: vector.x.length,
+        finiteVector: vector.x.every(Number.isFinite),
+        margin,
+        total,
+        homeProbability,
+      };
+      continue;
+    }
     const home = teamById.get(game.homeTeamId);
-    if (!home) continue;
+    if (!home) {
+      skippedNoHomeTeam += 1;
+      continue;
+    }
     const marketSnapshot = await marketData(game.gameId, now, {
       teamId: home.teamId,
       name: home.teamName,
@@ -337,6 +358,10 @@ export async function generateLivePredictions(now = new Date()) {
     status: "success",
     snapshotsCreated,
     gamesConsidered: considered.length,
+    skippedNoVector,
+    skippedNoHomeTeam,
+    skippedNonFinite,
+    firstNonFinite,
     productionModels: [...models.values()].map((model) => ({
       family: model.family,
       modelVersion: model.modelVersion,
