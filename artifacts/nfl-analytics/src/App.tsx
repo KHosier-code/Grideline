@@ -38,6 +38,7 @@ import {
   getGetDataHealthQueryKey,
   getGetGameQueryKey,
   getGetOddsHistoryQueryKey,
+  getGetPersonnelContextForGameQueryKey,
   getGetSettingsQueryKey,
   getHealthCheckQueryKey,
   getListGamesQueryKey,
@@ -47,6 +48,7 @@ import {
   useGetDashboardSummary,
   useGetDataHealth,
   useGetGame,
+  useGetPersonnelContextForGame,
   useGetOddsHistory,
   useGetSettings,
   useHealthCheck,
@@ -91,6 +93,7 @@ const navGroups = [
     items: [
       { href: '/data-health', label: 'Data health', icon: Database },
       { href: '/feature-audit', label: 'Feature audit', icon: FileSearch },
+      { href: '/personnel-context', label: 'Personnel & context', icon: UserRound },
       { href: '/performance', label: 'Performance', icon: BarChart3 },
       { href: '/settings', label: 'Settings', icon: Settings2 },
     ],
@@ -736,6 +739,110 @@ function FeatureAuditPage() {
   );
 }
 
+function PersonnelContextPage() {
+  const games = useListGames(undefined, { query: { queryKey: ['personnel-context-games'], staleTime: 30000 } });
+  const [selectedGameId, setSelectedGameId] = useState('');
+  useEffect(() => {
+    if (!selectedGameId && games.data?.length) setSelectedGameId(games.data[0].gameId);
+  }, [games.data, selectedGameId]);
+  const context = useGetPersonnelContextForGame(selectedGameId, {
+    query: { queryKey: getGetPersonnelContextForGameQueryKey(selectedGameId), enabled: Boolean(selectedGameId), staleTime: 30000 },
+  });
+  const data = context.data as any;
+  const teams = data?.teams ? Object.values(data.teams) as any[] : [];
+  const score = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : null;
+  const decimal = (value: unknown, digits = 2) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'Unavailable';
+  const bool = (value: unknown) => value === null || value === undefined ? 'Unavailable' : value ? 'Yes' : 'No';
+  const selectedGame = games.data?.find((game) => game.gameId === selectedGameId);
+  return (
+    <>
+      <PageHeader
+        eyebrow="Review / Phase 7"
+        title="Personnel & Context Audit"
+        detail="Inspect the timestamped evidence available before kickoff. Inferred roles remain clearly separated from official source records."
+        actions={<button type="button" className="button button-subtle" onClick={() => context.refetch()} disabled={!selectedGameId || context.isFetching}><RefreshCw className={cx('h-4 w-4', context.isFetching && 'animate-spin')} /> Refresh</button>}
+      />
+      <Panel eyebrow="Point-in-time game record" title="Choose a matchup" className="mb-5">
+        {games.isLoading ? <Skeleton className="h-10" /> : games.isError ? <ErrorPanel message="The current schedule could not be loaded." /> : games.data?.length ? (
+          <div className="flex flex-col gap-3 md:flex-row md:items-end">
+            <label className="field-label min-w-0 flex-1">Game
+              <select className="field-input mt-2 w-full" value={selectedGameId} onChange={(event) => setSelectedGameId(event.target.value)}>
+                {games.data.map((game) => <option key={game.gameId} value={game.gameId}>{game.awayTeam.abbreviation} at {game.homeTeam.abbreviation} · Week {game.week} · {formatDate(game.kickoffTime ?? game.gameDate, true)}</option>)}
+              </select>
+            </label>
+            <div className="text-xs leading-5 text-muted-foreground md:max-w-md">
+              <p><strong className="text-ink">Feature version:</strong> pregame-v4-personnel-context</p>
+              <p><strong className="text-ink">Production status:</strong> Phase 6 models remain active and unchanged.</p>
+            </div>
+          </div>
+        ) : <EmptyPanel title="No games available" detail="A schedule record is required before personnel context can be derived." icon={CalendarDays} />}
+      </Panel>
+      {!selectedGameId || context.isLoading ? <LoadingPanel label="Building the point-in-time personnel record" /> : context.isError || !data ? <ErrorPanel message="The personnel and context audit could not be loaded for this game." /> : (
+        <>
+          <div className="signal-strip">
+            <div><span className="strip-label">MATCHUP</span><strong>{selectedGame ? `${selectedGame.awayTeam.abbreviation} at ${selectedGame.homeTeam.abbreviation}` : data.gameId}</strong></div>
+            <div><span className="strip-label">SOURCE CUTOFF</span><strong>{formatDate(data.sourceCutoff, true)}</strong></div>
+            <div><span className="strip-label">DATA CONFIDENCE</span><strong>{score(data.dataConfidence?.overall) ?? 'Unavailable'} / 100</strong></div>
+            <div><span className="strip-label">INTERPRETATION</span><strong>Not betting confidence</strong></div>
+          </div>
+          <div className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
+            <Panel eyebrow="Completeness and freshness" title={data.dataConfidence?.label ?? 'Data Confidence'}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {Object.entries(data.dataConfidence?.components ?? {}).map(([name, value]) => (
+                  <div className="rounded-xl border border-border bg-secondary/25 p-3" key={name}>
+                    <div className="flex items-center justify-between gap-3"><span className="text-xs font-semibold text-ink">{name.replace(/([A-Z])/g, ' $1').replace(/^./, (letter) => letter.toUpperCase())}</span><span className="font-mono text-sm font-semibold text-ink">{score(value) ?? '—'}</span></div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${score(value) ?? 0}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-xs leading-5 text-muted-foreground">This score measures source completeness, freshness, and sample support. It does not estimate win probability, edge, or recommendation quality.</p>
+            </Panel>
+            <Panel eyebrow="Environmental context" title="Weather and schedule">
+              <div className="callout callout-warn"><AlertTriangle className="h-4 w-4 shrink-0" /><p>{data.weather?.available ? 'A verified weather source is available.' : data.weather?.unavailableReason ?? 'Weather is unavailable.'}</p></div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                <div><p className="eyebrow">Temperature</p><p className="mt-1 text-ink">{decimal(data.weather?.temperature, 0)}</p></div>
+                <div><p className="eyebrow">Wind</p><p className="mt-1 text-ink">{decimal(data.weather?.windSpeed, 0)}</p></div>
+                <div><p className="eyebrow">Roof</p><p className="mt-1 text-ink">{data.weather?.roofStatus ?? 'Unavailable'}</p></div>
+                <div><p className="eyebrow">Precipitation</p><p className="mt-1 text-ink">{data.weather?.precipitationType ?? 'Unavailable'}</p></div>
+              </div>
+            </Panel>
+          </div>
+          <div className="mt-5 grid gap-5 xl:grid-cols-2">
+            {teams.map((team) => (
+              <Panel key={team.teamId} eyebrow={`${team.abbreviation ?? team.teamId} / Point-in-time personnel`} title={team.teamName ?? team.teamId} action={<StatusPill status={team.starters?.length ? 'current' : 'not_configured'}>{team.starters?.length ?? 0} probable starters</StatusPill>}>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <MetricCard label="Personnel completeness" value={`${score(team.personnelCompleteness) ?? 0}/100`} detail="Available source coverage" icon={UserRound} />
+                  <MetricCard label="QB certainty" value={`${score(team.qb?.starterCertainty) ?? 0}/100`} detail={team.qb?.projectedStarter?.playerName ?? team.qb?.projectedStarter?.playerId ?? 'No supported starter'} icon={Target} />
+                  <MetricCard label="OL continuity" value={decimal(team.olContinuity?.olSnapContinuity)} detail={`${team.olContinuity?.lineupChanges ?? '—'} lineup changes`} icon={ShieldCheck} />
+                </div>
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center justify-between"><p className="eyebrow">Probable starters</p><span className="section-meta">Official and inferred kept separate</span></div>
+                  {team.starters?.length ? <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-2 py-2">Player</th><th className="px-2 py-2">Position</th><th className="px-2 py-2">Source status</th><th className="px-2 py-2">Confidence</th><th className="px-2 py-2">Source timestamp</th></tr></thead><tbody>{team.starters.map((starter: any) => <tr className="border-b border-border/60" key={`${team.teamId}-${starter.playerId}-${starter.position}`}><td className="px-2 py-2 font-semibold text-ink">{starter.playerName ?? starter.playerId}</td><td className="px-2 py-2">{starter.position ?? '—'}</td><td className="px-2 py-2"><StatusPill status={starter.official ? 'current' : 'stale'}>{starter.official ? 'Official source record' : 'Inferred — not official'}</StatusPill><p className="mt-1 text-[10px] text-muted-foreground">{starter.source}</p></td><td className="px-2 py-2 font-mono">{score(starter.confidence) ?? '—'}/100</td><td className="px-2 py-2">{starter.snapshotTimestamp ? formatDate(starter.snapshotTimestamp, true) : 'Unavailable'}</td></tr>)}</tbody></table></div> : <EmptyPanel title="No supported starter evidence" detail={team.unavailableReasons?.join(' ') || 'No depth-chart or prior participation record is available before the source cutoff.'} icon={UserRound} />}
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-secondary/20 p-3 text-xs"><p className="eyebrow">Quarterback context</p><dl className="mt-2 space-y-1 text-muted-foreground"><div className="flex justify-between gap-3"><dt>Recent dropbacks</dt><dd className="font-mono text-ink">{team.qb?.recentDropbacks ?? '—'}</dd></div><div className="flex justify-between gap-3"><dt>EPA / dropback</dt><dd className="font-mono text-ink">{decimal(team.qb?.recentEpaPerDropback, 3)}</dd></div><div className="flex justify-between gap-3"><dt>Success rate</dt><dd className="font-mono text-ink">{decimal(team.qb?.recentSuccessRate, 3)}</dd></div><div className="flex justify-between gap-3"><dt>Starter change</dt><dd className="font-mono text-ink">{bool(team.qb?.starterChange)}</dd></div></dl></div>
+                  <div className="rounded-xl border border-border bg-secondary/20 p-3 text-xs"><p className="eyebrow">Rest and travel</p><dl className="mt-2 space-y-1 text-muted-foreground"><div className="flex justify-between gap-3"><dt>Days rest</dt><dd className="font-mono text-ink">{decimal(team.rest?.daysRest, 1)}</dd></div><div className="flex justify-between gap-3"><dt>Short week</dt><dd className="font-mono text-ink">{bool(team.rest?.shortWeek)}</dd></div><div className="flex justify-between gap-3"><dt>Bye return</dt><dd className="font-mono text-ink">{bool(team.rest?.byeWeekReturn)}</dd></div><div className="flex justify-between gap-3"><dt>Road-game run</dt><dd className="font-mono text-ink">{team.rest?.consecutiveRoadGames ?? '—'}</dd></div></dl></div>
+                </div>
+                <div className="mt-5"><p className="eyebrow">Player-level injury impact</p>{team.injuryPlayers?.length ? <div className="mt-2 space-y-2">{team.injuryPlayers.map((injury: any) => <div className="rounded-lg border border-border p-3 text-xs" key={`${team.teamId}-${injury.playerId}`}><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-ink">{injury.playerName ?? injury.playerId} · {injury.position ?? 'Unknown position'}</p><span className="font-mono text-ink">Impact {decimal(injury.impactScore)}</span></div><p className="mt-1 text-muted-foreground">{injury.gameStatus ?? injury.designation ?? 'Status unavailable'} · snap share {decimal(injury.recentSnapShare)} · starter likelihood {decimal(injury.starterLikelihood)}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">{injury.derivation}</p></div>)}</div> : <p className="mt-2 text-xs text-muted-foreground">No injury snapshot was available for this team before the cutoff.</p>}</div>
+              </Panel>
+            ))}
+          </div>
+          <Panel eyebrow="Unit interactions" title="Matchup context" className="mt-5">
+            <div className="grid gap-4 xl:grid-cols-2">{(data.matchup ?? []).map((item: any) => <div className="rounded-xl border border-border bg-secondary/20 p-4" key={`${item.offenseTeamId}-${item.defenseTeamId}`}><p className="font-semibold text-ink">{item.offenseTeamId} offense vs {item.defenseTeamId} defense</p><pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-sidebar p-3 text-[11px] leading-5 text-sidebar-foreground">{JSON.stringify(item.unitContext, null, 2)}</pre>{item.unavailableReasons?.map((reason: string) => <p className="mt-2 text-xs text-muted-foreground" key={reason}>{reason}</p>)}</div>)}</div>
+          </Panel>
+          <Panel eyebrow="Immutable sportsbook observations" title="Market movement" className="mt-5" action={<span className="section-meta">{data.market?.observations ?? 0} observations</span>}>
+            {data.market?.current?.length ? <div className="overflow-x-auto"><table className="w-full min-w-[880px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Book / market</th><th className="px-3 py-3">Selection</th><th className="px-3 py-3">First observed</th><th className="px-3 py-3">Current</th><th className="px-3 py-3">Movement</th><th className="px-3 py-3">Last capture</th></tr></thead><tbody>{data.market.current.map((line: any) => <tr className="border-b border-border/70" key={line.key}><td className="px-3 py-3 font-semibold text-ink">{line.sportsbook} · {line.market}</td><td className="px-3 py-3">{line.selection}</td><td className="px-3 py-3 font-mono">{line.firstObserved?.point ?? 'ML'} {formatPrice(line.firstObserved?.price)}</td><td className="px-3 py-3 font-mono">{line.current?.point ?? 'ML'} {formatPrice(line.current?.price)}</td><td className="px-3 py-3 font-mono">{line.pointMovement ?? '—'} pts · {line.priceMovement ?? '—'} price</td><td className="px-3 py-3">{formatDate(line.current?.capturedAt, true)}</td></tr>)}</tbody></table></div> : <EmptyPanel title="No market observations before cutoff" detail={data.market?.unavailableReason ?? 'No immutable sportsbook history is available.'} icon={LineChart} />}
+            <p className="mt-4 text-[11px] leading-5 text-muted-foreground">“First observed by Gridline” is not an official sportsbook opener. Missing markets stay unavailable and do not invalidate football-model predictions.</p>
+          </Panel>
+          <Panel eyebrow="Audit boundary" title="Sources and limitations" className="mt-5">
+            <div className="grid gap-5 lg:grid-cols-2"><div><p className="eyebrow">Source tables</p><div className="mt-2 flex flex-wrap gap-2">{(data.sources ?? []).map((source: string) => <span className="rounded-full border border-border bg-secondary/30 px-2.5 py-1 text-xs font-medium text-ink" key={source}>{source}</span>)}</div></div><div><p className="eyebrow">Explicit limitations</p><ul className="mt-2 space-y-2 text-xs leading-5 text-muted-foreground">{(data.limitations ?? []).map((item: string) => <li className="flex gap-2" key={item}><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />{item}</li>)}</ul></div></div>
+          </Panel>
+        </>
+      )}
+    </>
+  );
+}
+
 function Backtesting() {
   return <ReadinessPage eyebrow="Research" title="Backtesting" detail="Walk-forward evaluation without hindsight or invented results." icon={History} blocks={['Walk-forward windows', 'Out-of-sample record', 'Calibration by segment']} />;
 }
@@ -1032,7 +1139,7 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function Router() {
-  return <RoutedErrorBoundary><Switch><Route path="/sign-in/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>} /><Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} /><Route><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/live-predictions" component={LivePredictions} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/feature-audit" component={FeatureAuditPage} /><Route path="/odds" component={OddsBoard} /><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices. Open a game from the Odds board to inspect every preserved change." preferred="odds" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></Route></Switch></RoutedErrorBoundary>;
+  return <RoutedErrorBoundary><Switch><Route path="/sign-in/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>} /><Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} /><Route><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/live-predictions" component={LivePredictions} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/feature-audit" component={FeatureAuditPage} /><Route path="/personnel-context" component={PersonnelContextPage} /><Route path="/odds" component={OddsBoard} /><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices. Open a game from the Odds board to inspect every preserved change." preferred="odds" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></Route></Switch></RoutedErrorBoundary>;
 }
 
 function App() {

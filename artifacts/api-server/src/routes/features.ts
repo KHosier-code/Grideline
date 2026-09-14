@@ -16,7 +16,8 @@ router.get("/features/pregame/health", async (req, res): Promise<void> => {
 });
 
 router.get("/features/pregame/game/:gameId", async (req, res): Promise<void> => {
-  res.json(await getPregameFeaturesForGame(req.params.gameId));
+  const featureVersion = typeof req.query.featureVersion === "string" ? req.query.featureVersion : undefined;
+  res.json(await getPregameFeaturesForGame(req.params.gameId, featureVersion));
 });
 
 router.get("/features/audit", async (req, res): Promise<void> => {
