@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "3hXvzThriHdv-Mv3Lbwj5"
+uri = "file://screenshots/model-lab-phase6-candidates.jpg"
+type = "image"
+title = "Model Lab Phase 6 candidate location"
+description = "Reference image showing the three Phase 6 promotion buttons in the first orange-bordered Model Lab panel."
+logical_id = "bdbab406-cdf6-4606-acaa-acefb678bb10"
+content_hash = "sha256:3772c0cb95795312e06fa3b90e6f2140041532bad8f1a489444594297fd3c99e"
+size = 155182
+mtime_ms = 1789403551663
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/bdbab406-cdf6-4606-acaa-acefb678bb10/c4bb53b0-b174-40b6-b6f7-c9bcd16a85bd"
+storage_version_token = "1789403575104368"
+content_type = "image/jpeg"
