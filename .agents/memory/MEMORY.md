@@ -4,3 +4,4 @@
 - [Persistent scheduler ownership](persistent-scheduler.md) — recurring refreshes belong to the durable worker, not the interactive API process; health must distinguish the two.
 - [Model candidate selection](model-selection.md) — rank production candidates on multi-season historical averages; keep small current-season results out of promotion decisions.
 - [Phase 5 production gates](phase5-production-gates.md) — keep challengers separate; only explicit per-family promotion unlocks immutable live snapshots and kickoff freezing.
+- [Prediction finiteness gates](prediction-finiteness.md) — standardize defensively and reject non-finite model outputs before snapshot persistence.
