@@ -1,0 +1,126 @@
+Verify my Gridline administrator access and, only if I am currently authenticated and authorized as an administrator, complete the initial production-model promotion workflow.
+
+Do not bypass authentication.
+
+Do not promote anything unless the current signed-in user is confirmed as an administrator.
+
+First verify:
+
+* Clerk authentication status
+* Current Clerk user ID
+* Whether the user is recognized as admin
+* Whether admin access is coming from:
+
+  * Clerk role = "admin", or
+  * ADMIN_USER_IDS
+
+If I am NOT recognized as admin:
+
+* stop
+* do not promote any models
+* tell me exactly what is missing
+
+If I AM recognized as admin, promote these specific Phase 4 candidates:
+
+SPREAD
+
+* Regularized linear regression
+* Include low-sample observations
+
+MONEYLINE
+
+* Logistic regression
+* Include low-sample observations
+
+TOTALS
+
+* Gradient boosting
+* Restrict low-sample observations
+
+Use this promotion note for all three:
+
+"Initial Gridline production baseline selected from 2022–2025 walk-forward validation. Activated for forward 2026 evaluation only; not a claim of demonstrated betting profitability."
+
+Requirements:
+
+* Persist promotions to model_promotion_history
+* Keep promotion history append-only
+* Only the latest promoted model for each market should be active
+* Do not delete challenger models
+* Do not automatically promote future challengers
+* Do not activate any betting recommendation layer
+
+After promotion, verify:
+
+1. Spread has exactly one active production model
+2. Moneyline has exactly one active production model
+3. Totals has exactly one active production model
+4. GET /api/models/promotions returns all three active models
+5. Model Lab shows all three as Production
+6. Live Predictions can successfully resolve the three production models
+
+Then generate the first immutable live prediction snapshots for all upcoming NFL games.
+
+Use:
+
+* active production models only
+* latest valid pregame-v3 features
+* legitimate pregame DraftKings/FanDuel data where available
+
+Do not generate predictions for games already started.
+
+For each upcoming game show:
+
+SPREAD
+
+* projected margin
+* current market spread
+* model vs market difference
+
+MONEYLINE
+
+* home win probability
+* away win probability
+* DraftKings implied probability
+* FanDuel implied probability
+* no-vig market probability
+* model probability difference
+
+TOTALS
+
+* projected game total
+* market total
+* model vs market difference
+
+Also show:
+
+* projected score if supported
+* production model version
+* feature version
+* prediction timestamp
+* sportsbook snapshot timestamp
+* QB confidence
+* sample quality
+
+Do NOT add:
+
+* Best Bet
+* wager recommendation
+* confidence score
+* unit sizing
+* Kelly sizing
+* automated betting
+
+At the end, give me a plain-English audit showing:
+
+* whether I was recognized as admin
+* the three production models promoted
+* promotion records created
+* number of upcoming games evaluated
+* number of prediction snapshots created
+* games skipped and why
+* largest spread differential
+* largest moneyline probability differential
+* largest totals differential
+* confirmation that snapshots are immutable
+* confirmation that no recommendation layer is active
