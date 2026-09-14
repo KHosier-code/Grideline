@@ -313,6 +313,12 @@ export async function getAvailabilityHealth() {
       lastUpdated: sql<Date | null>`max(${depthChartSnapshotsTable.snapshotTimestamp})`,
     })
     .from(depthChartSnapshotsTable);
+  const recentRuns = await db
+    .select()
+    .from(dataSyncRunsTable)
+    .where(sql`${dataSyncRunsTable.provider} in ('espn-injuries', 'espn-depth-charts')`)
+    .orderBy(desc(dataSyncRunsTable.startedAt))
+    .limit(20);
   const [[latestInjurySuccess], [latestInjuryFailure], [latestDepthFailure]] = await Promise.all([
     db
       .select({ completedAt: dataSyncRunsTable.completedAt })

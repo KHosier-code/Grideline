@@ -57,9 +57,46 @@ router.get("/data-health", async (req, res): Promise<void> => {
       .filter((job) => job.provider === provider && job.enabled)
       .sort((left, right) => (left.nextRunAt ?? "").localeCompare(right.nextRunAt ?? ""))[0];
   const scheduleJob = schedulerJob("espn-schedule");
-  const injuryJob = schedulerJob("espn-injuries");
-  const nflverseJob = schedulerJob("nflverse");
   const oddsJob = schedulerJob("odds-api");
+  const now = new Date();
+  const gameDays = await getFeedGameDays(now);
+  const injuryNextUpdate = nextFeedUpdate("injuries", now, scheduledInjuryRuns, gameDays)?.toISOString() ?? null;
+  const nflverseNextUpdate = nextFeedUpdate("nflverse", now, scheduledNflverseRuns)?.toISOString() ?? null;
+  const month = now.getUTCMonth() + 1;
+  const latestFailedScheduledInjuryRun = scheduledInjuryRuns.find((run) => run.status === "failed");
+  const nativeFailureAt = availability.injury.failureAt ? new Date(availability.injury.failureAt) : null;
+  const scheduledFailureAt = latestFailedScheduledInjuryRun
+    ? latestFailedScheduledInjuryRun.completedAt ?? latestFailedScheduledInjuryRun.startedAt
+    : null;
+  const latestFailureAt = scheduledFailureAt && nativeFailureAt
+    ? scheduledFailureAt >= nativeFailureAt ? scheduledFailureAt : nativeFailureAt
+    : scheduledFailureAt ?? nativeFailureAt;
+  const lastSuccessfulInjuryAt = availability.injury.lastUpdated ? new Date(availability.injury.lastUpdated) : null;
+  const latestFailureIsCurrent = Boolean(
+    latestFailureAt
+    && (!lastSuccessfulInjuryAt || latestFailureAt >= lastSuccessfulInjuryAt),
+  );
+  const maxInjuryAge = (month >= 3 && month <= 7 ? 8 * 24 : 30) * 60 * 60 * 1000;
+  const injuryIsFresh = Boolean(
+    lastSuccessfulInjuryAt
+    && now.getTime() - lastSuccessfulInjuryAt.getTime() <= maxInjuryAge,
+  );
+  const latestFailureMessage = (scheduledFailureAt && nativeFailureAt && nativeFailureAt > scheduledFailureAt
+    ? availability.injury.failure
+    : latestFailedScheduledInjuryRun?.error ?? availability.injury.failure)
+    ?? (latestFailureAt ? "Injury synchronization failed." : null);
+  const injuryStatus = latestFailureIsCurrent
+    ? availability.injury.records > 0 ? "stale" : "unavailable"
+    : injuryIsFresh ? "current" : "stale";
+  const injuryDetail = latestFailureMessage && latestFailureIsCurrent
+    ? latestFailureMessage
+    : latestFailureMessage
+      ? `Latest failed attempt: ${latestFailureMessage}`
+      : availability.injury.records > 0
+        ? `${availability.injury.records} immutable injury snapshots captured.`
+        : lastSuccessfulInjuryAt
+          ? "The latest injury synchronization completed successfully with no reported injuries."
+          : "The first injury synchronization is pending.";
   res.json(
     GetDataHealthResponse.parse([
       {
@@ -123,15 +160,19 @@ router.get("/data-health", async (req, res): Promise<void> => {
         label: "NFLverse historical data",
         status: nflverse.status,
         detail: nflverse.detail,
+        schedule: "Tuesday at 2:00 PM ET; Wednesday at 2:00 PM ET during the season.",
+        retryPolicy: "Up to 3 retries after 5, 15, and 45 minutes.",
         lastUpdated: nflverse.lastUpdated,
-        nextUpdate: nflverseJob?.nextRunAt ?? null,
+        nextUpdate: nflverseNextUpdate,
         requestsToday: nflverse.requestsToday,
         requestsThisMonth: nflverse.requestsThisMonth,
         remainingQuota: nflverse.remainingQuota,
+        scheduledRuns: scheduledNflverseRuns,
         metadata: {
           ...nflverse.metadata,
           lastRun: scheduler.runs.find((run) => run.provider === "nflverse") ?? null,
           recentRuns: scheduler.runs.filter((run) => run.provider === "nflverse").slice(0, 20),
+          scheduledRuns: scheduledNflverseRuns,
           timezone: scheduler.timezone,
         },
       },
@@ -169,19 +210,21 @@ router.get("/data-health", async (req, res): Promise<void> => {
       {
         provider: "espn-injuries",
         label: "ESPN injuries",
-        status: availability.injury.records > 0 ? "current" : availability.injury.failure ? "unavailable" : "stale",
-        detail: availability.injury.records > 0
-          ? `${availability.injury.records} immutable injury snapshots captured.`
-          : availability.injury.failure ?? "The first injury synchronization is pending.",
+        status: injuryStatus,
+        detail: injuryDetail,
+        schedule: "Every 3 hours on NFL game days; twice daily on other active-season days; weekly during the offseason.",
+        retryPolicy: "Up to 3 retries after 5, 15, and 45 minutes.",
         lastUpdated: availability.injury.lastUpdated,
-        nextUpdate: injuryJob?.nextRunAt ?? null,
+        nextUpdate: injuryNextUpdate,
         requestsToday: 0,
         requestsThisMonth: 0,
         remainingQuota: "Public endpoint",
+        scheduledRuns: scheduledInjuryRuns,
         metadata: {
           records: availability.injury.records,
           failures: availability.injury.failure ? [availability.injury.failure] : [],
           lastRun: scheduler.runs.find((run) => run.provider === "espn-injuries") ?? null,
+          scheduledRuns: scheduledInjuryRuns,
           timezone: scheduler.timezone,
         },
       },
@@ -212,50 +255,3 @@ router.get("/data-health", async (req, res): Promise<void> => {
 });
 
 export default router;
-
-  const latestFailureMessage = (scheduledFailureAt && nativeFailureAt && nativeFailureAt > scheduledFailureAt
-    ? availability.injury.failure
-    : latestFailedScheduledInjuryRun?.error ?? availability.injury.failure)
-    ?? (latestFailureAt ? "Injury synchronization failed." : null);
-
-  const lastSuccessfulInjuryAt = availability.injury.lastUpdated ? new Date(availability.injury.lastUpdated) : null;
-
-  const latestFailureIsCurrent = Boolean(
-    latestFailureAt
-    && (!lastSuccessfulInjuryAt || latestFailureAt >= lastSuccessfulInjuryAt),
-  );
-
-  const maxInjuryAge = (month >= 3 && month <= 7 ? 8 * 24 : 30) * 60 * 60 * 1000;
-
-  const nativeFailureAt = availability.injury.failureAt ? new Date(availability.injury.failureAt) : null;
-
-  const injuryStatus = latestFailureIsCurrent
-    ? availability.injury.records > 0 ? "stale" : "unavailable"
-    : injuryIsFresh ? "current" : "stale";
-
-  const injuryDetail = latestFailureMessage && latestFailureIsCurrent
-    ? latestFailureMessage
-    : latestFailureMessage
-      ? `Latest failed attempt: ${latestFailureMessage}`
-      : availability.injury.records > 0
-        ? `${availability.injury.records} immutable injury snapshots captured.`
-        : lastSuccessfulInjuryAt
-          ? "The latest injury synchronization completed successfully with no reported injuries."
-          : "The first injury synchronization is pending.";
-
-  const injuryIsFresh = Boolean(
-    lastSuccessfulInjuryAt
-    && Date.now() - lastSuccessfulInjuryAt.getTime() <= maxInjuryAge,
-  );
-
-  const scheduledFailureAt = latestFailedScheduledInjuryRun
-    ? latestFailedScheduledInjuryRun.completedAt ?? latestFailedScheduledInjuryRun.startedAt
-    : null;
-
-  const latestFailureAt = scheduledFailureAt && nativeFailureAt
-    ? scheduledFailureAt >= nativeFailureAt ? scheduledFailureAt : nativeFailureAt
-    : scheduledFailureAt ?? nativeFailureAt;
-
-  const latestFailedScheduledInjuryRun = scheduledInjuryRuns.find((run) => run.status === "failed");
-
-  const month = new Date().getUTCMonth() + 1;
