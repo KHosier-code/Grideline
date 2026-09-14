@@ -1,0 +1,387 @@
+Proceed with Phase 4 of Gridline: MODEL TRAINING AND COMPARISON.
+
+The purpose of this phase is to train and compare statistically valid NFL prediction models using the existing `pregame-v3` feature set.
+
+Do NOT optimize specifically to hit a requested 58%, 60%, or other target win rate.
+
+Do NOT use random train/test splits as the primary validation method.
+
+Use chronological walk-forward testing.
+
+BUILD THREE SEPARATE MODEL FAMILIES
+
+1. Spread / ATS
+2. Moneyline
+3. Game totals
+
+Do not combine these into one model.
+
+---
+
+## SPREAD MODEL
+
+Build two related outputs:
+
+A. Projected game spread
+
+Example:
+Model: KC -5.4
+Market: KC -3
+
+B. Probability of covering a specific sportsbook spread
+
+Example:
+KC -3 cover probability: 58.7%
+
+Targets must be built from historical final scores.
+
+Do not use post-kickoff information as predictors.
+
+Compare candidate algorithms including:
+
+* Linear regression for projected margin baseline
+* Logistic regression for cover probability
+* Random Forest
+* Gradient Boosting
+* XGBoost or equivalent boosted-tree implementation if available
+
+Use regularization and reasonable hyperparameter ranges.
+
+Do not excessively tune to historical betting results.
+
+---
+
+## MONEYLINE MODEL
+
+Predict:
+
+* home win probability
+* away win probability
+
+Candidate models:
+
+* Logistic Regression baseline
+* Random Forest
+* Gradient Boosting
+* XGBoost if available
+
+Evaluate probability quality, not just winners.
+
+Metrics should include:
+
+* accuracy
+* log loss
+* Brier score
+* calibration
+
+---
+
+## TOTALS MODEL
+
+Build:
+
+A. Projected game total
+
+Example:
+Model total: 49.8
+
+B. Probability of Over/Under against a specific sportsbook total.
+
+Candidate models:
+
+* Linear regression baseline
+* Random Forest regression
+* Gradient Boosting regression
+* XGBoost regression if available
+
+For Over/Under probabilities, either:
+
+* build a calibrated classification layer around market totals, or
+* derive probabilities from validated residual distributions
+
+Document which approach is used.
+
+---
+
+## WALK-FORWARD VALIDATION
+
+Use chronological validation.
+
+Example structure:
+
+Train:
+2021
+
+Test:
+2022
+
+Then:
+
+Train:
+2021–2022
+
+Test:
+2023
+
+Then:
+
+Train:
+2021–2023
+
+Test:
+2024
+
+Then:
+
+Train:
+2021–2024
+
+Test:
+2025
+
+2026 should remain a true current-season/out-of-sample evaluation period wherever possible.
+
+Do not train a historical test season using that season's future games.
+
+Within-season expanding-window tests are encouraged.
+
+---
+
+## MARKET DATA RULES
+
+Market odds may only be used when they existed before the prediction timestamp.
+
+For historical seasons where Gridline does not possess reliable sportsbook snapshots:
+
+Do NOT fabricate historical DraftKings or FanDuel lines.
+
+Separate:
+
+MODEL QUALITY
+from
+BETTING PERFORMANCE
+
+Model-quality testing can use:
+
+* actual score margin
+* win/loss
+* actual total
+
+Betting-performance metrics such as ATS win rate, ROI and CLV require legitimate historical market lines.
+
+If historical sportsbook data is insufficient, explicitly say so.
+
+Do not infer betting results from today's odds.
+
+---
+
+## FEATURE SELECTION
+
+Begin with `pregame-v3`.
+
+Exclude:
+
+* IDs
+* final scores
+* future results
+* post-kickoff fields
+* data timestamps that accidentally encode outcomes
+* any leakage-prone variables
+
+Create feature importance analysis.
+
+For linear/logistic models show standardized coefficient influence.
+
+For tree/boosted models show feature importance and, if practical, SHAP-style explanations.
+
+Do not automatically delete a feature merely because its initial importance is low.
+
+---
+
+## LOW-SAMPLE HANDLING
+
+There are currently 564 low-sample feature rows.
+
+Test at least two approaches:
+
+A. Include them with low-sample flags.
+B. Exclude/restrict very low-sample observations.
+
+Compare performance.
+
+Do not quietly drop early-season games.
+
+Document whichever approach performs better and why.
+
+---
+
+## QB UNCERTAINTY
+
+Incorporate:
+
+* QB continuity
+* starter-change indicator
+* QB data-confidence
+
+Do not treat low-confidence inferred starters as known certainties.
+
+Test whether low QB confidence materially affects error rates.
+
+---
+
+## MODEL CALIBRATION
+
+Probability outputs must be calibrated.
+
+Create buckets such as:
+
+50–54%
+55–59%
+60–64%
+65–69%
+70%+
+
+For each bucket show:
+
+* predicted probability
+* actual outcome rate
+* number of predictions
+
+Use calibration methods such as Platt scaling or isotonic regression only when justified by out-of-sample validation.
+
+---
+
+## MODEL COMPARISON PAGE
+
+Build a Phase 4 Model Lab interface showing each candidate.
+
+For each model display:
+
+SPREAD
+
+* MAE of projected margin
+* RMSE
+* cover-probability Brier score where evaluable
+* calibration
+* sample size
+
+MONEYLINE
+
+* accuracy
+* log loss
+* Brier score
+* calibration
+
+TOTALS
+
+* MAE
+* RMSE
+* Over/Under probability quality where evaluable
+
+Also display:
+
+* training seasons
+* test season
+* feature version
+* algorithm
+* model version
+* date trained
+
+Do not promote a model simply because it has the highest raw win percentage.
+
+---
+
+## PRODUCTION MODEL SELECTION
+
+At the end of Phase 4, recommend a candidate production model for:
+
+* Spread
+* Moneyline
+* Totals
+
+But do NOT automatically activate it.
+
+Explain why each candidate is preferred.
+
+Consider:
+
+* out-of-sample accuracy
+* calibration
+* stability across seasons
+* variance
+* interpretability
+* sample size
+
+Create a production/challenger workflow:
+
+Production candidate
+Challenger A
+Challenger B
+
+No model becomes active until explicitly promoted.
+
+---
+
+## PREDICTION STORAGE
+
+Prepare model output storage for future weekly predictions.
+
+For every prediction eventually store:
+
+* game
+* prediction timestamp
+* feature version
+* model version
+* predicted score/margin
+* projected total
+* win probability
+* cover probability if market available
+* sportsbook line used
+* sportsbook price used
+* model edge
+
+But do NOT generate fake historical sportsbook predictions where market lines were unavailable.
+
+---
+
+## DO NOT ADD YET
+
+Do NOT add:
+
+* AI subjective overrides
+* final confidence score
+* recommended bet sizing
+* Kelly betting
+* player props
+* anytime TD model
+* automated wagering
+
+Those come later.
+
+---
+
+## FINAL PHASE 4 AUDIT
+
+After training, provide a plain-English report showing:
+
+1. Algorithms tested
+2. Seasons used for training
+3. Seasons used for walk-forward testing
+4. Number of predictions evaluated
+5. Best spread model
+6. Best moneyline model
+7. Best totals model
+8. Performance by test season
+9. Calibration results
+10. Most influential features
+11. Effect of low-sample games
+12. Effect of QB-confidence uncertainty
+13. Any signs of overfitting
+14. Limitations caused by missing historical sportsbook lines
+15. Recommended production candidates
+16. Confirmation that none were automatically promoted
+17. Confirmation that no AI override or betting recommendation layer was added
+
+Do not hide poor model performance.
+
+If a simple model outperforms a complex model, recommend the simple model.
