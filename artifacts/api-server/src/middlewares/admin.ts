@@ -17,8 +17,12 @@ export function sessionRole(
 
 export function getAdminAuthStatus(req: Request, authResolver: AuthResolver = getAuth) {
   const auth = authResolver(req);
-  const configuredIds = (process.env.ADMIN_USER_IDS ?? "")
-    .split(",")
+  const configuredIds = [
+    process.env.ADMIN_USER_IDS,
+    process.env.ADDITIONAL_ADMIN_USER_IDS,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .flatMap((value) => value.split(","))
     .map((value) => value.trim())
     .filter(Boolean);
   const role = sessionRole(req, authResolver);
