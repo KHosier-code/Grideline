@@ -228,8 +228,10 @@ export const GetOddsHistoryResponse = zod.object({
 export const CaptureOddsResponse = zod.object({
   "status": zod.enum(['success', 'failed', 'not_configured']),
   "requestedAt": zod.coerce.date(),
+  "requestId": zod.number().int().nullable(),
   "requestCount": zod.number().int(),
   "recordsReceived": zod.number().int(),
+  "auditedEvents": zod.number().int(),
   "snapshotsCreated": zod.number().int(),
   "duplicateSnapshots": zod.number().int(),
   "unmatchedEvents": zod.number().int(),
@@ -239,6 +241,76 @@ export const CaptureOddsResponse = zod.object({
   "creditsUsed": zod.number().int().nullable(),
   "creditsRemaining": zod.number().int().nullable(),
   "error": zod.string().nullable()
+})
+
+
+/**
+ * Returns parsed provider fields and matching diagnostics without raw payloads or keyed URLs.
+ * @summary Read persisted per-event Odds API matching audits
+ */
+
+export const listOddsAuditsQueryLimitDefault = 200;
+export const listOddsAuditsQueryLimitMax = 1000;
+
+
+
+export const ListOddsAuditsQueryParams = zod.object({
+  "requestId": zod.coerce.number().int().min(1).optional(),
+  "outcome": zod.enum(['matched_saved', 'matched_post_kickoff_skipped', 'unmatched']).optional(),
+  "limit": zod.coerce.number().int().min(1).max(listOddsAuditsQueryLimitMax).default(listOddsAuditsQueryLimitDefault)
+})
+
+export const ListOddsAuditsResponseItem = zod.object({
+  "id": zod.number().int(),
+  "requestId": zod.number().int(),
+  "eventIndex": zod.number().int(),
+  "providerEventId": zod.string().nullable(),
+  "providerHomeTeam": zod.string().nullable(),
+  "providerAwayTeam": zod.string().nullable(),
+  "providerKickoffTime": zod.coerce.date().nullable(),
+  "normalizedHomeTeam": zod.string().nullable(),
+  "normalizedAwayTeam": zod.string().nullable(),
+  "candidateGridlineGames": zod.array(zod.object({
+  "gridlineGameId": zod.string(),
+  "kickoffTime": zod.coerce.date().nullable(),
+  "timeDifferenceMinutes": zod.number().nullable()
+})),
+  "matchedGridlineGameId": zod.string().nullable(),
+  "matchedGridlineKickoff": zod.coerce.date().nullable(),
+  "outcome": zod.enum(['matched_saved', 'matched_post_kickoff_skipped', 'unmatched']),
+  "reason": zod.enum(['saved_observation', 'duplicate_observation', 'no_observations', 'postkickoff', 'invalid_fields', 'no_matching_teams', 'missing_schedule', 'outside_tolerance', 'ambiguity', 'other']),
+  "observationsReceived": zod.number().int(),
+  "observationsSaved": zod.number().int(),
+  "duplicateObservations": zod.number().int(),
+  "rejectedObservations": zod.number().int(),
+  "auditedAt": zod.coerce.date()
+})
+export const ListOddsAuditsResponse = zod.array(ListOddsAuditsResponseItem)
+
+
+/**
+ * Performs an explicit ESPN schedule sync and only upserts games; it never deletes schedule history or calls the Odds API.
+ * @summary Persist the current and next two exposed NFL weeks
+ */
+export const syncScheduleBodySeasonMin = 2020;
+
+export const syncScheduleBodyCurrentWeekMax = 22;
+
+
+
+export const SyncScheduleBody = zod.object({
+  "season": zod.number().int().min(syncScheduleBodySeasonMin).optional(),
+  "currentWeek": zod.number().int().min(1).max(syncScheduleBodyCurrentWeekMax).optional()
+})
+
+export const SyncScheduleResponse = zod.object({
+  "status": zod.enum(['success', 'partial', 'failed']),
+  "season": zod.number().int(),
+  "currentWeek": zod.number().int(),
+  "weeks": zod.array(zod.number().int()),
+  "gamesByWeek": zod.record(zod.string(), zod.number().int()),
+  "totalGames": zod.number().int(),
+  "failures": zod.array(zod.string())
 })
 
 

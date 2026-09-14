@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   compareOddsQuotes,
+  classifyMatchedAuditReason,
+  classifyMatchedEvent,
+  diagnoseOddsEventMatch,
   findMissingOddsMarkets,
   getObservationKey,
   hashOddsState,
@@ -11,6 +14,7 @@ import {
   oddsQuoteIsBetter,
   parseOddsTimestamp,
 } from "./odds";
+import { getExposedScheduleWeeks } from "./schedule";
 
 test("normalizes common sportsbook team-name variants to one NFL identity", () => {
   assert.equal(normalizeTeamName("NY Giants"), normalizeTeamName("New York Giants"));
@@ -130,4 +134,123 @@ test("does not treat a missing quote as better and freezes at the kickoff bounda
   assert.equal(isPreKickoffCapture(new Date("2026-09-10T19:00:00.001Z"), kickoff), false);
   // Provider source time must not override the local capture boundary.
   assert.equal(isPreKickoffCapture(new Date("2026-09-10T18:59:59.999Z"), kickoff), true);
+});
+
+const fixtureKickoff = new Date("2026-09-10T19:00:00.000Z");
+const fixtureGame = {
+  gameId: "gridline-1",
+  kickoffTime: fixtureKickoff,
+  homeTeamId: "DAL",
+  awayTeamId: "PHI",
+  homeAbbreviation: "DAL",
+  awayAbbreviation: "PHI",
+  homeTeamName: "Dallas Cowboys",
+  awayTeamName: "Philadelphia Eagles",
+};
+
+test("retains the existing 36-hour nearest matching behavior while exposing candidates", () => {
+  const result = diagnoseOddsEventMatch(
+    {
+      id: "provider-1",
+      home_team: "Dallas",
+      away_team: "Philadelphia Eagles",
+      commence_time: fixtureKickoff.toISOString(),
+    },
+    [fixtureGame],
+  );
+  assert.equal(result.game?.gameId, "gridline-1");
+  assert.equal(result.reason, null);
+  assert.deepEqual(result.candidates, [{
+    gridlineGameId: "gridline-1",
+    kickoffTime: fixtureKickoff.toISOString(),
+    timeDifferenceMinutes: 0,
+  }]);
+
+  const outside = diagnoseOddsEventMatch(
+    {
+      id: "provider-outside",
+      home_team: "Dallas",
+      away_team: "Philadelphia Eagles",
+      commence_time: new Date(fixtureKickoff.getTime() + 36 * 60 * 60 * 1000 + 1).toISOString(),
+    },
+    [fixtureGame],
+  );
+  assert.equal(outside.game, null);
+  assert.equal(outside.reason, "outside_tolerance");
+  assert.equal(outside.candidates[0]?.gridlineGameId, "gridline-1");
+});
+
+test("diagnoses invalid fields, missing teams, and nearest-candidate ambiguity", () => {
+  const invalid = diagnoseOddsEventMatch(
+    { id: "bad", home_team: "Dallas", away_team: null, commence_time: "bad-time" },
+    [fixtureGame],
+  );
+  assert.equal(invalid.reason, "invalid_fields");
+
+  const noTeams = diagnoseOddsEventMatch(
+    {
+      id: "no-team",
+      home_team: "New York Giants",
+      away_team: "Philadelphia Eagles",
+      commence_time: fixtureKickoff.toISOString(),
+    },
+    [fixtureGame],
+  );
+  assert.equal(noTeams.reason, "no_matching_teams");
+
+  const second = {
+    ...fixtureGame,
+    gameId: "gridline-2",
+    kickoffTime: new Date(fixtureKickoff.getTime() + 30_000),
+  };
+  const ambiguous = diagnoseOddsEventMatch(
+    {
+      id: "ambiguous",
+      home_team: "Dallas",
+      away_team: "Philadelphia Eagles",
+      commence_time: new Date(fixtureKickoff.getTime() + 15_000).toISOString(),
+    },
+    [fixtureGame, second],
+  );
+  assert.equal(ambiguous.game, null);
+  assert.equal(ambiguous.reason, "ambiguity");
+  assert.deepEqual(
+    ambiguous.candidates.map((candidate) => candidate.gridlineGameId),
+    ["gridline-1", "gridline-2"],
+  );
+
+  const missing = diagnoseOddsEventMatch(
+    {
+      id: "missing-schedule",
+      home_team: "Dallas",
+      away_team: "Philadelphia Eagles",
+      commence_time: fixtureKickoff.toISOString(),
+    },
+    [],
+  );
+  assert.equal(missing.reason, "missing_schedule");
+});
+
+test("expands only within the exposed regular/postseason week bounds", () => {
+  assert.deepEqual(getExposedScheduleWeeks(18), [18, 19, 20]);
+  assert.deepEqual(getExposedScheduleWeeks(21), [21, 22]);
+  assert.deepEqual(getExposedScheduleWeeks(22), [22]);
+  assert.deepEqual(getExposedScheduleWeeks(23), []);
+});
+
+test("keeps matched audit reasons explicit for saved, duplicate, and empty observations", () => {
+  assert.equal(classifyMatchedAuditReason(2, 0), "saved_observation");
+  assert.equal(classifyMatchedAuditReason(0, 3), "duplicate_observation");
+  assert.equal(classifyMatchedAuditReason(0, 0), "no_observations");
+});
+
+test("marks a matched event as post-kickoff without changing matching", () => {
+  assert.deepEqual(
+    classifyMatchedEvent(fixtureKickoff, new Date(fixtureKickoff.getTime() + 1)),
+    { outcome: "matched_post_kickoff_skipped", reason: "postkickoff" },
+  );
+  assert.deepEqual(
+    classifyMatchedEvent(fixtureKickoff, new Date(fixtureKickoff.getTime() - 1)),
+    { outcome: "matched_saved", reason: null },
+  );
 });

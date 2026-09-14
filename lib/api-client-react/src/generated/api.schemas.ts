@@ -131,8 +131,11 @@ export const OddsCaptureResultStatus = {
 export interface OddsCaptureResult {
   status: OddsCaptureResultStatus;
   requestedAt: string;
+  /** @nullable */
+  requestId: number | null;
   requestCount: number;
   recordsReceived: number;
+  auditedEvents: number;
   snapshotsCreated: number;
   duplicateSnapshots: number;
   unmatchedEvents: number;
@@ -145,6 +148,100 @@ export interface OddsCaptureResult {
   creditsRemaining: number | null;
   /** @nullable */
   error: string | null;
+}
+
+export interface OddsAuditCandidate {
+  gridlineGameId: string;
+  /** @nullable */
+  kickoffTime: string | null;
+  /** @nullable */
+  timeDifferenceMinutes: number | null;
+}
+
+export type OddsEventAuditOutcome = typeof OddsEventAuditOutcome[keyof typeof OddsEventAuditOutcome];
+
+
+export const OddsEventAuditOutcome = {
+  matched_saved: 'matched_saved',
+  matched_post_kickoff_skipped: 'matched_post_kickoff_skipped',
+  unmatched: 'unmatched',
+} as const;
+
+export type OddsEventAuditReason = typeof OddsEventAuditReason[keyof typeof OddsEventAuditReason];
+
+
+export const OddsEventAuditReason = {
+  saved_observation: 'saved_observation',
+  duplicate_observation: 'duplicate_observation',
+  no_observations: 'no_observations',
+  postkickoff: 'postkickoff',
+  invalid_fields: 'invalid_fields',
+  no_matching_teams: 'no_matching_teams',
+  missing_schedule: 'missing_schedule',
+  outside_tolerance: 'outside_tolerance',
+  ambiguity: 'ambiguity',
+  other: 'other',
+} as const;
+
+export interface OddsEventAudit {
+  id: number;
+  requestId: number;
+  eventIndex: number;
+  /** @nullable */
+  providerEventId: string | null;
+  /** @nullable */
+  providerHomeTeam: string | null;
+  /** @nullable */
+  providerAwayTeam: string | null;
+  /** @nullable */
+  providerKickoffTime: string | null;
+  /** @nullable */
+  normalizedHomeTeam: string | null;
+  /** @nullable */
+  normalizedAwayTeam: string | null;
+  candidateGridlineGames: OddsAuditCandidate[];
+  /** @nullable */
+  matchedGridlineGameId: string | null;
+  /** @nullable */
+  matchedGridlineKickoff: string | null;
+  outcome: OddsEventAuditOutcome;
+  reason: OddsEventAuditReason;
+  observationsReceived: number;
+  observationsSaved: number;
+  duplicateObservations: number;
+  rejectedObservations: number;
+  auditedAt: string;
+}
+
+export interface ScheduleSyncRequest {
+  /** @minimum 2020 */
+  season?: number;
+  /**
+     * @minimum 1
+     * @maximum 22
+     */
+  currentWeek?: number;
+}
+
+export type ScheduleSyncResultStatus = typeof ScheduleSyncResultStatus[keyof typeof ScheduleSyncResultStatus];
+
+
+export const ScheduleSyncResultStatus = {
+  success: 'success',
+  partial: 'partial',
+  failed: 'failed',
+} as const;
+
+export type ScheduleSyncResultGamesByWeek = {[key: string]: number};
+
+export interface ScheduleSyncResult {
+  status: ScheduleSyncResultStatus;
+  season: number;
+  currentWeek: number;
+  weeks: number[];
+  gamesByWeek: ScheduleSyncResultGamesByWeek;
+  totalGames: number;
+  failures: string[];
 }
 
 export type DataHealthStatus = typeof DataHealthStatus[keyof typeof DataHealthStatus];
@@ -262,4 +359,26 @@ season?: number;
  */
 week?: number;
 };
+
+export type ListOddsAuditsParams = {
+/**
+ * @minimum 1
+ */
+requestId?: number;
+outcome?: ListOddsAuditsOutcome;
+/**
+ * @minimum 1
+ * @maximum 1000
+ */
+limit?: number;
+};
+
+export type ListOddsAuditsOutcome = typeof ListOddsAuditsOutcome[keyof typeof ListOddsAuditsOutcome];
+
+
+export const ListOddsAuditsOutcome = {
+  matched_saved: 'matched_saved',
+  matched_post_kickoff_skipped: 'matched_post_kickoff_skipped',
+  unmatched: 'unmatched',
+} as const;
 

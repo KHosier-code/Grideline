@@ -139,6 +139,63 @@ paths:
                 $ref: "#/components/schemas/OddsCaptureResult"
         "502":
           description: Capture failed
+  /odds/audit:
+    get:
+      operationId: listOddsAudits
+      tags: [dashboard]
+      summary: Read persisted per-event Odds API matching audits
+      description: Returns parsed provider fields and matching diagnostics without raw payloads or keyed URLs.
+      parameters:
+        - name: requestId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: outcome
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [matched_saved, matched_post_kickoff_skipped, unmatched]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 200
+      responses:
+        "200":
+          description: Persisted per-event audits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OddsEventAudit"
+  /data-sync/schedule:
+    post:
+      operationId: syncSchedule
+      tags: [nfl]
+      summary: Persist the current and next two exposed NFL weeks
+      description: Performs an explicit ESPN schedule sync and only upserts games; it never deletes schedule history or calls the Odds API.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleSyncRequest"
+      responses:
+        "200":
+          description: Schedule synchronization result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleSyncResult"
+        "502":
+          description: Schedule synchronization failed
   /teams:
     get:
       operationId: listTeams
@@ -279,14 +336,16 @@ components:
     OddsCaptureResult:
       type: object
       required:
-        [status, requestedAt, requestCount, recordsReceived, snapshotsCreated,
-         duplicateSnapshots, unmatchedEvents, skippedPostKickoff,
+        [status, requestedAt, requestId, requestCount, recordsReceived, snapshotsCreated,
+         auditedEvents, duplicateSnapshots, unmatchedEvents, skippedPostKickoff,
          missingMarkets, failedSportsbooks, creditsUsed, creditsRemaining, error]
       properties:
         status: { type: string, enum: [success, failed, not_configured] }
         requestedAt: { type: string, format: date-time }
+        requestId: { type: ["integer", "null"] }
         requestCount: { type: integer }
         recordsReceived: { type: integer }
+        auditedEvents: { type: integer }
         snapshotsCreated: { type: integer }
         duplicateSnapshots: { type: integer }
         unmatchedEvents: { type: integer }
@@ -300,6 +359,72 @@ components:
         creditsUsed: { type: ["integer", "null"] }
         creditsRemaining: { type: ["integer", "null"] }
         error: { type: ["string", "null"] }
+    OddsAuditCandidate:
+      type: object
+      required: [gridlineGameId, kickoffTime, timeDifferenceMinutes]
+      properties:
+        gridlineGameId: { type: string }
+        kickoffTime: { type: ["string", "null"], format: date-time }
+        timeDifferenceMinutes: { type: ["number", "null"] }
+    OddsEventAudit:
+      type: object
+      required:
+        [id, requestId, eventIndex, providerEventId, providerHomeTeam,
+         providerAwayTeam, providerKickoffTime, normalizedHomeTeam,
+         normalizedAwayTeam, candidateGridlineGames, matchedGridlineGameId,
+         matchedGridlineKickoff, outcome, reason, observationsReceived,
+         observationsSaved, duplicateObservations, rejectedObservations, auditedAt]
+      properties:
+        id: { type: integer }
+        requestId: { type: integer }
+        eventIndex: { type: integer }
+        providerEventId: { type: ["string", "null"] }
+        providerHomeTeam: { type: ["string", "null"] }
+        providerAwayTeam: { type: ["string", "null"] }
+        providerKickoffTime: { type: ["string", "null"], format: date-time }
+        normalizedHomeTeam: { type: ["string", "null"] }
+        normalizedAwayTeam: { type: ["string", "null"] }
+        candidateGridlineGames:
+          type: array
+          items: { $ref: "#/components/schemas/OddsAuditCandidate" }
+        matchedGridlineGameId: { type: ["string", "null"] }
+        matchedGridlineKickoff: { type: ["string", "null"], format: date-time }
+        outcome:
+          type: string
+          enum: [matched_saved, matched_post_kickoff_skipped, unmatched]
+        reason:
+          type: string
+          enum:
+            [saved_observation, duplicate_observation, no_observations,
+             postkickoff, invalid_fields, no_matching_teams, missing_schedule,
+             outside_tolerance, ambiguity, other]
+        observationsReceived: { type: integer }
+        observationsSaved: { type: integer }
+        duplicateObservations: { type: integer }
+        rejectedObservations: { type: integer }
+        auditedAt: { type: string, format: date-time }
+    ScheduleSyncRequest:
+      type: object
+      properties:
+        season: { type: integer, minimum: 2020 }
+        currentWeek: { type: integer, minimum: 1, maximum: 22 }
+    ScheduleSyncResult:
+      type: object
+      required: [status, season, currentWeek, weeks, gamesByWeek, totalGames, failures]
+      properties:
+        status: { type: string, enum: [success, partial, failed] }
+        season: { type: integer }
+        currentWeek: { type: integer }
+        weeks:
+          type: array
+          items: { type: integer }
+        gamesByWeek:
+          type: object
+          additionalProperties: { type: integer }
+        totalGames: { type: integer }
+        failures:
+          type: array
+          items: { type: string }
     DataHealth:
       type: object
       required: [provider, label, status, detail]

@@ -10,8 +10,11 @@ import type { OddsCaptureResultStatus } from './oddsCaptureResultStatus';
 export interface OddsCaptureResult {
   status: OddsCaptureResultStatus;
   requestedAt: Date;
+  /** @nullable */
+  requestId: number | null;
   requestCount: number;
   recordsReceived: number;
+  auditedEvents: number;
   snapshotsCreated: number;
   duplicateSnapshots: number;
   unmatchedEvents: number;

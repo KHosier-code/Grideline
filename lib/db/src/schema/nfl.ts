@@ -4,6 +4,7 @@ import {
   date,
   doublePrecision,
   integer,
+  index,
   jsonb,
   pgTable,
   primaryKey,
@@ -124,6 +125,46 @@ export const oddsApiRequestsTable = pgTable("odds_api_requests", {
   errorMessage: text("error_message"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
+
+export type OddsAuditCandidate = {
+  gridlineGameId: string;
+  kickoffTime: string | null;
+  timeDifferenceMinutes: number | null;
+};
+
+/**
+ * One immutable row for every event returned by an Odds API capture.  This
+ * deliberately stores parsed fields and matching diagnostics only; provider
+ * payloads, request URLs, and API keys never belong in the audit trail.
+ */
+export const oddsEventAuditsTable = pgTable("odds_event_audits", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  requestId: integer("request_id").notNull(),
+  eventIndex: integer("event_index").notNull(),
+  providerEventId: text("provider_event_id"),
+  providerHomeTeam: text("provider_home_team"),
+  providerAwayTeam: text("provider_away_team"),
+  providerKickoffTime: timestamp("provider_kickoff_time", { withTimezone: true }),
+  normalizedHomeTeam: text("normalized_home_team"),
+  normalizedAwayTeam: text("normalized_away_team"),
+  candidateGridlineGames: jsonb("candidate_gridline_games")
+    .$type<OddsAuditCandidate[]>()
+    .notNull()
+    .default([]),
+  matchedGridlineGameId: text("matched_gridline_game_id"),
+  matchedGridlineKickoff: timestamp("matched_gridline_kickoff", { withTimezone: true }),
+  outcome: text("outcome").notNull(),
+  reason: text("reason").notNull(),
+  observationsReceived: integer("observations_received").notNull().default(0),
+  observationsSaved: integer("observations_saved").notNull().default(0),
+  duplicateObservations: integer("duplicate_observations").notNull().default(0),
+  rejectedObservations: integer("rejected_observations").notNull().default(0),
+  auditedAt: timestamp("audited_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("odds_event_audits_request_id_idx").on(table.requestId),
+  index("odds_event_audits_audited_at_idx").on(table.auditedAt, table.id),
+  index("odds_event_audits_outcome_idx").on(table.outcome),
+]);
 
 export const predictionsTable = pgTable("predictions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import {
   db,
   gamesTable,
   oddsApiRequestsTable,
+  oddsEventAuditsTable,
   sportsbookOddsTable,
   teamsTable,
+  type OddsAuditCandidate,
 } from "@workspace/db";
 
 export const SUPPORTED_SPORTSBOOKS = ["DraftKings", "FanDuel"] as const;
@@ -57,6 +59,83 @@ type MatchedGame = {
   awayTeamName: string;
 };
 
+export const ODDS_AUDIT_OUTCOMES = [
+  "matched_saved",
+  "matched_post_kickoff_skipped",
+  "unmatched",
+] as const;
+export type OddsAuditOutcome = (typeof ODDS_AUDIT_OUTCOMES)[number];
+
+export const ODDS_AUDIT_REASONS = [
+  "saved_observation",
+  "duplicate_observation",
+  "no_observations",
+  "postkickoff",
+  "invalid_fields",
+  "no_matching_teams",
+  "missing_schedule",
+  "outside_tolerance",
+  "ambiguity",
+  "other",
+] as const;
+export type OddsAuditReason = (typeof ODDS_AUDIT_REASONS)[number];
+
+type MatchRejectionReason = Exclude<
+  OddsAuditReason,
+  "saved_observation" | "duplicate_observation" | "no_observations"
+>;
+
+export type OddsMatchCandidate = OddsAuditCandidate;
+
+export type OddsMatchDiagnostics = {
+  game: MatchedGame | null;
+  reason: MatchRejectionReason | null;
+  candidates: OddsMatchCandidate[];
+  providerEventId: string | null;
+  providerHomeTeam: string | null;
+  providerAwayTeam: string | null;
+  providerKickoffTime: Date | null;
+  normalizedHomeTeam: string | null;
+  normalizedAwayTeam: string | null;
+};
+
+export function classifyMatchedAuditReason(
+  observationsSaved: number,
+  duplicateObservations: number,
+): Extract<OddsAuditReason, "saved_observation" | "duplicate_observation" | "no_observations"> {
+  if (observationsSaved > 0) return "saved_observation";
+  if (duplicateObservations > 0) return "duplicate_observation";
+  return "no_observations";
+}
+
+export function classifyMatchedEvent(
+  kickoffTime: Date | null,
+  now: Date,
+): { outcome: "matched_saved" | "matched_post_kickoff_skipped"; reason: "postkickoff" | null } {
+  return kickoffTime && kickoffTime.getTime() <= now.getTime()
+    ? { outcome: "matched_post_kickoff_skipped", reason: "postkickoff" }
+    : { outcome: "matched_saved", reason: null };
+}
+
+type OddsEventAuditInsert = {
+  eventIndex: number;
+  providerEventId: string | null;
+  providerHomeTeam: string | null;
+  providerAwayTeam: string | null;
+  providerKickoffTime: Date | null;
+  normalizedHomeTeam: string | null;
+  normalizedAwayTeam: string | null;
+  candidateGridlineGames: OddsMatchCandidate[];
+  matchedGridlineGameId: string | null;
+  matchedGridlineKickoff: Date | null;
+  outcome: OddsAuditOutcome;
+  reason: OddsAuditReason;
+  observationsReceived: number;
+  observationsSaved: number;
+  duplicateObservations: number;
+  rejectedObservations: number;
+};
+
 export type OddsQuote = {
   sportsbook: SupportedSportsbook;
   market: SupportedMarket;
@@ -96,8 +175,10 @@ export type OddsHistory = {
 export type OddsCaptureResult = {
   status: "success" | "failed" | "not_configured";
   requestedAt: Date;
+  requestId: number | null;
   requestCount: number;
   recordsReceived: number;
+  auditedEvents: number;
   snapshotsCreated: number;
   duplicateSnapshots: number;
   unmatchedEvents: number;
@@ -291,7 +372,8 @@ function safeErrorMessage(error: unknown, fallback: string): string {
   // the request ledger or Data Health response.
   return message
     .replace(/([?&]apiKey=)[^&\s]+/gi, "$1[redacted]")
-    .replace(/(api[_-]?key[=:])[^&\s]+/gi, "$1[redacted]");
+    .replace(/(api[_-]?key[=:])[^&\s]+/gi, "$1[redacted]")
+    .replace(/https?:\/\/[^\s]+/gi, "[redacted-url]");
 }
 
 function canonicalTeamName(value: string): string {
@@ -486,37 +568,123 @@ async function findExistingGames(): Promise<MatchedGame[]> {
   });
 }
 
-function matchGame(
+function candidateForGame(
+  game: MatchedGame,
+  commence: Date | null,
+): OddsMatchCandidate {
+  return {
+    gridlineGameId: game.gameId,
+    kickoffTime: game.kickoffTime?.toISOString() ?? null,
+    timeDifferenceMinutes: commence && game.kickoffTime
+      ? Math.abs(commence.getTime() - game.kickoffTime.getTime()) / 60_000
+      : null,
+  };
+}
+
+/**
+ * Match diagnostics intentionally use the same ordered checks as the original
+ * matcher: exact normalized home/away teams, a 36-hour absolute kickoff
+ * tolerance, nearest candidate, and a sub-minute nearest-candidate ambiguity
+ * refusal.  The additional reason/candidate fields are observational only.
+ */
+export function diagnoseOddsEventMatch(
   event: OddsApiEvent,
   existingGames: MatchedGame[],
-): MatchedGame | null {
+): OddsMatchDiagnostics {
   const home = asString(event.home_team);
   const away = asString(event.away_team);
   const commence = asDate(event.commence_time);
-  if (!home || !away || !commence) return null;
-  const candidates = existingGames.filter((game) => {
+  const providerEventId = asString(event.id);
+  const normalizedHomeTeam = home ? canonicalTeamName(home) : null;
+  const normalizedAwayTeam = away ? canonicalTeamName(away) : null;
+  const base = {
+    providerEventId,
+    providerHomeTeam: home,
+    providerAwayTeam: away,
+    providerKickoffTime: commence,
+    normalizedHomeTeam,
+    normalizedAwayTeam,
+  };
+  const teamCandidates = home && away
+    ? existingGames.filter((game) =>
+      normalizedHomeTeam === canonicalTeamName(game.homeTeamName) &&
+      normalizedAwayTeam === canonicalTeamName(game.awayTeamName))
+    : [];
+  const candidates = teamCandidates.map((game) => candidateForGame(game, commence));
+
+  if (!home || !away || !commence) {
+    return {
+      ...base,
+      game: null,
+      reason: "invalid_fields",
+      candidates,
+    };
+  }
+  if (existingGames.length === 0) {
+    return {
+      ...base,
+      game: null,
+      reason: "missing_schedule",
+      candidates: [],
+    };
+  }
+
+  if (teamCandidates.length === 0) {
+    return {
+      ...base,
+      game: null,
+      reason: "no_matching_teams",
+      candidates,
+    };
+  }
+
+  const withinTolerance = teamCandidates.filter((game) => {
     if (!game.kickoffTime) return false;
-    const teamsMatch =
-      canonicalTeamName(home) === canonicalTeamName(game.homeTeamName) &&
-      canonicalTeamName(away) === canonicalTeamName(game.awayTeamName);
     const kickoffDiff = Math.abs(commence.getTime() - game.kickoffTime.getTime());
-    return teamsMatch && kickoffDiff <= 36 * 60 * 60 * 1000;
+    return kickoffDiff <= 36 * 60 * 60 * 1000;
   });
-  if (candidates.length === 0) return null;
-  candidates.sort((left, right) => {
+  if (withinTolerance.length === 0) {
+    return {
+      ...base,
+      game: null,
+      reason: teamCandidates.every((game) => !game.kickoffTime) ? "missing_schedule" : "outside_tolerance",
+      candidates,
+    };
+  }
+
+  withinTolerance.sort((left, right) => {
     const leftDiff = Math.abs(commence.getTime() - (left.kickoffTime?.getTime() ?? 0));
     const rightDiff = Math.abs(commence.getTime() - (right.kickoffTime?.getTime() ?? 0));
     return leftDiff - rightDiff;
   });
-  const nearest = candidates[0];
+  const nearest = withinTolerance[0];
   const nearestDiff = Math.abs(commence.getTime() - (nearest.kickoffTime?.getTime() ?? 0));
-  const secondDiff = candidates[1]
-    ? Math.abs(commence.getTime() - (candidates[1].kickoffTime?.getTime() ?? 0))
+  const secondDiff = withinTolerance[1]
+    ? Math.abs(commence.getTime() - (withinTolerance[1].kickoffTime?.getTime() ?? 0))
     : Number.POSITIVE_INFINITY;
   // If two Gridline games are equally close, refusing the observation is safer
   // than attaching a market to the wrong game.
-  if (Math.abs(nearestDiff - secondDiff) < 60_000) return null;
-  return nearest;
+  if (Math.abs(nearestDiff - secondDiff) < 60_000) {
+    return {
+      ...base,
+      game: null,
+      reason: "ambiguity",
+      candidates,
+    };
+  }
+  return {
+    ...base,
+    game: nearest,
+    reason: null,
+    candidates,
+  };
+}
+
+function matchGame(
+  event: OddsApiEvent,
+  existingGames: MatchedGame[],
+): MatchedGame | null {
+  return diagnoseOddsEventMatch(event, existingGames).game;
 }
 
 async function insertIfChanged(
@@ -590,16 +758,48 @@ async function recordRequest(values: {
   errorMessage?: string | null;
   metadata?: Record<string, unknown>;
 }) {
-  await db.insert(oddsApiRequestsTable).values({
-    requestedAt: values.requestedAt,
-    status: values.status,
-    httpStatus: values.httpStatus ?? null,
-    recordsProcessed: values.recordsProcessed ?? 0,
-    creditsUsed: values.creditsUsed ?? null,
-    creditsRemaining: values.creditsRemaining ?? null,
-    errorMessage: values.errorMessage ?? null,
-    metadata: values.metadata,
-  });
+  const [request] = await db
+    .insert(oddsApiRequestsTable)
+    .values({
+      requestedAt: values.requestedAt,
+      status: values.status,
+      httpStatus: values.httpStatus ?? null,
+      recordsProcessed: values.recordsProcessed ?? 0,
+      creditsUsed: values.creditsUsed ?? null,
+      creditsRemaining: values.creditsRemaining ?? null,
+      errorMessage: values.errorMessage ?? null,
+      metadata: values.metadata,
+    })
+    .returning({ id: oddsApiRequestsTable.id });
+  return request.id;
+}
+
+async function recordEventAudits(
+  requestId: number,
+  audits: OddsEventAuditInsert[],
+) {
+  if (audits.length === 0) return;
+  await db.insert(oddsEventAuditsTable).values(
+    audits.map((audit) => ({
+      requestId,
+      eventIndex: audit.eventIndex,
+      providerEventId: audit.providerEventId,
+      providerHomeTeam: audit.providerHomeTeam,
+      providerAwayTeam: audit.providerAwayTeam,
+      providerKickoffTime: audit.providerKickoffTime,
+      normalizedHomeTeam: audit.normalizedHomeTeam,
+      normalizedAwayTeam: audit.normalizedAwayTeam,
+      candidateGridlineGames: audit.candidateGridlineGames,
+      matchedGridlineGameId: audit.matchedGridlineGameId,
+      matchedGridlineKickoff: audit.matchedGridlineKickoff,
+      outcome: audit.outcome,
+      reason: audit.reason,
+      observationsReceived: audit.observationsReceived,
+      observationsSaved: audit.observationsSaved,
+      duplicateObservations: audit.duplicateObservations,
+      rejectedObservations: audit.rejectedObservations,
+    })),
+  );
 }
 
 async function runOddsCapture(): Promise<OddsCaptureResult> {
@@ -607,8 +807,10 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
   const emptyResult = (status: OddsCaptureResult["status"], error: string | null): OddsCaptureResult => ({
     status,
     requestedAt,
+    requestId: null,
     requestCount: 0,
     recordsReceived: 0,
+    auditedEvents: 0,
     snapshotsCreated: 0,
     duplicateSnapshots: 0,
     unmatchedEvents: 0,
@@ -644,7 +846,7 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     headers = parseQuotaHeaders(response.headers);
   } catch (error) {
     const message = safeErrorMessage(error, "Odds API request failed");
-    await recordRequest({
+    const requestId = await recordRequest({
       requestedAt,
       status: "failed",
       errorMessage: message,
@@ -654,6 +856,7 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     lastCaptureFailure = message;
     return {
       ...emptyResult("failed", message),
+      requestId,
       requestCount: 1,
       creditsUsed: headers.requestsUsed,
       creditsRemaining: headers.requestsRemaining,
@@ -662,7 +865,7 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
 
   if (!response.ok) {
     const message = `The Odds API returned HTTP ${response.status}.`;
-    await recordRequest({
+    const requestId = await recordRequest({
       requestedAt,
       status: "failed",
       httpStatus: response.status,
@@ -673,6 +876,7 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     lastCaptureFailure = message;
     return {
       ...emptyResult("failed", message),
+      requestId,
       requestCount: 1,
       creditsUsed: headers.requestsUsed,
       creditsRemaining: headers.requestsRemaining,
@@ -684,7 +888,7 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     payload = await response.json();
   } catch {
     const message = "The Odds API returned an unreadable response.";
-    await recordRequest({
+    const requestId = await recordRequest({
       requestedAt,
       status: "failed",
       httpStatus: response.status,
@@ -695,6 +899,7 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     lastCaptureFailure = message;
     return {
       ...emptyResult("failed", message),
+      requestId,
       requestCount: 1,
       creditsUsed: headers.requestsUsed,
       creditsRemaining: headers.requestsRemaining,
@@ -713,16 +918,55 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
   const observedSelections = new Map<string, Set<string>>();
   const validSportsbooks = new Set<SupportedSportsbook>();
   const failedSportsbooks = new Set<string>();
+  const eventAudits: OddsEventAuditInsert[] = [];
   const now = new Date();
 
-  for (const event of events) {
-    const game = matchGame(event, existingGames);
+  for (const [eventIndex, event] of events.entries()) {
+    const diagnostics = diagnoseOddsEventMatch(event, existingGames);
+    const game = diagnostics.game;
     if (!game) {
       unmatchedEvents += 1;
+      eventAudits.push({
+        eventIndex,
+        providerEventId: diagnostics.providerEventId,
+        providerHomeTeam: diagnostics.providerHomeTeam,
+        providerAwayTeam: diagnostics.providerAwayTeam,
+        providerKickoffTime: diagnostics.providerKickoffTime,
+        normalizedHomeTeam: diagnostics.normalizedHomeTeam,
+        normalizedAwayTeam: diagnostics.normalizedAwayTeam,
+        candidateGridlineGames: diagnostics.candidates,
+        matchedGridlineGameId: null,
+        matchedGridlineKickoff: null,
+        outcome: "unmatched",
+        reason: diagnostics.reason ?? "other",
+        observationsReceived: 0,
+        observationsSaved: 0,
+        duplicateObservations: 0,
+        rejectedObservations: 0,
+      });
       continue;
     }
-    if (game.kickoffTime && game.kickoffTime.getTime() <= now.getTime()) {
+    const matchedEvent = classifyMatchedEvent(game.kickoffTime, now);
+    if (matchedEvent.outcome === "matched_post_kickoff_skipped") {
       skippedPostKickoff += 1;
+      eventAudits.push({
+        eventIndex,
+        providerEventId: diagnostics.providerEventId,
+        providerHomeTeam: diagnostics.providerHomeTeam,
+        providerAwayTeam: diagnostics.providerAwayTeam,
+        providerKickoffTime: diagnostics.providerKickoffTime,
+        normalizedHomeTeam: diagnostics.normalizedHomeTeam,
+        normalizedAwayTeam: diagnostics.normalizedAwayTeam,
+        candidateGridlineGames: diagnostics.candidates,
+        matchedGridlineGameId: game.gameId,
+        matchedGridlineKickoff: game.kickoffTime,
+        outcome: matchedEvent.outcome,
+        reason: matchedEvent.reason ?? "postkickoff",
+        observationsReceived: 0,
+        observationsSaved: 0,
+        duplicateObservations: 0,
+        rejectedObservations: 0,
+      });
       continue;
     }
     // Scope missing-market reporting to each matched upcoming game. A
@@ -730,25 +974,45 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     // being absent on another game.
     matchedGameIds.add(game.gameId);
     matchedGames.set(game.gameId, game);
+    let observationsReceived = 0;
+    let observationsSaved = 0;
+    let duplicateObservations = 0;
+    let rejectedObservations = 0;
     const bookmakers = Array.isArray(event.bookmakers) ? event.bookmakers.map(asRecord) : [];
     for (const rawBookmaker of bookmakers) {
       const sportsbook = bookmakerName(rawBookmaker);
-      if (!sportsbook) continue;
+      if (!sportsbook) {
+        rejectedObservations += 1;
+        continue;
+      }
       const bookmakerLastUpdate = asDate(rawBookmaker.last_update);
       const markets = Array.isArray(rawBookmaker.markets) ? rawBookmaker.markets.map(asRecord) : [];
       for (const rawMarket of markets) {
         const market = normalizeMarket(rawMarket.key);
-        if (!market) continue;
+        if (!market) {
+          rejectedObservations += 1;
+          continue;
+        }
         const sourceTimestamp = asDate(rawMarket.last_update) ?? bookmakerLastUpdate;
         const outcomes = Array.isArray(rawMarket.outcomes) ? rawMarket.outcomes.map(asRecord) : [];
         for (const outcome of outcomes) {
           const outcomeName = asString(outcome.name);
           const price = asFiniteNumber(outcome.price);
-          if (!outcomeName || price === null || !Number.isInteger(price) || price === 0) continue;
+          if (!outcomeName || price === null || !Number.isInteger(price) || price === 0) {
+            rejectedObservations += 1;
+            continue;
+          }
           const point = expectedPoint(market, outcome);
-          if (market !== "moneyline" && point === null) continue;
+          if (market !== "moneyline" && point === null) {
+            rejectedObservations += 1;
+            continue;
+          }
           const selection = selectionForOutcome(market, outcomeName, game);
-          if (!selection) continue;
+          if (!selection) {
+            rejectedObservations += 1;
+            continue;
+          }
+          observationsReceived += 1;
           const result = await insertIfChanged(
             game,
             sportsbook,
@@ -764,11 +1028,34 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
           selections.add(selection);
           observedSelections.set(marketKey, selections);
           validSportsbooks.add(sportsbook);
-          if (result === "inserted") snapshotsCreated += 1;
-          else duplicateSnapshots += 1;
+          if (result === "inserted") {
+            snapshotsCreated += 1;
+            observationsSaved += 1;
+          } else {
+            duplicateSnapshots += 1;
+            duplicateObservations += 1;
+          }
         }
       }
     }
+    eventAudits.push({
+      eventIndex,
+      providerEventId: diagnostics.providerEventId,
+      providerHomeTeam: diagnostics.providerHomeTeam,
+      providerAwayTeam: diagnostics.providerAwayTeam,
+      providerKickoffTime: diagnostics.providerKickoffTime,
+      normalizedHomeTeam: diagnostics.normalizedHomeTeam,
+      normalizedAwayTeam: diagnostics.normalizedAwayTeam,
+      candidateGridlineGames: diagnostics.candidates,
+      matchedGridlineGameId: game.gameId,
+      matchedGridlineKickoff: game.kickoffTime,
+      outcome: "matched_saved",
+      reason: classifyMatchedAuditReason(observationsSaved, duplicateObservations),
+      observationsReceived,
+      observationsSaved,
+      duplicateObservations,
+      rejectedObservations,
+    });
   }
   for (const sportsbook of SUPPORTED_SPORTSBOOKS) {
     if (!validSportsbooks.has(sportsbook)) {
@@ -793,21 +1080,33 @@ async function runOddsCapture(): Promise<OddsCaptureResult> {
     missingMarkets.add(missing);
   }
   const recordsProcessed = snapshotsCreated + duplicateSnapshots;
-  await recordRequest({
+  const auditReasonCounts = eventAudits.reduce<Record<string, number>>((counts, audit) => {
+    counts[audit.reason] = (counts[audit.reason] ?? 0) + 1;
+    return counts;
+  }, {});
+  const requestId = await recordRequest({
     requestedAt,
     status: "success",
     httpStatus: response.status,
     recordsProcessed,
     creditsUsed: headers.requestsUsed,
     creditsRemaining: headers.requestsRemaining,
-    metadata: { missingMarkets: [...missingMarkets].sort(), failedSportsbooks: [...failedSportsbooks].sort() },
+    metadata: {
+      missingMarkets: [...missingMarkets].sort(),
+      failedSportsbooks: [...failedSportsbooks].sort(),
+      auditedEvents: eventAudits.length,
+      auditReasonCounts,
+    },
   });
+  await recordEventAudits(requestId, eventAudits);
   lastCaptureFailure = null;
   return {
     status: "success",
     requestedAt,
+    requestId,
     requestCount: 1,
     recordsReceived: events.length,
+    auditedEvents: eventAudits.length,
     snapshotsCreated,
     duplicateSnapshots,
     unmatchedEvents,
@@ -931,6 +1230,69 @@ export async function getOddsHistory(gameId: string): Promise<OddsHistory> {
     closing: closingRows.map(quoteFromRow),
     closingFrozen,
   };
+}
+
+export type OddsEventAudit = {
+  id: number;
+  requestId: number;
+  eventIndex: number;
+  providerEventId: string | null;
+  providerHomeTeam: string | null;
+  providerAwayTeam: string | null;
+  providerKickoffTime: Date | null;
+  normalizedHomeTeam: string | null;
+  normalizedAwayTeam: string | null;
+  candidateGridlineGames: OddsMatchCandidate[];
+  matchedGridlineGameId: string | null;
+  matchedGridlineKickoff: Date | null;
+  outcome: OddsAuditOutcome;
+  reason: OddsAuditReason;
+  observationsReceived: number;
+  observationsSaved: number;
+  duplicateObservations: number;
+  rejectedObservations: number;
+  auditedAt: Date;
+};
+
+export async function getOddsEventAudits(filters: {
+  requestId?: number;
+  outcome?: OddsAuditOutcome;
+  limit?: number;
+} = {}): Promise<OddsEventAudit[]> {
+  const conditions: SQL[] = [];
+  if (filters.requestId !== undefined) {
+    conditions.push(eq(oddsEventAuditsTable.requestId, filters.requestId));
+  }
+  if (filters.outcome !== undefined) {
+    conditions.push(eq(oddsEventAuditsTable.outcome, filters.outcome));
+  }
+  const rows = await db
+    .select()
+    .from(oddsEventAuditsTable)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(oddsEventAuditsTable.auditedAt), desc(oddsEventAuditsTable.id))
+    .limit(Math.min(Math.max(filters.limit ?? 200, 1), 1000));
+  return rows.map((row) => ({
+    id: row.id,
+    requestId: row.requestId,
+    eventIndex: row.eventIndex,
+    providerEventId: row.providerEventId,
+    providerHomeTeam: row.providerHomeTeam,
+    providerAwayTeam: row.providerAwayTeam,
+    providerKickoffTime: row.providerKickoffTime,
+    normalizedHomeTeam: row.normalizedHomeTeam,
+    normalizedAwayTeam: row.normalizedAwayTeam,
+    candidateGridlineGames: row.candidateGridlineGames,
+    matchedGridlineGameId: row.matchedGridlineGameId,
+    matchedGridlineKickoff: row.matchedGridlineKickoff,
+    outcome: row.outcome as OddsAuditOutcome,
+    reason: row.reason as OddsAuditReason,
+    observationsReceived: row.observationsReceived,
+    observationsSaved: row.observationsSaved,
+    duplicateObservations: row.duplicateObservations,
+    rejectedObservations: row.rejectedObservations,
+    auditedAt: row.auditedAt,
+  }));
 }
 
 export async function getOddsApiHealth(): Promise<OddsHealth> {

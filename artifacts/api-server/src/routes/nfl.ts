@@ -20,81 +20,12 @@ import {
   fetchTeams,
   logEspnFailure,
   type EspnGame,
-  type EspnTeam,
 } from "../lib/espn";
 import { resolveCurrentSeasonWeek } from "../lib/season";
 import { getLatestOddsByGame, getOddsHistory, type OddsQuote } from "../lib/odds";
+import { saveScheduleGames, saveScheduleTeams, syncEspnScheduleCoverage } from "../lib/schedule";
 
 const router: IRouter = Router();
-
-function toDbTeam(team: EspnTeam) {
-  return {
-    teamId: team.teamId,
-    abbreviation: team.abbreviation,
-    teamName: team.teamName,
-    conference: team.conference,
-    division: team.division,
-    logoUrl: team.logoUrl,
-    sourceUpdatedAt: new Date(),
-  };
-}
-
-async function saveTeams(teams: EspnTeam[]) {
-  for (const team of teams) {
-    await db
-      .insert(teamsTable)
-      .values(toDbTeam(team))
-      .onConflictDoUpdate({
-        target: teamsTable.teamId,
-        set: {
-          abbreviation: team.abbreviation,
-          teamName: team.teamName,
-          conference: team.conference,
-          division: team.division,
-          logoUrl: team.logoUrl,
-          sourceUpdatedAt: new Date(),
-        },
-      });
-  }
-}
-
-async function saveGames(games: EspnGame[]) {
-  for (const game of games) {
-    await db
-      .insert(gamesTable)
-      .values({
-        gameId: game.gameId,
-        season: game.season,
-        week: game.week,
-        gameDate: new Date(game.gameDate),
-        kickoffTime: game.kickoffTime ? new Date(game.kickoffTime) : null,
-        homeTeamId: game.homeTeam.teamId,
-        awayTeamId: game.awayTeam.teamId,
-        stadium: game.venue,
-        finalHomeScore: game.finalHomeScore,
-        finalAwayScore: game.finalAwayScore,
-        gameStatus: game.gameStatus,
-        broadcast: game.broadcast,
-        sourceUpdatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: gamesTable.gameId,
-        set: {
-          week: game.week,
-          gameDate: new Date(game.gameDate),
-          kickoffTime: game.kickoffTime ? new Date(game.kickoffTime) : null,
-          homeTeamId: game.homeTeam.teamId,
-          awayTeamId: game.awayTeam.teamId,
-          stadium: game.venue,
-          finalHomeScore: game.finalHomeScore,
-          finalAwayScore: game.finalAwayScore,
-          gameStatus: game.gameStatus,
-          broadcast: game.broadcast,
-          sourceUpdatedAt: new Date(),
-        },
-      });
-  }
-}
 
 function fromLiveGame(game: EspnGame, latestOdds: OddsQuote[]) {
   return {
@@ -166,10 +97,15 @@ router.get("/games", async (req, res): Promise<void> => {
   const season = parsed.data.season ?? current.season;
   const week = parsed.data.week ?? current.week;
   try {
+    if (season === current.season && week === current.week) {
+      // Keep the current view additive while also warming the next two exposed
+      // weeks. The sync never touches Odds API or deletes historical games.
+      await syncEspnScheduleCoverage({ season, currentWeek: week });
+    }
     const games = await fetchSchedule(season, week);
-    const teams = games.flatMap((game) => [game.homeTeam, game.awayTeam]);
-    await saveTeams(teams);
-    await saveGames(games);
+    if (season !== current.season || week !== current.week) {
+      await saveScheduleGames(games);
+    }
     const latestOdds = await getLatestOddsByGame(games.map((game) => game.gameId));
     res.json(
       ListGamesResponse.parse(
@@ -229,7 +165,7 @@ router.get("/games/:gameId/odds-history", async (req, res): Promise<void> => {
 router.get("/teams", async (req, res): Promise<void> => {
   try {
     const teams = await fetchTeams();
-    await saveTeams(teams);
+    await saveScheduleTeams(teams);
     res.json(ListTeamsResponse.parse(teams));
   } catch (error) {
     logEspnFailure(error);

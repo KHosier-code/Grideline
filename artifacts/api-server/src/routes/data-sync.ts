@@ -1,8 +1,15 @@
 import { Router, type IRouter } from "express";
-import { CaptureOddsResponse } from "@workspace/api-zod";
+import {
+  CaptureOddsResponse,
+  ListOddsAuditsQueryParams,
+  ListOddsAuditsResponse,
+  SyncScheduleBody,
+  SyncScheduleResponse,
+} from "@workspace/api-zod";
 import { syncEspnDepthCharts, syncEspnInjuries } from "../lib/availability";
 import { syncNflverseHistory } from "../lib/nflverse";
-import { captureOddsSnapshots } from "../lib/odds";
+import { captureOddsSnapshots, getOddsEventAudits } from "../lib/odds";
+import { syncEspnScheduleCoverage } from "../lib/schedule";
 
 const router: IRouter = Router();
 
@@ -37,6 +44,24 @@ router.post("/data-sync/depth-charts", async (req, res): Promise<void> => {
   }
 });
 
+router.post("/data-sync/schedule", async (req, res): Promise<void> => {
+  try {
+    const parsed = SyncScheduleBody.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const input = parsed.data.season !== undefined && parsed.data.currentWeek !== undefined
+      ? parsed.data
+      : undefined;
+    const result = await syncEspnScheduleCoverage(input);
+    res.status(result.status === "failed" ? 502 : 200).json(SyncScheduleResponse.parse(result));
+  } catch (error) {
+    req.log.error({ error }, "Schedule synchronization failed");
+    res.status(502).json({ error: error instanceof Error ? error.message : "Schedule synchronization failed" });
+  }
+});
+
 router.post("/odds/capture", async (req, res): Promise<void> => {
   try {
     const result = await captureOddsSnapshots();
@@ -51,6 +76,21 @@ router.post("/odds/capture", async (req, res): Promise<void> => {
       "Odds capture failed",
     );
     res.status(502).json({ error: "Odds capture failed." });
+  }
+});
+
+router.get("/odds/audit", async (req, res): Promise<void> => {
+  const parsed = ListOddsAuditsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  try {
+    const audits = await getOddsEventAudits(parsed.data);
+    res.json(ListOddsAuditsResponse.parse(audits));
+  } catch (error) {
+    req.log.error({ error }, "Odds audit read failed");
+    res.status(500).json({ error: "Odds audit is temporarily unavailable." });
   }
 });
 
