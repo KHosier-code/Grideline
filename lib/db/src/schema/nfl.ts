@@ -1,6 +1,7 @@
 import { createInsertSchema } from "drizzle-zod";
 import {
   boolean,
+  check,
   date,
   doublePrecision,
   integer,
@@ -12,6 +13,7 @@ import {
   timestamp,
   unique,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 
 export const teamsTable = pgTable("teams", {
@@ -109,7 +111,9 @@ export const sportsbookOddsTable = pgTable("sportsbook_odds", {
   // row preserves legitimate A-B-A movement.
   observationKey: text("observation_key").notNull().default(""),
   stateHash: text("state_hash").notNull().default(""),
-});
+}, (table) => [
+  index("sportsbook_odds_game_market_captured_idx").on(table.gameId, table.market, table.capturedAt, table.id),
+]);
 
 /**
  * One row per Odds API request.  This is intentionally separate from the
@@ -238,6 +242,57 @@ export const modelTrainingRunsTable = pgTable("model_training_runs", {
 }, (table) => [
   index("model_training_runs_family_idx").on(table.family, table.testSeason, table.trainedAt),
   unique("model_training_runs_version_unique").on(table.modelVersion),
+]);
+
+/**
+ * Immutable game-level evidence captured at the same time as a chronological
+ * walk-forward run. Historical aggregate runs are intentionally not backfilled.
+ */
+export const modelEvaluationPredictionsTable = pgTable("model_evaluation_predictions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  modelVersion: text("model_version").notNull().references(() => modelTrainingRunsTable.modelVersion),
+  family: text("family").notNull(),
+  algorithm: text("algorithm").notNull(),
+  featureVersion: text("feature_version").notNull(),
+  testSeason: integer("test_season").notNull(),
+  week: integer("week").notNull(),
+  evaluationStage: text("evaluation_stage").notNull().default("season_holdout"),
+  gameId: text("game_id").notNull(),
+  kickoffTime: timestamp("kickoff_time", { withTimezone: true }).notNull(),
+  predictionCutoff: timestamp("prediction_cutoff", { withTimezone: true }).notNull(),
+  trainingSeasons: jsonb("training_seasons").$type<number[]>().notNull().default([]),
+  trainingCutoff: text("training_cutoff").notNull(),
+  gameStage: text("game_stage").notNull(),
+  homeFeatureSourceCutoff: timestamp("home_feature_source_cutoff", { withTimezone: true }).notNull(),
+  awayFeatureSourceCutoff: timestamp("away_feature_source_cutoff", { withTimezone: true }).notNull(),
+  lowSample: boolean("low_sample").notNull(),
+  predictedValue: doublePrecision("predicted_value").notNull(),
+  actualValue: doublePrecision("actual_value").notNull(),
+  actualHomeScore: integer("actual_home_score").notNull(),
+  actualAwayScore: integer("actual_away_score").notNull(),
+  actualMargin: doublePrecision("actual_margin").notNull(),
+  actualTotal: doublePrecision("actual_total").notNull(),
+  actualHomeWin: doublePrecision("actual_home_win").notNull(),
+  marketSportsbook: text("market_sportsbook"),
+  marketName: text("market_name"),
+  marketSelection: text("market_selection"),
+  marketPoint: doublePrecision("market_point"),
+  marketPrice: integer("market_price"),
+  marketObservedAt: timestamp("market_observed_at", { withTimezone: true }),
+  evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("model_evaluation_prediction_version_game_unique").on(table.modelVersion, table.gameId),
+  index("model_evaluation_prediction_season_week_idx").on(table.testSeason, table.week, table.family),
+  index("model_evaluation_prediction_game_idx").on(table.gameId),
+  check("model_evaluation_prediction_cutoff_check", sql`${table.predictionCutoff} <= ${table.kickoffTime}`),
+  check("model_evaluation_home_feature_chronology_check", sql`${table.homeFeatureSourceCutoff} < ${table.predictionCutoff}`),
+  check("model_evaluation_away_feature_chronology_check", sql`${table.awayFeatureSourceCutoff} < ${table.predictionCutoff}`),
+  check("model_evaluation_market_chronology_check", sql`${table.marketObservedAt} is null or ${table.marketObservedAt} < ${table.predictionCutoff}`),
+  check("model_evaluation_market_provenance_check", sql`
+    (${table.marketObservedAt} is null and ${table.marketSportsbook} is null and ${table.marketName} is null and ${table.marketSelection} is null and ${table.marketPrice} is null)
+    or
+    (${table.marketObservedAt} is not null and ${table.marketSportsbook} is not null and ${table.marketName} is not null and ${table.marketSelection} is not null and ${table.marketPrice} is not null)
+  `),
 ]);
 
 export const modelPromotionHistoryTable = pgTable("model_promotion_history", {

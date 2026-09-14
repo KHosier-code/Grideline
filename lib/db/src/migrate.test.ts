@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   assertMigrationSafe,
   computeChecksum,
+  extractRequirements,
   sortMigrations,
   validateRecordedChecksum,
 } from "./migrate";
@@ -41,4 +42,14 @@ test("checksums detect modified migration contents", () => {
   assert.doesNotThrow(() =>
     validateRecordedChecksum("0001_example.sql", original, original),
   );
+});
+
+test("migration requirements include append-only triggers", () => {
+  const requirements = extractRequirements(`
+    CREATE TABLE IF NOT EXISTS "audit_rows" ("id" integer);
+    CREATE TRIGGER "audit_rows_append_only"
+      BEFORE UPDATE OR DELETE ON "audit_rows"
+      FOR EACH ROW EXECUTE FUNCTION reject_mutation();
+  `);
+  assert.deepEqual([...requirements.triggers], ["audit_rows_append_only"]);
 });

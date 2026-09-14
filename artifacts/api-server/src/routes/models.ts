@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspace/db";
 import { getAuth } from "@clerk/express";
 import { generateLivePredictions, getModelDriftMonitoring } from "../lib/live-predictions";
-import { getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate } from "../lib/modeling";
+import { getModelEvaluationAudit, getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate, type Family } from "../lib/modeling";
 import { PromotionSafetyGateError, runPromotionSafetyGate, type PromotionSafetyGateResult } from "../lib/promotion-safety-gate";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 
@@ -123,6 +123,28 @@ router.get("/models/lab", async (_req, res): Promise<void> => {
     res.json(await getPhase4ModelLab());
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Model Lab unavailable" });
+  }
+});
+
+router.get("/models/evaluations/audit", async (req, res): Promise<void> => {
+  try {
+    const family = typeof req.query.family === "string" && ["spread", "moneyline", "totals"].includes(req.query.family)
+      ? req.query.family as Family
+      : undefined;
+    const integerQuery = (value: unknown) => {
+      if (typeof value !== "string" || !/^\d+$/.test(value)) return undefined;
+      return Number(value);
+    };
+    res.json(await getModelEvaluationAudit({
+      modelVersion: typeof req.query.modelVersion === "string" ? req.query.modelVersion.trim() || undefined : undefined,
+      family,
+      testSeason: integerQuery(req.query.testSeason),
+      week: integerQuery(req.query.week),
+      limit: integerQuery(req.query.limit),
+      cursor: integerQuery(req.query.cursor),
+    }));
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Model evaluation audit unavailable" });
   }
 });
 

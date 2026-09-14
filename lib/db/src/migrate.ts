@@ -23,6 +23,7 @@ export const CRITICAL_HISTORICAL_TABLES = [
   "injuries",
   "prediction_snapshots",
   "model_training_runs",
+  "model_evaluation_predictions",
   "model_promotion_history",
   "prediction_grades",
 ] as const;
@@ -58,6 +59,7 @@ interface MigrationRequirements {
   tables: Set<string>;
   columns: Map<string, Set<string>>;
   indexes: Set<string>;
+  triggers: Set<string>;
   constraints: Set<string>;
   absentIndexes: Set<string>;
   absentConstraints: Set<string>;
@@ -149,6 +151,7 @@ export function extractRequirements(sql: string): MigrationRequirements {
     tables: new Set(),
     columns: new Map(),
     indexes: new Set(),
+    triggers: new Set(),
     constraints: new Set(),
     absentIndexes: new Set(),
     absentConstraints: new Set(),
@@ -196,6 +199,11 @@ export function extractRequirements(sql: string): MigrationRequirements {
     /CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:"([^"]+)"|([a-z_][a-z0-9_]*))/gi,
   )) {
     requirements.indexes.add(tableName(match[1], match[2]));
+  }
+  for (const match of sql.matchAll(
+    /CREATE\s+TRIGGER\s+(?:"([^"]+)"|([a-z_][a-z0-9_]*))/gi,
+  )) {
+    requirements.triggers.add(tableName(match[1], match[2]));
   }
   for (const match of sql.matchAll(
     /ADD\s+CONSTRAINT\s+(?:"([^"]+)"|([a-z_][a-z0-9_]*))/gi,
@@ -257,6 +265,17 @@ async function hasConstraint(client: pg.Client, name: string) {
   return result.rowCount === 1;
 }
 
+async function hasTrigger(client: pg.Client, name: string) {
+  const result = await client.query(
+    `SELECT 1
+       FROM pg_trigger
+      WHERE tgname = $1
+        AND NOT tgisinternal`,
+    [name],
+  );
+  return result.rowCount === 1;
+}
+
 async function verifyExistingSchema(client: pg.Client, sql: string) {
   const requirements = extractRequirements(sql);
   for (const table of requirements.tables) {
@@ -269,6 +288,9 @@ async function verifyExistingSchema(client: pg.Client, sql: string) {
   }
   for (const index of requirements.indexes) {
     if (!(await hasIndex(client, index))) return false;
+  }
+  for (const trigger of requirements.triggers) {
+    if (!(await hasTrigger(client, trigger))) return false;
   }
   for (const constraint of requirements.constraints) {
     if (!(await hasConstraint(client, constraint))) return false;

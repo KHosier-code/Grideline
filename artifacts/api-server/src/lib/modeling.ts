@@ -1,10 +1,12 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, lt } from "drizzle-orm";
 import {
   db,
+  modelEvaluationPredictionsTable,
   pregameTeamFeaturesTable,
   teamGameStatsTable,
   sportsbookOddsTable,
   modelTrainingRunsTable,
+  playerGameStatsTable,
   type PregameFeatureValues,
 } from "@workspace/db";
 import { PREGAME_FEATURE_VERSION } from "./features";
@@ -25,6 +27,13 @@ export type Example = {
   x: number[];
   lowSample: boolean;
   qbConfidence: number;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeFeatureSourceCutoff: Date;
+  awayFeatureSourceCutoff: Date;
+  actualHomeScore: number;
+  actualAwayScore: number;
+  gameStage: string;
   margin: number;
   total: number;
   homeWin: number;
@@ -304,8 +313,21 @@ export function sourceFeatureNames(rows: Array<{ features: PregameFeatureValues 
 
 export async function loadExamples(featureVersion: string) {
   const rows = await db.select().from(pregameTeamFeaturesTable).where(eq(pregameTeamFeaturesTable.featureVersion, featureVersion));
-  const stats = await db.select({ gameId: teamGameStatsTable.gameId, teamId: teamGameStatsTable.teamId, teamScore: teamGameStatsTable.teamScore, opponentScore: teamGameStatsTable.opponentScore }).from(teamGameStatsTable);
+  const [stats, gameStages] = await Promise.all([
+    db.select({ gameId: teamGameStatsTable.gameId, teamId: teamGameStatsTable.teamId, teamScore: teamGameStatsTable.teamScore, opponentScore: teamGameStatsTable.opponentScore }).from(teamGameStatsTable),
+    db.selectDistinct({
+      season: playerGameStatsTable.season,
+      week: playerGameStatsTable.week,
+      teamId: playerGameStatsTable.teamId,
+      opponentTeamId: playerGameStatsTable.opponentTeamId,
+      seasonType: playerGameStatsTable.seasonType,
+    }).from(playerGameStatsTable),
+  ]);
   const scoreByTeamGame = new Map(stats.map((row) => [`${row.gameId}:${row.teamId}`, row]));
+  const stageByMatchup = new Map(gameStages.map((row) => [
+    `${row.season}:${row.week}:${row.teamId ?? ""}:${row.opponentTeamId ?? ""}`,
+    row.seasonType,
+  ]));
   const names = sourceFeatureNames(rows);
   const grouped = new Map<string, typeof rows>();
   for (const row of rows) grouped.set(row.gameId, [...(grouped.get(row.gameId) ?? []), row]);
@@ -332,6 +354,13 @@ export async function loadExamples(featureVersion: string) {
     x: [...features, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb],
       lowSample: home.lowSample || away.lowSample,
       qbConfidence: (homeQb + awayQb) / 2,
+      homeTeamId: home.teamId,
+      awayTeamId: away.teamId,
+      homeFeatureSourceCutoff: home.sourceCutoff,
+      awayFeatureSourceCutoff: away.sourceCutoff,
+      actualHomeScore: homeScore,
+      actualAwayScore: awayScore,
+      gameStage: stageByMatchup.get(`${home.season}:${home.week}:${home.teamId}:${home.opponentTeamId}`) ?? "unknown",
       margin: homeScore - awayScore,
       total: homeScore + awayScore,
       homeWin: homeScore > awayScore ? 1 : 0,
@@ -358,8 +387,23 @@ function applyRecencyWeighting(rows: Example[], weighting: string) {
 
 export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION) {
   const { examples, names } = await loadExamples(featureVersion);
+  const evaluatedGameIds = [...new Set(examples.filter((example) => TEST_SEASONS.includes(example.season)).map((example) => example.gameId))];
+  const historicalOdds = evaluatedGameIds.length
+    ? await db.select().from(sportsbookOddsTable)
+      .where(inArray(sportsbookOddsTable.gameId, evaluatedGameIds))
+      .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id))
+    : [];
+  const oddsByGame = new Map<string, typeof historicalOdds>();
+  for (const quote of historicalOdds) {
+    const quotes = oddsByGame.get(quote.gameId);
+    if (quotes) quotes.push(quote);
+    else oddsByGame.set(quote.gameId, [quote]);
+  }
   const availableSeasons = TEST_SEASONS.filter((season) => examples.some((example) => example.season === season));
-  const runs: Array<typeof modelTrainingRunsTable.$inferInsert> = [];
+  const runs: Array<{
+    run: typeof modelTrainingRunsTable.$inferInsert;
+    evidence: Array<typeof modelEvaluationPredictionsTable.$inferInsert>;
+  }> = [];
   const families: Array<{ family: Family; algorithms: Algorithm[]; target: (example: Example) => number; classification: boolean }> = [
     { family: "spread", algorithms: ["linear_regression", "random_forest", "gradient_boosting"], target: (example) => example.margin, classification: false },
     { family: "moneyline", algorithms: ["logistic_regression", "random_forest", "gradient_boosting"], target: (example) => example.homeWin, classification: true },
@@ -384,7 +428,8 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
             const predicted = weightedScaled.test.map((row) => config.classification ? clamp(model.predict(row)) : model.predict(row));
             const metrics = buildMetrics(config.family, actual, predicted, testRows);
             const modelVersion = `phase4-${config.family}-${algorithm}-${testSeason}-${samplePolicy}-${recencyWeighting}-${Date.now()}-${runs.length}`;
-            runs.push({
+            const trainingCutoff = `through-${Math.max(...trainingSeasons)}`;
+            const run = {
               modelVersion,
               family: config.family,
               algorithm,
@@ -399,14 +444,103 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
               calibration: (config.classification ? calibration(actual, predicted) : { status: "not_applicable" }) as unknown as Record<string, unknown>,
               featureImportance: normalizeImportance(model.importance, names),
               notes: "Chronological walk-forward evaluation with a controlled recency-weighting challenger variant. No automatic promotion. Betting performance is unavailable unless a legitimate pre-prediction sportsbook line exists.",
+            } satisfies typeof modelTrainingRunsTable.$inferInsert;
+            const evidence = testRows.map((example, index) => {
+              const marketName = config.family === "totals" ? "total" : config.family;
+              const quote = (oddsByGame.get(example.gameId) ?? [])
+                .filter((candidate) => candidate.market === marketName && candidate.capturedAt < example.kickoffTime)
+                .at(-1);
+              return {
+                modelVersion,
+                family: config.family,
+                algorithm,
+                featureVersion,
+                testSeason,
+                week: example.week,
+                evaluationStage: "season_holdout",
+                gameId: example.gameId,
+                kickoffTime: example.kickoffTime,
+                predictionCutoff: example.kickoffTime,
+                trainingSeasons,
+                trainingCutoff,
+                gameStage: example.gameStage,
+                homeFeatureSourceCutoff: example.homeFeatureSourceCutoff,
+                awayFeatureSourceCutoff: example.awayFeatureSourceCutoff,
+                lowSample: example.lowSample,
+                predictedValue: predicted[index],
+                actualValue: actual[index],
+                actualHomeScore: example.actualHomeScore,
+                actualAwayScore: example.actualAwayScore,
+                actualMargin: example.margin,
+                actualTotal: example.total,
+                actualHomeWin: example.homeWin,
+                marketSportsbook: quote?.sportsbook ?? null,
+                marketName: quote?.market ?? null,
+                marketSelection: quote?.selection ?? null,
+                marketPoint: quote?.point ?? null,
+                marketPrice: quote?.price ?? null,
+                marketObservedAt: quote?.capturedAt ?? null,
+              };
             });
+            runs.push({ run, evidence });
           }
         }
       }
     }
   }
-  for (let index = 0; index < runs.length; index += 200) await db.insert(modelTrainingRunsTable).values(runs.slice(index, index + 200));
+  for (const bundle of runs) {
+    await db.transaction(async (tx) => {
+      await tx.insert(modelTrainingRunsTable).values(bundle.run);
+      for (let index = 0; index < bundle.evidence.length; index += 500) {
+        await tx.insert(modelEvaluationPredictionsTable).values(bundle.evidence.slice(index, index + 500));
+      }
+    });
+  }
   return { featureVersion, examples: examples.length, runsCreated: runs.length, testSeasons: availableSeasons, bettingEvaluation: { status: "unavailable", reason: "Historical DraftKings/FanDuel snapshots are insufficient for a complete pre-prediction market evaluation; no lines were fabricated." } };
+}
+
+export type EvaluationAuditFilters = {
+  modelVersion?: string;
+  family?: Family;
+  testSeason?: number;
+  week?: number;
+  limit?: number;
+  cursor?: number;
+};
+
+export async function getModelEvaluationAudit(filters: EvaluationAuditFilters = {}) {
+  const baseConditions = [
+    filters.modelVersion ? eq(modelEvaluationPredictionsTable.modelVersion, filters.modelVersion) : undefined,
+    filters.family ? eq(modelEvaluationPredictionsTable.family, filters.family) : undefined,
+    filters.testSeason ? eq(modelEvaluationPredictionsTable.testSeason, filters.testSeason) : undefined,
+    filters.week ? eq(modelEvaluationPredictionsTable.week, filters.week) : undefined,
+  ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
+  const conditions = filters.cursor
+    ? [...baseConditions, lt(modelEvaluationPredictionsTable.id, filters.cursor)]
+    : baseConditions;
+  const limit = Math.max(1, Math.min(1000, Math.floor(filters.limit ?? 250)));
+  const [rows, totalResult] = await Promise.all([
+    db.select().from(modelEvaluationPredictionsTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(modelEvaluationPredictionsTable.id))
+    .limit(limit + 1),
+    db.select({ value: count() }).from(modelEvaluationPredictionsTable)
+      .where(baseConditions.length ? and(...baseConditions) : undefined),
+  ]);
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  return {
+    status: page.length ? "measured" : "unavailable",
+    rows: page,
+    total: totalResult[0]?.value ?? 0,
+    hasMore,
+    nextCursor: hasMore ? page.at(-1)?.id ?? null : null,
+    immutable: true,
+    readOnly: true,
+    note: page.length
+      ? "Stored evaluation-time evidence only. This read did not train, refit, generate, promote, or change a production model."
+      : "No game-level evidence is stored for the requested run. Legacy aggregate runs, including existing 2025 results, are not backfilled or reconstructed.",
+  };
 }
 
 export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATURE_VERSION) {
