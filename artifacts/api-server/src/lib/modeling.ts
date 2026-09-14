@@ -385,6 +385,19 @@ function applyRecencyWeighting(rows: Example[], weighting: string) {
   return [...rows, ...recent.slice(0, Math.ceil(recent.length * (multiplier - 1)))];
 }
 
+type ModelEvaluationBundle = {
+  run: typeof modelTrainingRunsTable.$inferInsert;
+  evidence: Array<typeof modelEvaluationPredictionsTable.$inferInsert>;
+};
+
+export function assertCompleteModelEvaluationBundle(bundle: ModelEvaluationBundle) {
+  if (bundle.evidence.length !== bundle.run.sampleSize) {
+    throw new Error(
+      `Incomplete model evaluation evidence for ${bundle.run.modelVersion}: expected ${bundle.run.sampleSize}, received ${bundle.evidence.length}`,
+    );
+  }
+}
+
 export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION) {
   const { examples, names } = await loadExamples(featureVersion);
   const evaluatedGameIds = [...new Set(examples.filter((example) => TEST_SEASONS.includes(example.season)).map((example) => example.gameId))];
@@ -400,10 +413,7 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
     else oddsByGame.set(quote.gameId, [quote]);
   }
   const availableSeasons = TEST_SEASONS.filter((season) => examples.some((example) => example.season === season));
-  const runs: Array<{
-    run: typeof modelTrainingRunsTable.$inferInsert;
-    evidence: Array<typeof modelEvaluationPredictionsTable.$inferInsert>;
-  }> = [];
+  const runs: ModelEvaluationBundle[] = [];
   const families: Array<{ family: Family; algorithms: Algorithm[]; target: (example: Example) => number; classification: boolean }> = [
     { family: "spread", algorithms: ["linear_regression", "random_forest", "gradient_boosting"], target: (example) => example.margin, classification: false },
     { family: "moneyline", algorithms: ["logistic_regression", "random_forest", "gradient_boosting"], target: (example) => example.homeWin, classification: true },
@@ -489,6 +499,7 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
     }
   }
   for (const bundle of runs) {
+    assertCompleteModelEvaluationBundle(bundle);
     await db.transaction(async (tx) => {
       await tx.insert(modelTrainingRunsTable).values(bundle.run);
       for (let index = 0; index < bundle.evidence.length; index += 500) {

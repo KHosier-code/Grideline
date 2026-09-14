@@ -11,6 +11,7 @@
     "test:auth-hardening": "tsx ../artifacts/api-server/src/middlewares/admin.test.ts && tsx ../artifacts/api-server/src/routes/authorization.test.ts",
     "db:migrate": "tsx ../lib/db/src/migrate.ts",
     "test:db-migrations": "tsx ../lib/db/src/migrate.test.ts",
+    "test:model-evaluation-evidence": "tsx ../artifacts/api-server/src/lib/model-evaluation-evidence.test.ts",
     "report:pregame-leakage": "tsx ./src/pregame-leakage-report.ts",
     "report:production-readiness": "tsx ./src/production-readiness-report.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
