@@ -1,0 +1,516 @@
+Proceed with Phase 5 of Gridline: LIVE PREDICTIONS, VALIDATION, AND CONTROLLED CONTINUOUS LEARNING.
+
+Do not automatically promote any model.
+
+The objective is to begin generating real forward-looking NFL predictions, freeze them historically, grade them after games, compare them to sportsbook markets, and retrain challenger models as new games are completed.
+
+Use only explicitly reviewed/promoted models for official predictions.
+
+---
+
+1. MODEL PROMOTION WORKFLOW
+
+---
+
+Add administrator-controlled promotion.
+
+Model Lab should allow an admin to promote one reviewed candidate for each market:
+
+* Spread
+* Moneyline
+* Totals
+
+Promotion must be explicit.
+
+Store:
+
+* model version
+* algorithm
+* feature version
+* training data cutoff
+* promotion timestamp
+* promoted by
+* reason/notes
+
+Never overwrite previous production-model history.
+
+Allow:
+
+Production
+Challenger A
+Challenger B
+
+A new challenger must never silently replace production.
+
+For the initial production candidates, make available for manual promotion:
+
+Spread:
+Regularized linear regression
+Include low-sample observations
+
+Moneyline:
+Logistic regression
+Include low-sample observations
+
+Totals:
+Gradient boosting
+Restrict low-sample observations
+
+Do not automatically promote them.
+
+---
+
+2. WEEKLY PREDICTION GENERATION
+
+---
+
+Once a production model is explicitly promoted, generate predictions for upcoming NFL games.
+
+For every model run store:
+
+* game_id
+* prediction timestamp
+* feature-set version
+* model version
+* training cutoff
+* projected home score where derivable
+* projected away score where derivable
+* projected margin
+* projected total
+* home win probability
+* away win probability
+
+If sportsbook data exists at prediction time, also store:
+
+* DraftKings line
+* DraftKings price
+* FanDuel line
+* FanDuel price
+* best available line
+* best available price
+* market implied probability
+* no-vig implied probability where possible
+* model-vs-market edge
+
+Every prediction must be immutable.
+
+Never rewrite an earlier prediction simply because the model reruns later.
+
+---
+
+3. PREDICTION SNAPSHOTS
+
+---
+
+Generate multiple prediction states through the week.
+
+Examples:
+
+* Early week
+* Midweek
+* Friday
+* Saturday
+* Sunday morning
+* Final pre-kickoff
+
+Each should be stored separately.
+
+The most recent prediction before kickoff becomes:
+
+OFFICIAL FINAL PREDICTION
+
+Once kickoff occurs, this record must be permanently frozen.
+
+No post-kickoff data may modify the official prediction.
+
+---
+
+4. SPORTSBOOK COMPARISON
+
+---
+
+For Spread:
+
+Show:
+
+Market spread
+Model projected spread
+Point edge
+
+Example:
+
+Market:
+BUF -3
+
+Model:
+BUF -5.7
+
+Model edge:
+BUF +2.7
+
+For Moneyline:
+
+Show:
+
+Sportsbook implied probability
+No-vig market probability
+Model probability
+Probability edge
+
+For Totals:
+
+Show:
+
+Market total
+Model total
+Point differential
+
+Do not call something a recommended wager yet solely because an edge exists.
+
+This phase is about measurement.
+
+---
+
+5. PREDICTION GRADING
+
+---
+
+After games finish, automatically grade official final predictions.
+
+Spread:
+
+Track model projected margin error.
+
+If a legitimate sportsbook spread was captured pre-kickoff:
+
+* win
+* loss
+* push
+
+Moneyline:
+
+* prediction accuracy
+* Brier score
+* log loss
+
+Totals:
+
+* projected total error
+
+If legitimate sportsbook total was captured:
+
+* Over win/loss/push
+* Under win/loss/push
+
+Never fabricate a market result when no line was captured.
+
+---
+
+6. CLOSING LINE VALUE
+
+---
+
+Use the final sportsbook snapshot captured before kickoff as Gridline's closing-line reference.
+
+Clearly label it:
+
+"Final pre-kickoff line captured by Gridline"
+
+Do not claim it is the official industry closing line.
+
+Track:
+
+Spread CLV
+Moneyline price CLV
+Total CLV
+
+Compare the line available when the prediction was generated against the final pre-kickoff line.
+
+Example:
+
+Prediction:
+BUF -3
+
+Final Gridline pre-kickoff:
+BUF -4.5
+
+CLV:
++1.5 points
+
+Store sportsbook-specific CLV when possible.
+
+---
+
+7. PERFORMANCE DASHBOARD
+
+---
+
+Build live forward-performance reporting.
+
+Display separately:
+
+SPREAD
+
+* Predictions
+* MAE
+* RMSE
+* ATS record when eligible
+* ATS %
+* Units if later enabled
+* Average CLV
+
+MONEYLINE
+
+* Predictions
+* Accuracy
+* Brier score
+* Log loss
+* Average probability edge
+* CLV where calculable
+
+TOTALS
+
+* Predictions
+* MAE
+* RMSE
+* Over/Under record where eligible
+* Average total CLV
+
+Break down by:
+
+* week
+* season
+* model version
+* edge bucket
+* home/away
+* favorite/underdog
+* low-sample status
+* QB-confidence level
+
+Do not hide losing segments.
+
+---
+
+8. EDGE BUCKETS
+
+---
+
+Track performance by model-vs-market edge.
+
+Spread example:
+
+0–1 point
+1–2 points
+2–3 points
+3–4 points
+4+ points
+
+Moneyline probability edge:
+
+0–2%
+2–4%
+4–6%
+6–8%
+8%+
+
+Totals:
+
+0–1 point
+1–2
+2–3
+3–4
+4+
+
+Do not determine recommended thresholds until enough forward observations exist.
+
+---
+
+9. CONTROLLED CONTINUOUS LEARNING
+
+---
+
+After completed NFL games are ingested:
+
+* update NFLverse data
+* regenerate pregame/rolling features for future games
+* append completed games to the available training set
+
+On a weekly schedule, train new CHALLENGER model versions.
+
+Do not retrain production in place.
+
+Example:
+
+Production:
+Spread v1.0
+
+After Week 4:
+
+Challenger:
+Spread v1.1
+
+Training cutoff:
+End of Week 4
+
+Store the full training metadata.
+
+---
+
+10. CHALLENGER EVALUATION
+
+---
+
+Compare every new challenger to production using:
+
+* historical walk-forward performance
+* current-season forward performance
+* MAE/RMSE
+* Brier score
+* log loss
+* calibration
+* stability
+* sample size
+* sportsbook edge performance when available
+* CLV when available
+
+Do not automatically promote a challenger simply because one metric is slightly better.
+
+Flag:
+
+Potential upgrade
+
+only when improvement is meaningful and stable.
+
+Require administrator approval for promotion.
+
+---
+
+11. RECENCY LEARNING
+
+---
+
+Create configurable candidate weighting strategies.
+
+Test examples such as:
+
+A. Full historical expanding window
+B. Recent seasons weighted more heavily
+C. Current season + prior season emphasized
+D. Rolling multi-season window
+
+Do not hardcode arbitrary weights as production truth.
+
+Evaluate these weighting strategies as challenger variants.
+
+Examples may include exponential sample weighting, but must be validated chronologically.
+
+---
+
+12. MODEL DRIFT
+
+---
+
+Add model-drift monitoring.
+
+Track whether production performance is deteriorating compared with historical expectations.
+
+Examples:
+
+* increasing spread MAE
+* deteriorating moneyline calibration
+* totals residual changes
+* QB-change error spikes
+* edge buckets no longer performing as expected
+
+Display:
+
+Stable
+Monitor
+Potential Drift
+
+Do not automatically replace the model because drift is detected.
+
+---
+
+13. WEEKLY LEARNING REPORT
+
+---
+
+Create an automated weekly report after all NFL games for the week are completed.
+
+Show:
+
+* production model results
+* prediction errors
+* ATS results where eligible
+* moneyline calibration
+* totals errors
+* CLV
+* strongest and weakest feature segments
+* major misses
+* whether challenger models improved
+* whether any model deserves review for promotion
+
+Include:
+
+"Why did Gridline miss?"
+
+using quantitative evidence only.
+
+Example:
+
+Projected:
+BUF -6.2
+
+Actual:
+BUF lost by 3
+
+Largest deviations:
+
+* Buffalo offensive EPA 1.4 SD below expectation
+* Starting QB efficiency below recent baseline
+* Opponent explosive pass rate substantially exceeded expectation
+
+Do not let an AI layer invent explanations unsupported by data.
+
+---
+
+14. NO BET RECOMMENDATIONS YET
+
+---
+
+Do NOT add:
+
+* Best Bet
+* Bet of the Week
+* recommended unit sizes
+* Kelly sizing
+* automated wagers
+* player props
+* anytime touchdown predictions
+
+First collect enough real 2026 forward evidence.
+
+---
+
+15. PHASE 5 AUDIT
+
+---
+
+After implementation, provide a plain-English report showing:
+
+1. Model promotion workflow
+2. Which models are available for promotion
+3. Prediction snapshot workflow
+4. How official final predictions are frozen
+5. How games are graded
+6. How Gridline calculates CLV
+7. Performance-dashboard structure
+8. Challenger retraining schedule
+9. How completed games become new training data
+10. How production and challengers remain separate
+11. Recency-weighting strategies available
+12. Model-drift monitoring
+13. Weekly learning report structure
+14. Any current data limitations
+15. Confirmation that no betting-recommendation layer has been activated
