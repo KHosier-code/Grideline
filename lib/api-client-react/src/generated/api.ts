@@ -23,11 +23,21 @@ import type {
   AppSettings,
   AppSettingsUpdate,
   ChallengerReadinessReport,
+  ConsumerDashboard,
+  ConsumerDataUnavailableResponse,
+  ConsumerGameDetail,
+  ConsumerGameNotFoundResponse,
+  ConsumerGames,
+  ConsumerInvalidRequestResponse,
+  ConsumerPerformance,
+  ConsumerPropsAvailability,
+  ConsumerTrends,
   DashboardSummary,
   DataHealth,
   Game,
   GetPregameFeatureHealthParams,
   HealthStatus,
+  ListConsumerGamesParams,
   ListGamesParams,
   ListOddsAuditsParams,
   ListPersonnelContextAuditParams,
@@ -145,13 +155,6 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getGetDashboardSummaryUrl = () => {
 
 
@@ -228,7 +231,6 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
 
 
 
-
 export const getGetDataHealthUrl = () => {
 
 
@@ -299,13 +301,6 @@ export function useGetDataHealth<TData = Awaited<ReturnType<typeof getDataHealth
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getListGamesUrl = (params?: ListGamesParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1686,3 +1681,467 @@ export const useUpdateSettings = <TError = ErrorType<unknown>,
       return useMutation(getUpdateSettingsMutationOptions(options));
     }
 
+export const getGetConsumerDashboardUrl = () => {
+
+
+
+
+  return `/api/consumer/dashboard`
+}
+
+/**
+ * Returns consumer-safe, persisted data only. It never starts data synchronization or model computation.
+ * @summary Read the persisted consumer game dashboard
+ */
+export const getConsumerDashboard = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerDashboard> => {
+
+  return customFetch<ConsumerDashboard>(getGetConsumerDashboardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerDashboardQueryKey = () => {
+    return [
+    `/api/consumer/dashboard`
+    ] as const;
+    }
+
+
+export const getGetConsumerDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerDashboard>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerDashboardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerDashboard>>> = ({ signal }) => getConsumerDashboard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerDashboard>>>
+export type GetConsumerDashboardQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read the persisted consumer game dashboard
+ */
+
+export function useGetConsumerDashboard<TData = Awaited<ReturnType<typeof getConsumerDashboard>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListConsumerGamesUrl = (params?: ListConsumerGamesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/games?${stringifiedParams}` : `/api/consumer/games`
+}
+
+/**
+ * @summary Read consumer-safe persisted games
+ */
+export const listConsumerGames = async (params?: ListConsumerGamesParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerGames> => {
+
+  return customFetch<ConsumerGames>(getListConsumerGamesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConsumerGamesQueryKey = (params?: ListConsumerGamesParams,) => {
+    return [
+    `/api/consumer/games`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListConsumerGamesQueryOptions = <TData = Awaited<ReturnType<typeof listConsumerGames>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(params?: ListConsumerGamesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConsumerGames>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConsumerGamesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConsumerGames>>> = ({ signal }) => listConsumerGames(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConsumerGames>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConsumerGamesQueryResult = NonNullable<Awaited<ReturnType<typeof listConsumerGames>>>
+export type ListConsumerGamesQueryError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read consumer-safe persisted games
+ */
+
+export function useListConsumerGames<TData = Awaited<ReturnType<typeof listConsumerGames>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(
+ params?: ListConsumerGamesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConsumerGames>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConsumerGamesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerGameUrl = (gameId: string,) => {
+
+
+
+
+  return `/api/consumer/games/${gameId}`
+}
+
+/**
+ * @summary Read a consumer-safe persisted game detail
+ */
+export const getConsumerGame = async (gameId: string, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerGameDetail> => {
+
+  return customFetch<ConsumerGameDetail>(getGetConsumerGameUrl(gameId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerGameQueryKey = (gameId: string,) => {
+    return [
+    `/api/consumer/games/${gameId}`
+    ] as const;
+    }
+
+
+export const getGetConsumerGameQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerGame>>, TError = ErrorType<ConsumerGameNotFoundResponse | ConsumerDataUnavailableResponse>>(gameId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGame>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerGameQueryKey(gameId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerGame>>> = ({ signal }) => getConsumerGame(gameId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerGame>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerGameQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerGame>>>
+export type GetConsumerGameQueryError = ErrorType<ConsumerGameNotFoundResponse | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read a consumer-safe persisted game detail
+ */
+
+export function useGetConsumerGame<TData = Awaited<ReturnType<typeof getConsumerGame>>, TError = ErrorType<ConsumerGameNotFoundResponse | ConsumerDataUnavailableResponse>>(
+ gameId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGame>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerGameQueryOptions(gameId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerPerformanceUrl = () => {
+
+
+
+
+  return `/api/consumer/performance`
+}
+
+/**
+ * @summary Read consumer-safe persisted performance
+ */
+export const getConsumerPerformance = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPerformance> => {
+
+  return customFetch<ConsumerPerformance>(getGetConsumerPerformanceUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerPerformanceQueryKey = () => {
+    return [
+    `/api/consumer/performance`
+    ] as const;
+    }
+
+
+export const getGetConsumerPerformanceQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPerformance>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPerformanceQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPerformance>>> = ({ signal }) => getConsumerPerformance({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerPerformanceQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerPerformance>>>
+export type GetConsumerPerformanceQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read consumer-safe persisted performance
+ */
+
+export function useGetConsumerPerformance<TData = Awaited<ReturnType<typeof getConsumerPerformance>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerPerformanceQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerTrendsUrl = () => {
+
+
+
+
+  return `/api/consumer/trends`
+}
+
+/**
+ * @summary Read consumer-safe performance trends
+ */
+export const getConsumerTrends = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerTrends> => {
+
+  return customFetch<ConsumerTrends>(getGetConsumerTrendsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerTrendsQueryKey = () => {
+    return [
+    `/api/consumer/trends`
+    ] as const;
+    }
+
+
+export const getGetConsumerTrendsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerTrends>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerTrendsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerTrends>>> = ({ signal }) => getConsumerTrends({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerTrends>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerTrendsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerTrends>>>
+export type GetConsumerTrendsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read consumer-safe performance trends
+ */
+
+export function useGetConsumerTrends<TData = Awaited<ReturnType<typeof getConsumerTrends>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerTrendsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerPropsAvailabilityUrl = () => {
+
+
+
+
+  return `/api/consumer/props`
+}
+
+/**
+ * Player props are intentionally not available in V1.
+ * @summary Read player props availability
+ */
+export const getConsumerPropsAvailability = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPropsAvailability> => {
+
+  return customFetch<ConsumerPropsAvailability>(getGetConsumerPropsAvailabilityUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerPropsAvailabilityQueryKey = () => {
+    return [
+    `/api/consumer/props`
+    ] as const;
+    }
+
+
+export const getGetConsumerPropsAvailabilityQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPropsAvailability>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPropsAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPropsAvailabilityQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPropsAvailability>>> = ({ signal }) => getConsumerPropsAvailability({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPropsAvailability>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerPropsAvailabilityQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerPropsAvailability>>>
+export type GetConsumerPropsAvailabilityQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read player props availability
+ */
+
+export function useGetConsumerPropsAvailability<TData = Awaited<ReturnType<typeof getConsumerPropsAvailability>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPropsAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerPropsAvailabilityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

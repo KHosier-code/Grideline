@@ -408,8 +408,259 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AppSettings"
+  /consumer/dashboard:
+    get:
+      operationId: getConsumerDashboard
+      tags: [nfl]
+      summary: Read the persisted consumer game dashboard
+      description: Returns consumer-safe, persisted data only. It never starts data synchronization or model computation.
+      responses:
+        "200":
+          description: Consumer dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerDashboard"
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/games:
+    get:
+      operationId: listConsumerGames
+      tags: [nfl]
+      summary: Read consumer-safe persisted games
+      parameters:
+        - name: season
+          in: query
+          schema: { type: integer, minimum: 2020 }
+        - name: week
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 22 }
+      responses:
+        "200":
+          description: Consumer games
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerGames"
+        "400":
+          $ref: "#/components/responses/ConsumerInvalidRequest"
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/games/{gameId}:
+    get:
+      operationId: getConsumerGame
+      tags: [nfl]
+      summary: Read a consumer-safe persisted game detail
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Consumer game detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerGameDetail"
+        "404":
+          $ref: "#/components/responses/ConsumerGameNotFound"
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/performance:
+    get:
+      operationId: getConsumerPerformance
+      tags: [nfl]
+      summary: Read consumer-safe persisted performance
+      responses:
+        "200":
+          description: Consumer performance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerPerformance"
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/trends:
+    get:
+      operationId: getConsumerTrends
+      tags: [nfl]
+      summary: Read consumer-safe performance trends
+      responses:
+        "200":
+          description: Consumer trends
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerTrends"
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/props:
+    get:
+      operationId: getConsumerPropsAvailability
+      tags: [nfl]
+      summary: Read player props availability
+      description: Player props are intentionally not available in V1.
+      responses:
+        "200":
+          description: Props placeholder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerPropsAvailability"
 components:
+  responses:
+    ConsumerDataUnavailable:
+      description: Consumer data is temporarily unavailable
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ConsumerError" }
+    ConsumerInvalidRequest:
+      description: Invalid consumer request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ConsumerError" }
+    ConsumerGameNotFound:
+      description: Consumer game unavailable
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    ConsumerError:
+      type: object
+      required: [error, code]
+      properties:
+        error: { type: string }
+        code: { type: string, enum: [consumer_data_unavailable, invalid_request, game_not_found] }
+    ConsumerTeam:
+      type: object
+      required: [name, abbreviation, logoUrl]
+      properties:
+        name: { type: string }
+        abbreviation: { type: string }
+        logoUrl: { type: ["string", "null"] }
+    ConsumerMarketQuote:
+      type: object
+      required: [sportsbook, point, price, capturedAt]
+      properties:
+        sportsbook: { type: string }
+        point: { type: ["number", "null"] }
+        price: { type: number }
+        capturedAt: { type: ["string", "null"], format: date-time }
+    ConsumerGame:
+      type: object
+      required: [gameId, season, week, kickoffTime, gameStatus, venue, matchup, finalScore, prediction, market, dataConfidence, availability]
+      properties:
+        gameId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        kickoffTime: { type: ["string", "null"], format: date-time }
+        gameStatus: { type: string }
+        venue: { type: ["string", "null"] }
+        matchup:
+          type: object
+          required: [home, away]
+          properties:
+            home: { $ref: "#/components/schemas/ConsumerTeam" }
+            away: { $ref: "#/components/schemas/ConsumerTeam" }
+        finalScore:
+          type: ["object", "null"]
+          properties:
+            home: { type: integer }
+            away: { type: integer }
+        prediction:
+          type: ["object", "null"]
+          properties:
+            modelLabel: { type: string, const: Gridline Production Model }
+            projectedHomeScore: { type: ["number", "null"] }
+            projectedAwayScore: { type: ["number", "null"] }
+            projectedMargin: { type: ["number", "null"] }
+            projectedTotal: { type: ["number", "null"] }
+            homeWinProbability: { type: ["number", "null"] }
+            awayWinProbability: { type: ["number", "null"] }
+        market:
+          type: object
+          required: [spread, moneyline, total]
+          properties:
+            spread: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+            moneyline: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+            total: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        dataConfidence:
+          type: object
+          required: [label, score, reason]
+          properties:
+            label: { type: string, enum: [Updating, Limited, Moderate, Standard] }
+            score: { type: ["number", "null"] }
+            reason: { type: ["string", "null"] }
+        availability:
+          type: object
+          required: [prediction, market]
+          properties:
+            prediction: { type: ["string", "null"] }
+            market: { type: ["string", "null"] }
+    ConsumerGames:
+      type: object
+      required: [status, games]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        games:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerGame" }
+    ConsumerDashboard:
+      type: object
+      required: [status, games, note]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        games:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerGame" }
+        note: { type: string }
+    ConsumerGameDetail:
+      allOf:
+        - $ref: "#/components/schemas/ConsumerGame"
+        - type: object
+          required: [weather, analysis]
+          properties:
+            weather:
+              type: ["object", "null"]
+              additionalProperties: true
+            analysis:
+              type: object
+              required: [drivers, availability]
+              properties:
+                drivers: { type: array, items: { type: string } }
+                availability:
+                  type: object
+                  required: [weather, personnel]
+                  properties:
+                    weather: { type: ["string", "null"] }
+                    personnel: { type: ["string", "null"] }
+    ConsumerPerformance:
+      type: object
+      required: [status, officialPredictions, gradedPredictions, byFamily, breakdowns, note]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        officialPredictions: { type: integer }
+        gradedPredictions: { type: integer }
+        byFamily: { type: object, additionalProperties: true }
+        breakdowns: { type: object, additionalProperties: true }
+        note: { type: string }
+    ConsumerTrends:
+      type: object
+      required: [status, byWeek, byConfidence, byEdge, note]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        byWeek: { type: array, items: { type: object, additionalProperties: true } }
+        byConfidence: { type: array, items: { type: object, additionalProperties: true } }
+        byEdge: { type: array, items: { type: object, additionalProperties: true } }
+        note: { type: string }
+    ConsumerPropsAvailability:
+      type: object
+      required: [status, message, available]
+      properties:
+        status: { type: string, const: unavailable }
+        message: { type: string }
+        available: { type: boolean, const: false }
     HealthStatus:
       type: object
       properties:

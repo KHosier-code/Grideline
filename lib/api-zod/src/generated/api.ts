@@ -663,3 +663,272 @@ export const UpdateSettingsResponse = zod.object({
 })
 
 
+/**
+ * Returns consumer-safe, persisted data only. It never starts data synchronization or model computation.
+ * @summary Read the persisted consumer game dashboard
+ */
+export const GetConsumerDashboardResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date().nullable(),
+  "gameStatus": zod.string(),
+  "venue": zod.string().nullable(),
+  "matchup": zod.object({
+  "home": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+}),
+  "away": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+})
+}),
+  "finalScore": zod.object({
+  "home": zod.number().int().optional(),
+  "away": zod.number().int().optional()
+}).nullable(),
+  "prediction": zod.object({
+  "modelLabel": zod.literal("Gridline Production Model").optional(),
+  "projectedHomeScore": zod.number().nullish(),
+  "projectedAwayScore": zod.number().nullish(),
+  "projectedMargin": zod.number().nullish(),
+  "projectedTotal": zod.number().nullish(),
+  "homeWinProbability": zod.number().nullish(),
+  "awayWinProbability": zod.number().nullish()
+}).nullable(),
+  "market": zod.object({
+  "spread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "moneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "total": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()])
+}),
+  "dataConfidence": zod.object({
+  "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
+  "score": zod.number().nullable(),
+  "reason": zod.string().nullable()
+}),
+  "availability": zod.object({
+  "prediction": zod.string().nullable(),
+  "market": zod.string().nullable()
+})
+})),
+  "note": zod.string()
+})
+
+
+/**
+ * @summary Read consumer-safe persisted games
+ */
+export const listConsumerGamesQuerySeasonMin = 2020;
+
+export const listConsumerGamesQueryWeekMax = 22;
+
+
+
+export const ListConsumerGamesQueryParams = zod.object({
+  "season": zod.coerce.number().int().min(listConsumerGamesQuerySeasonMin).optional(),
+  "week": zod.coerce.number().int().min(1).max(listConsumerGamesQueryWeekMax).optional()
+})
+
+export const ListConsumerGamesResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date().nullable(),
+  "gameStatus": zod.string(),
+  "venue": zod.string().nullable(),
+  "matchup": zod.object({
+  "home": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+}),
+  "away": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+})
+}),
+  "finalScore": zod.object({
+  "home": zod.number().int().optional(),
+  "away": zod.number().int().optional()
+}).nullable(),
+  "prediction": zod.object({
+  "modelLabel": zod.literal("Gridline Production Model").optional(),
+  "projectedHomeScore": zod.number().nullish(),
+  "projectedAwayScore": zod.number().nullish(),
+  "projectedMargin": zod.number().nullish(),
+  "projectedTotal": zod.number().nullish(),
+  "homeWinProbability": zod.number().nullish(),
+  "awayWinProbability": zod.number().nullish()
+}).nullable(),
+  "market": zod.object({
+  "spread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "moneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "total": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()])
+}),
+  "dataConfidence": zod.object({
+  "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
+  "score": zod.number().nullable(),
+  "reason": zod.string().nullable()
+}),
+  "availability": zod.object({
+  "prediction": zod.string().nullable(),
+  "market": zod.string().nullable()
+})
+}))
+})
+
+
+/**
+ * @summary Read a consumer-safe persisted game detail
+ */
+export const GetConsumerGameParams = zod.object({
+  "gameId": zod.coerce.string()
+})
+
+export const GetConsumerGameResponse = zod.object({
+  "gameId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date().nullable(),
+  "gameStatus": zod.string(),
+  "venue": zod.string().nullable(),
+  "matchup": zod.object({
+  "home": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+}),
+  "away": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+})
+}),
+  "finalScore": zod.object({
+  "home": zod.number().int().optional(),
+  "away": zod.number().int().optional()
+}).nullable(),
+  "prediction": zod.object({
+  "modelLabel": zod.literal("Gridline Production Model").optional(),
+  "projectedHomeScore": zod.number().nullish(),
+  "projectedAwayScore": zod.number().nullish(),
+  "projectedMargin": zod.number().nullish(),
+  "projectedTotal": zod.number().nullish(),
+  "homeWinProbability": zod.number().nullish(),
+  "awayWinProbability": zod.number().nullish()
+}).nullable(),
+  "market": zod.object({
+  "spread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "moneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "total": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()])
+}),
+  "dataConfidence": zod.object({
+  "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
+  "score": zod.number().nullable(),
+  "reason": zod.string().nullable()
+}),
+  "availability": zod.object({
+  "prediction": zod.string().nullable(),
+  "market": zod.string().nullable()
+})
+}).and(zod.object({
+  "weather": zod.record(zod.string(), zod.unknown()).nullable(),
+  "analysis": zod.object({
+  "drivers": zod.array(zod.string()),
+  "availability": zod.object({
+  "weather": zod.string().nullable(),
+  "personnel": zod.string().nullable()
+})
+})
+}))
+
+
+/**
+ * @summary Read consumer-safe persisted performance
+ */
+export const GetConsumerPerformanceResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "officialPredictions": zod.number().int(),
+  "gradedPredictions": zod.number().int(),
+  "byFamily": zod.record(zod.string(), zod.unknown()),
+  "breakdowns": zod.record(zod.string(), zod.unknown()),
+  "note": zod.string()
+})
+
+
+/**
+ * @summary Read consumer-safe performance trends
+ */
+export const GetConsumerTrendsResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "byWeek": zod.array(zod.record(zod.string(), zod.unknown())),
+  "byConfidence": zod.array(zod.record(zod.string(), zod.unknown())),
+  "byEdge": zod.array(zod.record(zod.string(), zod.unknown())),
+  "note": zod.string()
+})
+
+
+/**
+ * Player props are intentionally not available in V1.
+ * @summary Read player props availability
+ */
+export const GetConsumerPropsAvailabilityResponse = zod.object({
+  "status": zod.literal("unavailable"),
+  "message": zod.string(),
+  "available": zod.literal(false)
+})
+
+

@@ -5,6 +5,217 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+export type ConsumerErrorCode = typeof ConsumerErrorCode[keyof typeof ConsumerErrorCode];
+
+
+export const ConsumerErrorCode = {
+  consumer_data_unavailable: 'consumer_data_unavailable',
+  invalid_request: 'invalid_request',
+  game_not_found: 'game_not_found',
+} as const;
+
+export interface ConsumerError {
+  error: string;
+  code: ConsumerErrorCode;
+}
+
+export interface ConsumerTeam {
+  name: string;
+  abbreviation: string;
+  /** @nullable */
+  logoUrl: string | null;
+}
+
+export interface ConsumerMarketQuote {
+  sportsbook: string;
+  /** @nullable */
+  point: number | null;
+  price: number;
+  /** @nullable */
+  capturedAt: string | null;
+}
+
+export type ConsumerGameMatchup = {
+  home: ConsumerTeam;
+  away: ConsumerTeam;
+};
+
+/**
+ * @nullable
+ */
+export type ConsumerGameFinalScore = {
+  home?: number;
+  away?: number;
+} | null;
+
+/**
+ * @nullable
+ */
+export type ConsumerGamePrediction = {
+  modelLabel?: 'Gridline Production Model';
+  /** @nullable */
+  projectedHomeScore?: number | null;
+  /** @nullable */
+  projectedAwayScore?: number | null;
+  /** @nullable */
+  projectedMargin?: number | null;
+  /** @nullable */
+  projectedTotal?: number | null;
+  /** @nullable */
+  homeWinProbability?: number | null;
+  /** @nullable */
+  awayWinProbability?: number | null;
+} | null;
+
+export type ConsumerGameMarket = {
+  spread: ConsumerMarketQuote | null;
+  moneyline: ConsumerMarketQuote | null;
+  total: ConsumerMarketQuote | null;
+};
+
+export type ConsumerGameDataConfidenceLabel = typeof ConsumerGameDataConfidenceLabel[keyof typeof ConsumerGameDataConfidenceLabel];
+
+
+export const ConsumerGameDataConfidenceLabel = {
+  Updating: 'Updating',
+  Limited: 'Limited',
+  Moderate: 'Moderate',
+  Standard: 'Standard',
+} as const;
+
+export type ConsumerGameDataConfidence = {
+  label: ConsumerGameDataConfidenceLabel;
+  /** @nullable */
+  score: number | null;
+  /** @nullable */
+  reason: string | null;
+};
+
+export type ConsumerGameAvailability = {
+  /** @nullable */
+  prediction: string | null;
+  /** @nullable */
+  market: string | null;
+};
+
+export interface ConsumerGame {
+  gameId: string;
+  season: number;
+  week: number;
+  /** @nullable */
+  kickoffTime: string | null;
+  gameStatus: string;
+  /** @nullable */
+  venue: string | null;
+  matchup: ConsumerGameMatchup;
+  /** @nullable */
+  finalScore: ConsumerGameFinalScore;
+  /** @nullable */
+  prediction: ConsumerGamePrediction;
+  market: ConsumerGameMarket;
+  dataConfidence: ConsumerGameDataConfidence;
+  availability: ConsumerGameAvailability;
+}
+
+export type ConsumerGamesStatus = typeof ConsumerGamesStatus[keyof typeof ConsumerGamesStatus];
+
+
+export const ConsumerGamesStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+export interface ConsumerGames {
+  status: ConsumerGamesStatus;
+  games: ConsumerGame[];
+}
+
+export type ConsumerDashboardStatus = typeof ConsumerDashboardStatus[keyof typeof ConsumerDashboardStatus];
+
+
+export const ConsumerDashboardStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+export interface ConsumerDashboard {
+  status: ConsumerDashboardStatus;
+  games: ConsumerGame[];
+  note: string;
+}
+
+/**
+ * @nullable
+ */
+export type ConsumerGameDetailWeather = { [key: string]: unknown } | null;
+
+export type ConsumerGameDetailAnalysisAvailability = {
+  /** @nullable */
+  weather: string | null;
+  /** @nullable */
+  personnel: string | null;
+};
+
+export type ConsumerGameDetailAnalysis = {
+  drivers: string[];
+  availability: ConsumerGameDetailAnalysisAvailability;
+};
+
+export type ConsumerGameDetail = ConsumerGame & {
+  /** @nullable */
+  weather: ConsumerGameDetailWeather;
+  analysis: ConsumerGameDetailAnalysis;
+};
+
+export type ConsumerPerformanceStatus = typeof ConsumerPerformanceStatus[keyof typeof ConsumerPerformanceStatus];
+
+
+export const ConsumerPerformanceStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerPerformanceByFamily = { [key: string]: unknown };
+
+export type ConsumerPerformanceBreakdowns = { [key: string]: unknown };
+
+export interface ConsumerPerformance {
+  status: ConsumerPerformanceStatus;
+  officialPredictions: number;
+  gradedPredictions: number;
+  byFamily: ConsumerPerformanceByFamily;
+  breakdowns: ConsumerPerformanceBreakdowns;
+  note: string;
+}
+
+export type ConsumerTrendsStatus = typeof ConsumerTrendsStatus[keyof typeof ConsumerTrendsStatus];
+
+
+export const ConsumerTrendsStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerTrendsByWeekItem = { [key: string]: unknown };
+
+export type ConsumerTrendsByConfidenceItem = { [key: string]: unknown };
+
+export type ConsumerTrendsByEdgeItem = { [key: string]: unknown };
+
+export interface ConsumerTrends {
+  status: ConsumerTrendsStatus;
+  byWeek: ConsumerTrendsByWeekItem[];
+  byConfidence: ConsumerTrendsByConfidenceItem[];
+  byEdge: ConsumerTrendsByEdgeItem[];
+  note: string;
+}
+
+export interface ConsumerPropsAvailability {
+  status: 'unavailable';
+  message: string;
+  available: false;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -666,6 +877,21 @@ export interface PregameFeatureBuildInput {
   featureVersion?: PregameFeatureBuildInputFeatureVersion;
 }
 
+/**
+ * Consumer data is temporarily unavailable
+ */
+export type ConsumerDataUnavailableResponse = ConsumerError;
+
+/**
+ * Invalid consumer request
+ */
+export type ConsumerInvalidRequestResponse = ConsumerError;
+
+/**
+ * Consumer game unavailable
+ */
+export type ConsumerGameNotFoundResponse = ConsumerError;
+
 export type ListGamesParams = {
 /**
  * @minimum 2020
@@ -730,5 +956,17 @@ week?: number;
  * @maximum 1000
  */
 limit?: number;
+};
+
+export type ListConsumerGamesParams = {
+/**
+ * @minimum 2020
+ */
+season?: number;
+/**
+ * @minimum 1
+ * @maximum 22
+ */
+week?: number;
 };
 

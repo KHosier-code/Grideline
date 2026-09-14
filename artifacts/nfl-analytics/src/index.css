@@ -72,69 +72,51 @@
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
 
-  /* Automatic computation of border around primary / danger buttons */
-  --opaque-button-border-intensity: -8; /* In terms of percentages */
+  --opaque-button-border-intensity: -8;
 
-  /* Backgrounds applied on top of other backgrounds when hovered/active */
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 219 32% 95%;
-
+  --background: 0 0% 98%;
   --foreground: 222 34% 15%;
 
   --border: 216 23% 86%;
 
   --card: 0 0% 100%;
-
   --card-foreground: 222 34% 15%;
-
   --card-border: 216 23% 86%;
 
-  --sidebar: 222 34% 15%;
-
+  --sidebar: 222 34% 12%;
   --sidebar-foreground: 216 25% 84%;
-
   --sidebar-border: 222 27% 24%;
-
   --sidebar-primary: 24 92% 59%;
-
   --sidebar-primary-foreground: 222 34% 15%;
-
   --sidebar-accent: 222 27% 24%;
-
   --sidebar-accent-foreground: 0 0% 100%;
-
   --sidebar-ring: 24 92% 59%;
 
   --popover: 0 0% 100%;
-
   --popover-foreground: 222 34% 15%;
-
   --popover-border: 216 23% 86%;
 
   --primary: 222 34% 15%;
-
   --primary-foreground: 0 0% 100%;
 
   --secondary: 219 32% 91%;
-
   --secondary-foreground: 222 34% 15%;
 
   --muted: 219 32% 91%;
-
   --muted-foreground: 216 13% 45%;
 
   --accent: 24 92% 59%;
+  --accent-foreground: 0 0% 100%;
 
-  --accent-foreground: 222 34% 15%;
-
-  --destructive: 0 66% 52%;
-
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
   --input: 216 23% 82%;
   --ring: 24 92% 59%;
+
   --chart-1: 24 92% 59%;
   --chart-2: 169 47% 42%;
   --chart-3: 205 65% 48%;
@@ -144,7 +126,8 @@
   --app-font-sans: 'Manrope', sans-serif;
   --app-font-serif: 'Space Grotesk', sans-serif;
   --app-font-mono: 'DM Mono', monospace;
-  --radius: 0.5rem; /* 8px */
+  --radius: 0.75rem;
+
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
   --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
   --shadow-sm:
@@ -222,74 +205,56 @@
   --button-outline: rgba(255, 255, 255, 0.1);
   --badge-outline: rgba(255, 255, 255, 0.05);
 
-  --opaque-button-border-intensity: 9; /* In terms of percentages */
+  --opaque-button-border-intensity: 9;
 
-  /* Backgrounds applied on top of other backgrounds when hovered/active */
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
-  --background: 222 34% 15%;
-
+  --background: 222 34% 8%;
   --foreground: 219 32% 95%;
 
-  --border: 222 27% 24%;
+  --border: 222 27% 18%;
 
-  --card: 222 29% 19%;
-
+  --card: 222 34% 11%;
   --card-foreground: 219 32% 95%;
+  --card-border: 222 27% 18%;
 
-  --card-border: 222 27% 28%;
-
-  --sidebar: 222 38% 10%;
-
+  --sidebar: 222 38% 8%;
   --sidebar-foreground: 216 25% 84%;
-
-  --sidebar-border: 222 27% 20%;
-
+  --sidebar-border: 222 27% 16%;
   --sidebar-primary: 24 92% 59%;
-
   --sidebar-primary-foreground: 222 34% 15%;
-
-  --sidebar-accent: 222 27% 20%;
-
+  --sidebar-accent: 222 27% 16%;
   --sidebar-accent-foreground: 219 32% 95%;
-
   --sidebar-ring: 24 92% 59%;
 
-  --popover: 222 29% 19%;
-
+  --popover: 222 29% 11%;
   --popover-foreground: 219 32% 95%;
-
-  --popover-border: 222 27% 28%;
+  --popover-border: 222 27% 18%;
 
   --primary: 24 92% 59%;
-
   --primary-foreground: 222 34% 15%;
 
-  --secondary: 222 27% 24%;
-
+  --secondary: 222 27% 18%;
   --secondary-foreground: 219 32% 95%;
 
-  --muted: 222 27% 24%;
-
+  --muted: 222 27% 16%;
   --muted-foreground: 216 18% 67%;
 
   --accent: 169 47% 42%;
-
   --accent-foreground: 222 34% 15%;
 
   --destructive: 0 60% 55%;
-
   --destructive-foreground: 219 32% 95%;
 
-  /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
-  --input: 222 27% 31%;
+  --input: 222 27% 20%;
   --ring: 24 92% 59%;
   --chart-1: 24 92% 59%;
   --chart-2: 169 47% 42%;
   --chart-3: 205 65% 48%;
   --chart-4: 45 88% 57%;
   --chart-5: 280 42% 58%;
+
 
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
   --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);

@@ -85,7 +85,7 @@ router.post("/odds/capture", requireAdmin, async (req, res): Promise<void> => {
   }
 });
 
-router.get("/odds/audit", async (req, res): Promise<void> => {
+router.get("/odds/audit", requireAdmin, async (req, res): Promise<void> => {
   const parsed = ListOddsAuditsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

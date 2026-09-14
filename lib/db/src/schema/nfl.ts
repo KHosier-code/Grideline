@@ -250,6 +250,10 @@ export const modelTrainingRunsTable = pgTable("model_training_runs", {
  */
 export const modelEvaluationPredictionsTable = pgTable("model_evaluation_predictions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // A walk-forward evaluation may contain family-specific model runs. This
+  // stable grouping key ties those append-only rows to the same evaluation
+  // without treating a model version as a consumer-facing identifier.
+  evaluationRunId: text("evaluation_run_id"),
   modelVersion: text("model_version").notNull().references(() => modelTrainingRunsTable.modelVersion),
   family: text("family").notNull(),
   algorithm: text("algorithm").notNull(),
@@ -263,6 +267,8 @@ export const modelEvaluationPredictionsTable = pgTable("model_evaluation_predict
   trainingSeasons: jsonb("training_seasons").$type<number[]>().notNull().default([]),
   trainingCutoff: text("training_cutoff").notNull(),
   gameStage: text("game_stage").notNull(),
+  homeTeamId: text("home_team_id"),
+  awayTeamId: text("away_team_id"),
   homeFeatureSourceCutoff: timestamp("home_feature_source_cutoff", { withTimezone: true }).notNull(),
   awayFeatureSourceCutoff: timestamp("away_feature_source_cutoff", { withTimezone: true }).notNull(),
   lowSample: boolean("low_sample").notNull(),
@@ -273,12 +279,34 @@ export const modelEvaluationPredictionsTable = pgTable("model_evaluation_predict
   actualMargin: doublePrecision("actual_margin").notNull(),
   actualTotal: doublePrecision("actual_total").notNull(),
   actualHomeWin: doublePrecision("actual_home_win").notNull(),
+  // Family-independent fields make the retained evidence explicit. A field
+  // remains null when that family did not produce it; it is never imputed.
+  projectedHomeWinProbability: doublePrecision("projected_home_win_probability"),
+  projectedAwayWinProbability: doublePrecision("projected_away_win_probability"),
+  projectedMargin: doublePrecision("projected_margin"),
+  projectedTotal: doublePrecision("projected_total"),
   marketSportsbook: text("market_sportsbook"),
   marketName: text("market_name"),
   marketSelection: text("market_selection"),
   marketPoint: doublePrecision("market_point"),
   marketPrice: integer("market_price"),
   marketObservedAt: timestamp("market_observed_at", { withTimezone: true }),
+  marketEvidence: jsonb("market_evidence").$type<Array<{
+    sportsbook: string;
+    market: string;
+    selection: string;
+    point: number | null;
+    price: number;
+    observedAt: string;
+  }>>(),
+  closingMarketEvidence: jsonb("closing_market_evidence").$type<Array<{
+    sportsbook: string;
+    market: string;
+    selection: string;
+    point: number | null;
+    price: number;
+    observedAt: string;
+  }>>(),
   evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique("model_evaluation_prediction_version_game_unique").on(table.modelVersion, table.gameId),

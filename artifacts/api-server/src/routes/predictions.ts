@@ -4,7 +4,7 @@ import { requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
 
-router.get("/predictions/live", async (_req, res): Promise<void> => {
+router.get("/predictions/live", requireAdmin, async (_req, res): Promise<void> => {
   try {
     res.json({ status: "success", predictions: await getLivePredictionBoard() });
   } catch (error) {
@@ -12,7 +12,7 @@ router.get("/predictions/live", async (_req, res): Promise<void> => {
   }
 });
 
-router.get("/predictions/current-week", async (_req, res): Promise<void> => {
+router.get("/predictions/current-week", requireAdmin, async (_req, res): Promise<void> => {
   try {
     res.json(await getCurrentWeekValidationReport());
   } catch (error) {
@@ -20,9 +20,10 @@ router.get("/predictions/current-week", async (_req, res): Promise<void> => {
   }
 });
 
-router.get("/predictions/games/:gameId", async (req, res): Promise<void> => {
+router.get("/predictions/games/:gameId", requireAdmin, async (req, res): Promise<void> => {
   try {
-    const detail = await getGamePredictionDetail(req.params.gameId);
+    const gameId = Array.isArray(req.params.gameId) ? req.params.gameId[0] : req.params.gameId;
+    const detail = await getGamePredictionDetail(gameId);
     if (!detail) {
       res.status(404).json({ error: "Game not found" });
       return;
@@ -33,7 +34,7 @@ router.get("/predictions/games/:gameId", async (req, res): Promise<void> => {
   }
 });
 
-router.get("/predictions/validation-failures", async (req, res): Promise<void> => {
+router.get("/predictions/validation-failures", requireAdmin, async (req, res): Promise<void> => {
   try {
     const requestedLimit = Number(req.query.limit ?? 50);
     res.json({
@@ -45,7 +46,7 @@ router.get("/predictions/validation-failures", async (req, res): Promise<void> =
   }
 });
 
-router.get("/predictions/performance", async (_req, res): Promise<void> => {
+router.get("/predictions/performance", requireAdmin, async (_req, res): Promise<void> => {
   try {
     res.json(await getPredictionPerformance());
   } catch (error) {
@@ -53,7 +54,7 @@ router.get("/predictions/performance", async (_req, res): Promise<void> => {
   }
 });
 
-router.get("/predictions/reports", async (_req, res): Promise<void> => {
+router.get("/predictions/reports", requireAdmin, async (_req, res): Promise<void> => {
   try {
     res.json({ reports: await getLatestLearningReports() });
   } catch (error) {

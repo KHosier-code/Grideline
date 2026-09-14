@@ -13,10 +13,11 @@ import { nextFeedUpdate } from "../lib/feed-schedule";
 import { getFeedGameDays } from "../lib/feed-game-days";
 import { getProductionModelStatus } from "../lib/live-predictions";
 import { weatherHealth } from "../lib/weather";
+import { requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
 
-router.get("/dashboard/summary", async (req, res): Promise<void> => {
+router.get("/dashboard/summary", requireAdmin, async (req, res): Promise<void> => {
   const { season, week } = await resolveCurrentSeasonWeek();
   const modelStatus = await getProductionModelStatus();
   let gamesThisWeek = 0;
@@ -42,7 +43,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   );
 });
 
-router.get("/data-health", async (req, res): Promise<void> => {
+router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
   const espn = getEspnHealth();
   const schedule = await getScheduleHealth();
   const nflverse = await getNflverseHealth();

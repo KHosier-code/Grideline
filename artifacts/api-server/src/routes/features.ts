@@ -17,17 +17,18 @@ type ChallengerReadinessResult = Awaited<ReturnType<typeof getChallengerReadines
 let challengerReadinessCache: { expiresAt: number; value: ChallengerReadinessResult } | null = null;
 let challengerReadinessRequest: Promise<ChallengerReadinessResult> | null = null;
 
-router.get("/features/pregame/health", async (req, res): Promise<void> => {
+router.get("/features/pregame/health", requireAdmin, async (req, res): Promise<void> => {
   const featureVersion = typeof req.query.featureVersion === "string" ? req.query.featureVersion : undefined;
   res.json(await getPregameFeatureHealth(featureVersion));
 });
 
-router.get("/features/pregame/game/:gameId", async (req, res): Promise<void> => {
+router.get("/features/pregame/game/:gameId", requireAdmin, async (req, res): Promise<void> => {
   const featureVersion = typeof req.query.featureVersion === "string" ? req.query.featureVersion : undefined;
-  res.json(await getPregameFeaturesForGame(req.params.gameId, featureVersion));
+  const gameId = Array.isArray(req.params.gameId) ? req.params.gameId[0] : req.params.gameId;
+  res.json(await getPregameFeaturesForGame(gameId, featureVersion));
 });
 
-router.get("/features/audit", async (req, res): Promise<void> => {
+router.get("/features/audit", requireAdmin, async (req, res): Promise<void> => {
   const numberParam = (key: string) => {
     const value = req.query[key];
     return typeof value === "string" && Number.isInteger(Number(value)) ? Number(value) : undefined;
@@ -43,7 +44,7 @@ router.get("/features/audit", async (req, res): Promise<void> => {
   res.json(rows.slice(0, Math.max(1, Math.min(limit, 2000))));
 });
 
-router.get("/features/personnel-context/game/:gameId", async (req, res): Promise<void> => {
+router.get("/features/personnel-context/game/:gameId", requireAdmin, async (req, res): Promise<void> => {
   const gameId = Array.isArray(req.params.gameId) ? req.params.gameId[0] : req.params.gameId;
   const context = await getPersonnelContextForGame(gameId);
   if (!context) {
@@ -53,7 +54,7 @@ router.get("/features/personnel-context/game/:gameId", async (req, res): Promise
   res.json(context);
 });
 
-router.get("/features/personnel-context/audit", async (req, res): Promise<void> => {
+router.get("/features/personnel-context/audit", requireAdmin, async (req, res): Promise<void> => {
   const numberParam = (key: string) => {
     const value = req.query[key];
     return typeof value === "string" && Number.isInteger(Number(value)) ? Number(value) : undefined;
@@ -68,7 +69,7 @@ router.get("/features/personnel-context/audit", async (req, res): Promise<void> 
   res.json(rows.slice(0, Math.max(1, Math.min(limit, 1000))));
 });
 
-router.get("/features/personnel-context/coverage", async (_req, res): Promise<void> => {
+router.get("/features/personnel-context/coverage", requireAdmin, async (_req, res): Promise<void> => {
   if (personnelCoverageCache && personnelCoverageCache.expiresAt > Date.now()) {
     res.json(personnelCoverageCache.value);
     return;
@@ -81,7 +82,7 @@ router.get("/features/personnel-context/coverage", async (_req, res): Promise<vo
   res.json(value);
 });
 
-router.get("/features/personnel-context/challenger-readiness", async (_req, res): Promise<void> => {
+router.get("/features/personnel-context/challenger-readiness", requireAdmin, async (_req, res): Promise<void> => {
   if (challengerReadinessCache && challengerReadinessCache.expiresAt > Date.now()) {
     res.json(challengerReadinessCache.value);
     return;

@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, inArray, lt } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import {
   db,
   modelEvaluationPredictionsTable,
@@ -396,6 +397,13 @@ export function assertCompleteModelEvaluationBundle(bundle: ModelEvaluationBundl
       `Incomplete model evaluation evidence for ${bundle.run.modelVersion}: expected ${bundle.run.sampleSize}, received ${bundle.evidence.length}`,
     );
   }
+  const gameIds = new Set(bundle.evidence.map((row) => row.gameId));
+  if (gameIds.size !== bundle.evidence.length) {
+    throw new Error(`Duplicate game evidence for ${bundle.run.modelVersion}`);
+  }
+  if (bundle.evidence.some((row) => row.modelVersion !== bundle.run.modelVersion)) {
+    throw new Error(`Mismatched game evidence for ${bundle.run.modelVersion}`);
+  }
 }
 
 export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION) {
@@ -413,6 +421,7 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
     else oddsByGame.set(quote.gameId, [quote]);
   }
   const availableSeasons = TEST_SEASONS.filter((season) => examples.some((example) => example.season === season));
+  const evaluationRunId = `phase4-evaluation-${randomUUID()}`;
   const runs: ModelEvaluationBundle[] = [];
   const families: Array<{ family: Family; algorithms: Algorithm[]; target: (example: Example) => number; classification: boolean }> = [
     { family: "spread", algorithms: ["linear_regression", "random_forest", "gradient_boosting"], target: (example) => example.margin, classification: false },
@@ -457,10 +466,28 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
             } satisfies typeof modelTrainingRunsTable.$inferInsert;
             const evidence = testRows.map((example, index) => {
               const marketName = config.family === "totals" ? "total" : config.family;
-              const quote = (oddsByGame.get(example.gameId) ?? [])
+              const gameQuotes = oddsByGame.get(example.gameId) ?? [];
+              const quote = gameQuotes
                 .filter((candidate) => candidate.market === marketName && candidate.capturedAt < example.kickoffTime)
                 .at(-1);
+              const latestEvidenceAt = (cutoff: Date) => {
+                const latest = new Map<string, typeof gameQuotes[number]>();
+                for (const candidate of gameQuotes) {
+                  if (candidate.capturedAt >= cutoff) continue;
+                  const key = `${candidate.sportsbook}:${candidate.market}:${candidate.selection}`;
+                  latest.set(key, candidate);
+                }
+                return [...latest.values()].map((candidate) => ({
+                  sportsbook: candidate.sportsbook,
+                  market: candidate.market,
+                  selection: candidate.selection,
+                  point: candidate.point,
+                  price: candidate.price,
+                  observedAt: candidate.capturedAt.toISOString(),
+                }));
+              };
               return {
+                evaluationRunId,
                 modelVersion,
                 family: config.family,
                 algorithm,
@@ -474,6 +501,8 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
                 trainingSeasons,
                 trainingCutoff,
                 gameStage: example.gameStage,
+                homeTeamId: example.homeTeamId,
+                awayTeamId: example.awayTeamId,
                 homeFeatureSourceCutoff: example.homeFeatureSourceCutoff,
                 awayFeatureSourceCutoff: example.awayFeatureSourceCutoff,
                 lowSample: example.lowSample,
@@ -484,12 +513,20 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
                 actualMargin: example.margin,
                 actualTotal: example.total,
                 actualHomeWin: example.homeWin,
+                projectedHomeWinProbability: config.family === "moneyline" ? predicted[index] : null,
+                projectedAwayWinProbability: config.family === "moneyline" ? 1 - predicted[index] : null,
+                projectedMargin: config.family === "spread" ? predicted[index] : null,
+                projectedTotal: config.family === "totals" ? predicted[index] : null,
                 marketSportsbook: quote?.sportsbook ?? null,
                 marketName: quote?.market ?? null,
                 marketSelection: quote?.selection ?? null,
                 marketPoint: quote?.point ?? null,
                 marketPrice: quote?.price ?? null,
                 marketObservedAt: quote?.capturedAt ?? null,
+                // Both are persisted observation evidence, never generated
+                // lines. Closing evidence is only a genuine pre-kickoff quote.
+                marketEvidence: latestEvidenceAt(example.kickoffTime),
+                closingMarketEvidence: latestEvidenceAt(example.kickoffTime),
               };
             });
             runs.push({ run, evidence });

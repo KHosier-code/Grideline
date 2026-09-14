@@ -6,6 +6,7 @@ import { generateLivePredictions, getModelDriftMonitoring } from "../lib/live-pr
 import { getModelEvaluationAudit, getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate, type Family } from "../lib/modeling";
 import { PromotionSafetyGateError, runPromotionSafetyGate, type PromotionSafetyGateResult } from "../lib/promotion-safety-gate";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
+import { getLifecycleVerificationReport } from "../lib/lifecycle-verification";
 
 const router: IRouter = Router();
 type TrainingRun = typeof modelTrainingRunsTable.$inferSelect;
@@ -118,7 +119,7 @@ router.get("/auth/admin-status", (req, res): void => {
   res.json(getAdminAuthStatus(req));
 });
 
-router.get("/models/lab", async (_req, res): Promise<void> => {
+router.get("/models/lab", requireAdmin, async (_req, res): Promise<void> => {
   try {
     res.json(await getPhase4ModelLab());
   } catch (error) {
@@ -126,7 +127,7 @@ router.get("/models/lab", async (_req, res): Promise<void> => {
   }
 });
 
-router.get("/models/evaluations/audit", async (req, res): Promise<void> => {
+router.get("/models/evaluations/audit", requireAdmin, async (req, res): Promise<void> => {
   try {
     const family = typeof req.query.family === "string" && ["spread", "moneyline", "totals"].includes(req.query.family)
       ? req.query.family as Family
@@ -168,7 +169,7 @@ router.post("/models/refit-production", requireAdmin, async (req, res): Promise<
   }
 });
 
-router.get("/models/promotions", async (_req, res): Promise<void> => {
+router.get("/models/promotions", requireAdmin, async (_req, res): Promise<void> => {
   try {
     const history = await db.select().from(modelPromotionHistoryTable)
       .orderBy(desc(modelPromotionHistoryTable.promotedAt), desc(modelPromotionHistoryTable.id));
@@ -180,11 +181,20 @@ router.get("/models/promotions", async (_req, res): Promise<void> => {
   }
 });
 
-router.get("/models/drift", async (_req, res): Promise<void> => {
+router.get("/models/drift", requireAdmin, async (_req, res): Promise<void> => {
   try {
     res.json(await getModelDriftMonitoring());
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Model drift unavailable" });
+  }
+});
+
+router.get("/admin/lifecycle-verification", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    res.json(await getLifecycleVerificationReport());
+  } catch (error) {
+    req.log.error({ error }, "Lifecycle verification read failed");
+    res.status(503).json({ error: "Lifecycle verification is temporarily unavailable." });
   }
 });
 

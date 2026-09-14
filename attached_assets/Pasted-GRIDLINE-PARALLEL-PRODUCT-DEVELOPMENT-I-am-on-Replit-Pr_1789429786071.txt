@@ -1,0 +1,352 @@
+GRIDLINE — PARALLEL PRODUCT DEVELOPMENT
+
+I am on Replit Pro and want this work executed using PARALLEL TASKS.
+
+Do not execute this entire request sequentially in one Agent thread.
+
+Before implementation:
+
+1. Break the work below into FOUR independent parallel tasks.
+2. Create each task in its own isolated task environment.
+3. Run the four tasks concurrently where Replit supports it.
+4. Do not merge/apply any task automatically without review.
+5. Minimize overlapping file ownership between tasks.
+6. If two tasks need to modify the same core file, identify that conflict before applying either task.
+7. Preserve the current working production application.
+
+IMPORTANT GLOBAL RULES
+
+Across ALL tasks:
+
+- Do not retrain or promote production models.
+- Do not change active Phase 6 model behavior.
+- Do not modify existing production predictions.
+- Do not alter sportsbook history.
+- Do not weaken Clerk authentication or administrator authorization.
+- Do not change scheduler ownership.
+- Do not add new paid providers.
+- Do not add player props yet.
+- Do not add wagering automation.
+- Do not fabricate missing data.
+- Preserve all point-in-time and leakage protections.
+
+==================================================
+PARALLEL TASK 1 — CONSUMER UI FOUNDATION
+==================================================
+
+Goal:
+Build the first polished consumer-facing Gridline experience.
+
+This task should focus primarily on frontend/UI files.
+
+Create clear separation between:
+
+CONSUMER:
+- Home
+- Games
+- Game Detail
+- Performance
+- Trends
+- Props placeholder
+
+ADMIN:
+- Model Lab
+- Data Health
+- Personnel & Context
+- Feature Audit
+- Backtesting
+- Scheduler diagnostics
+- Settings
+
+Consumer users must NOT see:
+
+- raw JSON
+- stack traces
+- SQL
+- source code
+- migration information
+- scheduler internals
+- provider error payloads
+- giant internal model IDs
+- database IDs
+- developer debugging output
+
+Replace technical errors with polished consumer states such as:
+
+- Sportsbook line updating
+- Weather not yet available
+- Player information temporarily unavailable
+- Prediction data is being refreshed
+- No current market available
+
+Build:
+
+1. Consumer navigation
+2. Consumer homepage
+3. Game cards
+4. Consumer game-detail layout
+5. Responsive mobile layout
+6. Loading states
+7. Empty states
+8. Consumer-safe error states
+
+Game cards should prioritize:
+
+- matchup
+- kickoff
+- current market
+- Gridline projected score
+- win probability
+- projected margin
+- projected total
+- Data Confidence
+- major personnel/injury alert
+- weather when relevant
+
+Game Detail should use progressive disclosure.
+
+Top section:
+- matchup
+- records if available
+- kickoff
+- venue
+- market
+- projected score
+- projected margin
+- projected total
+- win probabilities
+- Data Confidence
+
+Then expandable analysis:
+- QB context
+- personnel
+- injuries
+- OL continuity
+- weather
+- rest
+- market movement
+
+Do not redesign Admin pages in this task.
+
+==================================================
+PARALLEL TASK 2 — EVALUATION RETENTION & PERFORMANCE
+==================================================
+
+Goal:
+Ensure all future model evaluations retain immutable game-level results so Gridline can provide legitimate weekly and game-by-game historical analysis.
+
+Focus on database/evaluation/reporting code.
+
+For every future walk-forward or challenger evaluation, persist:
+
+- evaluation run ID
+- model family
+- model version
+- algorithm
+- feature version
+- training seasons
+- test season
+- game ID
+- week
+- kickoff
+- home/away teams
+- actual scores
+- actual margin
+- actual total
+- projected win probabilities
+- projected margin
+- projected total
+- sample quality
+- feature cutoff
+
+If legitimate market data exists:
+- spread
+- spread price
+- moneyline
+- total
+- total prices
+- sportsbook
+- market timestamp
+- closing reference
+
+Derived fields:
+- winner correct/incorrect
+- absolute margin error
+- absolute total error
+- ATS only with legitimate spread
+- O/U only with legitimate total
+- CLV only with legitimate closing line
+
+Requirements:
+
+- append-only
+- no overwrites
+- no future leakage
+- no reconstructed fake 2025 predictions
+- do not retrain models during this task
+
+Create reporting support for:
+
+- season
+- week
+- game
+- cumulative results
+- calibration
+- model comparison
+- future edge buckets
+
+Keep this work independent from Consumer UI whenever possible.
+
+==================================================
+PARALLEL TASK 3 — PRODUCTION STABILITY & QA
+==================================================
+
+Goal:
+Protect Gridline production reliability.
+
+Audit and verify:
+
+- personnel-context concurrency limits
+- shared context calculated once per game
+- DB pool utilization
+- API responsiveness during worker runs
+- worker-only scheduler ownership
+- v4 feature scheduling
+- prediction freeze
+- grading pipeline
+- result ingestion
+- CLV eligibility
+- Data Health
+- duplicate prevention
+
+Do not add new feature families.
+
+Create or extend regression tests for:
+
+- API responsiveness under worker load
+- database concurrency
+- prediction immutability
+- pregame cutoff safety
+- v4 idempotency
+- worker scheduling
+- grading safety
+
+Report any real production bug discovered.
+
+Fix only legitimate stability defects.
+
+==================================================
+PARALLEL TASK 4 — CONSUMER DATA/API LAYER
+==================================================
+
+Goal:
+Create a stable consumer-safe API/data layer between Gridline's technical backend and Consumer UI.
+
+Do NOT change prediction logic.
+
+Consumer responses should expose friendly fields such as:
+
+- teams
+- kickoff
+- projected score
+- projected margin
+- projected total
+- win probabilities
+- current market
+- Data Confidence
+- QB context
+- key injuries
+- personnel summary
+- weather
+- market movement
+- performance results
+
+Hide technical/internal fields from ordinary consumers:
+
+- raw provider responses
+- SQL errors
+- internal scheduler fields
+- migration state
+- full model UUID/version strings
+- stack traces
+- database IDs not needed by UI
+- internal rejection details
+
+Admin endpoints should retain full technical information.
+
+Consumer pages must not trigger expensive model calculations directly.
+
+Prefer persisted/precomputed results.
+
+Ensure API responses remain fast while the worker is active.
+
+==================================================
+COORDINATION RULES
+==================================================
+
+Before starting, return the four proposed parallel tasks and identify their expected file/domain ownership.
+
+Then start all four tasks concurrently.
+
+Try to keep ownership approximately:
+
+Task 1:
+Frontend consumer components/routes/styles
+
+Task 2:
+Evaluation persistence/reporting/database schema
+
+Task 3:
+Worker/scheduler/tests/stability
+
+Task 4:
+Consumer API/contracts/serialization
+
+Avoid editing the same files across multiple tasks when possible.
+
+If overlap becomes necessary:
+- flag it
+- finish the lower-level dependency first
+- use Replit's supported task merge/conflict workflow
+
+Do NOT create duplicate implementations.
+
+==================================================
+WHEN TASKS FINISH
+==================================================
+
+For EACH task, return:
+
+- what changed
+- files/domains affected
+- tests run
+- build status
+- screenshots/preview where applicable
+- known conflicts
+- whether it is safe to apply
+
+Do not automatically apply all four tasks at once.
+
+Recommend the safest application order.
+
+My expected merge order is approximately:
+
+1. Production Stability & QA
+2. Evaluation Retention
+3. Consumer Data/API Layer
+4. Consumer UI
+
+But change that order if actual dependencies require it.
+
+After all approved tasks are applied, run:
+
+- full workspace typecheck
+- API production build
+- frontend production build
+- prediction safety tests
+- leakage tests
+- scheduler tests
+- consumer API tests
+- mobile/desktop UI verification
+
+Confirm active Phase 6 production models remain unchanged.

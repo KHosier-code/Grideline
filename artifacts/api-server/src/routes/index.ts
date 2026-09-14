@@ -7,6 +7,7 @@ import dataSyncRouter from "./data-sync";
 import featuresRouter from "./features";
 import modelsRouter from "./models";
 import predictionsRouter from "./predictions";
+import consumerRouter from "./consumer";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(dataSyncRouter);
 router.use(featuresRouter);
 router.use(modelsRouter);
 router.use(predictionsRouter);
+router.use(consumerRouter);
 
 export default router;

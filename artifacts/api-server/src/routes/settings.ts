@@ -16,7 +16,7 @@ function safeSettings(settings: Awaited<ReturnType<typeof getAppSettings>>) {
   };
 }
 
-router.get("/settings", async (_req, res): Promise<void> => {
+router.get("/settings", requireAdmin, async (_req, res): Promise<void> => {
   res.json(GetSettingsResponse.parse(safeSettings(await getAppSettings())));
 });
 

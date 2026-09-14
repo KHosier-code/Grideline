@@ -1,0 +1,320 @@
+GRIDLINE — FINAL V1 HARDENING + CONSUMER PRODUCT FOUNDATION
+
+The goal is to turn the current Gridline engineering/admin application into a stable product foundation without changing the proven model logic.
+
+DO NOT:
+- retrain or promote models
+- change active Phase 6 model logic
+- add player props yet
+- add new paid providers
+- redesign admin/model-lab workflows
+- modify historical predictions
+- remove existing auditability
+
+CURRENT PRIORITIES
+
+A. FINISH V1 PRODUCTION HARDENING
+
+1. Ensure the personnel-context database concurrency repair is included in production:
+   - bounded database concurrency
+   - shared game context calculated once per game
+   - no duplicate team-level expensive work
+   - API remains responsive during worker execution
+
+2. Preserve:
+   - cutoff rules
+   - immutable prediction behavior
+   - Phase 6 active production models
+   - worker-only scheduler ownership
+
+3. Verify the real production game lifecycle automatically:
+   - pregame snapshot
+   - kickoff freeze
+   - post-kickoff immutability
+   - final score ingestion
+   - grading
+   - eligible CLV
+   - Performance update
+   - weekly/challenger pipeline consumption
+
+Do not manually fabricate any lifecycle result.
+
+B. ADD IMMUTABLE MODEL-EVALUATION RETENTION
+
+Future walk-forward/challenger evaluations must permanently retain one row per game.
+
+Persist:
+- evaluation run ID
+- model family
+- model version
+- algorithm
+- feature version
+- training seasons
+- test season
+- game ID
+- week
+- kickoff
+- teams
+- actual scores
+- actual margin
+- actual total
+- projected home/away win probabilities
+- projected margin
+- projected total
+- sample quality
+- feature cutoff
+
+Where legitimate market data exists also retain:
+- sportsbook
+- spread
+- spread price
+- moneyline
+- total
+- O/U price
+- market timestamp
+- closing reference where legitimate
+
+Derived audit results may include:
+- winner correct/incorrect
+- absolute margin error
+- absolute total error
+- ATS result only with legitimate spread
+- O/U result only with legitimate total
+- CLV only with legitimate closing reference
+
+Requirements:
+- append-only
+- no historical overwrites
+- no leakage
+- no fake market data
+
+Do NOT regenerate missing historical 2025 predictions.
+
+C. CREATE CONSUMER-SAFE APPLICATION LAYER
+
+Keep the existing Admin/Model Lab system intact.
+
+Create a clear separation between:
+
+CONSUMER
+- Home
+- Games
+- Game Detail
+- Performance
+- Trends
+- Props placeholder for future use
+
+ADMIN
+- Model Lab
+- Data Health
+- Personnel & Context
+- Feature Audit
+- Backtesting
+- Scheduler diagnostics
+- Settings
+- raw sync/error details
+
+Normal users must never see:
+- raw JSON
+- stack traces
+- source code
+- SQL
+- migration messages
+- scheduler internals
+- provider error payloads
+- internal database IDs
+- giant model version strings
+- failed developer/debug components
+
+Admins may still access these in Admin tools.
+
+D. CONSUMER ERROR AND EMPTY STATES
+
+Replace technical errors on consumer pages with polished states such as:
+
+- “Sportsbook line updating”
+- “Weather not yet available”
+- “Player information temporarily unavailable”
+- “No current market available”
+- “Prediction data is being refreshed”
+
+Technical failure details must remain available in Admin/Data Health only.
+
+Never display fake fallback values.
+
+E. CONSUMER NAVIGATION
+
+Build a clean consumer navigation structure:
+
+- Home
+- Games
+- Performance
+- Trends
+- Props
+
+If user is an administrator, provide a separate Admin entry.
+
+Do not clutter consumer navigation with engineering pages.
+
+F. CONSUMER HOME PAGE
+
+Create a polished Gridline homepage.
+
+Prioritize:
+
+1. Current/upcoming NFL games
+2. Gridline projected score
+3. Win probability
+4. Market spread
+5. Gridline projected margin
+6. Projected total
+7. Data Confidence
+8. Key injuries/personnel alerts
+9. Weather where relevant
+
+Each matchup card should be understandable in seconds.
+
+Do not show raw model IDs.
+
+Instead show simple labels such as:
+“Gridline Production Model”
+or
+“Phase 6”
+
+G. GAME DETAIL EXPERIENCE
+
+Redesign the consumer game page around:
+
+TOP SUMMARY
+- matchup
+- team records where available
+- kickoff
+- location
+- current market
+- projected score
+- projected margin
+- projected total
+- win probabilities
+- Data Confidence
+
+WHY GRIDLINE SEES IT THIS WAY
+Show concise drivers such as:
+- QB context
+- team efficiency
+- injuries
+- personnel availability
+- offensive-line continuity
+- weather
+- rest
+- market movement
+
+Then provide expandable sections for deeper analysis.
+
+Use progressive disclosure.
+
+Do not dump every metric on screen at once.
+
+H. PERFORMANCE PAGE
+
+Create consumer-friendly performance reporting.
+
+Clearly distinguish:
+
+- Winner prediction accuracy
+- Spread projection accuracy
+- Total projection accuracy
+- Actual ATS results when legitimate sportsbook lines exist
+- Actual O/U results when legitimate sportsbook lines exist
+- CLV where legitimate
+
+Never imply that straight-up winner accuracy equals betting profitability.
+
+Support:
+- season
+- week
+- model family
+- Data Confidence buckets
+- eventual edge buckets
+
+I. VISUAL DESIGN
+
+Create a consistent Gridline design system.
+
+Goals:
+- modern sports analytics feel
+- dark/light compatibility if already supported
+- strong typography
+- consistent cards
+- generous spacing
+- fewer borders
+- clear hierarchy
+- subtle status colors
+- readable data
+- responsive mobile design
+- no developer-looking components on consumer pages
+
+Avoid unnecessary animation.
+
+Prioritize speed and readability.
+
+J. PERFORMANCE / STABILITY
+
+Consumer pages must not trigger expensive model computation on page load.
+
+They should read persisted/precomputed production data wherever practical.
+
+Heavy jobs remain worker-owned.
+
+Verify:
+- dashboard endpoint response time
+- game-detail response time
+- consumer performance endpoint response time
+- no database pool exhaustion
+- worker activity does not make consumer site unavailable
+
+K. ROLE BEHAVIOR
+
+Normal authenticated user:
+- consumer experience only
+
+Administrator:
+- consumer experience
+- plus Admin area
+
+Do not weaken Clerk authorization.
+
+L. FINAL VERIFICATION
+
+Verify:
+- Phase 6 models unchanged
+- production predictions unchanged unless normal scheduled lifecycle requires a legitimate new snapshot
+- no model retraining
+- no player-prop logic added
+- no new paid API usage
+- admin tooling remains functional
+- consumer pages contain no raw technical errors
+- desktop works
+- mobile works
+- API/web typecheck passes
+- production build passes
+
+FINAL REPORT
+
+Return:
+
+1. V1 production lifecycle status
+2. Evaluation-retention status
+3. Consumer/admin separation
+4. Consumer navigation
+5. Homepage redesign
+6. Game-detail redesign
+7. Performance redesign
+8. Error-state cleanup
+9. Mobile verification
+10. Performance verification
+11. Any bugs discovered
+12. Confirmation Phase 6 remains unchanged
+13. Whether publishing is required
+
+Do not begin Player Props in this task.
+Do not begin Phase 8 training in this task.
