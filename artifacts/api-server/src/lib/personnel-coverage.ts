@@ -8,13 +8,36 @@ const INJURY_FRESHNESS_HOURS = 7 * 24;
 const SPORTSBOOK_FRESHNESS_HOURS = 24;
 const PERSONNEL_FEED_FRESHNESS_HOURS = 7 * 24;
 const WEATHER_FEED_FRESHNESS_HOURS = 24;
-const READINESS_THRESHOLDS = {
+export const READINESS_THRESHOLDS = {
   medianPersonnelCompleteness: 80,
   medianQbCertainty: 70,
   currentInjuryCoverage: 90,
   sportsbookFreshness: 90,
   eligibleWeatherCoverage: 80,
   medianOverallConfidence: 65,
+} as const;
+export const PRODUCTION_READINESS_CONTROLS = {
+  productionSchema: {
+    authority: "replit_publish",
+    status: "managed_by_replit_publish",
+    scope: "tables_columns_indexes",
+    migrationLedgerMirrorRequired: false,
+  },
+  applicationWeatherImmutability: {
+    status: "enforced",
+    persistenceMode: "insert_only",
+    updateDeletePathsAllowed: false,
+  },
+  pointInTimeLeakageProtection: {
+    status: "enforced",
+    cutoffRule: "Evidence availability timestamps must be strictly before kickoff; post-cutoff backfills are excluded.",
+  },
+  unsupportedControlLimitations: [{
+    control: "weather_forecast_snapshots_database_append_only_trigger",
+    status: "unsupported_by_current_replit_production_migration_path",
+    eligibilityImpact: "none",
+    requiredAction: "Retain as a future defense-in-depth improvement if Replit supports custom production SQL migrations.",
+  }],
 } as const;
 const REQUIRED_STARTER_POSITIONS = new Set([
   "QB", "RB", "WR", "TE", "LT", "LG", "C", "RG", "RT", "EDGE", "DT", "LB", "CB", "S",
@@ -265,6 +288,7 @@ export async function getChallengerReadinessReport(now = new Date()) {
       eligible: false,
       systematicSourceFailures: [],
       failureRule: "A latest failed persisted feed run or no successful run within the bounded family freshness window fails the major family.",
+      ...PRODUCTION_READINESS_CONTROLS,
     };
   }
   const contextGames = await mapContexts(allGames, async (game) => {
@@ -321,6 +345,7 @@ export async function getChallengerReadinessReport(now = new Date()) {
     eligible: thresholds.every((threshold) => threshold.pass),
     systematicSourceFailures: feedHealth.filter((feed) => feed.failed),
     failureRule: "A latest failed persisted feed run or no successful run within the bounded family freshness window fails the major family. Windows: personnel/injury 168 hours; sportsbook/weather 24 hours.",
+    ...PRODUCTION_READINESS_CONTROLS,
   };
 }
 

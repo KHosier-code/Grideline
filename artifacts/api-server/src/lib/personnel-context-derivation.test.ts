@@ -228,6 +228,25 @@ test("weather snapshots are cutoff-safe and confidence exposes fixed weights", (
   assert.equal(context.dataConfidence.notBetting, true);
 });
 
+test("source timestamps at or after kickoff cannot enter pregame-v4 context", () => {
+  const context = derivePersonnelContext({
+    now: new Date("2025-01-13T00:00:00.000Z"),
+    game: { gameId: "boundary-game", season: 2024, week: 19, kickoffTime: kickoff, homeTeamId: "h", awayTeamId: "a" },
+    depth: [], injuries: [], snaps: [], qbs: [], priorGames: [],
+    odds: [{
+      sportsbook: "DraftKings", capturedAt: "2025-01-12T12:00:00.000Z",
+      sourceTimestamp: kickoff, market: "spread", selection: "h", point: -3, price: -110,
+    }],
+    weather: [{
+      gameId: "boundary-game", source: "National Weather Service api.weather.gov",
+      fetchedAt: "2025-01-12T12:00:00.000Z", forecastGeneratedAt: kickoff,
+      validTime: kickoff, indoorOutdoor: "outdoor", temperature: 40,
+    }],
+  });
+  assert.equal(context.market.observations, 0);
+  assert.equal(context.weather.available, false);
+});
+
 test("post-cutoff participation backfills cannot change QB or OL context", () => {
   const cutoffKickoff = new Date("2025-01-12T18:00:00.000Z");
   const context = derivePersonnelContext({

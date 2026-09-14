@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { coveragePercent, isWeatherEligible, latestCoverageAnchor, passesReadinessThreshold } from "./coverage-math";
+import { PRODUCTION_READINESS_CONTROLS, READINESS_THRESHOLDS } from "./personnel-coverage";
 
 test("coverage percentages use real denominator and unavailable is zero", () => {
   assert.equal(coveragePercent(3, 4), 75);
@@ -31,4 +32,24 @@ test("readiness threshold math is inclusive and null-safe", () => {
   assert.equal(passesReadinessThreshold(80, 80), true);
   assert.equal(passesReadinessThreshold(79.99, 80), false);
   assert.equal(passesReadinessThreshold(null, 80), false);
+});
+
+test("production control limitation is reported but does not alter live-data thresholds", () => {
+  assert.deepEqual(READINESS_THRESHOLDS, {
+    medianPersonnelCompleteness: 80,
+    medianQbCertainty: 70,
+    currentInjuryCoverage: 90,
+    sportsbookFreshness: 90,
+    eligibleWeatherCoverage: 80,
+    medianOverallConfidence: 65,
+  });
+  assert.equal(PRODUCTION_READINESS_CONTROLS.productionSchema.authority, "replit_publish");
+  assert.equal(PRODUCTION_READINESS_CONTROLS.productionSchema.migrationLedgerMirrorRequired, false);
+  assert.equal(PRODUCTION_READINESS_CONTROLS.applicationWeatherImmutability.persistenceMode, "insert_only");
+  assert.equal(PRODUCTION_READINESS_CONTROLS.pointInTimeLeakageProtection.status, "enforced");
+  assert.equal(
+    PRODUCTION_READINESS_CONTROLS.unsupportedControlLimitations[0].status,
+    "unsupported_by_current_replit_production_migration_path",
+  );
+  assert.equal(PRODUCTION_READINESS_CONTROLS.unsupportedControlLimitations[0].eligibilityImpact, "none");
 });

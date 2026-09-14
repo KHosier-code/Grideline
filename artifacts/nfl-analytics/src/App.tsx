@@ -814,6 +814,32 @@ function ChallengerReadinessPanel() {
             <h3 className="font-semibold text-ink text-sm mb-1">Failure Rule</h3>
             <p className="text-xs text-muted-foreground">{data.failureRule}</p>
           </div>
+          <div>
+            <h3 className="font-semibold text-ink text-sm mb-2">Production Controls</h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between gap-3">
+                <span>Replit-managed schema</span>
+                <StatusPill status="success">{data.productionSchema.status}</StatusPill>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span>Application weather immutability</span>
+                <StatusPill status="success">{data.applicationWeatherImmutability.persistenceMode}</StatusPill>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span>Point-in-time leakage protection</span>
+                <StatusPill status="success">{data.pointInTimeLeakageProtection.status}</StatusPill>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 className="font-semibold text-ink text-sm mb-2">Unsupported Database Controls</h3>
+            {data.unsupportedControlLimitations.map((control) => (
+              <div key={control.control} className="text-xs text-muted-foreground">
+                <div className="font-medium text-ink">{control.control.replaceAll('_', ' ')}</div>
+                <div className="mt-1">{control.status}. This defense-in-depth limitation does not affect Phase 8 eligibility.</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

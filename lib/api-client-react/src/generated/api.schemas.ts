@@ -608,6 +608,33 @@ export interface ChallengerSourceFailure {
   reason: string | null;
 }
 
+export const ProductionSchemaControlValue = {
+  authority: 'replit_publish',
+  status: 'managed_by_replit_publish',
+  scope: 'tables_columns_indexes',
+  migrationLedgerMirrorRequired: false,
+} as const;
+export type ProductionSchemaControl = typeof ProductionSchemaControlValue;
+
+export const ApplicationWeatherImmutabilityValue = {
+  status: 'enforced',
+  persistenceMode: 'insert_only',
+  updateDeletePathsAllowed: false,
+} as const;
+export type ApplicationWeatherImmutability = typeof ApplicationWeatherImmutabilityValue;
+
+export interface PointInTimeLeakageProtection {
+  status: 'enforced';
+  cutoffRule: string;
+}
+
+export interface UnsupportedProductionControl {
+  control: string;
+  status: 'unsupported_by_current_replit_production_migration_path';
+  eligibilityImpact: 'none';
+  requiredAction: string;
+}
+
 export interface ChallengerReadinessReport {
   evaluationOnly: true;
   label: string;
@@ -621,6 +648,10 @@ export interface ChallengerReadinessReport {
   eligible: boolean;
   systematicSourceFailures: ChallengerSourceFailure[];
   failureRule: string;
+  productionSchema: ProductionSchemaControl;
+  applicationWeatherImmutability: ApplicationWeatherImmutability;
+  pointInTimeLeakageProtection: PointInTimeLeakageProtection;
+  unsupportedControlLimitations: UnsupportedProductionControl[];
 }
 
 export type PregameFeatureBuildInputFeatureVersion = typeof PregameFeatureBuildInputFeatureVersion[keyof typeof PregameFeatureBuildInputFeatureVersion];

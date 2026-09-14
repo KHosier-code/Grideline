@@ -1,0 +1,84 @@
+Update Gridline’s production-readiness policy to match Replit’s supported production database model.
+
+Do not attempt to bypass Replit’s production database safeguards.
+
+Do not use:
+- startup DDL
+- deployment endpoints
+- embedded production credentials
+- unsupported custom-SQL production access
+
+Current production Phase 7 state:
+
+- `weather_forecast_snapshots` table exists
+- weather index exists
+- `depth_chart_snapshots.source` exists
+- `depth_chart_snapshots.classification` exists
+- custom append-only PostgreSQL function/trigger is not supported by the current Replit production migration path and is absent
+- production application data is intact
+- Phase 6 production models are unchanged
+
+Update readiness handling as follows:
+
+1. Treat Replit Publish as authoritative for production tables, columns, and indexes.
+
+2. Do not require `gridline_migration_history` to exactly mirror schema changes applied by Replit Publish.
+
+3. Do not insert fake or unsupported ledger entries for `0010` or `0011`.
+
+4. Track the missing weather database trigger separately as a production control limitation with status:
+
+`unsupported_by_current_replit_production_migration_path`
+
+5. Keep application-level weather immutability mandatory.
+
+6. Add or retain regression tests proving that no application API, service, worker, or normal application code path can UPDATE or DELETE existing weather snapshot records.
+
+7. Verify all normal weather persistence paths are INSERT-only.
+
+8. Verify all `pregame-v4-personnel-context` queries enforce strict point-in-time cutoff rules and cannot use weather, personnel, injuries, sportsbook observations, or other information that became available after the allowed pregame cutoff.
+
+9. Keep the PostgreSQL append-only trigger as a future defense-in-depth improvement if Replit later provides a supported custom-SQL production migration mechanism.
+
+10. Adjust Phase 8 readiness so the unsupported database trigger alone does NOT cause Phase 8 eligibility to fail.
+
+Phase 8 must still require all of these live-data thresholds:
+
+- Median personnel completeness >= 80%
+- Median QB certainty >= 70%
+- Current injury coverage >= 90%
+- Sportsbook freshness >= 90%
+- Eligible weather coverage >= 80%
+- Median Data Confidence >= 65
+- No major systematic source failure
+
+Do not train, score, refit, promote, or replace any production model yet.
+
+Do not modify the active Phase 6 models.
+
+Do not modify existing production predictions.
+
+Do not add betting recommendations, staking, confidence-to-win scoring, player props, or wagering automation.
+
+Return a revised production-readiness report containing:
+
+1. Current Phase 8 eligibility
+2. Each readiness threshold with:
+   - current value
+   - target
+   - pass/fail
+3. Application-level immutability status
+4. Point-in-time leakage protection status
+5. Replit-managed production schema status
+6. Unsupported database-control limitations
+7. Current personnel coverage
+8. Current QB certainty
+9. Current injury freshness
+10. Current sportsbook freshness
+11. Current weather coverage
+12. Current median Data Confidence
+13. Current systematic source failures
+14. Any remaining blockers before Phase 8 challenger evaluation
+15. Confirmation that all active Phase 6 production model versions remain unchanged
+
+Do not mark Phase 8 eligible unless every configured live-data readiness threshold passes.

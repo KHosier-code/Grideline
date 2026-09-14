@@ -5,10 +5,14 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ApplicationWeatherImmutability } from './applicationWeatherImmutability';
 import type { ChallengerReadinessGame } from './challengerReadinessGame';
 import type { ChallengerReadinessThreshold } from './challengerReadinessThreshold';
 import type { ChallengerReadinessWeeklyTrend } from './challengerReadinessWeeklyTrend';
 import type { ChallengerSourceFailure } from './challengerSourceFailure';
+import type { PointInTimeLeakageProtection } from './pointInTimeLeakageProtection';
+import type { ProductionSchemaControl } from './productionSchemaControl';
+import type { UnsupportedProductionControl } from './unsupportedProductionControl';
 
 export interface ChallengerReadinessReport {
   evaluationOnly: true;
@@ -23,4 +27,8 @@ export interface ChallengerReadinessReport {
   eligible: boolean;
   systematicSourceFailures: ChallengerSourceFailure[];
   failureRule: string;
+  productionSchema: ProductionSchemaControl;
+  applicationWeatherImmutability: ApplicationWeatherImmutability;
+  pointInTimeLeakageProtection: PointInTimeLeakageProtection;
+  unsupportedControlLimitations: UnsupportedProductionControl[];
 }

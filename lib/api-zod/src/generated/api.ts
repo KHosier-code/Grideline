@@ -563,7 +563,28 @@ export const GetChallengerReadinessReportResponse = zod.object({
   "freshnessBoundHours": zod.number().int(),
   "reason": zod.string().nullable()
 })),
-  "failureRule": zod.string()
+  "failureRule": zod.string(),
+  "productionSchema": zod.object({
+  "authority": zod.literal("replit_publish"),
+  "status": zod.literal("managed_by_replit_publish"),
+  "scope": zod.literal("tables_columns_indexes"),
+  "migrationLedgerMirrorRequired": zod.literal(false)
+}),
+  "applicationWeatherImmutability": zod.object({
+  "status": zod.literal("enforced"),
+  "persistenceMode": zod.literal("insert_only"),
+  "updateDeletePathsAllowed": zod.literal(false)
+}),
+  "pointInTimeLeakageProtection": zod.object({
+  "status": zod.literal("enforced"),
+  "cutoffRule": zod.string()
+}),
+  "unsupportedControlLimitations": zod.array(zod.object({
+  "control": zod.string(),
+  "status": zod.literal("unsupported_by_current_replit_production_migration_path"),
+  "eligibilityImpact": zod.literal("none"),
+  "requiredAction": zod.string()
+}))
 })
 
 

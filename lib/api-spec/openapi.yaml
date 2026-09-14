@@ -873,11 +873,44 @@ components:
         latestSuccessfulRunAt: { type: ["string", "null"], format: date-time }
         freshnessBoundHours: { type: integer }
         reason: { type: ["string", "null"] }
+    ProductionSchemaControl:
+      type: object
+      required: [authority, status, scope, migrationLedgerMirrorRequired]
+      properties:
+        authority: { type: string, const: replit_publish }
+        status: { type: string, const: managed_by_replit_publish }
+        scope: { type: string, const: tables_columns_indexes }
+        migrationLedgerMirrorRequired: { type: boolean, const: false }
+    ApplicationWeatherImmutability:
+      type: object
+      required: [status, persistenceMode, updateDeletePathsAllowed]
+      properties:
+        status: { type: string, const: enforced }
+        persistenceMode: { type: string, const: insert_only }
+        updateDeletePathsAllowed: { type: boolean, const: false }
+    PointInTimeLeakageProtection:
+      type: object
+      required: [status, cutoffRule]
+      properties:
+        status: { type: string, const: enforced }
+        cutoffRule: { type: string }
+    UnsupportedProductionControl:
+      type: object
+      required: [control, status, eligibilityImpact, requiredAction]
+      properties:
+        control: { type: string }
+        status:
+          type: string
+          const: unsupported_by_current_replit_production_migration_path
+        eligibilityImpact: { type: string, const: none }
+        requiredAction: { type: string }
     ChallengerReadinessReport:
       type: object
       required:
         [evaluationOnly, label, season, week, games, weeklyTrend, thresholds,
-         eligible, systematicSourceFailures, failureRule]
+         eligible, systematicSourceFailures, failureRule, productionSchema,
+         applicationWeatherImmutability, pointInTimeLeakageProtection,
+         unsupportedControlLimitations]
       properties:
         evaluationOnly: { type: boolean, const: true }
         label: { type: string }
@@ -897,6 +930,12 @@ components:
           type: array
           items: { $ref: "#/components/schemas/ChallengerSourceFailure" }
         failureRule: { type: string }
+        productionSchema: { $ref: "#/components/schemas/ProductionSchemaControl" }
+        applicationWeatherImmutability: { $ref: "#/components/schemas/ApplicationWeatherImmutability" }
+        pointInTimeLeakageProtection: { $ref: "#/components/schemas/PointInTimeLeakageProtection" }
+        unsupportedControlLimitations:
+          type: array
+          items: { $ref: "#/components/schemas/UnsupportedProductionControl" }
     PregameFeatureBuildInput:
       type: object
       properties:

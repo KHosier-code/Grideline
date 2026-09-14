@@ -716,7 +716,10 @@ function americanImplied(price: number) {
 }
 
 function deriveMarket(odds: PersonnelOddsRow[], cutoff: Date, kickoff: DateLike) {
-  const rows = odds.filter((row) => (time(row.capturedAt) ?? -1) <= cutoff.getTime()).sort((a, b) => (time(a.capturedAt) ?? -1) - (time(b.capturedAt) ?? -1));
+  const rows = odds
+    .filter((row) => (time(row.capturedAt) ?? -1) <= cutoff.getTime())
+    .filter((row) => row.sourceTimestamp == null || (time(row.sourceTimestamp) ?? Infinity) <= cutoff.getTime())
+    .sort((a, b) => (time(a.capturedAt) ?? -1) - (time(b.capturedAt) ?? -1));
   const groups = new Map<string, PersonnelOddsRow[]>();
   for (const row of rows) groups.set(`${row.sportsbook}:${row.market}:${row.selection}`, [...(groups.get(`${row.sportsbook}:${row.market}:${row.selection}`) ?? []), row]);
   const lines = [...groups.entries()].map(([key, quotes]) => {
@@ -972,6 +975,7 @@ export function derivePersonnelContext(input: {
   });
   const weatherRow = (input.weather ?? [])
     .filter((row) => (time(row.fetchedAt) ?? -1) <= cutoff.getTime())
+    .filter((row) => row.forecastGeneratedAt == null || (time(row.forecastGeneratedAt) ?? Infinity) <= cutoff.getTime())
     .filter((row) => {
       const valid = time(row.validTime);
       const kickoff = time(input.game.kickoffTime);
