@@ -38,7 +38,9 @@ router.get("/predictions/reports", async (_req, res): Promise<void> => {
 
 router.post("/predictions/generate", requireAdmin, async (req, res): Promise<void> => {
   try {
-    res.json(await generateLivePredictions());
+    const result = await generateLivePredictions();
+    req.log.info({ result }, "Live prediction generation completed");
+    res.json(result);
   } catch (error) {
     req.log.error({ error }, "Live prediction generation failed");
     res.status(500).json({ error: error instanceof Error ? error.message : "Live prediction generation failed" });
