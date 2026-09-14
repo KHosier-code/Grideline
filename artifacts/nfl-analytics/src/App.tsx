@@ -770,14 +770,16 @@ function ModelLab() {
           <div className="mt-5 grid gap-5 xl:grid-cols-3">
             {families.map((family) => {
               const recommendation = lab.data?.recommendations?.[family.key];
+              const active = promotions.data?.current?.[family.key]?.modelVersion === recommendation?.modelVersion;
               return (
-                <Panel key={family.key} eyebrow={family.label} title={recommendation ? `${recommendation.algorithm.replaceAll('_', ' ')} candidate` : 'No candidate'} action={<StatusPill status="not_configured">Challenger</StatusPill>}>
+                <Panel key={family.key} eyebrow={family.label} title={recommendation ? `${recommendation.algorithm.replaceAll('_', ' ')} candidate` : 'No candidate'} action={<StatusPill status={active ? 'success' : 'not_configured'}>{active ? 'Production' : 'Challenger'}</StatusPill>}>
                   <p className="text-xs leading-5 text-muted-foreground">{family.description}</p>
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">{family.primary}</p><p className="mt-2 font-display text-2xl font-semibold text-ink">{recommendation ? metric(recommendation, family.primary) : '—'}</p></div>
                     <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">{family.secondary}</p><p className="mt-2 font-display text-2xl font-semibold text-ink">{recommendation ? metric(recommendation, family.secondary) : '—'}</p></div>
                   </div>
                   <p className="mt-3 text-[11px] leading-5 text-muted-foreground">{recommendation ? `Selected for review by lowest ${family.primary}; this is not an activation decision.` : 'No evaluated candidate is available.'}</p>
+                  {recommendation && <div className="mt-4">{active ? <span className="text-xs font-semibold text-accent">Active production model</span> : <button type="button" className="button button-subtle w-full" disabled={promoting === recommendation.modelVersion} onClick={() => promote(recommendation)}>{promoting === recommendation.modelVersion ? 'Promoting…' : 'Promote this candidate'}</button>}</div>}
                 </Panel>
               );
             })}
