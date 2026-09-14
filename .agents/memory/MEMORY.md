@@ -1,1 +1,2 @@
+- [Sportsbook capture constraints](odds-history.md) — preserve price-only and A-B-A movement; keep live verification calls minimal.
 - [NFLverse availability semantics](nflverse-availability.md) — validate requested-season rows; downloaded files can be valid but lack that season, and depth formats change by era.

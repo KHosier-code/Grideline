@@ -95,10 +95,34 @@ export const sportsbookOddsTable = pgTable("sportsbook_odds", {
   gameId: text("game_id").notNull(),
   sportsbook: text("sportsbook").notNull(),
   capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
+  sourceTimestamp: timestamp("source_timestamp", { withTimezone: true }),
   market: text("market").notNull(),
   selection: text("selection").notNull(),
   point: doublePrecision("point"),
   price: integer("price").notNull(),
+  // These fields are deliberately additive.  observation_key identifies the
+  // current state stream (not a snapshot), while state_hash identifies the
+  // latest point/price state in that stream.  Comparing only with the latest
+  // row preserves legitimate A-B-A movement.
+  observationKey: text("observation_key").notNull().default(""),
+  stateHash: text("state_hash").notNull().default(""),
+});
+
+/**
+ * One row per Odds API request.  This is intentionally separate from the
+ * quote history so Data Health can report quota and failures even when a
+ * request returns no markets.
+ */
+export const oddsApiRequestsTable = pgTable("odds_api_requests", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+  status: text("status").notNull(),
+  httpStatus: integer("http_status"),
+  recordsProcessed: integer("records_processed").notNull().default(0),
+  creditsUsed: integer("credits_used"),
+  creditsRemaining: integer("credits_remaining"),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
 
 export const predictionsTable = pgTable("predictions", {

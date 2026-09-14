@@ -4,6 +4,7 @@ import { fetchSchedule, getEspnHealth, logEspnFailure } from "../lib/espn";
 import { getNflverseHealth } from "../lib/nflverse";
 import { resolveCurrentSeasonWeek } from "../lib/season";
 import { getAvailabilityHealth } from "../lib/availability";
+import { getOddsApiHealth } from "../lib/odds";
 
 const router: IRouter = Router();
 
@@ -43,7 +44,7 @@ router.get("/data-health", async (req, res): Promise<void> => {
   const espn = getEspnHealth();
   const nflverse = await getNflverseHealth();
   const availability = await getAvailabilityHealth();
-  const oddsConfigured = Boolean(process.env.ODDS_API_KEY);
+  const odds = await getOddsApiHealth();
   res.json(
     GetDataHealthResponse.parse([
       {
@@ -74,15 +75,14 @@ router.get("/data-health", async (req, res): Promise<void> => {
       {
         provider: "odds-api",
         label: "The Odds API",
-        status: oddsConfigured ? "stale" : "not_configured",
-        detail: oddsConfigured
-          ? "Secret is configured; sportsbook snapshot adapter is next."
-          : "Add ODDS_API_KEY in Secrets to enable DraftKings and FanDuel snapshots.",
-        lastUpdated: null,
+        status: odds.status,
+        detail: odds.detail,
+        lastUpdated: odds.lastUpdated,
         nextUpdate: null,
-        requestsToday: 0,
-        requestsThisMonth: 0,
-        remainingQuota: null,
+        requestsToday: odds.requestsToday,
+        requestsThisMonth: odds.requestsThisMonth,
+        remainingQuota: odds.remainingQuota,
+        metadata: odds.metadata,
       },
       {
         provider: "espn-injuries",

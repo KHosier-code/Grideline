@@ -27,6 +27,8 @@ import type {
   Game,
   HealthStatus,
   ListGamesParams,
+  OddsCaptureResult,
+  OddsHistory,
   Team
 } from './api.schemas';
 
@@ -449,6 +451,158 @@ export function useGetGame<TData = Awaited<ReturnType<typeof getGame>>, TError =
 
 
 
+
+export const getGetOddsHistoryUrl = (gameId: string,) => {
+
+
+
+
+  return `/api/games/${gameId}/odds-history`
+}
+
+/**
+ * @summary Get immutable sportsbook line history for one game
+ */
+export const getOddsHistory = async (gameId: string, options?: Parameters<typeof customFetch>[1]): Promise<OddsHistory> => {
+
+  return customFetch<OddsHistory>(getGetOddsHistoryUrl(gameId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOddsHistoryQueryKey = (gameId: string,) => {
+    return [
+    `/api/games/${gameId}/odds-history`
+    ] as const;
+    }
+
+
+export const getGetOddsHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getOddsHistory>>, TError = ErrorType<void>>(gameId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOddsHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOddsHistoryQueryKey(gameId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOddsHistory>>> = ({ signal }) => getOddsHistory(gameId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOddsHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOddsHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getOddsHistory>>>
+export type GetOddsHistoryQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get immutable sportsbook line history for one game
+ */
+
+export function useGetOddsHistory<TData = Awaited<ReturnType<typeof getOddsHistory>>, TError = ErrorType<void>>(
+ gameId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOddsHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOddsHistoryQueryOptions(gameId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCaptureOddsUrl = () => {
+
+
+
+
+  return `/api/odds/capture`
+}
+
+/**
+ * Performs one server-side request only. It never polls or retries and never exposes the API key.
+ * @summary Make one explicit Odds API capture
+ */
+export const captureOdds = async ( options?: Parameters<typeof customFetch>[1]): Promise<OddsCaptureResult> => {
+
+  return customFetch<OddsCaptureResult>(getCaptureOddsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCaptureOddsMutationKey = () => ['captureOdds'] as const;
+
+export const getCaptureOddsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof captureOdds>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof captureOdds>>, TError,void, TContext> => {
+
+const mutationKey = getCaptureOddsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof captureOdds>>, void> = () => {
+
+
+          return  captureOdds(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CaptureOddsMutationResult = NonNullable<Awaited<ReturnType<typeof captureOdds>>>
+
+    export type CaptureOddsMutationError = ErrorType<void>
+
+
+    /**
+ * @summary Make one explicit Odds API capture
+ */
+export const useCaptureOdds = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof captureOdds>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof captureOdds>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCaptureOddsMutationOptions(options));
+    }
 
 export const getListTeamsUrl = () => {
 

@@ -9,6 +9,8 @@ import {
 import {
   GetGameParams,
   GetGameResponse,
+  GetOddsHistoryParams,
+  GetOddsHistoryResponse,
   ListGamesQueryParams,
   ListGamesResponse,
   ListTeamsResponse,
@@ -21,6 +23,7 @@ import {
   type EspnTeam,
 } from "../lib/espn";
 import { resolveCurrentSeasonWeek } from "../lib/season";
+import { getLatestOddsByGame, getOddsHistory, type OddsQuote } from "../lib/odds";
 
 const router: IRouter = Router();
 
@@ -93,7 +96,7 @@ async function saveGames(games: EspnGame[]) {
   }
 }
 
-function fromLiveGame(game: EspnGame) {
+function fromLiveGame(game: EspnGame, latestOdds: OddsQuote[]) {
   return {
     gameId: game.gameId,
     season: game.season,
@@ -116,7 +119,7 @@ function fromLiveGame(game: EspnGame) {
     gameStatus: game.gameStatus,
     broadcast: game.broadcast,
     modelStatus: game.modelStatus,
-    latestOdds: [],
+    latestOdds,
   };
 }
 
@@ -125,6 +128,7 @@ async function fromDbGame(game: DbGame) {
   const teamMap = new Map(teams.map((team) => [team.teamId, team]));
   const homeTeam = teamMap.get(game.homeTeamId);
   const awayTeam = teamMap.get(game.awayTeamId);
+  const latestOdds = (await getLatestOddsByGame([game.gameId])).get(game.gameId) ?? [];
   return {
     gameId: game.gameId,
     season: game.season,
@@ -147,7 +151,7 @@ async function fromDbGame(game: DbGame) {
     gameStatus: game.gameStatus,
     broadcast: game.broadcast,
     modelStatus: "not_trained" as const,
-    latestOdds: [],
+    latestOdds,
   };
 }
 
@@ -166,7 +170,12 @@ router.get("/games", async (req, res): Promise<void> => {
     const teams = games.flatMap((game) => [game.homeTeam, game.awayTeam]);
     await saveTeams(teams);
     await saveGames(games);
-    res.json(ListGamesResponse.parse(games.map(fromLiveGame)));
+    const latestOdds = await getLatestOddsByGame(games.map((game) => game.gameId));
+    res.json(
+      ListGamesResponse.parse(
+        games.map((game) => fromLiveGame(game, latestOdds.get(game.gameId) ?? [])),
+      ),
+    );
   } catch (error) {
     logEspnFailure(error);
     req.log.error({ error, season, week }, "Unable to fetch live NFL schedule");
@@ -197,6 +206,24 @@ router.get("/games/:gameId", async (req, res): Promise<void> => {
     return;
   }
   res.json(GetGameResponse.parse(await fromDbGame(game)));
+});
+
+router.get("/games/:gameId/odds-history", async (req, res): Promise<void> => {
+  const params = GetOddsHistoryParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const [game] = await db
+    .select({ gameId: gamesTable.gameId })
+    .from(gamesTable)
+    .where(eq(gamesTable.gameId, params.data.gameId))
+    .limit(1);
+  if (!game) {
+    res.status(404).json({ error: "Game not found" });
+    return;
+  }
+  res.json(GetOddsHistoryResponse.parse(await getOddsHistory(game.gameId)));
 });
 
 router.get("/teams", async (req, res): Promise<void> => {

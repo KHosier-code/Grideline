@@ -104,6 +104,41 @@ paths:
                 $ref: "#/components/schemas/Game"
         "404":
           description: Game not found
+  /games/{gameId}/odds-history:
+    get:
+      operationId: getOddsHistory
+      tags: [nfl]
+      summary: Get immutable sportsbook line history for one game
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Historical sportsbook observations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OddsHistory"
+        "404":
+          description: Game not found
+  /odds/capture:
+    post:
+      operationId: captureOdds
+      tags: [dashboard]
+      summary: Make one explicit Odds API capture
+      description: Performs one server-side request only. It never polls or retries and never exposes the API key.
+      responses:
+        "200":
+          description: Capture completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OddsCaptureResult"
+        "502":
+          description: Capture failed
   /teams:
     get:
       operationId: listTeams
@@ -202,6 +237,69 @@ components:
         point: { type: ["number", "null"] }
         price: { type: integer }
         capturedAt: { type: string, format: date-time }
+        sourceTimestamp: { type: ["string", "null"], format: date-time }
+        observationLabel: { type: string }
+    OddsChange:
+      type: object
+      required:
+        [sportsbook, market, selection, capturedAt, previousPoint, point,
+         previousPrice, price, pointChanged, priceChanged]
+      properties:
+        sportsbook: { type: string, enum: [DraftKings, FanDuel] }
+        market: { type: string, enum: [spread, moneyline, total] }
+        selection: { type: string }
+        capturedAt: { type: string, format: date-time }
+        sourceTimestamp: { type: ["string", "null"], format: date-time }
+        previousPoint: { type: ["number", "null"] }
+        point: { type: ["number", "null"] }
+        previousPrice: { type: integer }
+        price: { type: integer }
+        pointChanged: { type: boolean }
+        priceChanged: { type: boolean }
+    OddsHistory:
+      type: object
+      required: [gameId, firstObservedAt, firstObservedLabel, firstObserved, current, changes, closing, closingFrozen]
+      properties:
+        gameId: { type: string }
+        firstObservedAt: { type: ["string", "null"], format: date-time }
+        firstObservedLabel: { type: ["string", "null"] }
+        firstObserved:
+          type: array
+          items: { $ref: "#/components/schemas/OddsQuote" }
+        current:
+          type: array
+          items: { $ref: "#/components/schemas/OddsQuote" }
+        changes:
+          type: array
+          items: { $ref: "#/components/schemas/OddsChange" }
+        closing:
+          type: array
+          items: { $ref: "#/components/schemas/OddsQuote" }
+        closingFrozen: { type: boolean }
+    OddsCaptureResult:
+      type: object
+      required:
+        [status, requestedAt, requestCount, recordsReceived, snapshotsCreated,
+         duplicateSnapshots, unmatchedEvents, skippedPostKickoff,
+         missingMarkets, failedSportsbooks, creditsUsed, creditsRemaining, error]
+      properties:
+        status: { type: string, enum: [success, failed, not_configured] }
+        requestedAt: { type: string, format: date-time }
+        requestCount: { type: integer }
+        recordsReceived: { type: integer }
+        snapshotsCreated: { type: integer }
+        duplicateSnapshots: { type: integer }
+        unmatchedEvents: { type: integer }
+        skippedPostKickoff: { type: integer }
+        missingMarkets:
+          type: array
+          items: { type: string }
+        failedSportsbooks:
+          type: array
+          items: { type: string }
+        creditsUsed: { type: ["integer", "null"] }
+        creditsRemaining: { type: ["integer", "null"] }
+        error: { type: ["string", "null"] }
     DataHealth:
       type: object
       required: [provider, label, status, detail]

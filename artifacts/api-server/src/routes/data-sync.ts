@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
+import { CaptureOddsResponse } from "@workspace/api-zod";
 import { syncEspnDepthCharts, syncEspnInjuries } from "../lib/availability";
 import { syncNflverseHistory } from "../lib/nflverse";
+import { captureOddsSnapshots } from "../lib/odds";
 
 const router: IRouter = Router();
 
@@ -32,6 +34,23 @@ router.post("/data-sync/depth-charts", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Depth-chart synchronization failed");
     res.status(502).json({ error: error instanceof Error ? error.message : "Depth-chart synchronization failed" });
+  }
+});
+
+router.post("/odds/capture", async (req, res): Promise<void> => {
+  try {
+    const result = await captureOddsSnapshots();
+    res
+      .status(result.status === "failed" ? 502 : 200)
+      .json(CaptureOddsResponse.parse(result));
+  } catch (error) {
+    // The adapter records provider failures without including the secret or
+    // the keyed URL in the response/log.
+    req.log.error(
+      { error: error instanceof Error ? error.message : "Odds capture failed" },
+      "Odds capture failed",
+    );
+    res.status(502).json({ error: "Odds capture failed." });
   }
 });
 

@@ -14,4 +14,7 @@ export interface OddsQuote {
   point: number | null;
   price: number;
   capturedAt: Date;
+  /** @nullable */
+  sourceTimestamp?: Date | null;
+  observationLabel?: string;
 }

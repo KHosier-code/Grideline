@@ -1,0 +1,134 @@
+Proceed with sportsbook snapshot capture.
+
+The ODDS_API_KEY secret is already configured.
+
+Do NOT build prediction models yet.
+
+Use The Odds API to collect NFL markets from only:
+
+* DraftKings
+* FanDuel
+
+Initially collect:
+
+* point spreads
+* spread prices
+* moneylines
+* game totals
+* over prices
+* under prices
+
+For every sportsbook observation, save:
+
+* game_id
+* sportsbook
+* market
+* selection/team
+* point/line
+* American price
+* source timestamp if provided
+* local snapshot timestamp
+
+CRITICAL REQUIREMENT:
+
+Never overwrite sportsbook history.
+
+However, do not waste database space by saving exact duplicates.
+
+Create a new snapshot when ANY of these changes:
+
+* spread changes
+* total changes
+* moneyline changes
+* American price changes
+
+Example:
+
+DraftKings DAL -3 (-110)
+
+later:
+
+DraftKings DAL -3 (-105)
+
+These must be stored as separate snapshots because the price changed.
+
+Match sportsbook games to the existing Gridline game_id.
+
+Do not create duplicate NFL games simply because sportsbook naming differs.
+
+Build reliable team-name normalization for cases such as:
+
+* NY Giants vs New York Giants
+* LA Rams vs Los Angeles Rams
+* abbreviations or naming differences
+
+Update the Odds Board to show DraftKings and FanDuel side-by-side.
+
+For each market identify the best currently available price.
+
+Examples:
+
+Spread:
+DK DAL -3 -110
+FD DAL -3 -105
+Best: FanDuel
+
+Moneyline:
+DK DAL -155
+FD DAL -150
+Best: FanDuel
+
+Totals:
+Compare both the point and price correctly.
+
+Do not label a worse total as "best" merely because the vig is lower.
+
+Add line-history support.
+
+For each game preserve:
+
+* first observed line
+* current line
+* every change
+* final pre-kickoff line
+
+Do not call something an official sportsbook "opening line" unless Gridline actually captured the first market offering. Otherwise label it:
+
+"First observed by Gridline"
+
+Add support for later Closing Line Value calculations.
+
+The final sportsbook snapshot immediately before kickoff should be eligible to become the closing-line snapshot.
+
+Never replace it after kickoff.
+
+API USAGE:
+
+The Odds API free allowance is limited.
+
+Track:
+
+* requests made
+* credits used if provided by the API
+* credits remaining if provided
+* last successful request
+* failed requests
+
+Show this on Data Health.
+
+Do not poll unnecessarily.
+
+For this implementation, perform only the minimum number of live calls needed to verify the integration.
+
+After completion, give me a plain-English audit showing:
+
+1. One actual current NFL game
+2. DraftKings spread, ML and total
+3. FanDuel spread, ML and total
+4. Database rows created for that game
+5. How duplicate sportsbook snapshots are prevented
+6. How prices changing without the point changing are preserved
+7. API credits consumed
+8. Remaining API quota if available
+9. Any sportsbooks or markets that failed
+10. Confirmation that no prediction/model logic was added

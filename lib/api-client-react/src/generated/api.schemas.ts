@@ -44,6 +44,9 @@ export interface OddsQuote {
   point: number | null;
   price: number;
   capturedAt: string;
+  /** @nullable */
+  sourceTimestamp?: string | null;
+  observationLabel?: string;
 }
 
 export interface Game {
@@ -67,6 +70,81 @@ export interface Game {
   modelStatus: GameModelStatus;
   /** @nullable */
   latestOdds?: OddsQuote[] | null;
+}
+
+export type OddsChangeSportsbook = typeof OddsChangeSportsbook[keyof typeof OddsChangeSportsbook];
+
+
+export const OddsChangeSportsbook = {
+  DraftKings: 'DraftKings',
+  FanDuel: 'FanDuel',
+} as const;
+
+export type OddsChangeMarket = typeof OddsChangeMarket[keyof typeof OddsChangeMarket];
+
+
+export const OddsChangeMarket = {
+  spread: 'spread',
+  moneyline: 'moneyline',
+  total: 'total',
+} as const;
+
+export interface OddsChange {
+  sportsbook: OddsChangeSportsbook;
+  market: OddsChangeMarket;
+  selection: string;
+  capturedAt: string;
+  /** @nullable */
+  sourceTimestamp?: string | null;
+  /** @nullable */
+  previousPoint: number | null;
+  /** @nullable */
+  point: number | null;
+  previousPrice: number;
+  price: number;
+  pointChanged: boolean;
+  priceChanged: boolean;
+}
+
+export interface OddsHistory {
+  gameId: string;
+  /** @nullable */
+  firstObservedAt: string | null;
+  /** @nullable */
+  firstObservedLabel: string | null;
+  firstObserved: OddsQuote[];
+  current: OddsQuote[];
+  changes: OddsChange[];
+  closing: OddsQuote[];
+  closingFrozen: boolean;
+}
+
+export type OddsCaptureResultStatus = typeof OddsCaptureResultStatus[keyof typeof OddsCaptureResultStatus];
+
+
+export const OddsCaptureResultStatus = {
+  success: 'success',
+  failed: 'failed',
+  not_configured: 'not_configured',
+} as const;
+
+export interface OddsCaptureResult {
+  status: OddsCaptureResultStatus;
+  requestedAt: string;
+  requestCount: number;
+  recordsReceived: number;
+  snapshotsCreated: number;
+  duplicateSnapshots: number;
+  unmatchedEvents: number;
+  skippedPostKickoff: number;
+  missingMarkets: string[];
+  failedSportsbooks: string[];
+  /** @nullable */
+  creditsUsed: number | null;
+  /** @nullable */
+  creditsRemaining: number | null;
+  /** @nullable */
+  error: string | null;
 }
 
 export type DataHealthStatus = typeof DataHealthStatus[keyof typeof DataHealthStatus];

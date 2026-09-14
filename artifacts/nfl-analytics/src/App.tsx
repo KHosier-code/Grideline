@@ -35,6 +35,7 @@ import {
   getGetDashboardSummaryQueryKey,
   getGetDataHealthQueryKey,
   getGetGameQueryKey,
+  getGetOddsHistoryQueryKey,
   getGetSettingsQueryKey,
   getHealthCheckQueryKey,
   getListGamesQueryKey,
@@ -42,11 +43,13 @@ import {
   useGetDashboardSummary,
   useGetDataHealth,
   useGetGame,
+  useGetOddsHistory,
   useGetSettings,
   useHealthCheck,
   useListGames,
   useListTeams,
   useUpdateSettings,
+  useCaptureOdds,
 } from '@workspace/api-client-react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -108,6 +111,61 @@ function formatPercent(value?: number | null) {
 
 function formatUnits(value?: number | null) {
   return value === null || value === undefined ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(1)}u`;
+}
+
+function formatPrice(price?: number | null) {
+  if (price === null || price === undefined) return '—';
+  return price > 0 ? `+${price}` : String(price);
+}
+
+function formatPoint(point?: number | null) {
+  if (point === null || point === undefined) return '—';
+  return point > 0 ? `+${point}` : String(point);
+}
+
+function quoteDisplay(quote: any) {
+  if (!quote) return '—';
+  return `${quote.point === null || quote.point === undefined ? '' : `${formatPoint(quote.point)} `}${formatPrice(quote.price)}`.trim();
+}
+
+function quoteFreshness(quote: any) {
+  if (!quote?.capturedAt) return 'Capture time unavailable';
+  const capturedAt = new Date(String(quote.capturedAt));
+  if (Number.isNaN(capturedAt.getTime())) return 'Capture time unavailable';
+  const ageMinutes = Math.max(0, Math.floor((Date.now() - capturedAt.getTime()) / 60000));
+  if (ageMinutes >= 360) return 'Stale local capture';
+  if (ageMinutes < 1) return 'Captured just now';
+  if (ageMinutes < 60) return `Captured ${ageMinutes}m ago`;
+  return `Captured ${Math.floor(ageMinutes / 60)}h ago`;
+}
+
+function quoteIsBetter(candidate: any, incumbent: any) {
+  if (!candidate) return false;
+  if (!incumbent) return true;
+  const market = candidate.market;
+  const candidatePoint = candidate.point as number | null;
+  const incumbentPoint = incumbent.point as number | null;
+  if (market !== 'moneyline' && candidatePoint !== incumbentPoint) {
+    if (candidatePoint === null || candidatePoint === undefined) return false;
+    if (incumbentPoint === null || incumbentPoint === undefined) return true;
+    // A larger spread is bettor-favorable for either side (+3 beats +2.5;
+    // -2.5 beats -3). For totals the side determines the favorable direction.
+    const candidateScore = market === 'total' && String(candidate.selection ?? '').toLowerCase() === 'over'
+      ? -(candidatePoint ?? Number.POSITIVE_INFINITY)
+      : candidatePoint ?? Number.NEGATIVE_INFINITY;
+    const incumbentScore = market === 'total' && String(incumbent.selection ?? '').toLowerCase() === 'over'
+      ? -(incumbentPoint ?? Number.POSITIVE_INFINITY)
+      : incumbentPoint ?? Number.NEGATIVE_INFINITY;
+    if (candidateScore !== incumbentScore) return candidateScore > incumbentScore;
+  }
+  return candidate.price > incumbent.price;
+}
+
+function marketLabel(market: string) {
+  if (market === 'moneyline') return 'Moneyline';
+  if (market === 'spread') return 'Spread';
+  if (market === 'total') return 'Total';
+  return market;
 }
 
 function statusTone(status?: string | null) {
@@ -369,6 +427,138 @@ function ThisWeek() {
   );
 }
 
+function OddsMarketTable({ quotes }: { quotes: any[] }) {
+  const grouped = new Map<string, { market: string; selection: string; books: Record<string, any> }>();
+  for (const quote of quotes) {
+    const key = `${quote.market}|${quote.selection}`;
+    const current: { market: string; selection: string; books: Record<string, any> } = grouped.get(key) ?? { market: quote.market, selection: quote.selection, books: {} };
+    current.books[quote.sportsbook] = quote;
+    grouped.set(key, current);
+  }
+  const rows = [...grouped.values()].sort((left, right) =>
+    `${left.market}-${left.selection}`.localeCompare(`${right.market}-${right.selection}`),
+  );
+  if (!rows.length) {
+    return <EmptyPanel title="No captured markets for this game" detail="The schedule exists, but no DraftKings or FanDuel snapshot was matched to it. A missing market is not treated as a zero or a prediction." icon={SlidersHorizontal} />;
+  }
+  return (
+    <div className="odds-table">
+      <div className="odds-head"><span>Market</span><span>Selection</span><span>DraftKings</span><span>FanDuel</span><span>Best now</span></div>
+      {rows.map((row) => {
+        const draftKings = row.books.DraftKings;
+        const fanDuel = row.books.FanDuel;
+        const best = quoteIsBetter(fanDuel, draftKings) ? fanDuel : draftKings;
+        const equalPoint = draftKings && fanDuel && draftKings.point === fanDuel.point;
+        const pointTradeoff = draftKings && fanDuel && draftKings.point !== fanDuel.point && draftKings.price !== fanDuel.price;
+        return (
+          <div className="odds-row" key={`${row.market}-${row.selection}`}>
+            <span className="font-semibold text-ink">{marketLabel(row.market)}</span>
+            <span>{row.selection}</span>
+            <span className="font-mono">{quoteDisplay(draftKings)}</span>
+            <span className="font-mono">{quoteDisplay(fanDuel)}</span>
+            <span className="font-mono font-semibold text-accent">
+              {best ? `${best.sportsbook} · ${quoteDisplay(best)}` : '—'}
+              {best && <small className={cx('block font-sans text-[10px] font-normal', quoteFreshness(best) === 'Stale local capture' ? 'text-amber-700' : 'text-muted-foreground')}>{quoteFreshness(best)}</small>}
+              {pointTradeoff && <small className="block font-sans text-[10px] font-normal text-muted-foreground">Points ranked before price</small>}
+              {equalPoint && <small className="block font-sans text-[10px] font-normal text-muted-foreground">Equal point; price ranked</small>}
+            </span>
+          </div>
+        );
+      })}
+      <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
+        Best means bettor-favorable point first, then the higher American price only when points match. A price tradeoff is disclosed rather than hidden.
+      </p>
+    </div>
+  );
+}
+
+function OddsBoard() {
+  const summary = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey(), staleTime: 30000 } });
+  const season = summary.data?.season ?? new Date().getFullYear();
+  const week = summary.data?.currentWeek ?? 1;
+  const games = useListGames({ season, week }, { query: { queryKey: getListGamesQueryKey({ season, week }), staleTime: 30000 } });
+  const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000 } });
+  const capture = useCaptureOdds();
+  const client = useQueryClient();
+  const [captureMessage, setCaptureMessage] = useState<string | null>(null);
+  const runCapture = () => {
+    setCaptureMessage(null);
+    capture.mutate(undefined, {
+      onSuccess: (result) => {
+        const marketWarning = result.missingMarkets?.length
+          ? ` Missing markets: ${result.missingMarkets.slice(0, 3).join(', ')}${result.missingMarkets.length > 3 ? ` (+${result.missingMarkets.length - 3} more)` : ''}.`
+          : '';
+        const sportsbookWarning = result.failedSportsbooks?.length
+          ? ` Failed sportsbooks: ${result.failedSportsbooks.join(', ')}.`
+          : '';
+        const quota = result.creditsRemaining === null || result.creditsRemaining === undefined
+          ? ''
+          : ` ${result.creditsRemaining} credits remaining.`;
+        setCaptureMessage(
+          result.status === 'success'
+            ? `One live request completed: ${result.snapshotsCreated} new snapshots; ${result.duplicateSnapshots} exact current-state duplicates skipped.${marketWarning}${sportsbookWarning}${quota}`
+            : result.error ?? 'No snapshot was captured.',
+        );
+        client.invalidateQueries({ queryKey: getListGamesQueryKey({ season, week }) });
+        client.invalidateQueries({ queryKey: getGetDataHealthQueryKey() });
+      },
+      onError: () => setCaptureMessage('The live capture failed. Check Data Health for the recorded failure; no automatic retry was attempted.'),
+    });
+  };
+  const oddsHealth = health.data?.find((item) => item.provider === 'odds-api');
+  return (
+    <>
+      <PageHeader
+        eyebrow={`Market data / Season ${season} / Week ${week}`}
+        title="Odds board"
+        detail="DraftKings and FanDuel snapshots, compared without manufacturing a signal."
+        actions={<button type="button" className="button button-primary" onClick={runCapture} disabled={capture.isPending} data-testid="button-capture-odds">{capture.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Capture one snapshot</button>}
+      />
+      <div className="signal-strip">
+        <div><span className="strip-label">SOURCE</span><strong>DraftKings · FanDuel</strong></div>
+        <div><span className="strip-label">CAPTURE MODE</span><strong>Explicit one-shot</strong></div>
+        <div><span className="strip-label">API STATE</span><StatusPill status={oddsHealth?.status}>{oddsHealth?.status === 'not_configured' ? 'Not configured' : oddsHealth?.status ?? 'Checking'}</StatusPill></div>
+        <div><span className="strip-label">LAST CAPTURE</span><strong>{oddsHealth?.lastUpdated ? formatDate(String(oddsHealth.lastUpdated), true) : 'None'}</strong></div>
+      </div>
+      {captureMessage && <div className="callout callout-neutral mt-5"><ShieldCheck className="h-4 w-4 shrink-0 text-accent" /><p>{captureMessage}</p></div>}
+      <Panel className="mt-5" title="Current market comparison" eyebrow="Side-by-side board" action={<span className="section-meta">{games.data?.length ?? 0} games</span>}>
+        {games.isLoading ? <div className="space-y-3"><Skeleton className="h-28" /><Skeleton className="h-28" /></div> : games.isError ? <ErrorPanel /> : games.data?.length ? <div className="space-y-5">{games.data.map((game) => <div className="rounded-xl border border-border p-4" key={game.gameId}><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold text-ink">{game.awayTeam.abbreviation} at {game.homeTeam.abbreviation}</p><p className="mt-1 text-xs text-muted-foreground">{game.kickoffTime ? formatDate(String(game.kickoffTime), true) : 'Kickoff TBD'} · {game.latestOdds?.length ?? 0} current quotes</p></div><Link href={`/games/${game.gameId}`} className="text-xs font-semibold text-accent hover:underline">History & detail <ChevronRight className="inline h-3 w-3" /></Link></div><OddsMarketTable quotes={(game.latestOdds ?? []) as any[]} /></div>)}</div> : <EmptyPanel title="No games returned for this week" detail="The live schedule is empty, so no sportsbook market can be safely matched." icon={CalendarDays} />}
+      </Panel>
+      <div className="callout callout-warn mt-5"><AlertTriangle className="h-4 w-4 shrink-0" /><p>Missing or stale markets remain visibly missing. The board does not infer a line, fill a bookmaker gap, or turn market differences into prediction logic.</p></div>
+    </>
+  );
+}
+
+function LineHistory({ gameId }: { gameId: string }) {
+  const history = useGetOddsHistory(gameId, { query: { queryKey: getGetOddsHistoryQueryKey(gameId), staleTime: 30000 } });
+  if (history.isLoading) return <LoadingPanel label="Loading immutable line history" />;
+  if (history.isError || !history.data) return <ErrorPanel message="Line history is temporarily unavailable." />;
+  const data = history.data;
+  return (
+    <Panel eyebrow="Immutable history" title="Line movement" action={<span className="section-meta">{data.changes.length} changes</span>}>
+      <div className="mb-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
+        <span><strong className="text-ink">First observed:</strong> {data.firstObservedAt ? formatDate(String(data.firstObservedAt), true) : 'Not observed'}</span>
+        <span>{data.firstObservedLabel ?? 'No first observation'}</span>
+        <span><strong className="text-ink">Closing eligibility:</strong> {data.closingFrozen ? 'Frozen at last pre-kickoff state' : 'Open until kickoff'}</span>
+      </div>
+      <div className="mb-5 grid gap-3 md:grid-cols-3">
+        {([
+          ['First observed', data.firstObserved],
+          ['Current', data.current],
+          ['Final pre-kickoff', data.closing],
+        ] as Array<[string, any[]]>).map(([label, quotes]) => (
+          <div className="rounded-xl border border-border bg-secondary/30 p-3" key={String(label)}>
+            <p className="eyebrow">{label}</p>
+            {Array.isArray(quotes) && quotes.length ? <div className="mt-2 space-y-1">{quotes.slice(0, 6).map((quote: any, index: number) => <p className="text-xs text-muted-foreground" key={`${quote.sportsbook}-${quote.market}-${quote.selection}-${index}`}><span className="font-semibold text-ink">{quote.sportsbook}</span> · {marketLabel(quote.market)} {quote.selection} <span className="font-mono text-ink">{quoteDisplay(quote)}</span></p>)}</div> : <p className="mt-2 text-xs text-muted-foreground">Not captured</p>}
+          </div>
+        ))}
+      </div>
+      {data.changes.length ? <div className="odds-table"><div className="odds-head"><span>When</span><span>Book / market</span><span>Selection</span><span>Change</span><span>Source time</span></div>{data.changes.map((change, index) => <div className="odds-row" key={`${change.sportsbook}-${change.market}-${change.selection}-${change.capturedAt}-${index}`}><span>{formatDate(String(change.capturedAt), true)}</span><span>{change.sportsbook} · {marketLabel(change.market)}</span><span>{change.selection}</span><span className="font-mono">{change.previousPoint ?? '—'} {formatPrice(change.previousPrice)} → {change.point ?? '—'} {formatPrice(change.price)}</span><span>{change.sourceTimestamp ? formatDate(String(change.sourceTimestamp), true) : 'Not provided'}</span></div>)}</div> : <EmptyPanel title="No line changes captured" detail="Only the first observed state is available so far. Repeated identical captures are intentionally not added." icon={LineChart} />}
+      <p className="mt-4 text-[11px] leading-5 text-muted-foreground">“First observed by Gridline” is not an official sportsbook opening line. The closing set is the last immutable pre-kickoff state and cannot be replaced after kickoff.</p>
+    </Panel>
+  );
+}
+
 function GameDetail() {
   const { gameId = '' } = useParams<{ gameId: string }>();
   const game = useGetGame(gameId, { query: { queryKey: getGetGameQueryKey(gameId), staleTime: 30000 } });
@@ -388,9 +578,10 @@ function GameDetail() {
           <div className="readiness-block"><div className="readiness-icon"><ShieldCheck className="h-5 w-5" /></div><div><StatusPill status={item.modelStatus}>{item.modelStatus === 'not_trained' ? 'Model not yet trained' : 'Model available'}</StatusPill><p className="mt-3 text-sm leading-6 text-muted-foreground">{item.modelStatus === 'not_trained' ? 'Probability, edge, and recommended stake fields are withheld. The workspace will not manufacture a signal from market data alone.' : 'Model outputs are available for review against the current market.'}</p></div></div>
         </Panel>
       </div>
+      <div className="mt-5"><LineHistory gameId={gameId} /></div>
       <div className="mt-5 grid gap-5 md:grid-cols-3">
         <ReadinessTile icon={Activity} title="Injury impact" detail="Meaningful availability data will appear here when the injury feed is connected." />
-        <ReadinessTile icon={LineChart} title="Line movement" detail="Historical capture has not been populated for this game yet." />
+        <ReadinessTile icon={LineChart} title="Closing line eligibility" detail="The line-history panel records the last pre-kickoff snapshot without replacing it after kickoff." />
         <ReadinessTile icon={Sparkles} title="Model context" detail="Feature contributions and calibration details are future-ready, not fabricated." />
       </div>
     </>
@@ -469,7 +660,7 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function Router() {
-  return <RoutedErrorBoundary><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/odds"><HealthPage kind="odds" eyebrow="Workspace / Market data" title="Odds board" detail="Snapshot readiness across configured sportsbook providers." preferred="odds" /></Route><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices." preferred="line" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></RoutedErrorBoundary>;
+  return <RoutedErrorBoundary><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/odds" component={OddsBoard} /><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices. Open a game from the Odds board to inspect every preserved change." preferred="odds" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></RoutedErrorBoundary>;
 }
 
 function App() {

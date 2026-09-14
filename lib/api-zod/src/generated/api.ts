@@ -113,7 +113,9 @@ export const ListGamesResponseItem = zod.object({
   "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number().int(),
-  "capturedAt": zod.coerce.date()
+  "capturedAt": zod.coerce.date(),
+  "sourceTimestamp": zod.coerce.date().nullish(),
+  "observationLabel": zod.string().optional()
 })).nullish()
 })
 export const ListGamesResponse = zod.array(ListGamesResponseItem)
@@ -154,8 +156,89 @@ export const GetGameResponse = zod.object({
   "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number().int(),
-  "capturedAt": zod.coerce.date()
+  "capturedAt": zod.coerce.date(),
+  "sourceTimestamp": zod.coerce.date().nullish(),
+  "observationLabel": zod.string().optional()
 })).nullish()
+})
+
+
+/**
+ * @summary Get immutable sportsbook line history for one game
+ */
+export const GetOddsHistoryParams = zod.object({
+  "gameId": zod.coerce.string()
+})
+
+export const GetOddsHistoryResponse = zod.object({
+  "gameId": zod.string(),
+  "firstObservedAt": zod.coerce.date().nullable(),
+  "firstObservedLabel": zod.string().nullable(),
+  "firstObserved": zod.array(zod.object({
+  "sportsbook": zod.string(),
+  "market": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number().int(),
+  "capturedAt": zod.coerce.date(),
+  "sourceTimestamp": zod.coerce.date().nullish(),
+  "observationLabel": zod.string().optional()
+})),
+  "current": zod.array(zod.object({
+  "sportsbook": zod.string(),
+  "market": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number().int(),
+  "capturedAt": zod.coerce.date(),
+  "sourceTimestamp": zod.coerce.date().nullish(),
+  "observationLabel": zod.string().optional()
+})),
+  "changes": zod.array(zod.object({
+  "sportsbook": zod.enum(['DraftKings', 'FanDuel']),
+  "market": zod.enum(['spread', 'moneyline', 'total']),
+  "selection": zod.string(),
+  "capturedAt": zod.coerce.date(),
+  "sourceTimestamp": zod.coerce.date().nullish(),
+  "previousPoint": zod.number().nullable(),
+  "point": zod.number().nullable(),
+  "previousPrice": zod.number().int(),
+  "price": zod.number().int(),
+  "pointChanged": zod.boolean(),
+  "priceChanged": zod.boolean()
+})),
+  "closing": zod.array(zod.object({
+  "sportsbook": zod.string(),
+  "market": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number().int(),
+  "capturedAt": zod.coerce.date(),
+  "sourceTimestamp": zod.coerce.date().nullish(),
+  "observationLabel": zod.string().optional()
+})),
+  "closingFrozen": zod.boolean()
+})
+
+
+/**
+ * Performs one server-side request only. It never polls or retries and never exposes the API key.
+ * @summary Make one explicit Odds API capture
+ */
+export const CaptureOddsResponse = zod.object({
+  "status": zod.enum(['success', 'failed', 'not_configured']),
+  "requestedAt": zod.coerce.date(),
+  "requestCount": zod.number().int(),
+  "recordsReceived": zod.number().int(),
+  "snapshotsCreated": zod.number().int(),
+  "duplicateSnapshots": zod.number().int(),
+  "unmatchedEvents": zod.number().int(),
+  "skippedPostKickoff": zod.number().int(),
+  "missingMarkets": zod.array(zod.string()),
+  "failedSportsbooks": zod.array(zod.string()),
+  "creditsUsed": zod.number().int().nullable(),
+  "creditsRemaining": zod.number().int().nullable(),
+  "error": zod.string().nullable()
 })
 
 
