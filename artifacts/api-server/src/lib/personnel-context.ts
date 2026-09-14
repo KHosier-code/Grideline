@@ -10,6 +10,7 @@ import {
   snapCountsTable,
   sportsbookOddsTable,
   teamsTable,
+  weatherForecastSnapshotsTable,
   type PregameFeatureAuditEntry,
 } from "@workspace/db";
 import {
@@ -23,6 +24,8 @@ import {
   type PersonnelPriorGame,
   type PersonnelQbRow,
   type PersonnelSnapRow,
+  normalizeTeamId,
+  nflverseTeamCandidates,
 } from "./personnel-context-derivation";
 
 export const PREGAME_PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context" as const;
@@ -46,16 +49,30 @@ export async function getPersonnelContextForGame(gameId: string, now = new Date(
     game.kickoffTime ? game.kickoffTime.getTime() - 1 : now.getTime(),
   ));
   const teamIds = [game.homeTeamId, game.awayTeamId];
-  const [depth, historicalDepth, injuries, snaps, qbRows, priorGames, odds, teams] = await Promise.all([
-    db.select().from(depthChartSnapshotsTable).where(inArray(depthChartSnapshotsTable.teamId, teamIds)),
-    db.select().from(historicalDepthChartTable).where(inArray(historicalDepthChartTable.teamId, teamIds)),
+  // ESPN schedule rows use numeric IDs while nflverse participation/depth rows
+  // use abbreviations. Resolve source identifiers once at this boundary so
+  // derivation receives one canonical ID space and can never silently filter
+  // out legitimate historical evidence.
+  const allTeams = await db.select().from(teamsTable);
+  const teamByAbbreviation = new Map(allTeams.map((team) => [team.abbreviation.toUpperCase(), team.teamId]));
+  const sourceTeamIds = [...new Set(teamIds.flatMap((teamId) => {
+    const team = allTeams.find((row) => row.teamId === teamId);
+    return team ? [teamId, ...nflverseTeamCandidates(team.abbreviation)] : [teamId];
+  }))];
+  const [depth, historicalDepth, injuries, snaps, qbRows, priorGames, odds, weatherRows] = await Promise.all([
+    db.select().from(depthChartSnapshotsTable).where(inArray(depthChartSnapshotsTable.teamId, sourceTeamIds)),
+    db.select().from(historicalDepthChartTable).where(inArray(historicalDepthChartTable.teamId, sourceTeamIds)),
     db.select().from(injuriesTable).where(inArray(injuriesTable.teamId, teamIds)),
-    db.select().from(snapCountsTable).where(inArray(snapCountsTable.teamId, teamIds)),
-    db.select().from(qbGameStatsTable).where(inArray(qbGameStatsTable.teamId, teamIds)),
+    db.select().from(snapCountsTable).where(inArray(snapCountsTable.teamId, sourceTeamIds)),
+    db.select().from(qbGameStatsTable).where(inArray(qbGameStatsTable.teamId, sourceTeamIds)),
     db.select().from(gamesTable),
     db.select().from(sportsbookOddsTable).where(eq(sportsbookOddsTable.gameId, gameId)),
-    db.select().from(teamsTable).where(inArray(teamsTable.teamId, teamIds)),
+    db.select().from(weatherForecastSnapshotsTable).where(eq(weatherForecastSnapshotsTable.gameId, gameId)),
   ]);
+  const canonicalDepth = depth.map((row) => ({ ...row, sourceTeamId: row.teamId, teamId: normalizeTeamId(row.teamId, teamByAbbreviation) }));
+  const canonicalHistoricalDepth = historicalDepth.map((row) => ({ ...row, sourceTeamId: row.teamId, teamId: normalizeTeamId(row.teamId, teamByAbbreviation) }));
+  const canonicalSnaps = snaps.map((row) => ({ ...row, sourceTeamId: row.teamId, teamId: normalizeTeamId(row.teamId, teamByAbbreviation) }));
+  const canonicalQbs = qbRows.map((row) => ({ ...row, sourceTeamId: row.teamId, teamId: normalizeTeamId(row.teamId, teamByAbbreviation) }));
   const gameById = new Map(priorGames.map((row) => [row.gameId, row]));
   const prior: PersonnelPriorGame[] = priorGames
     .filter((row) => row.gameId !== gameId && (row.homeTeamId === game.homeTeamId || row.awayTeamId === game.homeTeamId || row.homeTeamId === game.awayTeamId || row.awayTeamId === game.awayTeamId))
@@ -77,7 +94,7 @@ export async function getPersonnelContextForGame(gameId: string, now = new Date(
         finalAwayScore: row.finalAwayScore,
       },
     ]);
-  const qbWithKickoff: PersonnelQbRow[] = qbRows
+  const qbWithKickoff: PersonnelQbRow[] = canonicalQbs
     .map((row) => {
       const sourceGame = gameById.get(row.gameId);
       return {
@@ -86,22 +103,23 @@ export async function getPersonnelContextForGame(gameId: string, now = new Date(
       };
     })
     .filter((row) => row.kickoffTime && row.kickoffTime.getTime() < cutoff.getTime());
-  const snapsWithKickoff: PersonnelSnapRow[] = snaps.map((row) => ({
+  const snapsWithKickoff: PersonnelSnapRow[] = canonicalSnaps.map((row) => ({
     ...row,
     kickoffTime: gameById.get(row.gameId)?.kickoffTime,
   }));
   const context = derivePersonnelContext({
     game: contextGame(game),
     now,
-    depth: depth as PersonnelDepthRow[],
-    historicalDepth: historicalDepth as PersonnelHistoricalDepthRow[],
+    depth: canonicalDepth as PersonnelDepthRow[],
+    historicalDepth: canonicalHistoricalDepth as PersonnelHistoricalDepthRow[],
     injuries: injuries as PersonnelInjuryRow[],
     snaps: snapsWithKickoff,
     qbs: qbWithKickoff,
     priorGames: prior,
     odds: odds as PersonnelOddsRow[],
+    weather: weatherRows,
   });
-  const teamById = new Map(teams.map((team) => [team.teamId, team]));
+  const teamById = new Map(allTeams.map((team) => [team.teamId, team]));
   for (const [teamId, teamContext] of Object.entries(context.teams)) {
     const team = teamById.get(teamId);
     if (team) Object.assign(teamContext, { teamName: team.teamName, abbreviation: team.abbreviation });

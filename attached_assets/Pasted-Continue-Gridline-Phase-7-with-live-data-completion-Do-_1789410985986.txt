@@ -1,0 +1,176 @@
+Continue Gridline Phase 7 with live-data completion.
+
+Do not retrain, promote, or modify the active Phase 6 production models.
+
+Do not add betting recommendations, staking, player props, or wagering automation.
+
+The purpose of this step is to improve the actual live coverage feeding `pregame-v4-personnel-context`.
+
+PRIORITY 1: CURRENT DEPTH CHART / PERSONNEL COVERAGE
+
+Audit current available sources for legal, reliable, low-cost or free NFL depth-chart data.
+
+Evaluate:
+
+* Ourlads
+* ESPN
+* NFL.com/team depth charts
+* official team roster/depth-chart pages where available
+* nflverse historical depth charts
+* recent snap counts and participation as inference fallback
+
+For each source report:
+
+* availability
+* update frequency
+* structured vs HTML
+* whether automated ingestion is technically practical
+* whether terms/robots/access restrictions permit the intended use
+* team coverage
+* position coverage
+* starter/depth-order quality
+* source freshness
+* failure rate
+
+Do not bypass access controls or scrape a source where automated collection is prohibited.
+
+Build a source hierarchy only from sources we can legitimately use.
+
+Target hierarchy:
+
+1. verified current published depth chart
+2. secondary published source
+3. recent snap-count/participation inference
+4. historical depth chart fallback
+
+Store:
+
+* source name
+* official/published/inferred classification
+* timestamp
+* freshness
+* confidence
+* evidence used
+* unavailable reason
+
+Do not label inferred starters as official.
+
+PRIORITY 2: PROJECTED STARTERS
+
+Improve projected starter construction for:
+
+* QB
+* RB
+* WR
+* TE
+* LT
+* LG
+* C
+* RG
+* RT
+* EDGE
+* DT
+* LB
+* CB
+* S
+
+Use only information available before the prediction timestamp.
+
+For each projected starter include:
+
+* player
+* position
+* confidence
+* official/published/inferred
+* source
+* recent snap share
+* recent starter evidence
+* injury status
+* prior-week participation
+
+PRIORITY 3: WEATHER INGESTION
+
+Add a verified weather source for NFL stadium locations.
+
+Prefer a legitimate free or low-cost weather API.
+
+Requirements:
+
+* stadium latitude/longitude stored centrally
+* indoor/retractable/outdoor designation
+* kickoff-time forecast
+* timestamped forecast snapshots
+* temperature
+* sustained wind
+* gusts if available
+* precipitation probability
+* precipitation type if supported
+* humidity if available
+* weather source
+* forecast timestamp
+
+Never use post-kickoff observed weather in a pregame feature.
+
+If retractable-roof status cannot be verified, mark it unknown rather than assuming open or closed.
+
+PRIORITY 4: DATA CONFIDENCE CALIBRATION
+
+Recalculate Data Confidence using actual source completeness.
+
+The score must clearly separate:
+
+* QB certainty
+* depth/personnel completeness
+* injury freshness
+* sportsbook freshness
+* weather availability
+* sample quality
+
+Do not equate Data Confidence with probability of winning.
+
+Add component weights and document them.
+
+PRIORITY 5: COVERAGE REPORT
+
+Create coverage metrics for the current NFL week:
+
+* % teams with current published depth chart
+* % projected starters supported by published source
+* % projected starters inferred
+* % games with weather coverage
+* % games with current injury data
+* % games with current sportsbook data
+* median Data Confidence
+* lowest-confidence games and why
+
+PRIORITY 6: AUDIT PAGE ENHANCEMENT
+
+Update `/personnel-context` to show:
+
+* published depth chart
+* inferred projected starters
+* source conflicts
+* missing positions
+* weather
+* injury impact
+* OL continuity
+* matchup context
+* market movement
+* Data Confidence components
+
+FINAL REPORT
+
+Return:
+
+1. Which personnel sources are legally usable
+2. Selected depth-chart source hierarchy
+3. Current-week personnel coverage
+4. Published-vs-inferred starter coverage
+5. Weather source and coverage
+6. Data Confidence methodology
+7. Current-week lowest-confidence games
+8. Remaining unavailable inputs
+9. Any costs introduced
+10. Whether Phase 6 production behavior changed
+
+Do not train a Phase 7 challenger until this live-data completion step is finished.

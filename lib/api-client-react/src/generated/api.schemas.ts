@@ -491,6 +491,43 @@ export interface PersonnelContextAuditRow {
   sources: string[];
 }
 
+export type PersonnelContextCoverageGameCoverageItem = { [key: string]: unknown };
+
+export type PersonnelContextCoverageLowestConfidenceGamesItem = {
+  gameId: string;
+  confidence: number;
+  reasons: string[];
+};
+
+export type PersonnelContextCoverageSourceAssessmentsItem = { [key: string]: unknown };
+
+export type PersonnelContextCoverageWeather = { [key: string]: unknown };
+
+export interface PersonnelContextCoverage {
+  /** @nullable */
+  season: number | null;
+  /** @nullable */
+  week: number | null;
+  games: number;
+  teams: number;
+  requiredStarterSlots: number;
+  observedStarterSlots: number;
+  publishedStarterSlots: number;
+  inferredStarterSlots: number;
+  teamPublishedDepthPercent: number;
+  starterPublishedPercent: number;
+  starterInferredPercent: number;
+  gameWeatherPercent: number;
+  currentInjuryPercent: number;
+  currentSportsbookPercent: number;
+  /** @nullable */
+  medianConfidence: number | null;
+  gameCoverage: PersonnelContextCoverageGameCoverageItem[];
+  lowestConfidenceGames: PersonnelContextCoverageLowestConfidenceGamesItem[];
+  sourceAssessments: PersonnelContextCoverageSourceAssessmentsItem[];
+  weather: PersonnelContextCoverageWeather;
+}
+
 export type PregameFeatureBuildInputFeatureVersion = typeof PregameFeatureBuildInputFeatureVersion[keyof typeof PregameFeatureBuildInputFeatureVersion];
 
 

@@ -1,4 +1,4 @@
-export type Feed = "injuries" | "nflverse";
+export type Feed = "injuries" | "nflverse" | "weather";
 const eastern = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York", year: "numeric", month: "numeric",
   day: "numeric", weekday: "short", hour: "numeric", hourCycle: "h23",
@@ -22,7 +22,9 @@ export function latestFeedSlot(feed: Feed, now: Date, gameDates: ReadonlySet<str
   // Search real instants, not local arithmetic, so DST transitions are unambiguous.
   for (let i = 0; i < 8 * 24; i++) {
     const t = footballTime(candidate);
-    const due = feed === "nflverse"
+    const due = feed === "weather"
+      ? t.active && t.hour % 6 === 0
+      : feed === "nflverse"
       ? t.hour === 14 && (t.weekday === "Tue" || (t.active && t.weekday === "Wed"))
       : gameDates.has(t.dateKey)
         ? t.hour % 3 === 0

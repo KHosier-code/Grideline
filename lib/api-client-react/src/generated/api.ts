@@ -36,6 +36,7 @@ import type {
   OddsHistory,
   PersonnelContext,
   PersonnelContextAuditRow,
+  PersonnelContextCoverage,
   PregameFeatureAuditRow,
   PregameFeatureBuildInput,
   PregameFeatureHealth,
@@ -1275,6 +1276,83 @@ export function useListPersonnelContextAudit<TData = Awaited<ReturnType<typeof l
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListPersonnelContextAuditQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPersonnelContextCoverageUrl = () => {
+
+
+
+
+  return `/api/features/personnel-context/coverage`
+}
+
+/**
+ * @summary Read current-week personnel and weather coverage
+ */
+export const getPersonnelContextCoverage = async ( options?: Parameters<typeof customFetch>[1]): Promise<PersonnelContextCoverage> => {
+
+  return customFetch<PersonnelContextCoverage>(getGetPersonnelContextCoverageUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPersonnelContextCoverageQueryKey = () => {
+    return [
+    `/api/features/personnel-context/coverage`
+    ] as const;
+    }
+
+
+export const getGetPersonnelContextCoverageQueryOptions = <TData = Awaited<ReturnType<typeof getPersonnelContextCoverage>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPersonnelContextCoverage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPersonnelContextCoverageQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPersonnelContextCoverage>>> = ({ signal }) => getPersonnelContextCoverage({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPersonnelContextCoverage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPersonnelContextCoverageQueryResult = NonNullable<Awaited<ReturnType<typeof getPersonnelContextCoverage>>>
+export type GetPersonnelContextCoverageQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read current-week personnel and weather coverage
+ */
+
+export function useGetPersonnelContextCoverage<TData = Awaited<ReturnType<typeof getPersonnelContextCoverage>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPersonnelContextCoverage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPersonnelContextCoverageQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

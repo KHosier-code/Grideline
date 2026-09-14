@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { dataSyncRunsTable, db } from "@workspace/db";
 
-const scheduledProviders = ["scheduled:injuries", "scheduled:nflverse"] as const;
+const scheduledProviders = ["scheduled:injuries", "scheduled:nflverse", "scheduled:weather"] as const;
 
 export type ScheduledProvider = (typeof scheduledProviders)[number];
 

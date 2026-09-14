@@ -49,6 +49,8 @@ import {
   useGetDataHealth,
   useGetGame,
   useGetPersonnelContextForGame,
+  useGetPersonnelContextCoverage,
+  getGetPersonnelContextCoverageQueryKey,
   useGetOddsHistory,
   useGetSettings,
   useHealthCheck,
@@ -739,6 +741,83 @@ function FeatureAuditPage() {
   );
 }
 
+function PersonnelContextCoveragePanel() {
+  const coverage = useGetPersonnelContextCoverage({ query: { queryKey: getGetPersonnelContextCoverageQueryKey(), staleTime: 30000 } });
+
+  if (coverage.isLoading) return <LoadingPanel label="Loading coverage data" />;
+  if (coverage.isError || !coverage.data) return <ErrorPanel message="Coverage data could not be loaded." />;
+
+  const data = coverage.data;
+  const decimal = (value: unknown, digits = 1) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '—';
+
+  return (
+    <Panel eyebrow="Slate overview" title={`Season ${data.season ?? '—'} / Week ${data.week ?? '—'} Coverage`} className="mb-5">
+       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+         <MetricCard label="Games" value={String(data.games)} detail="Total scheduled" icon={CalendarDays} />
+         <MetricCard label="Median Confidence" value={`${decimal(data.medianConfidence)}/100`} detail="Not betting confidence" icon={Target} />
+         <MetricCard label="Published Depth" value={`${decimal(data.teamPublishedDepthPercent)}%`} detail="Official depth charts" icon={ListFilter} />
+         <MetricCard label="Inferred Starters" value={`${decimal(data.starterInferredPercent)}%`} detail="Projected via snap share" icon={UserRound} />
+       </div>
+       <div className="mt-5 grid gap-5 lg:grid-cols-3">
+         <div className="rounded-xl border border-border bg-secondary/20 p-4">
+           <h3 className="font-semibold text-ink text-sm">Data Availability</h3>
+           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+             <div className="flex justify-between"><span>Weather</span> <span className="font-mono text-ink">{decimal(data.gameWeatherPercent)}%</span></div>
+             <div className="flex justify-between"><span>Injuries</span> <span className="font-mono text-ink">{decimal(data.currentInjuryPercent)}%</span></div>
+             <div className="flex justify-between"><span>Sportsbook</span> <span className="font-mono text-ink">{decimal(data.currentSportsbookPercent)}%</span></div>
+             <div className="flex justify-between"><span>Published Starters</span> <span className="font-mono text-ink">{decimal(data.starterPublishedPercent)}%</span></div>
+           </div>
+         </div>
+
+         <div className="rounded-xl border border-border bg-secondary/20 p-4">
+           <h3 className="font-semibold text-ink text-sm">Lowest Confidence Games</h3>
+           <div className="mt-3 space-y-3">
+             {data.lowestConfidenceGames?.length ? data.lowestConfidenceGames.map((g: any) => (
+               <div key={g.gameId} className="text-xs">
+                 <div className="flex justify-between font-medium text-ink"><span>{g.gameId}</span> <span className="font-mono">{decimal(g.confidence)}</span></div>
+                 <div className="text-muted-foreground mt-1 text-[10px] leading-4">{g.reasons?.join(', ')}</div>
+               </div>
+             )) : <p className="text-xs text-muted-foreground">No low confidence outliers.</p>}
+           </div>
+         </div>
+
+         <div className="rounded-xl border border-border bg-secondary/20 p-4">
+           <h3 className="font-semibold text-ink text-sm">Weather Provider</h3>
+           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+              {Object.entries(data.weather ?? {}).map(([key, value]) => (
+                <div key={key} className="flex justify-between"><span>{key.replace(/([A-Z])/g, ' $1').toLowerCase()}</span> <span className="font-mono text-ink">{String(value)}</span></div>
+              ))}
+           </div>
+         </div>
+       </div>
+
+       {data.sourceAssessments && data.sourceAssessments.length > 0 && (
+          <div className="mt-5 rounded-xl border border-border bg-secondary/20 p-4 overflow-x-auto">
+             <h3 className="font-semibold text-ink text-sm mb-3">Source Assessments</h3>
+             <table className="w-full text-left text-xs whitespace-nowrap">
+               <thead>
+                 <tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                   <th className="px-2 py-2">Source</th>
+                   <th className="px-2 py-2">Coverage</th>
+                   <th className="px-2 py-2">Quality</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {data.sourceAssessments.map((sa: any, i: number) => (
+                   <tr key={i} className="border-b border-border/50 last:border-0">
+                     <td className="px-2 py-2 font-medium text-ink">{sa.source ?? 'Unknown'}</td>
+                     <td className="px-2 py-2 font-mono">{sa.coverage ?? '—'}</td>
+                     <td className="px-2 py-2">{sa.quality ?? '—'}</td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+          </div>
+       )}
+    </Panel>
+  );
+}
+
 function PersonnelContextPage() {
   const games = useListGames(undefined, { query: { queryKey: ['personnel-context-games'], staleTime: 30000 } });
   const [selectedGameId, setSelectedGameId] = useState('');
@@ -762,6 +841,7 @@ function PersonnelContextPage() {
         detail="Inspect the timestamped evidence available before kickoff. Inferred roles remain clearly separated from official source records."
         actions={<button type="button" className="button button-subtle" onClick={() => context.refetch()} disabled={!selectedGameId || context.isFetching}><RefreshCw className={cx('h-4 w-4', context.isFetching && 'animate-spin')} /> Refresh</button>}
       />
+      <PersonnelContextCoveragePanel />
       <Panel eyebrow="Point-in-time game record" title="Choose a matchup" className="mb-5">
         {games.isLoading ? <Skeleton className="h-10" /> : games.isError ? <ErrorPanel message="The current schedule could not be loaded." /> : games.data?.length ? (
           <div className="flex flex-col gap-3 md:flex-row md:items-end">
@@ -817,8 +897,28 @@ function PersonnelContextPage() {
                 </div>
                 <div className="mt-5">
                   <div className="mb-2 flex items-center justify-between"><p className="eyebrow">Probable starters</p><span className="section-meta">Official and inferred kept separate</span></div>
-                  {team.starters?.length ? <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-2 py-2">Player</th><th className="px-2 py-2">Position</th><th className="px-2 py-2">Source status</th><th className="px-2 py-2">Confidence</th><th className="px-2 py-2">Source timestamp</th></tr></thead><tbody>{team.starters.map((starter: any) => <tr className="border-b border-border/60" key={`${team.teamId}-${starter.playerId}-${starter.position}`}><td className="px-2 py-2 font-semibold text-ink">{starter.playerName ?? starter.playerId}</td><td className="px-2 py-2">{starter.position ?? '—'}</td><td className="px-2 py-2"><StatusPill status={starter.official ? 'current' : 'stale'}>{starter.official ? 'Official source record' : 'Inferred — not official'}</StatusPill><p className="mt-1 text-[10px] text-muted-foreground">{starter.source}</p></td><td className="px-2 py-2 font-mono">{score(starter.confidence) ?? '—'}/100</td><td className="px-2 py-2">{starter.snapshotTimestamp ? formatDate(starter.snapshotTimestamp, true) : 'Unavailable'}</td></tr>)}</tbody></table></div> : <EmptyPanel title="No supported starter evidence" detail={team.unavailableReasons?.join(' ') || 'No depth-chart or prior participation record is available before the source cutoff.'} icon={UserRound} />}
+                  {team.starters?.length ? <div className="overflow-x-auto"><table className="w-full min-w-[980px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-2 py-2">Player</th><th className="px-2 py-2">Position</th><th className="px-2 py-2">Source status</th><th className="px-2 py-2">Confidence</th><th className="px-2 py-2">Recent participation</th><th className="px-2 py-2">Injury</th><th className="px-2 py-2">Evidence</th><th className="px-2 py-2">Source timestamp</th></tr></thead><tbody>{team.starters.map((starter: any) => <tr className="border-b border-border/60 align-top" key={`${team.teamId}-${starter.playerId}-${starter.position}`}><td className="px-2 py-2 font-semibold text-ink">{starter.playerName ?? starter.playerId}</td><td className="px-2 py-2">{starter.position ?? '—'}</td><td className="px-2 py-2"><StatusPill status={starter.classification === 'official' ? 'current' : 'stale'}>{starter.classification === 'official' ? 'Official' : starter.classification === 'published_secondary' ? 'Published secondary' : 'Inferred — not official'}</StatusPill><p className="mt-1 text-[10px] text-muted-foreground">{starter.source}</p></td><td className="px-2 py-2 font-mono">{score(starter.confidence) ?? '—'}/100</td><td className="px-2 py-2"><p>Snap share: {decimal(starter.recentSnapShare, 2)}</p><p className="mt-1 text-[10px] text-muted-foreground">{starter.priorWeekParticipation?.played === null || starter.priorWeekParticipation?.played === undefined ? 'Prior week unavailable' : starter.priorWeekParticipation.played ? 'Played prior week' : 'No prior-week participation'}</p></td><td className="px-2 py-2">{starter.injuryStatus?.gameStatus ?? starter.injuryStatus?.practiceStatus ?? 'No current row'} </td><td className="max-w-[240px] px-2 py-2 text-[10px] leading-4 text-muted-foreground">{starter.recentStarterEvidence?.length ? starter.recentStarterEvidence.join(' ') : starter.evidence?.join(' ') || starter.unavailableReason || 'No additional evidence.'}</td><td className="px-2 py-2">{starter.snapshotTimestamp ? formatDate(starter.snapshotTimestamp, true) : 'Unavailable'}<p className="mt-1 text-[10px] text-muted-foreground">{starter.dataFreshness ?? 'unknown freshness'}</p></td></tr>)}</tbody></table></div> : <EmptyPanel title="No supported starter evidence" detail={team.unavailableReasons?.join(' ') || 'No depth-chart or prior participation record is available before the source cutoff.'} icon={UserRound} />}
                 </div>
+                {team.sourceConflicts?.length > 0 && (
+                  <div className="mt-4 callout callout-warn text-xs">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="eyebrow !mb-1 text-inherit">Source conflicts</p>
+                      <ul className="list-inside list-disc opacity-90 space-y-1">
+                        {team.sourceConflicts.map((conflict: any, idx: number) => <li key={`${conflict.position ?? 'unknown'}-${idx}`}><strong>{conflict.position ?? 'Unknown position'}:</strong> {conflict.reason ?? 'Sources disagree.'} {conflict.players?.length ? `Players: ${conflict.players.join(', ')}.` : ''} {conflict.sources?.length ? `Sources: ${conflict.sources.join(', ')}.` : ''}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                {team.missingRequiredPositions?.length > 0 && (
+                  <div className="mt-4 callout border-destructive/30 bg-destructive/10 text-destructive text-xs">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="eyebrow !mb-1 text-inherit">Missing positions</p>
+                      <p className="opacity-90 mt-1">The following positions lack sufficient starter evidence: <strong>{team.missingRequiredPositions.join(', ')}</strong></p>
+                    </div>
+                  </div>
+                )}
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
                   <div className="rounded-xl border border-border bg-secondary/20 p-3 text-xs"><p className="eyebrow">Quarterback context</p><dl className="mt-2 space-y-1 text-muted-foreground"><div className="flex justify-between gap-3"><dt>Recent dropbacks</dt><dd className="font-mono text-ink">{team.qb?.recentDropbacks ?? '—'}</dd></div><div className="flex justify-between gap-3"><dt>EPA / dropback</dt><dd className="font-mono text-ink">{decimal(team.qb?.recentEpaPerDropback, 3)}</dd></div><div className="flex justify-between gap-3"><dt>Success rate</dt><dd className="font-mono text-ink">{decimal(team.qb?.recentSuccessRate, 3)}</dd></div><div className="flex justify-between gap-3"><dt>Starter change</dt><dd className="font-mono text-ink">{bool(team.qb?.starterChange)}</dd></div></dl></div>
                   <div className="rounded-xl border border-border bg-secondary/20 p-3 text-xs"><p className="eyebrow">Rest and travel</p><dl className="mt-2 space-y-1 text-muted-foreground"><div className="flex justify-between gap-3"><dt>Days rest</dt><dd className="font-mono text-ink">{decimal(team.rest?.daysRest, 1)}</dd></div><div className="flex justify-between gap-3"><dt>Short week</dt><dd className="font-mono text-ink">{bool(team.rest?.shortWeek)}</dd></div><div className="flex justify-between gap-3"><dt>Bye return</dt><dd className="font-mono text-ink">{bool(team.rest?.byeWeekReturn)}</dd></div><div className="flex justify-between gap-3"><dt>Road-game run</dt><dd className="font-mono text-ink">{team.rest?.consecutiveRoadGames ?? '—'}</dd></div></dl></div>

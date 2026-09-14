@@ -2,6 +2,7 @@ import { and, desc, eq, gte } from "drizzle-orm";
 import { db, pool, dataSyncRunsTable } from "@workspace/db";
 import { syncEspnInjuries } from "./availability";
 import { syncNflverseHistory } from "./nflverse";
+import { syncNwsWeather } from "./weather";
 import { footballTime, latestFeedSlot, shouldAttempt, type Feed } from "./feed-schedule";
 import { logger } from "./logger";
 import { getFeedGameDays } from "./feed-game-days";
@@ -9,7 +10,7 @@ import { getFeedGameDays } from "./feed-game-days";
 // Session locks prevent duplicate jobs across API replicas. Manual syncs share them.
 export async function withFeedLock<T>(feed: Feed, work: () => Promise<T>): Promise<T | null> {
   const client = await pool.connect();
-  const key = feed === "injuries" ? 731401 : 731402;
+  const key = feed === "injuries" ? 731401 : feed === "nflverse" ? 731402 : 731403;
   let locked = false;
   try {
     const result = await client.query("SELECT pg_try_advisory_lock($1) AS locked", [key]);
@@ -49,7 +50,9 @@ export async function runScheduledFeed(feed: Feed, now = new Date()) {
     try {
       const result = feed === "injuries"
         ? await syncEspnInjuries()
-        : await syncNflverseHistory([footballTime(now).season], { refresh: true });
+        : feed === "weather"
+          ? await syncNwsWeather({ jobKey: provider, scheduledFor: now })
+          : await syncNflverseHistory([footballTime(now).season], { refresh: true });
       if ("status" in result && result.status !== "success") {
         throw new Error(`Source returned ${result.status}: ${"failures" in result ? result.failures.join("; ") : ""}`);
       }
@@ -72,7 +75,7 @@ export function startFeedScheduler() {
   const busy = new Set<Feed>();
   const tick = async () => {
     // Independent feeds: a large history import must not delay injury reports.
-    await Promise.allSettled((["injuries", "nflverse"] as const).map(async feed => {
+    await Promise.allSettled((["injuries", "nflverse", "weather"] as const).map(async feed => {
       if (busy.has(feed)) return;
       busy.add(feed);
       try { await runScheduledFeed(feed); }

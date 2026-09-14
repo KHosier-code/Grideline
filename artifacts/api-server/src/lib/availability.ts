@@ -254,6 +254,8 @@ export async function syncEspnDepthCharts(options?: { jobKey?: string; scheduled
           role: item.depthPosition === 1 ? "starter" : "backup",
           changeType,
           sourceHash,
+          source: "espn_depth_chart",
+          classification: "published_secondary",
           sourceUpdatedAt,
           snapshotTimestamp: new Date(),
         });
@@ -282,6 +284,8 @@ export async function syncEspnDepthCharts(options?: { jobKey?: string; scheduled
             role: "removed",
             changeType: "player_removed",
             sourceHash,
+            source: "espn_depth_chart",
+            classification: "published_secondary",
             sourceUpdatedAt,
             snapshotTimestamp: new Date(),
           });

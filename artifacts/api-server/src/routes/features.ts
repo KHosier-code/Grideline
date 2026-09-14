@@ -7,8 +7,12 @@ import {
   rebuildPregamePersonnelContextFeatures,
 } from "../lib/personnel-context";
 import { requireAdmin } from "../middlewares/admin";
+import { getCurrentPersonnelCoverage } from "../lib/personnel-coverage";
 
 const router: IRouter = Router();
+type PersonnelCoverageResult = Awaited<ReturnType<typeof getCurrentPersonnelCoverage>>;
+let personnelCoverageCache: { expiresAt: number; value: PersonnelCoverageResult } | null = null;
+let personnelCoverageRequest: Promise<PersonnelCoverageResult> | null = null;
 
 router.get("/features/pregame/health", async (req, res): Promise<void> => {
   const featureVersion = typeof req.query.featureVersion === "string" ? req.query.featureVersion : undefined;
@@ -59,6 +63,19 @@ router.get("/features/personnel-context/audit", async (req, res): Promise<void> 
   });
   const limit = numberParam("limit") ?? 200;
   res.json(rows.slice(0, Math.max(1, Math.min(limit, 1000))));
+});
+
+router.get("/features/personnel-context/coverage", async (_req, res): Promise<void> => {
+  if (personnelCoverageCache && personnelCoverageCache.expiresAt > Date.now()) {
+    res.json(personnelCoverageCache.value);
+    return;
+  }
+  personnelCoverageRequest ??= getCurrentPersonnelCoverage().finally(() => {
+    personnelCoverageRequest = null;
+  });
+  const value = await personnelCoverageRequest;
+  personnelCoverageCache = { expiresAt: Date.now() + 60_000, value };
+  res.json(value);
 });
 
 router.post("/features/pregame/build", requireAdmin, async (req, res): Promise<void> => {

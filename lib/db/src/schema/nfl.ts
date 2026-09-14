@@ -79,6 +79,8 @@ export const depthChartSnapshotsTable = pgTable("depth_chart_snapshots", {
   role: text("role"),
   changeType: text("change_type"),
   sourceHash: text("source_hash").notNull(),
+  source: text("source").notNull().default("unknown"),
+  classification: text("classification").notNull().default("published_secondary"),
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
   snapshotTimestamp: timestamp("snapshot_timestamp", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -541,6 +543,30 @@ export const historicalDepthChartTable = pgTable("historical_depth_charts", {
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique("historical_depth_chart_source_key_unique").on(table.sourceKey),
+]);
+
+/** Immutable, pre-kickoff National Weather Service forecast captures. */
+export const weatherForecastSnapshotsTable = pgTable("weather_forecast_snapshots", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  gameId: text("game_id").notNull(),
+  source: text("source").notNull(),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
+  forecastGeneratedAt: timestamp("forecast_generated_at", { withTimezone: true }),
+  validTime: timestamp("valid_time", { withTimezone: true }).notNull(),
+  temperature: doublePrecision("temperature"),
+  sustainedWind: doublePrecision("sustained_wind"),
+  windGust: doublePrecision("wind_gust"),
+  precipitationProbability: doublePrecision("precipitation_probability"),
+  precipitationType: text("precipitation_type"),
+  humidity: doublePrecision("humidity"),
+  weatherSummary: text("weather_summary"),
+  indoorOutdoor: text("indoor_outdoor").notNull(),
+  roofStatus: text("roof_status"),
+  sourceUrl: text("source_url"),
+  office: text("office"),
+  gridpoint: text("gridpoint"),
+}, (table) => [
+  index("weather_forecast_game_valid_idx").on(table.gameId, table.validTime, table.fetchedAt),
 ]);
 
 export type PregameFeatureValues = Record<string, number | null>;

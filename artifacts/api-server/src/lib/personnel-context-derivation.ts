@@ -17,6 +17,8 @@ export type PersonnelGame = {
 
 export type PersonnelDepthRow = {
   teamId: string;
+  /** The identifier as supplied by the source (for example nflverse's CIN). */
+  sourceTeamId?: string | null;
   playerId: string;
   playerName?: string | null;
   position?: string | null;
@@ -26,6 +28,7 @@ export type PersonnelDepthRow = {
   snapshotTimestamp?: DateLike;
   sourceUpdatedAt?: DateLike;
   source?: string;
+  classification?: "official" | "published_secondary" | "inferred" | string | null;
 };
 
 export type PersonnelHistoricalDepthRow = PersonnelDepthRow & {
@@ -53,6 +56,7 @@ export type PersonnelSnapRow = {
   playerName: string;
   position?: string | null;
   teamId: string;
+  sourceTeamId?: string | null;
   offenseSnaps?: number | null;
   offensePct?: number | null;
   defenseSnaps?: number | null;
@@ -69,6 +73,7 @@ export type PersonnelQbRow = {
   week: number;
   playerId: string;
   teamId: string;
+  sourceTeamId?: string | null;
   dropbacks: number;
   passAttempts: number;
   passEpa: number;
@@ -78,6 +83,7 @@ export type PersonnelQbRow = {
   rushAttempts: number;
   rushEpa: number;
   kickoffTime?: DateLike;
+  sourceUpdatedAt?: DateLike;
 };
 
 export type PersonnelPriorGame = {
@@ -99,6 +105,26 @@ export type PersonnelOddsRow = {
   price: number;
 };
 
+export type PersonnelWeatherRow = {
+  gameId: string;
+  source: string;
+  fetchedAt: DateLike;
+  forecastGeneratedAt?: DateLike;
+  validTime: DateLike;
+  temperature?: number | null;
+  sustainedWind?: number | null;
+  windGust?: number | null;
+  precipitationProbability?: number | null;
+  precipitationType?: string | null;
+  humidity?: number | null;
+  weatherSummary?: string | null;
+  indoorOutdoor: string;
+  roofStatus?: string | null;
+  sourceUrl?: string | null;
+  office?: string | null;
+  gridpoint?: string | null;
+};
+
 export type ProbableStarter = {
   playerId: string;
   teamId: string;
@@ -107,11 +133,26 @@ export type ProbableStarter = {
   unit: string;
   estimatedDepthPosition: number | null;
   source: string;
+  classification: "official" | "published_secondary" | "inferred";
   official: boolean;
   inferred: boolean;
   confidence: number;
   snapshotTimestamp: string | null;
   dataFreshness: "fresh" | "stale" | "unavailable";
+  recentSnapShare: number | null;
+  recentStarterEvidence: string[];
+  injuryStatus: {
+    injury: string | null;
+    practiceStatus: string | null;
+    gameStatus: string | null;
+    snapshotTimestamp: string | null;
+  };
+  priorWeekParticipation: {
+    gameId: string | null;
+    participated: boolean;
+    snapShare: number | null;
+  };
+  evidence: string[];
   unavailableReason: string | null;
 };
 
@@ -136,6 +177,10 @@ export type InjuryImpact = {
 const OFFENSE = new Set(["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"]);
 const DEFENSE = new Set(["DL", "DE", "DT", "NT", "EDGE", "LB", "ILB", "OLB", "MLB", "CB", "S", "FS", "SS", "DB"]);
 const OL = new Set(["OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"]);
+export const REQUIRED_STARTER_POSITIONS = [
+  "QB", "RB", "WR", "TE", "LT", "LG", "C", "RG", "RT",
+  "EDGE", "DT", "LB", "CB", "S",
+] as const;
 
 function time(value: DateLike) {
   if (value instanceof Date) return value.getTime();
@@ -166,7 +211,49 @@ export function asOfCutoff(kickoffTime: DateLike, now = new Date()) {
 }
 
 export function normalizePosition(position: string | null | undefined) {
-  return text(position)?.toUpperCase() ?? null;
+  const normalized = text(position)?.toUpperCase() ?? null;
+  if (normalized && ["DE", "EDGE", "E"].includes(normalized)) return "EDGE";
+  if (normalized && ["DL", "NT", "NOSE"].includes(normalized)) return "DT";
+  if (normalized && ["ILB", "OLB", "MLB"].includes(normalized)) return "LB";
+  if (normalized && ["FS", "SS", "DB"].includes(normalized)) return "S";
+  return normalized;
+}
+
+/**
+ * Convert an nflverse abbreviation to the schedule's canonical team ID.
+ * Source IDs are deliberately retained on rows by the database adapter.
+ */
+export function normalizeTeamId(
+  sourceId: string,
+  abbreviationToTeamId: ReadonlyMap<string, string>,
+) {
+  const normalized = sourceId.trim().toUpperCase();
+  const alias = NFLVERSE_TEAM_ALIASES[normalized] ?? normalized;
+  return abbreviationToTeamId.get(alias) ?? abbreviationToTeamId.get(normalized) ?? sourceId;
+}
+
+/** nflverse franchise aliases retained across historical seasons. */
+export const NFLVERSE_TEAM_ALIASES: Record<string, string> = {
+  LA: "LAR", LAR: "LAR",
+  OAK: "LV", LV: "LV",
+  SD: "LAC", LAC: "LAC",
+  STL: "LAR",
+  JAX: "JAX", JAC: "JAX",
+  WSH: "WAS", WAS: "WAS",
+  ARI: "ARI", ATL: "ATL", BAL: "BAL", BUF: "BUF", CAR: "CAR",
+  CHI: "CHI", CIN: "CIN", CLE: "CLE", DAL: "DAL", DEN: "DEN",
+  DET: "DET", GB: "GB", HOU: "HOU", IND: "IND", KC: "KC",
+  MIA: "MIA", MIN: "MIN", NE: "NE", NO: "NO", NYG: "NYG",
+  NYJ: "NYJ", PHI: "PHI", PIT: "PIT", SEA: "SEA", SF: "SF",
+  TB: "TB", TEN: "TEN",
+};
+
+export function nflverseTeamCandidates(abbreviation: string | null | undefined) {
+  const stable = abbreviation?.trim().toUpperCase() ?? "";
+  const aliases = Object.entries(NFLVERSE_TEAM_ALIASES)
+    .filter(([, canonical]) => canonical === stable)
+    .map(([alias]) => alias);
+  return [...new Set([stable, ...aliases].filter(Boolean))];
 }
 
 export function personnelUnit(position: string | null | undefined): string {
@@ -214,7 +301,8 @@ function recentSnaps(
     .filter((row) =>
       row.teamId === teamId &&
       row.playerId === playerId &&
-      (time(row.sourceUpdatedAt) ?? -1) <= cutoff.getTime() &&
+      time(row.sourceUpdatedAt) !== null &&
+      time(row.sourceUpdatedAt)! <= cutoff.getTime() &&
       (time(row.kickoffTime) ?? -1) < cutoff.getTime())
     .sort((a, b) => (time(b.kickoffTime) ?? -1) - (time(a.kickoffTime) ?? -1))
     .slice(0, 5);
@@ -251,27 +339,24 @@ function depthForTeam(
 ): ProbableStarter[] {
   const current = depth.filter((row) =>
     row.teamId === teamId &&
+    (row.source === "official_depth_chart" || row.source === "espn_depth_chart") &&
     (time(row.snapshotTimestamp) ?? -1) <= cutoff.getTime() &&
     (time(row.sourceUpdatedAt) ?? time(row.snapshotTimestamp) ?? -1) <= cutoff.getTime(),
   );
-  const latest = latestBy(current, (row) => `${row.playerId}:${normalizePosition(row.position) ?? "UNK"}`, (row) => row.snapshotTimestamp);
+  const latest = latestBy(
+    current.filter((row) => (row.depthPosition ?? 99) === 1 || row.starter === true),
+    (row) => normalizePosition(row.position) ?? "UNK",
+    (row) => row.snapshotTimestamp,
+  );
   const rows = [...latest.values()];
   const positionRows = new Set(rows.map((row) => normalizePosition(row.position)).filter(Boolean));
-  const historical = historicalDepth.filter((row) =>
-    row.teamId === teamId &&
-    (time(row.sourceSnapshotAt ?? row.sourceUpdatedAt) ?? -1) <= cutoff.getTime(),
-  );
-  const latestHistorical = latestBy(historical, (row) => `${row.playerId}:${normalizePosition(row.position) ?? "UNK"}`, (row) => row.sourceSnapshotAt ?? row.sourceUpdatedAt);
-  for (const row of latestHistorical.values()) {
-    const position = normalizePosition(row.position);
-    if (position && !positionRows.has(position) && (row.depthPosition ?? 99) <= 2) rows.push({ ...row, source: "historical_depth_charts" });
-  }
   // A current snapshot can be incomplete.  Participation is a legal,
   // auditable fallback, never an official depth chart.
   const recent = snaps
     .filter((row) =>
       row.teamId === teamId &&
-      (time(row.sourceUpdatedAt) ?? -1) <= cutoff.getTime() &&
+      time(row.sourceUpdatedAt) !== null &&
+      time(row.sourceUpdatedAt)! <= cutoff.getTime() &&
       (time(row.kickoffTime) ?? -1) < cutoff.getTime())
     .sort((a, b) => (time(b.kickoffTime) ?? -1) - (time(a.kickoffTime) ?? -1));
   const byPosition = new Map<string, PersonnelSnapRow[]>();
@@ -301,13 +386,29 @@ function depthForTeam(
       });
     }
   }
+  // Historical depth is the last fallback, after current participation
+  // inference has had a chance to support a missing position.
+  const inferredPositions = new Set(rows.map((row) => normalizePosition(row.position)).filter(Boolean));
+  const historical = historicalDepth.filter((row) =>
+    row.teamId === teamId &&
+    (time(row.sourceSnapshotAt ?? row.sourceUpdatedAt) ?? -1) <= cutoff.getTime(),
+  );
+  const latestHistorical = latestBy(
+    historical.filter((row) => (row.depthPosition ?? 99) === 1),
+    (row) => normalizePosition(row.position) ?? "UNK",
+    (row) => row.sourceSnapshotAt ?? row.sourceUpdatedAt,
+  );
+  for (const row of latestHistorical.values()) {
+    const position = normalizePosition(row.position);
+    if (position && !inferredPositions.has(position) && (row.depthPosition ?? 99) <= 2) rows.push({ ...row, source: "historical_depth_charts" });
+  }
   return rows
     .filter((row) => (row.depthPosition ?? 99) === 1 || row.starter === true || row.source === "snap_counts_inference")
     .map((row) => {
       const position = normalizePosition(row.position);
       const share = snapShare(recentSnaps(teamId, row.playerId, snaps, cutoff));
       const fresh = freshness(row.snapshotTimestamp ?? row.sourceUpdatedAt, cutoff);
-      const official = row.source !== "snap_counts_inference" && row.source !== "historical_depth_charts" && (row.starter === true || row.depthPosition === 1);
+      const official = row.classification === "official" && row.source === "official_depth_chart";
       const injury = injuries.get(`${teamId}:${row.playerId}`);
       const unavailableReason = unavailableStatus(injury?.gameStatus ?? null)
         ? `Latest injury status is ${injury?.gameStatus}.`
@@ -320,11 +421,42 @@ function depthForTeam(
         unit: personnelUnit(position),
         estimatedDepthPosition: row.depthPosition ?? null,
         source: row.source ?? (official ? "depth_chart_snapshots" : "depth_chart_snapshot"),
-        official,
-        inferred: !official,
+        classification: row.classification === "official" && row.source === "official_depth_chart"
+          ? "official"
+          : row.source === "snap_counts_inference" || row.source === "historical_depth_charts"
+            ? "inferred"
+            : "published_secondary",
+        official: row.classification === "official" && row.source === "official_depth_chart",
+        inferred: row.source === "snap_counts_inference" || row.source === "historical_depth_charts",
         confidence: clamp(35 + (official ? 35 : 15) + (share === null ? 0 : Math.min(20, share * 20)) + fresh.confidence - (unavailableReason ? 18 : 0)),
         snapshotTimestamp: fresh.timestamp,
         dataFreshness: fresh.label,
+        recentSnapShare: share,
+        recentStarterEvidence: row.classification !== "inferred" && row.source !== "snap_counts_inference" && row.source !== "historical_depth_charts"
+          ? [`${row.source ?? "published depth chart"} lists this player first at ${position ?? "an unspecified position"}.`]
+          : share === null
+            ? []
+            : [`Recent participation averaged ${Math.round(share * 100)}% of available snaps.`],
+        injuryStatus: {
+          injury: text(injury?.injury),
+          practiceStatus: text(injury?.practiceStatus),
+          gameStatus: text(injury?.gameStatus),
+          snapshotTimestamp: iso(injury?.snapshotTimestamp),
+        },
+        priorWeekParticipation: (() => {
+          const previous = recentSnaps(teamId, row.playerId, snaps, cutoff)[0];
+          return {
+            gameId: previous?.gameId ?? null,
+            participated: Boolean(previous),
+            snapShare: previous ? snapShare([previous]) : null,
+          };
+        })(),
+        evidence: [
+          `Source: ${row.source ?? "depth_chart_snapshots"}.`,
+          fresh.timestamp ? `Snapshot timestamp: ${fresh.timestamp}.` : "Snapshot timestamp unavailable.",
+          ...(share === null ? [] : [`Recent snap share: ${Math.round(share * 100)}%.`]),
+          ...(injury ? [`Injury feed status: ${injury.gameStatus ?? injury.practiceStatus ?? "reported"}.`] : ["No injury row reported as of cutoff."]),
+        ],
         unavailableReason,
       };
     });
@@ -403,7 +535,12 @@ function deriveQb(
   snaps: PersonnelSnapRow[],
   cutoff: Date,
 ) {
-  const teamRows = qbs.filter((row) => row.teamId === teamId && (time(row.kickoffTime) ?? -1) < cutoff.getTime());
+  const teamRows = qbs.filter((row) =>
+    row.teamId === teamId
+    && (time(row.kickoffTime) ?? -1) < cutoff.getTime()
+    && time(row.sourceUpdatedAt) !== null
+    && time(row.sourceUpdatedAt)! <= cutoff.getTime(),
+  );
   const byGame = new Map<string, PersonnelQbRow[]>();
   for (const row of teamRows) byGame.set(row.gameId, [...(byGame.get(row.gameId) ?? []), row]);
   const primary = [...byGame.values()]
@@ -418,11 +555,21 @@ function deriveQb(
     unit: "quarterback",
     estimatedDepthPosition: null,
     source: "qb_game_stats_inference",
+    classification: "inferred" as const,
     official: false,
     inferred: true,
     confidence: 48,
     snapshotTimestamp: iso(primary[0].kickoffTime),
     dataFreshness: "stale" as const,
+    recentSnapShare: snapShare(recentSnaps(teamId, primary[0].playerId, snaps, cutoff)),
+    recentStarterEvidence: ["Most recent pre-cutoff QB participation had the highest dropback volume."],
+    injuryStatus: { injury: null, practiceStatus: null, gameStatus: null, snapshotTimestamp: null },
+    priorWeekParticipation: {
+      gameId: primary[0].gameId,
+      participated: true,
+      snapShare: snapShare(recentSnaps(teamId, primary[0].playerId, snaps, cutoff)),
+    },
+    evidence: ["qb_game_stats participation inference", `Most recent pre-cutoff game: ${iso(primary[0].kickoffTime) ?? "unknown"}.`],
     unavailableReason: "No current depth-chart QB starter was available.",
   } : null);
   const recent = projected ? primary.filter((row) => row.playerId === projected.playerId).slice(0, 5) : [];
@@ -473,10 +620,18 @@ function deriveQb(
 function deriveOl(teamId: string, starters: ProbableStarter[], snaps: PersonnelSnapRow[], cutoff: Date) {
   const line = starters.filter((row) => row.teamId === teamId && row.unit === "offensive_line");
   const previousGame = snaps
-    .filter((row) => row.teamId === teamId && OL.has(normalizePosition(row.position) ?? "") && (time(row.kickoffTime) ?? -1) < cutoff.getTime())
+    .filter((row) => row.teamId === teamId
+      && OL.has(normalizePosition(row.position) ?? "")
+      && (time(row.kickoffTime) ?? -1) < cutoff.getTime()
+      && time(row.sourceUpdatedAt) !== null
+      && time(row.sourceUpdatedAt)! <= cutoff.getTime())
     .sort((a, b) => (time(b.kickoffTime) ?? -1) - (time(a.kickoffTime) ?? -1))[0]?.gameId;
   const priorLine = new Set(snaps
-    .filter((row) => row.teamId === teamId && row.gameId === previousGame && OL.has(normalizePosition(row.position) ?? ""))
+    .filter((row) => row.teamId === teamId
+      && row.gameId === previousGame
+      && OL.has(normalizePosition(row.position) ?? "")
+      && time(row.sourceUpdatedAt) !== null
+      && time(row.sourceUpdatedAt)! <= cutoff.getTime())
     .sort((a, b) => (b.offenseSnaps ?? -1) - (a.offenseSnaps ?? -1))
     .slice(0, 5)
     .map((row) => row.playerId));
@@ -538,6 +693,22 @@ function deriveRest(teamId: string, game: PersonnelGame, priorGames: PersonnelPr
       priorGameSnapBurden: "Snap counts are available by player but no complete team burden denominator is stored.",
     },
   };
+}
+
+function sourceConflicts(starters: ProbableStarter[]) {
+  const byPosition = new Map<string, ProbableStarter[]>();
+  for (const starter of starters) {
+    if (!starter.position) continue;
+    byPosition.set(starter.position, [...(byPosition.get(starter.position) ?? []), starter]);
+  }
+  return [...byPosition.entries()]
+    .filter(([, rows]) => new Set(rows.map((row) => row.playerId)).size > 1)
+    .map(([position, rows]) => ({
+      position,
+      players: [...new Set(rows.map((row) => row.playerName ?? row.playerId))],
+      sources: [...new Set(rows.map((row) => row.source))],
+      reason: "Multiple pre-cutoff source rows identify different first-choice players; source hierarchy was preserved.",
+    }));
 }
 
 function americanImplied(price: number) {
@@ -627,16 +798,49 @@ function confidence(
   weather: { available: boolean },
 ) {
   const values = Object.values(teams);
-  const personnelCompleteness = values.length ? clamp(values.reduce((sum, value) => sum + Math.min(100, value.starters.length * 12), 0) / values.length) : 0;
-  const injuryFreshness = values.length ? clamp(values.reduce((sum, value) => sum + (value.injuries.length ? value.injuries.filter((row) => row.snapshotTimestamp).length / value.injuries.length * 100 : 70), 0) / values.length) : 0;
+  const personnelCompleteness = values.length
+    ? clamp(values.reduce((sum, value) => sum + REQUIRED_STARTER_POSITIONS.filter((position) =>
+      value.starters.some((starter) => starter.position === position),
+    ).length / REQUIRED_STARTER_POSITIONS.length * 100, 0) / values.length)
+    : 0;
+  // No injury rows are not proof of a fresh clean report.
+  const injuryFreshness = values.length ? clamp(values.reduce((sum, value) => {
+    const rows = value.injuries;
+    return sum + (rows.length ? rows.filter((row) => row.snapshotTimestamp).length / rows.length * 100 : 0);
+  }, 0) / values.length) : 0;
   const qbCertainty = values.length ? clamp(values.reduce((sum, value) => sum + value.qb.starterCertainty, 0) / values.length) : 0;
-  const marketFreshness = values.length ? clamp(values.reduce((sum, value) => sum + (value.market.observations ? 75 : 0), 0) / values.length) : 0;
-  const marketCoverage = values.length ? clamp(values.reduce((sum, value) => sum + (value.market.marketCoverage.sportsbooks.length ? 80 : 0), 0) / values.length) : 0;
+  const marketFreshness = values.length ? clamp(values.reduce((sum, value) => sum + (value.market.observations
+    ? Math.max(0, 100 - Math.min(100, (value.market.timeSinceLastOddsUpdateHours ?? 999) * 4))
+    : 0), 0) / values.length) : 0;
+  const marketCoverage = values.length ? clamp(values.reduce((sum, value) =>
+    sum + Math.min(100, value.market.marketCoverage.sportsbooks.length * 50), 0) / values.length) : 0;
   const sampleSize = values.length ? clamp(values.reduce((sum, value) => sum + Math.min(100, value.qb.metricsSampleGames * 20), 0) / values.length) : 0;
-  const featureCompleteness = clamp((personnelCompleteness + qbCertainty + injuryFreshness + marketCoverage + sampleSize) / 5);
-  const components = { featureCompleteness, qbStarterCertainty: qbCertainty, injuryFreshness, personnelCompleteness, sportsbookFreshness: marketFreshness, weatherAvailability: weather.available ? 100 : 0, marketCoverage, sampleSize };
-  const overall = clamp(Object.values(components).reduce((sum, value) => sum + value, 0) / Object.values(components).length);
-  return { overall, label: "Data Confidence (not betting confidence)", components };
+  const weights = {
+    qbCertainty: 0.2,
+    personnelCompleteness: 0.2,
+    injuryFreshness: 0.15,
+    sportsbookFreshness: 0.15,
+    weatherAvailability: 0.1,
+    sampleQuality: 0.2,
+  } as const;
+  const components = {
+    qbCertainty,
+    personnelCompleteness,
+    injuryFreshness,
+    sportsbookFreshness: marketFreshness,
+    weatherAvailability: weather.available ? 100 : 0,
+    sampleQuality: sampleSize,
+    sportsbookCoverage: marketCoverage,
+  };
+  const overall = clamp(
+    components.qbCertainty * weights.qbCertainty
+    + components.personnelCompleteness * weights.personnelCompleteness
+    + components.injuryFreshness * weights.injuryFreshness
+    + components.sportsbookFreshness * weights.sportsbookFreshness
+    + components.weatherAvailability * weights.weatherAvailability
+    + components.sampleQuality * weights.sampleQuality,
+  );
+  return { overall, label: "Data Confidence (not betting confidence)", notBetting: true, weights, components };
 }
 
 export type PersonnelContext = {
@@ -648,6 +852,14 @@ export type PersonnelContext = {
     teamId: string;
     starters: ProbableStarter[];
     personnelCompleteness: number;
+    missingRequiredPositions: string[];
+    sourceConflicts: Array<{
+      position: string;
+      players: string[];
+      sources: string[];
+      reason: string;
+    }>;
+    sourceHierarchy: string[];
     unavailableReasons: string[];
     qb: ReturnType<typeof deriveQb>;
     injuries: ReturnType<typeof injurySummary>;
@@ -657,17 +869,23 @@ export type PersonnelContext = {
   }>;
   matchup: Array<{ offenseTeamId: string; defenseTeamId: string; unitContext: Record<string, unknown>; unavailableReasons: string[] }>;
   weather: {
-    available: false;
-    indoorOutdoor: null;
-    temperature: null;
-    windSpeed: null;
-    windGusts: null;
-    precipitationProbability: null;
-    precipitationType: null;
-    humidity: null;
-    roofStatus: null;
+    available: boolean;
+    indoorOutdoor: string | null;
+    temperature: number | null;
+    windSpeed: number | null;
+    windGusts: number | null;
+    precipitationProbability: number | null;
+    precipitationType: string | null;
+    humidity: number | null;
+    roofStatus: string | null;
     severeWeather: null;
-    unavailableReason: string;
+    unavailableReason: string | null;
+    source?: string | null;
+    fetchedAt?: string | null;
+    validTime?: string | null;
+    sourceUrl?: string | null;
+    office?: string | null;
+    gridpoint?: string | null;
   };
   market: ReturnType<typeof deriveMarket>;
   dataConfidence: ReturnType<typeof confidence>;
@@ -685,6 +903,7 @@ export function derivePersonnelContext(input: {
   qbs: PersonnelQbRow[];
   priorGames: PersonnelPriorGame[];
   odds: PersonnelOddsRow[];
+  weather?: PersonnelWeatherRow[];
 }): PersonnelContext {
   const cutoff = asOfCutoff(input.game.kickoffTime, input.now instanceof Date ? input.now : input.now ? new Date(input.now) : new Date());
   const injuryMap = injuryByPlayer(input.injuries, cutoff);
@@ -696,12 +915,24 @@ export function derivePersonnelContext(input: {
     const qb = deriveQb(teamId, starters, input.qbs, input.snaps, cutoff);
     const olContinuity = deriveOl(teamId, starters, input.snaps, cutoff);
     const rest = deriveRest(teamId, input.game, input.priorGames);
+    const missingRequiredPositions = REQUIRED_STARTER_POSITIONS.filter((position) =>
+      !starters.some((starter) => starter.position === position),
+    );
     teams[teamId] = {
       teamId,
       starters,
-      personnelCompleteness: clamp(Math.min(100, starters.length * 12)),
+      personnelCompleteness: clamp((REQUIRED_STARTER_POSITIONS.length - missingRequiredPositions.length)
+        / REQUIRED_STARTER_POSITIONS.length * 100),
+      missingRequiredPositions: [...missingRequiredPositions],
+      sourceConflicts: sourceConflicts(starters),
+      sourceHierarchy: [
+        "persisted verified official/published depth (only when explicitly sourced and permitted)",
+        "ESPN existing best-effort secondary structured endpoint (terms status not verified for production reuse)",
+        "nflverse recent snap-count/participation inference",
+        "historical nflverse depth chart",
+      ],
       unavailableReasons: starters.length
-        ? []
+        ? missingRequiredPositions.map((position) => `Required position ${position} was unavailable as of the cutoff.`)
         : ["No depth-chart or recent participation evidence was available as of the cutoff."],
       qb,
       injuries: injurySummary(injuryPlayers),
@@ -739,8 +970,34 @@ export function derivePersonnelContext(input: {
       unavailableReasons: ["Direct player-vs-player assignments are not supported by immutable sources."],
     };
   });
-  const weather = {
-    available: false as const,
+  const weatherRow = (input.weather ?? [])
+    .filter((row) => (time(row.fetchedAt) ?? -1) <= cutoff.getTime())
+    .filter((row) => {
+      const valid = time(row.validTime);
+      const kickoff = time(input.game.kickoffTime);
+      return valid !== null && (kickoff === null || Math.abs(valid - kickoff) <= 12 * 60 * 60 * 1000);
+    })
+    .sort((a, b) => (time(b.fetchedAt) ?? -1) - (time(a.fetchedAt) ?? -1))[0];
+  const weather = weatherRow ? {
+    available: true,
+    indoorOutdoor: weatherRow.indoorOutdoor,
+    temperature: weatherRow.temperature ?? null,
+    windSpeed: weatherRow.sustainedWind ?? null,
+    windGusts: weatherRow.windGust ?? null,
+    precipitationProbability: weatherRow.precipitationProbability ?? null,
+    precipitationType: weatherRow.precipitationType ?? null,
+    humidity: weatherRow.humidity ?? null,
+    roofStatus: weatherRow.roofStatus ?? null,
+    severeWeather: null,
+    unavailableReason: null,
+    source: weatherRow.source,
+    fetchedAt: iso(weatherRow.fetchedAt),
+    validTime: iso(weatherRow.validTime),
+    sourceUrl: weatherRow.sourceUrl ?? null,
+    office: weatherRow.office ?? null,
+    gridpoint: weatherRow.gridpoint ?? null,
+  } : {
+    available: false,
     indoorOutdoor: null,
     temperature: null,
     windSpeed: null,
@@ -750,7 +1007,7 @@ export function derivePersonnelContext(input: {
     humidity: null,
     roofStatus: null,
     severeWeather: null,
-    unavailableReason: "Weather is unavailable: no real current weather table/source is configured.",
+    unavailableReason: "Weather is unavailable: no valid pre-cutoff NWS forecast snapshot exists.",
   };
   const market = deriveMarket(input.odds, cutoff, input.game.kickoffTime);
   const contextTeams = Object.fromEntries(Object.entries(teams).map(([teamId, team]) => [teamId, { starters: team.starters, injuries: team.injuryPlayers, qb: team.qb, market }]));
@@ -766,7 +1023,7 @@ export function derivePersonnelContext(input: {
     dataConfidence: confidence(contextTeams, weather),
     sources: ["injuries", "depth_chart_snapshots", "historical_depth_charts", "snap_counts", "qb_game_stats", "games", "teams", "sportsbook_odds"],
     limitations: [
-      "Weather is explicitly unavailable because no configured real current weather source/table exists.",
+      ...(weather.available ? [] : ["Weather is explicitly unavailable because no valid pre-cutoff NWS forecast snapshot exists."]),
       "Travel distance, timezone change, international designation, overtime, and complete snap burden are unsupported.",
       "Replacement quality and player-vs-player coverage assignments are unavailable; no values were imputed.",
       "Gridline first odds observation is not an official opener.",
@@ -778,6 +1035,11 @@ export function personnelNumericFeatures(context: PersonnelContext) {
   const numeric: Record<string, number | null> = {
     "personnel.data_confidence": context.dataConfidence.overall,
     "personnel.weather_available": context.weather.available ? 1 : 0,
+    "personnel.weather_temperature": context.weather.temperature,
+    "personnel.weather_wind_speed": context.weather.windSpeed,
+    "personnel.weather_wind_gust": context.weather.windGusts,
+    "personnel.weather_precipitation_probability": context.weather.precipitationProbability,
+    "personnel.weather_humidity": context.weather.humidity,
     "market.observations": context.market.observations,
     "market.time_since_last_odds_update_hours": context.market.timeSinceLastOddsUpdateHours,
   };

@@ -336,6 +336,18 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PersonnelContextAuditRow"
+  /features/personnel-context/coverage:
+    get:
+      operationId: getPersonnelContextCoverage
+      tags: [dashboard]
+      summary: Read current-week personnel and weather coverage
+      responses:
+        "200":
+          description: Current-week coverage and source policy assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonnelContextCoverage"
   /teams:
     get:
       operationId: listTeams
@@ -731,6 +743,45 @@ components:
         dataConfidence: { type: ["number", "null"] }
         featureAudit: { type: object, additionalProperties: true }
         sources: { type: array, items: { type: string } }
+    PersonnelContextCoverage:
+      type: object
+      required: [season, week, games, teams, requiredStarterSlots, observedStarterSlots, publishedStarterSlots, inferredStarterSlots, teamPublishedDepthPercent, starterPublishedPercent, starterInferredPercent, gameWeatherPercent, currentInjuryPercent, currentSportsbookPercent, medianConfidence, gameCoverage, lowestConfidenceGames, sourceAssessments, weather]
+      properties:
+        season: { type: ["integer", "null"] }
+        week: { type: ["integer", "null"] }
+        games: { type: integer }
+        teams: { type: integer }
+        requiredStarterSlots: { type: integer }
+        observedStarterSlots: { type: integer }
+        publishedStarterSlots: { type: integer }
+        inferredStarterSlots: { type: integer }
+        teamPublishedDepthPercent: { type: number }
+        starterPublishedPercent: { type: number }
+        starterInferredPercent: { type: number }
+        gameWeatherPercent: { type: number }
+        currentInjuryPercent: { type: number }
+        currentSportsbookPercent: { type: number }
+        medianConfidence: { type: ["number", "null"] }
+        gameCoverage:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        lowestConfidenceGames:
+          type: array
+          items:
+            type: object
+            required: [gameId, confidence, reasons]
+            properties:
+              gameId: { type: string }
+              confidence: { type: number }
+              reasons: { type: array, items: { type: string } }
+        sourceAssessments:
+          type: array
+          items: { type: object, additionalProperties: true }
+        weather:
+          type: object
+          additionalProperties: true
     PregameFeatureBuildInput:
       type: object
       properties:

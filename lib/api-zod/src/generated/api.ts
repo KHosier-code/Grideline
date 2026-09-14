@@ -468,6 +468,36 @@ export const ListPersonnelContextAuditResponse = zod.array(ListPersonnelContextA
 
 
 /**
+ * @summary Read current-week personnel and weather coverage
+ */
+export const GetPersonnelContextCoverageResponse = zod.object({
+  "season": zod.number().int().nullable(),
+  "week": zod.number().int().nullable(),
+  "games": zod.number().int(),
+  "teams": zod.number().int(),
+  "requiredStarterSlots": zod.number().int(),
+  "observedStarterSlots": zod.number().int(),
+  "publishedStarterSlots": zod.number().int(),
+  "inferredStarterSlots": zod.number().int(),
+  "teamPublishedDepthPercent": zod.number(),
+  "starterPublishedPercent": zod.number(),
+  "starterInferredPercent": zod.number(),
+  "gameWeatherPercent": zod.number(),
+  "currentInjuryPercent": zod.number(),
+  "currentSportsbookPercent": zod.number(),
+  "medianConfidence": zod.number().nullable(),
+  "gameCoverage": zod.array(zod.record(zod.string(), zod.unknown())),
+  "lowestConfidenceGames": zod.array(zod.object({
+  "gameId": zod.string(),
+  "confidence": zod.number(),
+  "reasons": zod.array(zod.string())
+})),
+  "sourceAssessments": zod.array(zod.record(zod.string(), zod.unknown())),
+  "weather": zod.record(zod.string(), zod.unknown())
+})
+
+
+/**
  * @summary List NFL teams
  */
 export const ListTeamsResponseItem = zod.object({

@@ -12,6 +12,7 @@ import { getRecentScheduledRuns } from "../lib/sync-runs";
 import { nextFeedUpdate } from "../lib/feed-schedule";
 import { getFeedGameDays } from "../lib/feed-game-days";
 import { getProductionModelStatus } from "../lib/live-predictions";
+import { weatherHealth } from "../lib/weather";
 
 const router: IRouter = Router();
 
@@ -47,9 +48,10 @@ router.get("/data-health", async (req, res): Promise<void> => {
   const nflverse = await getNflverseHealth();
   const availability = await getAvailabilityHealth();
 
-  const [scheduledInjuryRuns, scheduledNflverseRuns] = await Promise.all([
+  const [scheduledInjuryRuns, scheduledNflverseRuns, scheduledWeatherRuns] = await Promise.all([
     getRecentScheduledRuns("scheduled:injuries"),
     getRecentScheduledRuns("scheduled:nflverse"),
+    getRecentScheduledRuns("scheduled:weather"),
   ]);
   const odds = await getOddsApiHealth();
   const scheduler = await getSchedulerHealth();
@@ -64,6 +66,8 @@ router.get("/data-health", async (req, res): Promise<void> => {
   const gameDays = await getFeedGameDays(now);
   const injuryNextUpdate = nextFeedUpdate("injuries", now, scheduledInjuryRuns, gameDays)?.toISOString() ?? null;
   const nflverseNextUpdate = nextFeedUpdate("nflverse", now, scheduledNflverseRuns)?.toISOString() ?? null;
+  const weatherNextUpdate = nextFeedUpdate("weather", now, scheduledWeatherRuns)?.toISOString() ?? null;
+  const weather = await weatherHealth();
   const month = now.getUTCMonth() + 1;
   const latestFailedScheduledInjuryRun = scheduledInjuryRuns.find((run) => run.status === "failed");
   const nativeFailureAt = availability.injury.failureAt ? new Date(availability.injury.failureAt) : null;
@@ -208,6 +212,21 @@ router.get("/data-health", async (req, res): Promise<void> => {
         requestsThisMonth: 0,
         remainingQuota: "Local database",
         metadata: features,
+      },
+      {
+        provider: "nws-weather",
+        label: "National Weather Service forecasts",
+        status: weather.lastRun?.status === "success" ? "current" : weather.lastRun ? "stale" : "unavailable",
+        detail: weather.lastRun?.error ?? "U.S. stadium forecasts use keyless api.weather.gov data; indoor games record no outdoor conditions.",
+        schedule: "Every 6 hours during active season.",
+        retryPolicy: "Up to 4 persisted attempts with 5, 15, and 45 minute backoff.",
+        lastUpdated: weather.lastRun?.completedAt ?? null,
+        nextUpdate: weatherNextUpdate,
+        requestsToday: 0,
+        requestsThisMonth: 0,
+        remainingQuota: "Free keyless API; reasonable rate limits",
+        scheduledRuns: scheduledWeatherRuns,
+        metadata: weather,
       },
       {
         provider: "espn-injuries",
