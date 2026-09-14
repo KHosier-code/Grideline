@@ -1,0 +1,642 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-primary-border: var(--sidebar-primary-border);
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent-border: var(--sidebar-accent-border);
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* LIGHT MODE */
+:root {
+  --button-outline: rgba(0, 0, 0, 0.1);
+  --badge-outline: rgba(0, 0, 0, 0.05);
+
+  /* Automatic computation of border around primary / danger buttons */
+  --opaque-button-border-intensity: -8; /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(0, 0, 0, 0.03);
+  --elevate-2: rgba(0, 0, 0, 0.08);
+
+  --background: 219 32% 95%;
+
+  --foreground: 222 34% 15%;
+
+  --border: 216 23% 86%;
+
+  --card: 0 0% 100%;
+
+  --card-foreground: 222 34% 15%;
+
+  --card-border: 216 23% 86%;
+
+  --sidebar: 222 34% 15%;
+
+  --sidebar-foreground: 216 25% 84%;
+
+  --sidebar-border: 222 27% 24%;
+
+  --sidebar-primary: 24 92% 59%;
+
+  --sidebar-primary-foreground: 222 34% 15%;
+
+  --sidebar-accent: 222 27% 24%;
+
+  --sidebar-accent-foreground: 0 0% 100%;
+
+  --sidebar-ring: 24 92% 59%;
+
+  --popover: 0 0% 100%;
+
+  --popover-foreground: 222 34% 15%;
+
+  --popover-border: 216 23% 86%;
+
+  --primary: 222 34% 15%;
+
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 219 32% 91%;
+
+  --secondary-foreground: 222 34% 15%;
+
+  --muted: 219 32% 91%;
+
+  --muted-foreground: 216 13% 45%;
+
+  --accent: 24 92% 59%;
+
+  --accent-foreground: 222 34% 15%;
+
+  --destructive: 0 66% 52%;
+
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 216 23% 82%;
+  --ring: 24 92% 59%;
+  --chart-1: 24 92% 59%;
+  --chart-2: 169 47% 42%;
+  --chart-3: 205 65% 48%;
+  --chart-4: 45 88% 57%;
+  --chart-5: 280 42% 58%;
+
+  --app-font-sans: 'Manrope', sans-serif;
+  --app-font-serif: 'Space Grotesk', sans-serif;
+  --app-font-mono: 'DM Mono', monospace;
+  --radius: 0.5rem; /* 8px */
+  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
+  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
+  --shadow-sm:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-md:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-lg:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-xl:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
+
+  /* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(
+    from hsl(var(--sidebar-primary)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(
+    from hsl(var(--sidebar-accent)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(
+    from hsl(var(--primary)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(
+    from hsl(var(--secondary)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(
+    from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) /
+      alpha
+  );
+
+  /* Fallback for older browsers */
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(
+    from hsl(var(--accent)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(
+    from hsl(var(--destructive)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+}
+
+.dark {
+  --button-outline: rgba(255, 255, 255, 0.1);
+  --badge-outline: rgba(255, 255, 255, 0.05);
+
+  --opaque-button-border-intensity: 9; /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(255, 255, 255, 0.04);
+  --elevate-2: rgba(255, 255, 255, 0.09);
+
+  --background: 222 34% 15%;
+
+  --foreground: 219 32% 95%;
+
+  --border: 222 27% 24%;
+
+  --card: 222 29% 19%;
+
+  --card-foreground: 219 32% 95%;
+
+  --card-border: 222 27% 28%;
+
+  --sidebar: 222 38% 10%;
+
+  --sidebar-foreground: 216 25% 84%;
+
+  --sidebar-border: 222 27% 20%;
+
+  --sidebar-primary: 24 92% 59%;
+
+  --sidebar-primary-foreground: 222 34% 15%;
+
+  --sidebar-accent: 222 27% 20%;
+
+  --sidebar-accent-foreground: 219 32% 95%;
+
+  --sidebar-ring: 24 92% 59%;
+
+  --popover: 222 29% 19%;
+
+  --popover-foreground: 219 32% 95%;
+
+  --popover-border: 222 27% 28%;
+
+  --primary: 24 92% 59%;
+
+  --primary-foreground: 222 34% 15%;
+
+  --secondary: 222 27% 24%;
+
+  --secondary-foreground: 219 32% 95%;
+
+  --muted: 222 27% 24%;
+
+  --muted-foreground: 216 18% 67%;
+
+  --accent: 169 47% 42%;
+
+  --accent-foreground: 222 34% 15%;
+
+  --destructive: 0 60% 55%;
+
+  --destructive-foreground: 219 32% 95%;
+
+  /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
+  --input: 222 27% 31%;
+  --ring: 24 92% 59%;
+  --chart-1: 24 92% 59%;
+  --chart-2: 169 47% 42%;
+  --chart-3: 205 65% 48%;
+  --chart-4: 45 88% 57%;
+  --chart-5: 280 42% 58%;
+
+  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-sm:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-md:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-lg:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-xl:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/**
+ * Using the elevate system.
+ * Automatic contrast adjustment.
+ *
+ * <element className="hover-elevate" />
+ * <element className="active-elevate-2" />
+ *
+ * // Using the tailwind utility when a data attribute is "on"
+ * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
+ * // Or manually controlling the toggle state
+ * <element className="toggle-elevate toggle-elevated" />
+ *
+ * Elevation systems have to handle many states.
+ * - not-hovered, vs. hovered vs. active  (three mutually exclusive states)
+ * - toggled or not
+ * - focused or not (this is not handled with these utilities)
+ *
+ * Even without handling focused or not, this is six possible combinations that
+ * need to be distinguished from eachother visually.
+ */
+@layer utilities {
+  /* Hide ugly search cancel button in Chrome until we can style it properly */
+  input[type='search']::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+
+  /* Placeholder styling for contentEditable div */
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
+   * buttons/badges can remove the automatic brightness adjustment on interactions
+   * and program their own. */
+  .no-default-hover-elevate {
+  }
+
+  .no-default-active-elevate {
+  }
+
+  /**
+   * Toggleable backgrounds go behind the content. Hoverable/active goes on top.
+   * This way they can stack/compound. Both will overlap the parent's borders!
+   * So borders will be automatically adjusted both on toggle, and hover/active,
+   * and they will be compounded.
+   */
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: -1;
+    /* sits behind content but above backdrop */
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  /* Does not work on elements with overflow:hidden! */
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: 999;
+    /* sits in front of content */
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
+    inset: -1px;
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    min-width: 320px;
+    background: hsl(var(--background));
+  }
+
+  button, input {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .font-display { font-family: var(--app-font-serif); }
+  .app-shell { min-height: 100dvh; background: hsl(var(--background)); }
+  .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; display: flex; width: 252px; flex-direction: column; background: hsl(var(--sidebar)); color: hsl(var(--sidebar-foreground)); }
+  .sidebar-top { display: flex; align-items: center; padding: 28px 22px 24px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: hsl(var(--sidebar-accent-foreground)); text-decoration: none; letter-spacing: -0.03em; }
+  .brand strong { font-family: var(--app-font-serif); font-size: 18px; font-weight: 700; }
+  .brand small { display: block; margin-top: 1px; color: hsl(var(--sidebar-foreground) / .52); font-family: var(--app-font-mono); font-size: 8px; letter-spacing: .12em; }
+  .brand-mark { display: grid; height: 28px; width: 28px; place-items: center; border-radius: 8px; background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); box-shadow: 3px 3px 0 hsl(var(--sidebar) / .5); }
+  .sidebar-scroll { flex: 1; overflow-y: auto; padding: 10px 12px; }
+  .nav-group { margin-bottom: 25px; }
+  .nav-label, .eyebrow { margin: 0 0 9px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; font-weight: 500; letter-spacing: .13em; text-transform: uppercase; }
+  .nav-label { padding: 0 12px; color: hsl(var(--sidebar-foreground) / .42); }
+  .nav-item { position: relative; display: flex; align-items: center; gap: 11px; min-height: 40px; margin: 3px 0; border-radius: 8px; padding: 0 12px; color: hsl(var(--sidebar-foreground) / .68); font-size: 13px; font-weight: 600; text-decoration: none; transition: background-color .2s ease, color .2s ease, transform .2s ease; }
+  .nav-item:hover { background: hsl(var(--sidebar-accent)); color: hsl(var(--sidebar-accent-foreground)); transform: translateX(2px); }
+  .nav-item-active { background: hsl(var(--sidebar-accent)); color: hsl(var(--sidebar-accent-foreground)); box-shadow: inset 3px 0 0 hsl(var(--accent)); }
+  .sidebar-footer { padding: 16px 16px 20px; border-top: 1px solid hsl(var(--sidebar-border)); }
+  .connection-row { display: flex; align-items: center; gap: 8px; padding: 0 6px 16px; color: hsl(var(--sidebar-foreground) / .72); font-family: var(--app-font-mono); font-size: 10px; }
+  .connection-dot, .live-pulse, .status-dot { display: inline-block; height: 6px; width: 6px; border-radius: 999px; }
+  .connection-live, .live-pulse { background: #6bd1ac; box-shadow: 0 0 0 3px hsl(169 47% 42% / .15); }
+  .connection-muted { background: hsl(var(--sidebar-foreground) / .35); }
+  .user-card { display: flex; align-items: center; gap: 9px; border-radius: 9px; background: hsl(var(--sidebar-accent) / .72); padding: 10px; }
+  .user-avatar { display: grid; height: 28px; width: 28px; place-items: center; border-radius: 8px; background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); font-family: var(--app-font-mono); font-size: 11px; font-weight: 600; }
+  .user-avatar-small { height: 28px; width: 28px; border-radius: 50%; text-decoration: none; }
+  .main-shell { min-height: 100dvh; margin-left: 252px; }
+  .topbar { display: flex; height: 64px; align-items: center; justify-content: space-between; border-bottom: 1px solid hsl(var(--border)); padding: 0 38px; background: hsl(var(--card) / .75); }
+  .topbar-context, .topbar-actions { display: flex; align-items: center; gap: 13px; }
+  .topbar-context { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+  .live-kicker { display: flex; align-items: center; gap: 8px; color: hsl(var(--foreground)); font-weight: 500; }
+  .topbar-divider { height: 14px; width: 1px; background: hsl(var(--border)); }
+  .topbar-actions { gap: 15px; }
+  .icon-button, .mobile-menu, .mobile-close { position: relative; display: grid; place-items: center; border: 0; background: transparent; color: hsl(var(--muted-foreground)); cursor: pointer; }
+  .icon-button { height: 32px; width: 32px; border-radius: 7px; }
+  .icon-button:hover { background: hsl(var(--secondary)); color: hsl(var(--foreground)); }
+  .notification-dot { position: absolute; right: 7px; top: 6px; height: 4px; width: 4px; border-radius: 50%; background: hsl(var(--accent)); }
+  .avatar-link { text-decoration: none; }
+  .page-wrap { width: min(1440px, 100%); margin: 0 auto; padding: 40px 38px 72px; }
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+  .page-title { margin: 0; color: hsl(var(--foreground)); font-family: var(--app-font-serif); font-size: clamp(31px, 3vw, 44px); font-weight: 700; letter-spacing: -.045em; line-height: 1.04; }
+  .page-detail { max-width: 610px; margin: 10px 0 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.65; }
+  .section-title { margin: 0; color: hsl(var(--foreground)); font-family: var(--app-font-serif); font-size: 19px; font-weight: 700; letter-spacing: -.025em; }
+  .section-meta { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; text-transform: uppercase; }
+  .panel { border: 1px solid hsl(var(--card-border)); border-radius: 12px; background: hsl(var(--card)); padding: 22px; box-shadow: 0 8px 24px hsl(222 34% 15% / .035); }
+  .button { display: inline-flex; height: 37px; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; border-radius: 7px; padding: 0 13px; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color .2s ease, border-color .2s ease, transform .2s ease; }
+  .button:hover { transform: translateY(-1px); }
+  .button:disabled { cursor: wait; opacity: .62; transform: none; }
+  .button-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .button-primary:hover { background: hsl(222 34% 22%); }
+  .button-subtle { border-color: hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--foreground)); }
+  .button-subtle:hover { border-color: hsl(var(--accent)); background: hsl(var(--accent) / .06); }
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; width: fit-content; border: 1px solid transparent; border-radius: 99px; padding: 4px 7px; font-family: var(--app-font-mono); font-size: 9px; line-height: 1; text-transform: uppercase; white-space: nowrap; }
+  .status-good { border-color: hsl(169 47% 42% / .24); background: hsl(169 47% 42% / .1); color: hsl(169 47% 30%); }
+  .status-good .status-dot { background: hsl(169 47% 42%); }
+  .status-warn { border-color: hsl(38 80% 48% / .28); background: hsl(38 80% 48% / .1); color: hsl(34 72% 34%); }
+  .status-warn .status-dot { background: hsl(38 80% 48%); }
+  .status-neutral { border-color: hsl(var(--border)); background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
+  .status-neutral .status-dot { background: hsl(var(--muted-foreground)); }
+  .status-bad { border-color: hsl(0 66% 52% / .24); background: hsl(0 66% 52% / .08); color: hsl(0 56% 42%); }
+  .status-bad .status-dot { background: hsl(0 66% 52%); }
+  .metric-card { min-height: 138px; border: 1px solid hsl(var(--card-border)); border-radius: 11px; background: hsl(var(--card)); padding: 18px; transition: transform .2s ease, box-shadow .2s ease; }
+  .metric-card:hover { transform: translateY(-2px); box-shadow: 0 12px 25px hsl(222 34% 15% / .07); }
+  .metric-card-accent { border-top: 3px solid hsl(var(--accent)); }
+  .metric-label { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .metric-value { color: hsl(var(--foreground)); font-family: var(--app-font-serif); font-size: 28px; font-weight: 700; letter-spacing: -.05em; }
+  .overview-banner { display: flex; align-items: center; justify-content: space-between; gap: 25px; min-height: 152px; border-radius: 12px; background: hsl(var(--sidebar)); padding: 26px 30px; color: white; box-shadow: 0 14px 30px hsl(222 34% 15% / .12); }
+  .banner-title { margin: 0; color: white; font-family: var(--app-font-serif); font-size: 26px; letter-spacing: -.035em; }
+  .banner-copy { max-width: 620px; margin: 7px 0 0; color: hsl(var(--sidebar-foreground) / .67); font-size: 13px; line-height: 1.55; }
+  .banner-side { display: flex; flex-shrink: 0; flex-direction: column; align-items: flex-end; gap: 15px; }
+  .edge-row { display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 12px 2px; text-decoration: none; transition: padding .2s ease, background-color .2s ease; }
+  .edge-row:hover { margin: 0 -10px; padding: 12px; border-radius: 7px; background: hsl(var(--secondary)); }
+  .edge-index, .feature-number { display: grid; height: 27px; width: 27px; flex-shrink: 0; place-items: center; border-radius: 6px; background: hsl(var(--accent) / .12); color: hsl(var(--accent)); font-family: var(--app-font-mono); font-size: 10px; }
+  .health-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border: 1px solid hsl(var(--border)); border-radius: 9px; padding: 13px; }
+  .provider-mark, .readiness-header-icon { display: grid; height: 32px; width: 32px; flex-shrink: 0; place-items: center; border-radius: 8px; background: hsl(var(--accent) / .1); color: hsl(var(--accent)); }
+  .provider-good { background: hsl(169 47% 42% / .12); color: hsl(169 47% 30%); }
+  .provider-warn { background: hsl(38 80% 48% / .12); color: hsl(34 72% 34%); }
+  .provider-neutral { background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
+  .provider-bad { background: hsl(0 66% 52% / .1); color: hsl(0 56% 42%); }
+  .ledger-card, .performance-card { border: 1px solid hsl(var(--border)); border-radius: 9px; padding: 16px; }
+  .skeleton { border-radius: 8px; background: linear-gradient(90deg, hsl(var(--secondary)) 20%, hsl(var(--border) / .7) 38%, hsl(var(--secondary)) 60%); background-size: 300% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+  .empty-panel { display: flex; min-height: 142px; align-items: center; gap: 14px; border: 1px dashed hsl(var(--border)); border-radius: 9px; padding: 20px; }
+  .empty-icon { display: grid; height: 38px; width: 38px; flex-shrink: 0; place-items: center; border-radius: 9px; background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
+  .signal-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--border)); }
+  .signal-strip > div { min-height: 74px; background: hsl(var(--card)); padding: 15px 18px; }
+  .strip-label { display: block; margin-bottom: 8px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; letter-spacing: .08em; }
+  .signal-strip strong { color: hsl(var(--foreground)); font-family: var(--app-font-serif); font-size: 17px; }
+  .game-list { margin: -6px -22px -22px; }
+  .game-row { display: grid; grid-template-columns: 100px minmax(255px, 1.3fr) 1fr 150px 18px; align-items: center; gap: 19px; min-height: 86px; border-top: 1px solid hsl(var(--border)); padding: 15px 22px; color: inherit; text-decoration: none; transition: background-color .2s ease, padding .2s ease; }
+  .game-row:hover { background: hsl(var(--secondary) / .55); padding-left: 27px; }
+  .game-date, .game-score { display: flex; flex-direction: column; gap: 5px; color: hsl(var(--foreground)); font-family: var(--app-font-mono); font-size: 11px; }
+  .game-date small, .game-score small { color: hsl(var(--muted-foreground)); font-size: 9px; text-transform: uppercase; }
+  .matchup { display: flex; align-items: center; gap: 12px; }
+  .team-side { display: flex; min-width: 110px; flex-direction: column; gap: 4px; color: hsl(var(--muted-foreground)); font-size: 11px; }
+  .team-side span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team-home { text-align: left; }
+  .team-abbr { color: hsl(var(--foreground)); font-family: var(--app-font-serif); font-size: 18px; font-weight: 700; }
+  .at-mark { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 11px; }
+  .callout { display: flex; align-items: flex-start; gap: 11px; border-radius: 9px; padding: 15px 17px; font-size: 12px; line-height: 1.6; }
+  .callout p { margin: 2px 0 0; color: hsl(var(--muted-foreground)); }
+  .callout strong { color: hsl(var(--foreground)); }
+  .callout-warn { border: 1px solid hsl(38 80% 48% / .25); background: hsl(38 80% 48% / .08); color: hsl(34 72% 34%); }
+  .callout-neutral { border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); }
+  .game-hero { display: flex; align-items: center; justify-content: center; gap: clamp(30px, 9vw, 145px); border-radius: 12px; background: hsl(var(--sidebar)); padding: 30px; color: white; }
+  .hero-team { display: flex; min-width: 145px; flex-direction: column; gap: 6px; color: hsl(var(--sidebar-foreground)); font-size: 13px; }
+  .hero-team-right { text-align: right; align-items: flex-end; }
+  .hero-abbr { color: white; font-family: var(--app-font-serif); font-size: 37px; font-weight: 700; letter-spacing: -.06em; }
+  .hero-team small { margin-top: 7px; color: hsl(var(--sidebar-foreground) / .45); font-family: var(--app-font-mono); font-size: 9px; letter-spacing: .1em; }
+  .hero-center { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .hero-at { color: hsl(var(--accent)); font-family: var(--app-font-serif); font-size: 22px; }
+  .odds-table { overflow-x: auto; margin: -3px -22px -22px; }
+  .odds-head, .odds-row { display: grid; grid-template-columns: 1.1fr 1fr 1.2fr .55fr .55fr; min-width: 520px; gap: 12px; padding: 12px 22px; font-size: 11px; }
+  .odds-head { color: hsl(var(--muted-foreground)); border-bottom: 1px solid hsl(var(--border)); font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }
+  .odds-row { border-bottom: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+  .readiness-block { display: flex; align-items: flex-start; gap: 14px; border-radius: 9px; background: hsl(var(--secondary) / .7); padding: 17px; }
+  .readiness-icon, .feature-intro-icon { display: grid; height: 40px; width: 40px; flex-shrink: 0; place-items: center; border-radius: 10px; background: hsl(var(--accent) / .12); color: hsl(var(--accent)); }
+  .readiness-tile { min-height: 154px; border: 1px solid hsl(var(--border)); border-radius: 10px; padding: 17px; }
+  .readiness-header, .feature-intro { display: flex; align-items: flex-start; gap: 14px; border: 1px solid hsl(var(--border)); border-left: 3px solid hsl(var(--accent)); border-radius: 10px; background: hsl(var(--card)); padding: 18px 20px; }
+  .feature-intro-icon { height: 50px; width: 50px; }
+  .feature-block { min-height: 180px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); padding: 18px; }
+  .feature-block h3 { margin: 21px 0 13px; color: hsl(var(--foreground)); font-family: var(--app-font-serif); font-size: 17px; }
+  .feature-block p { margin-top: 15px; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.6; }
+  .feature-number { float: right; }
+  .settings-layout { display: grid; grid-template-columns: .9fr 1.1fr; gap: 20px; }
+  .book-grid { display: grid; gap: 8px; }
+  .book-toggle { display: flex; height: 53px; align-items: center; gap: 11px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--card)); padding: 0 13px; color: hsl(var(--foreground)); font-size: 13px; font-weight: 600; cursor: pointer; text-align: left; transition: border-color .2s ease, background-color .2s ease; }
+  .book-toggle:hover { border-color: hsl(var(--accent) / .5); }
+  .book-toggle-active { border-color: hsl(var(--accent) / .6); background: hsl(var(--accent) / .06); }
+  .book-logo { display: grid; height: 27px; width: 27px; place-items: center; border-radius: 6px; background: hsl(var(--sidebar)); color: white; font-family: var(--app-font-mono); font-size: 9px; }
+  .settings-divider { height: 1px; margin: 25px 0; background: hsl(var(--border)); }
+  .settings-form { display: grid; grid-template-columns: 1fr 130px; align-items: center; gap: 7px 18px; }
+  .field-label { color: hsl(var(--foreground)); font-size: 13px; font-weight: 700; }
+  .field-label span { display: block; margin-top: 3px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; font-weight: 400; text-transform: uppercase; }
+  .field-input { width: 100%; height: 38px; border: 1px solid hsl(var(--input)); border-radius: 7px; background: hsl(var(--card)); padding: 0 10px; color: hsl(var(--foreground)); font-family: var(--app-font-mono); font-size: 12px; outline: none; }
+  .field-input:focus { border-color: hsl(var(--accent)); box-shadow: 0 0 0 3px hsl(var(--accent) / .1); }
+  .field-help { grid-column: 1 / -1; margin: -3px 0 10px; color: hsl(var(--muted-foreground)); font-size: 11px; }
+  .toggle-line { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid hsl(var(--border)); margin-top: 8px; padding-top: 19px; }
+  .switch { display: flex; height: 25px; width: 44px; align-items: center; border: 0; border-radius: 99px; background: hsl(var(--border)); padding: 3px; cursor: pointer; transition: background-color .2s ease; }
+  .switch span { height: 19px; width: 19px; border-radius: 50%; background: hsl(var(--card)); box-shadow: 0 1px 2px hsl(var(--foreground) / .15); transition: transform .2s ease; }
+  .switch-on { background: hsl(var(--accent)); }
+  .switch-on span { transform: translateX(19px); }
+  .mobile-topbar, .mobile-overlay, .mobile-close { display: none; }
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@media (max-width: 1024px) {
+  .game-row { grid-template-columns: 85px minmax(220px, 1fr) 120px 18px; }
+  .game-row > :nth-child(3) { display: none; }
+  .settings-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+  .sidebar { transform: translateX(-100%); transition: transform .25s ease; box-shadow: 15px 0 35px hsl(222 34% 15% / .16); }
+  .sidebar-open { transform: translateX(0); }
+  .mobile-close { display: grid; margin-left: auto; color: hsl(var(--sidebar-foreground) / .7); }
+  .mobile-overlay { position: fixed; inset: 0; z-index: 20; display: block; border: 0; background: hsl(222 34% 15% / .42); }
+  .main-shell { margin-left: 0; }
+  .topbar { display: none; }
+  .mobile-topbar { display: flex; height: 58px; align-items: center; gap: 13px; border-bottom: 1px solid hsl(var(--border)); background: hsl(var(--card)); padding: 0 18px; }
+  .mobile-menu { display: grid; height: 32px; width: 32px; border-radius: 6px; }
+  .mobile-menu:hover { background: hsl(var(--secondary)); }
+  .brand-mobile strong { color: hsl(var(--foreground)); }
+  .brand-mobile .brand-mark { height: 25px; width: 25px; }
+  .page-wrap { padding: 29px 17px 55px; }
+  .page-header { align-items: flex-start; flex-direction: column; margin-bottom: 23px; }
+  .page-title { font-size: 34px; }
+  .page-header > .flex { width: 100%; }
+  .page-header > .flex .button { flex: 1; }
+  .overview-banner { align-items: flex-start; flex-direction: column; padding: 22px; }
+  .banner-side { align-items: flex-start; }
+  .signal-strip { grid-template-columns: repeat(2, 1fr); }
+  .signal-strip > div { min-height: 70px; }
+  .game-list { margin: -5px -14px -14px; }
+  .game-row { grid-template-columns: 67px 1fr 18px; gap: 10px; padding: 14px; }
+  .game-score { display: none; }
+  .matchup { gap: 8px; }
+  .team-side { min-width: 0; }
+  .team-side span:last-child { max-width: 95px; }
+  .panel { padding: 16px; }
+  .game-hero { gap: 16px; padding: 23px 15px; }
+  .hero-team { min-width: 96px; font-size: 11px; }
+  .hero-abbr { font-size: 30px; }
+  .hero-team-right { text-align: right; }
+  .hero-team span:not(.hero-abbr) { max-width: 100px; }
+  .hero-center { gap: 7px; }
+  .settings-form { grid-template-columns: 1fr 105px; gap: 6px 11px; }
+  .health-row { flex-direction: column; }
+  .health-row > :last-child { padding-left: 44px; text-align: left; }
+  .readiness-header, .feature-intro { padding: 15px; }
+}

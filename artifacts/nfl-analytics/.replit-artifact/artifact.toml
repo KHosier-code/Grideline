@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "NFL Analytics Model"
+description = "A professional personal NFL analytics and betting-model workspace with live schedule and team data, historical data foundations, sportsbook line tracking, data health monitoring, and a transparent path to model predictions without fabricated results."
+version = "1.0.0"
+id = "artifacts/nfl-analytics"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21788
+
+[services.development]
+run = "pnpm --filter @workspace/nfl-analytics run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nfl-analytics", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nfl-analytics/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21788"
+BASE_PATH = "/"

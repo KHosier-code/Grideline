@@ -1,0 +1,1216 @@
+Build me a professional, full-stack NFL analytics and betting-model web application for personal use.
+
+I am not a programmer, so the application needs to be designed so I can operate it through the web interface without manually editing code. Build the application, database, data pipelines, scheduled jobs, model framework, backtesting engine, and dashboard.
+
+The long-term goal is to create an NFL prediction system that continuously improves throughout the season while keeping a complete historical record of predictions, sportsbook odds, injuries, depth charts, statistics, model versions, and actual results.
+
+Do NOT create a fake prototype with hardcoded sample data. Build the underlying architecture so real NFL data can be connected and stored.
+
+## CORE TECHNOLOGY
+
+Use:
+
+* Python for data collection, analytics, feature engineering, and prediction models.
+* A modern web frontend such as React.
+* PostgreSQL or Replit's built-in PostgreSQL-compatible database.
+* Scheduled background jobs for weekly data updates.
+* Environment variables/secrets for API keys.
+* A modular architecture so individual data providers can be replaced later without rebuilding the application.
+
+The application should be responsive and professional-looking on desktop and mobile.
+
+## PRIMARY DATA SOURCES
+
+Design separate data adapters for each source.
+
+### ESPN
+
+Use ESPN's publicly accessible NFL endpoints where possible for:
+
+* NFL schedule
+* Teams
+* Rosters
+* Players
+* Current depth charts
+* Current injuries
+* Transactions
+* Game results
+* Player game logs
+* Team statistics
+
+Build the ESPN integration as its own module so it can easily be replaced if an endpoint changes.
+
+Never assume ESPN data will always use the exact same JSON structure. Include error handling, logging, retries, and validation.
+
+### NFLVERSE
+
+Use nflverse datasets for historical and advanced analytics including:
+
+* Play-by-play
+* Snap counts
+* Player participation
+* Historical depth charts when available
+* Team statistics
+* Player statistics
+* Advanced play-level metrics
+
+Download/cache the data and store the information needed by the model in the database.
+
+Do not repeatedly download huge datasets unnecessarily.
+
+### SPORTSBOOK ODDS
+
+Create an integration for The Odds API.
+
+The user will eventually provide an API key through Replit Secrets.
+
+Prioritize these sportsbooks:
+
+1. DraftKings
+2. FanDuel
+
+Initially collect:
+
+* Moneyline
+* Point spread
+* Spread price
+* Game total
+* Over price
+* Under price
+
+Design the database now so player-prop markets can be added later.
+
+EVERY sportsbook pull must be stored as a new timestamped snapshot.
+
+Never overwrite previous sportsbook lines.
+
+Example:
+
+Dallas Cowboys vs New York Giants
+
+Opening:
+DAL -2.5
+
+Wednesday:
+DAL -3
+
+Friday:
+DAL -3
+
+Sunday:
+DAL -3.5
+
+Closing:
+DAL -4
+
+This is necessary for line-movement analysis and closing-line-value calculations.
+
+## DATABASE
+
+Create a properly normalized database.
+
+At minimum create tables for:
+
+### teams
+
+Fields should include:
+
+* team_id
+* abbreviation
+* team_name
+* conference
+* division
+
+### players
+
+Include:
+
+* player_id
+* name
+* team
+* position
+* jersey_number
+* active_status
+
+### games
+
+Include:
+
+* game_id
+* season
+* week
+* game_date
+* kickoff_time
+* home_team
+* away_team
+* stadium
+* final_home_score
+* final_away_score
+* game_status
+
+### injuries
+
+DO NOT overwrite injury history.
+
+Every injury update should be timestamped.
+
+Include:
+
+* player
+* team
+* position
+* injury
+* practice_status
+* game_status
+* date_reported
+* snapshot_timestamp
+
+Examples:
+
+Healthy
+Limited
+Did Not Practice
+Questionable
+Doubtful
+Out
+IR
+
+### depth_chart_snapshots
+
+Track:
+
+* team
+* player
+* position
+* depth_position
+* starter/back-up status
+* snapshot_timestamp
+
+Again, never overwrite history.
+
+### sportsbook_odds
+
+Track:
+
+* game
+* sportsbook
+* timestamp
+* market
+* selection
+* point
+* price
+
+Examples:
+
+DraftKings
+DAL -3
+-110
+
+FanDuel
+DAL -3
+-105
+
+### predictions
+
+This table is EXTREMELY IMPORTANT.
+
+Every model prediction needs to be frozen historically.
+
+Track:
+
+* game_id
+* prediction_timestamp
+* model_version
+* sportsbook
+* market
+* sportsbook_line
+* sportsbook_price
+* model_line
+* model_probability
+* market_implied_probability
+* model_edge
+* expected_value
+* confidence_score
+* recommended_pick
+* minimum_playable_line
+
+Once a prediction is recorded, never alter that historical prediction.
+
+### prediction_results
+
+Track:
+
+* prediction_id
+* actual_result
+* win
+* loss
+* push
+* closing_line
+* closing_price
+* closing_line_value
+* units_won_or_lost
+
+### model_versions
+
+Track each model change.
+
+Include:
+
+* model version
+* date activated
+* features
+* feature weights
+* algorithm type
+* notes
+* backtest results
+
+This is critical so we know whether model changes actually improved performance.
+
+## MODEL INPUT FEATURES
+
+Build the feature-engineering framework around several groups.
+
+### OFFENSIVE TEAM METRICS
+
+Calculate where data permits:
+
+* EPA per play
+* EPA per pass
+* EPA per rush
+* success rate
+* early-down success rate
+* explosive pass rate
+* explosive rush rate
+* third-down conversion rate
+* red-zone touchdown rate
+* points per drive
+* yards per play
+* neutral-script pass rate
+* pace
+* pressure allowed rate
+* sack rate allowed
+* turnovers per drive
+
+Use opponent adjustments wherever reasonable.
+
+Avoid relying only on season averages.
+
+Support:
+
+* season
+* last 8 games
+* last 5 games
+* last 3 games
+
+Weight recent performance appropriately without overreacting to tiny samples.
+
+### DEFENSIVE METRICS
+
+Calculate:
+
+* EPA allowed per play
+* pass EPA allowed
+* rush EPA allowed
+* defensive success rate
+* pressure rate
+* sack rate
+* explosive pass rate allowed
+* explosive rush rate allowed
+* third-down defense
+* red-zone touchdown percentage allowed
+* points allowed per drive
+* turnovers created
+
+### QUARTERBACK METRICS
+
+Include:
+
+* EPA/dropback
+* completion percentage over expected if available
+* pressure performance
+* clean-pocket performance
+* sack rate
+* interception rate
+* deep passing efficiency
+* scrambling/rushing contribution
+
+Quarterback changes should receive significant attention.
+
+Do not treat a backup QB as equal to the starter.
+
+### PLAYER AVAILABILITY
+
+Create an injury impact model.
+
+Do not simply count injured players.
+
+Weight injuries according to:
+
+* position
+* player importance
+* snap share
+* starter/back-up status
+* recent usage
+
+Particularly important positions:
+
+* QB
+* LT
+* RT
+* C
+* WR1
+* TE1
+* EDGE
+* DT
+* CB1
+* CB2
+* S
+
+Create an estimated injury-impact score for both offense and defense.
+
+The system should eventually learn historical performance when similar personnel losses occurred.
+
+### OFFENSIVE LINE
+
+Include:
+
+* starting OL continuity
+* injuries
+* sacks allowed
+* pressure rate allowed
+* rushing efficiency
+
+### DEFENSIVE MATCHUPS
+
+Include:
+
+* pass rush vs offensive line
+* rush defense vs opposing rushing offense
+* pass defense vs opposing passing offense
+* explosive-play matchup
+* red-zone matchup
+
+### SITUATIONAL FACTORS
+
+Include:
+
+* home/away
+* travel
+* rest days
+* short week
+* bye week
+* divisional matchup
+* conference matchup
+* time-zone changes
+* previous game overtime
+* consecutive road games
+* weather when available
+* dome/outdoor
+* playing surface
+
+Do not assign arbitrary large weights to narrative factors without evidence.
+
+Backtest their historical significance.
+
+## MARKET INFORMATION
+
+Market price is extremely important.
+
+For every game calculate:
+
+### Market implied probability
+
+Convert American odds into implied probability.
+
+### Remove sportsbook vig where possible
+
+Calculate estimated no-vig probability.
+
+### Model edge
+
+Example:
+
+Model cover probability:
+59%
+
+Market no-vig probability:
+52%
+
+Edge:
++7 percentage points
+
+Show this clearly.
+
+### Model spread
+
+Example:
+
+Vegas:
+Dallas -3
+
+Model:
+Dallas -5.8
+
+Model spread edge:
++2.8 Dallas
+
+### Expected value
+
+Calculate EV based on:
+
+* projected probability
+* sportsbook odds
+
+Do not recommend bets only because they are likely to win.
+
+Price matters.
+
+A -300 favorite can still be a terrible wager.
+
+## MODEL ARCHITECTURE
+
+Do NOT create one mysterious AI-generated score.
+
+Build a measurable statistical model.
+
+Start with interpretable approaches and allow multiple models to be compared.
+
+Initial candidate models:
+
+* Logistic Regression
+* Random Forest
+* Gradient Boosting
+* XGBoost if available
+
+Eventually support ensemble modeling.
+
+Create separate models for:
+
+### ATS / Spread
+
+Output:
+
+* projected spread
+* cover probability
+
+### Moneyline
+
+Output:
+
+* win probability
+
+### Total
+
+Output:
+
+* projected total
+* over probability
+* under probability
+
+Do not combine all three into the same target.
+
+## AI ANALYSIS LAYER
+
+AI should NOT independently invent picks.
+
+The quantitative model generates probabilities first.
+
+AI can then explain:
+
+* injury changes
+* depth-chart changes
+* matchup advantages
+* statistical reasons
+* significant line movement
+* unusual discrepancies
+
+AI should never silently modify a quantitative model prediction.
+
+If an AI/manual adjustment is eventually allowed, save:
+
+* original model prediction
+* adjustment
+* reason
+* final prediction
+
+So performance can be evaluated independently.
+
+## CONFIDENCE SCORE
+
+Create a 0-100 confidence score.
+
+Confidence should consider things such as:
+
+* size of model edge
+* agreement among models
+* stability of prediction
+* sample size
+* QB certainty
+* injury uncertainty
+* line movement
+* data quality
+
+Do not simply convert predicted probability into confidence.
+
+## PICK GRADING
+
+Automatically grade picks when games finish.
+
+For spread:
+
+Win
+Loss
+Push
+
+For totals:
+
+Win
+Loss
+Push
+
+For moneyline:
+
+Win
+Loss
+
+Track units based on the actual sportsbook price used at prediction time.
+
+## CLOSING LINE VALUE
+
+Calculate CLV.
+
+Example:
+
+Recommended:
+
+Dallas -3
+
+Closing line:
+
+Dallas -4.5
+
+Record that the recommendation beat the closing line by 1.5 points.
+
+Track average CLV by:
+
+* model
+* season
+* market
+* confidence
+* edge bucket
+
+Winning percentage alone should not be considered sufficient evidence of model quality.
+
+## BACKTESTING ENGINE
+
+Create a dedicated Backtesting page.
+
+Allow selection by:
+
+Season
+Week
+Market
+Model version
+Confidence
+Edge
+Favorite/underdog
+Home/away
+
+Display:
+
+* total bets
+* wins
+* losses
+* pushes
+* win %
+* units
+* ROI
+* average odds
+* average model edge
+* average CLV
+
+Break down performance by:
+
+Model Edge:
+
+0-1 point
+1-2 points
+2-3 points
+3-4 points
+4+ points
+
+Confidence:
+
+50-59
+60-69
+70-79
+80-89
+90+
+
+Do not optimize the model simply to produce a prettier historical record.
+
+Warn about overfitting.
+
+## WALK-FORWARD BACKTESTING
+
+Avoid training models using information that would not have existed at prediction time.
+
+When backtesting Week 10 of a season, only allow the algorithm access to information available before Week 10.
+
+Never leak:
+
+* final score
+* closing line
+* future injury information
+* future depth charts
+* future statistics
+
+into the training data.
+
+Use chronological/walk-forward validation rather than random train/test splits for primary model evaluation.
+
+## DASHBOARD
+
+Create a professional sports-analytics interface.
+
+I want this to look more like a professional sportsbook analytics product than a hobby website.
+
+Main navigation:
+
+Dashboard
+This Week
+Games
+Model Picks
+Odds
+Line Movement
+Injuries
+Depth Charts
+Backtesting
+Model Lab
+Performance
+Settings
+
+### DASHBOARD
+
+Show:
+
+NFL MODEL
+
+Current Week
+
+Season Performance
+
+ATS:
+Record
+Win %
+Units
+ROI
+
+Moneyline:
+Record
+Win %
+Units
+ROI
+
+Totals:
+Record
+Win %
+Units
+ROI
+
+CLV:
+Average CLV
+
+Then:
+
+TOP MODEL EDGES
+
+Example:
+
+BUF -3
+Model: BUF -6.4
+Edge: +3.4
+Cover: 61.8%
+Confidence: 84
+
+KC/DET Over 47.5
+Model: 51.7
+Edge: +4.2
+Over: 59.2%
+Confidence: 79
+
+Use cards and clear visual hierarchy.
+
+## THIS WEEK PAGE
+
+Show every current NFL game.
+
+Game card:
+
+AWAY TEAM
+at
+HOME TEAM
+
+Kickoff
+
+DraftKings:
+Spread
+ML
+Total
+
+FanDuel:
+Spread
+ML
+Total
+
+MODEL:
+Projected score
+Projected spread
+Projected total
+
+Win Probability
+
+Cover Probability
+
+Model Edge
+
+Confidence
+
+Recommended wager
+
+BEST AVAILABLE PRICE
+
+Example:
+
+DraftKings:
+DAL -3 (-110)
+
+FanDuel:
+DAL -3 (-105)
+
+Best:
+FanDuel -3 (-105)
+
+## GAME DETAILS PAGE
+
+Clicking a game should show:
+
+### Game prediction
+
+Projected final score
+
+Model spread
+
+Market spread
+
+Model total
+
+Market total
+
+Win probabilities
+
+Cover probabilities
+
+### Reasons
+
+Top positive factors
+
+Top negative factors
+
+Example:
+
+Dallas advantages:
+
+* Pass EPA matchup
+* Defensive pressure advantage
+* Opponent CB1 injury
+* Rest advantage
+
+Concerns:
+
+* Starting RT questionable
+* Giants strong red-zone defense
+
+### Injuries
+
+Side-by-side team comparison.
+
+### Depth charts
+
+Side-by-side.
+
+### Team statistics
+
+Offense vs defense.
+
+### Line movement
+
+Chart showing DraftKings and FanDuel line movement.
+
+### Historical matchup/context
+
+Useful historical comparisons, but avoid meaningless trends such as arbitrary records based on tiny samples.
+
+## INJURY PAGE
+
+Show every team.
+
+Highlight meaningful injuries.
+
+Use categories such as:
+
+Critical
+High
+Moderate
+Low
+
+Example:
+
+Buffalo Bills
+
+Josh Allen
+QB
+Questionable
+Critical Impact
+
+Starting CB
+Out
+High Impact
+
+Backup LB
+Questionable
+Low Impact
+
+Allow sorting/filtering.
+
+## DEPTH CHART PAGE
+
+Show current starting lineups.
+
+Highlight changes from the prior snapshot.
+
+Example:
+
+NEW STARTER
+
+RB
+Player B
+
+Previous starter:
+Player A
+
+Reason:
+Injury
+
+## MODEL LAB
+
+Build a page where future versions can be tested without immediately becoming the production model.
+
+Show:
+
+Production Model
+
+Challenger Models
+
+Model A
+Model B
+Model C
+
+Backtest comparison:
+
+ATS win %
+ROI
+CLV
+Brier score
+Log loss
+Calibration
+
+Do not promote a new model automatically merely because it has the highest win percentage.
+
+Require sufficient sample size.
+
+## MODEL CALIBRATION
+
+Track whether probabilities are actually calibrated.
+
+Example:
+
+Model predictions around 55% should historically win approximately 55%.
+
+Create calibration buckets:
+
+50-54%
+55-59%
+60-64%
+65-69%
+70%+
+
+Show:
+
+Predicted probability
+Actual win rate
+Number of bets
+
+## PLAYER TOUCHDOWN MODEL — DESIGN NOW, BUILD LATER
+
+Create database architecture capable of supporting an anytime-touchdown model.
+
+Future inputs will include:
+
+* player snap %
+* routes
+* target share
+* air-yard share
+* red-zone targets
+* goal-line carries
+* red-zone carries
+* team implied points
+* opponent TDs allowed by position
+* linebacker matchup
+* cornerback matchup
+* safety matchup
+* coverage tendencies
+* defensive personnel
+* injuries
+* weather
+* expected game script
+* sportsbook anytime TD odds
+
+Do NOT fully build the touchdown model during the first development phase unless the base game model is stable.
+
+Design for it now.
+
+## AUTOMATED WEEKLY WORKFLOW
+
+Create scheduled tasks.
+
+### Tuesday
+
+* detect new NFL week
+* update schedule
+* update teams/rosters
+* obtain opening sportsbook odds
+* update NFL historical data
+* generate early model
+
+### Wednesday
+
+* update injuries
+* update depth charts
+* update odds
+* rerun model
+
+### Thursday
+
+* update injuries
+* update odds
+* rerun model
+* account for Thursday game
+
+### Friday
+
+* update injury reports
+* update depth charts
+* update odds
+* rerun model
+
+### Saturday
+
+* update major status changes
+* update odds
+
+### Sunday
+
+Run multiple updates before games.
+
+Store every sportsbook snapshot.
+
+Before each kickoff:
+
+* pull latest odds
+* pull latest injuries
+* pull latest depth chart
+* run final model
+* freeze final official prediction
+
+Never change that final prediction after kickoff.
+
+After final scores are available:
+
+* grade predictions
+* calculate units
+* calculate CLV
+* update performance dashboard
+
+## API USAGE CONTROL
+
+Because free APIs may have limits:
+
+Create an API usage dashboard.
+
+Show:
+
+API provider
+Requests today
+Requests this month
+Estimated remaining quota
+Last successful update
+Next scheduled update
+
+Do not waste sportsbook API calls.
+
+Cache requests where appropriate.
+
+## DATA QUALITY
+
+Create a data-status indicator.
+
+Example:
+
+Schedule:
+Current
+
+Injuries:
+Updated 11 minutes ago
+
+Depth Charts:
+Updated 3 hours ago
+
+Odds:
+Updated 8 minutes ago
+
+Historical Data:
+Current through Week 4
+
+If data is missing or stale, clearly show it.
+
+Never fabricate data just to populate the UI.
+
+## ADMIN / SETTINGS
+
+Create settings for:
+
+The Odds API key
+OpenAI API key if eventually needed
+
+Do NOT expose secret values in the frontend.
+
+Allow:
+
+Enable/disable sportsbooks
+Enable/disable models
+Minimum model edge
+Minimum confidence
+Unit sizing
+
+Default unit:
+1 unit
+
+Do not automatically place wagers.
+
+## BET SIZE
+
+Initially use flat betting.
+
+Every recommendation should default to:
+
+1 unit
+
+Create infrastructure for future fractional Kelly sizing but leave it disabled initially.
+
+## RESPONSIBLE MODEL DESIGN
+
+Do not claim any algorithm guarantees profit.
+
+Do not manipulate backtesting thresholds solely to reach a requested win percentage.
+
+If a model achieves only 52%, display 52%.
+
+If it achieves 61%, display 61%.
+
+Accuracy and honest validation are more important than presenting flattering results.
+
+## DEVELOPMENT PHASES
+
+Build this in phases.
+
+### PHASE 1
+
+Application architecture
+Database
+NFL schedule
+Teams
+Players
+ESPN connectivity
+nflverse connectivity
+Sportsbook API connectivity
+DraftKings
+FanDuel
+Current week dashboard
+
+### PHASE 2
+
+Historical database
+Feature engineering
+Initial spread model
+Moneyline model
+Total model
+
+### PHASE 3
+
+Prediction tracking
+Bet grading
+CLV
+Backtesting
+Walk-forward testing
+Performance dashboard
+
+### PHASE 4
+
+Injury-impact modeling
+Depth-chart adjustments
+Model Lab
+Ensemble models
+
+### PHASE 5
+
+Player props
+Anytime TD model
+Position-vs-defense analysis
+Cornerback/WR matchups
+LB/RB/TE matchups
+
+Do not rush into Phase 5 until the base system works correctly.
+
+## FIRST TASK
+
+Start by:
+
+1. Creating the application architecture.
+2. Creating the database schema.
+3. Creating the professional frontend/navigation.
+4. Connecting current NFL schedule/team data.
+5. Building the data-health/status page.
+6. Creating placeholders for sportsbook API configuration.
+7. Creating the current-week games interface.
+
+Before attempting sophisticated machine-learning predictions, prove that the data pipeline works correctly.
+
+Do not populate fake model results.
+
+If prediction data does not exist yet, show:
+
+"Model not yet trained"
+
+instead of inventing probabilities.
+
+After completing Phase 1, give me a plain-English explanation of:
+
+* what was built
+* what data is currently live
+* which APIs are connected
+* what API keys I need to provide
+* what still needs to be built
+* any errors or limitations
+
+Remember: I am not a developer. Explain technical decisions in simple language and do as much configuration automatically as possible.

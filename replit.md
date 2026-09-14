@@ -1,6 +1,6 @@
-# [Project name]
+# NFL Analytics Model
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Personal NFL analytics workspace for live schedule data, sportsbook readiness, historical snapshots, and transparent model evaluation.
 
 ## Run & Operate
 
@@ -22,15 +22,23 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/nfl-analytics` — responsive React/Vite product UI and route-level screens.
+- `artifacts/api-server/src/lib/espn.ts` — ESPN adapter with parsing, retry timeout, and in-memory freshness cache.
+- `artifacts/api-server/src/lib/nflverse.ts` — NFLverse historical-data adapter boundary and readiness status.
+- `artifacts/api-server/src/routes` — API route handlers for dashboard, data health, games, teams, and settings.
+- `lib/api-spec/openapi.yaml` — source of truth for API contracts; run codegen after changes.
+- `lib/db/src/schema` — normalized PostgreSQL/Drizzle schema for NFL entities, immutable snapshots, predictions, model versions, and settings.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Live ESPN schedule/team data is cached briefly and persisted to PostgreSQL so the UI can fall back to the last successful capture.
+- Model outputs stay unavailable until a trained model is actually promoted; empty and not-trained states are intentional.
+- Sportsbook history uses append-only timestamped rows, while settings are the only mutable singleton configuration.
+- Secret values remain server-side; the frontend receives only safe configuration status such as whether `ODDS_API_KEY` is present.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The current release provides a professional dashboard, live current-week slate, game detail route, provider data-health monitor, sportsbook/model configuration, and honest readiness pages for odds, line movement, injuries, depth charts, backtesting, model lab, and performance.
 
 ## User preferences
 
@@ -38,7 +46,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Do not populate fabricated probabilities, edges, records, or odds. Use the explicit not-trained/not-configured states until source data and validated models exist.
+- Update `lib/api-spec/openapi.yaml` before changing API consumers, then run `pnpm --filter @workspace/api-spec run codegen`.
+- Use the managed API and web workflows rather than starting root-level development servers.
 
 ## Pointers
 

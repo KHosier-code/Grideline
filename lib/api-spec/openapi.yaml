@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: NFL Analytics Model API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: nfl
+    description: Live NFL schedule and team data
+  - name: dashboard
+    description: Dashboard summaries and data freshness
+  - name: settings
+    description: User-operable model and sportsbook settings
 paths:
   /healthz:
     get:
@@ -24,6 +30,123 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get the dashboard overview
+      responses:
+        "200":
+          description: Dashboard overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /data-health:
+    get:
+      operationId: getDataHealth
+      tags: [dashboard]
+      summary: Get freshness and availability for each data provider
+      responses:
+        "200":
+          description: Data health status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataHealth"
+  /games:
+    get:
+      operationId: listGames
+      tags: [nfl]
+      summary: List NFL games for a season and week
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 2020
+        - name: week
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 22
+      responses:
+        "200":
+          description: NFL games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Game"
+  /games/{gameId}:
+    get:
+      operationId: getGame
+      tags: [nfl]
+      summary: Get one game with current odds and model status
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Game details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Game"
+        "404":
+          description: Game not found
+  /teams:
+    get:
+      operationId: listTeams
+      tags: [nfl]
+      summary: List NFL teams
+      responses:
+        "200":
+          description: NFL teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get safe application settings
+      responses:
+        "200":
+          description: Application settings without secret values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update model and sportsbook settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppSettingsUpdate"
+      responses:
+        "200":
+          description: Updated application settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +156,117 @@ components:
           type: string
       required:
         - status
+    Team:
+      type: object
+      required: [teamId, abbreviation, teamName, conference, division]
+      properties:
+        teamId: { type: string }
+        abbreviation: { type: string }
+        teamName: { type: string }
+        conference: { type: ["string", "null"] }
+        division: { type: ["string", "null"] }
+        logoUrl: { type: ["string", "null"] }
+    TeamBrief:
+      type: object
+      required: [abbreviation, teamName]
+      properties:
+        abbreviation: { type: string }
+        teamName: { type: string }
+        logoUrl: { type: ["string", "null"] }
+    Game:
+      type: object
+      required:
+        [gameId, season, week, gameDate, kickoffTime, homeTeam, awayTeam, gameStatus, venue, modelStatus]
+      properties:
+        gameId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        gameDate: { type: string, format: date-time }
+        kickoffTime: { type: ["string", "null"], format: date-time }
+        homeTeam: { $ref: "#/components/schemas/TeamBrief" }
+        awayTeam: { $ref: "#/components/schemas/TeamBrief" }
+        venue: { type: ["string", "null"] }
+        finalHomeScore: { type: ["integer", "null"] }
+        finalAwayScore: { type: ["integer", "null"] }
+        gameStatus: { type: string }
+        broadcast: { type: ["string", "null"] }
+        modelStatus: { type: string, enum: [not_trained, available] }
+        latestOdds: { type: ["array", "null"], items: { $ref: "#/components/schemas/OddsQuote" } }
+    OddsQuote:
+      type: object
+      required: [sportsbook, market, selection, point, price, capturedAt]
+      properties:
+        sportsbook: { type: string }
+        market: { type: string }
+        selection: { type: string }
+        point: { type: ["number", "null"] }
+        price: { type: integer }
+        capturedAt: { type: string, format: date-time }
+    DataHealth:
+      type: object
+      required: [provider, label, status, detail]
+      properties:
+        provider: { type: string }
+        label: { type: string }
+        status: { type: string, enum: [current, stale, not_configured, unavailable] }
+        detail: { type: string }
+        lastUpdated: { type: ["string", "null"], format: date-time }
+        nextUpdate: { type: ["string", "null"], format: date-time }
+        requestsToday: { type: integer }
+        requestsThisMonth: { type: integer }
+        remainingQuota: { type: ["string", "null"] }
+    PerformanceSummary:
+      type: object
+      required: [record, winRate, units, roi]
+      properties:
+        record: { type: string }
+        winRate: { type: ["number", "null"] }
+        units: { type: ["number", "null"] }
+        roi: { type: ["number", "null"] }
+    DashboardSummary:
+      type: object
+      required: [season, currentWeek, gamesThisWeek, modelStatus, ats, moneyline, totals, averageClv]
+      properties:
+        season: { type: integer }
+        currentWeek: { type: ["integer", "null"] }
+        gamesThisWeek: { type: integer }
+        modelStatus: { type: string }
+        ats: { $ref: "#/components/schemas/PerformanceSummary" }
+        moneyline: { $ref: "#/components/schemas/PerformanceSummary" }
+        totals: { $ref: "#/components/schemas/PerformanceSummary" }
+        averageClv: { type: ["number", "null"] }
+        topEdges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModelEdge"
+    ModelEdge:
+      type: object
+      required: [gameId, label, detail]
+      properties:
+        gameId: { type: string }
+        label: { type: string }
+        detail: { type: string }
+        modelStatus: { type: string }
+    AppSettings:
+      type: object
+      required: [sportsbooks, minimumEdge, minimumConfidence, unitSize, kellyEnabled, oddsApiConfigured]
+      properties:
+        sportsbooks:
+          type: array
+          items: { type: string, enum: [DraftKings, FanDuel] }
+        minimumEdge: { type: number, minimum: 0 }
+        minimumConfidence: { type: number, minimum: 0, maximum: 100 }
+        unitSize: { type: number, minimum: 0.1 }
+        kellyEnabled: { type: boolean }
+        oddsApiConfigured: { type: boolean }
+    AppSettingsUpdate:
+      type: object
+      properties:
+        sportsbooks:
+          type: array
+          items: { type: string, enum: [DraftKings, FanDuel] }
+        minimumEdge: { type: number, minimum: 0 }
+        minimumConfidence: { type: number, minimum: 0, maximum: 100 }
+        unitSize: { type: number, minimum: 0.1 }
+        kellyEnabled: { type: boolean }
 
