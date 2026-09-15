@@ -1,0 +1,104 @@
+AUDIT GRIDLINE LIVE MODEL INPUT INTEGRITY
+
+The duplicate-score bug revealed that valid Phase 6 models were sometimes receiving all-zero input vectors because required game features were missing.
+
+Do not retrain or replace any model.
+
+The goal is to prove that production predictions are generated from real, game-specific, cutoff-safe inputs.
+
+For every upcoming NFL game, audit the exact input vector supplied to the active Phase 6 models.
+
+For each game report:
+
+1. Game ID
+2. Home team
+3. Away team
+4. Prediction snapshot ID if one exists
+5. Feature version used
+6. Exact count of required model-selected features
+7. Count populated
+8. Count missing
+9. Count zero-valued because the real value is legitimately zero
+10. Count previously zero-filled due to missing data
+11. QB confidence
+12. Projected starting QB for both teams
+13. QB evidence used
+14. Personnel completeness
+15. Sample quality
+16. Input-quality status
+
+CRITICAL RULE
+
+Missing feature values must NEVER be silently converted to zero unless zero is a legitimate, observed value for that feature.
+
+If any required feature is unavailable:
+
+- do not generate a production prediction
+- do not persist a prediction snapshot
+- mark the game as “Prediction pending — incomplete model inputs”
+- expose the missing inputs in Admin/Data Health
+- do not expose technical details to consumer users
+
+QB CONFIDENCE AUDIT
+
+Determine why QB confidence was 0% for the upcoming games.
+
+Trace the full QB pipeline:
+
+- projected starter source
+- player identity mapping
+- recent snap counts
+- recent participation
+- recent dropbacks
+- QB game history
+- injury evidence
+- continuity
+- starter certainty
+
+Compare the Phase 7 personnel/QB context with the QB fields actually used by the Phase 6 prediction generator.
+
+If Phase 7 knows the projected QB but the production predictor does not, identify and fix that integration gap.
+
+Do not automatically feed new Phase 7 features into Phase 6 if Phase 6 was not trained on those features.
+
+Instead, use Phase 7 evidence to validate starter/QB-context availability while preserving the exact Phase 6 feature schema.
+
+FEATURE GENERATION
+
+Audit why the 24 Phase 6-selected features were absent for these upcoming games.
+
+Verify:
+
+- pregame-v3 rows exist for both teams
+- future-game feature builder runs automatically
+- correct season/week/game IDs are used
+- team identifier normalization works
+- latest eligible feature row is selected
+- feature names match the model’s trained schema exactly
+- no schema/version mismatch exists
+- no stale cache or incorrect join prevents feature retrieval
+
+FAIL-CLOSED BEHAVIOR
+
+Add regression tests proving:
+
+1. Missing required features cannot become zero silently.
+2. Two games with different feature rows receive different input vectors.
+3. A game with incomplete inputs cannot generate a valid production snapshot.
+4. QB confidence cannot default to 0 without an explicit unavailable reason.
+5. Consumer UI never displays projections from an invalid-input snapshot.
+
+FINAL REPORT
+
+Return:
+
+- whether the Phase 6 models themselves are valid
+- why the 24 inputs were missing
+- why QB confidence was 0
+- whether pregame-v3 generation is working for upcoming games
+- whether there is a Phase 7-to-Phase 6 integration gap
+- bugs fixed
+- sample real input vectors for at least 3 upcoming games
+- confirmation that those vectors differ
+- confirmation that no model retraining occurred
+- whether current upcoming predictions are trustworthy after the fix

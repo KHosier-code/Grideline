@@ -376,8 +376,22 @@ export async function rebuildPregameFeatures(featureVersion = PREGAME_FEATURE_VE
     }
   }
   for (let index = 0; index < rows.length; index += 250) {
-    await db.insert(pregameTeamFeaturesTable).values(rows.slice(index, index + 250)).onConflictDoNothing({
+    await db.insert(pregameTeamFeaturesTable).values(rows.slice(index, index + 250)).onConflictDoUpdate({
       target: [pregameTeamFeaturesTable.featureVersion, pregameTeamFeaturesTable.gameId, pregameTeamFeaturesTable.teamId],
+      set: {
+        opponentTeamId: sql`excluded."opponent_team_id"`,
+        season: sql`excluded."season"`,
+        week: sql`excluded."week"`,
+        kickoffTime: sql`excluded."kickoff_time"`,
+        isHome: sql`excluded."is_home"`,
+        features: sql`excluded."features"`,
+        sampleCounts: sql`excluded."sample_counts"`,
+        featureAudit: sql`excluded."feature_audit"`,
+        lowSample: sql`excluded."low_sample"`,
+        sourceCutoff: sql`excluded."source_cutoff"`,
+        generatedAt: sql`excluded."generated_at"`,
+      },
+      setWhere: sql`${pregameTeamFeaturesTable.kickoffTime} > now()`,
     });
   }
   return {

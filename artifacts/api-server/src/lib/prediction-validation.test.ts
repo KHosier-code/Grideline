@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { comparisonData, isValidPredictionSnapshot, matchesPredictionPerformanceWindow, vectorForRows } from "./live-predictions";
+import {
+  comparisonData,
+  filterEligiblePredictionRows,
+  gameSpecificSnapshot,
+  hasVerifiedPredictionInputs,
+  isEligiblePredictionSnapshot,
+  isValidPredictionSnapshot,
+  matchesPredictionPerformanceWindow,
+  vectorForRows,
+} from "./live-predictions";
 import { safeNoVigProbabilities, validatePredictionOutputs } from "./prediction-validation";
 import { standardize } from "./modeling";
 
@@ -42,14 +51,40 @@ test("standardization converts non-finite feature values into safe finite inputs
   assert.ok(result.test.flat().every(Number.isFinite));
 });
 
-test("missing QB features still produce a complete vector", () => {
+test("missing optional QB confidence does not invalidate complete model features", () => {
   const vector = vectorForRows([
     { gameId: "g", isHome: true, lowSample: false, features: { "season_to_date.offense.points": 24 } },
     { gameId: "g", isHome: false, lowSample: true, features: { "season_to_date.offense.points": 20 } },
-  ], ["season_to_date.offense.points", "qb_data_confidence"]);
+  ], ["season_to_date.offense.points"]);
   assert.ok(vector);
-  assert.deepEqual(vector?.x, [4, 0, 0, 1, 0]);
+  assert.deepEqual(vector?.x, [4, 0, 1, 0]);
   assert.equal(vector?.lowSample, true);
+  assert.equal(vector?.inputFeatureCount, 1);
+  assert.equal(vector?.inputMissingFeatureCount, 0);
+});
+
+test("missing model features are explicitly ineligible instead of becoming a silent default vector", () => {
+  const vector = vectorForRows([
+    { gameId: "g", isHome: true, lowSample: true, features: {} },
+    { gameId: "g", isHome: false, lowSample: true, features: {} },
+  ], ["season_to_date.offense.points", "last_3.defense.epa"]);
+  assert.ok(vector);
+  assert.equal(vector?.inputFeatureCount, 2);
+  assert.equal(vector?.inputMissingFeatureCount, 2);
+  assert.equal(hasVerifiedPredictionInputs(vector!), false);
+});
+
+test("different games cannot consume the same mismatched prediction record", () => {
+  const gameOne = { id: 101, gameId: "game-1" };
+  const gameTwo = { id: 202, gameId: "game-2" };
+  const snapshots = new Map([
+    ["game-1", gameOne],
+    ["game-2", gameOne],
+  ]);
+  assert.equal(gameSpecificSnapshot("game-1", snapshots)?.id, 101);
+  assert.equal(gameSpecificSnapshot("game-2", snapshots), undefined);
+  snapshots.set("game-2", gameTwo);
+  assert.equal(gameSpecificSnapshot("game-2", snapshots)?.id, 202);
 });
 
 test("missing sportsbook data leaves football projections but removes market edges", () => {
@@ -93,11 +128,34 @@ test("invalid legacy snapshots are excluded from official prediction views", () 
     projectedTotal: 44,
     homeWinProbability: 0.6,
     awayWinProbability: 0.4,
+    inputFeatureCount: 4,
+    inputMissingFeatureCount: 0,
   };
   assert.equal(isValidPredictionSnapshot(valid), true);
+  assert.equal(isEligiblePredictionSnapshot(valid), true);
+  assert.equal(isEligiblePredictionSnapshot({ ...valid, inputFeatureCount: 0 }), false);
+  assert.equal(isEligiblePredictionSnapshot({ ...valid, inputMissingFeatureCount: 1 }), false);
   assert.equal(isValidPredictionSnapshot({ ...valid, projectedMargin: Number.NaN }), false);
   assert.equal(isValidPredictionSnapshot({ ...valid, homeWinProbability: 1.1, awayWinProbability: -0.1 }), false);
   assert.equal(isValidPredictionSnapshot({ ...valid, projectedTotal: null }), false);
+});
+
+test("weekly report inputs exclude numerically valid snapshots without verified provenance", () => {
+  const base = {
+    projectedHomeScore: 24,
+    projectedAwayScore: 20,
+    projectedMargin: 4,
+    projectedTotal: 44,
+    homeWinProbability: 0.6,
+    awayWinProbability: 0.4,
+    inputFeatureCount: 4,
+    inputMissingFeatureCount: 0,
+  };
+  const rows = filterEligiblePredictionRows([
+    { label: "verified", prediction: base },
+    { label: "legacy", prediction: { ...base, inputFeatureCount: 0 } },
+  ]);
+  assert.deepEqual(rows.map((row) => row.label), ["verified"]);
 });
 
 test("weekly performance includes only games in the requested season and week", () => {

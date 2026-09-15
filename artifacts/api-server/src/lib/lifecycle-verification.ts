@@ -7,7 +7,7 @@ import {
   predictionSnapshotsTable,
   weeklyLearningReportsTable,
 } from "@workspace/db";
-import { isValidPredictionSnapshot } from "./live-predictions";
+import { isEligiblePredictionSnapshot } from "./live-predictions";
 
 type CheckStatus = "verified" | "unavailable" | "not_verifiable";
 
@@ -62,7 +62,7 @@ export async function getLifecycleVerificationReport(now = new Date()) {
       snapshot
       && snapshot.kickoffTime
       && snapshot.predictionTimestamp < snapshot.kickoffTime
-      && isValidPredictionSnapshot(snapshot),
+      && isEligiblePredictionSnapshot(snapshot),
     );
     const finalScorePresent = game.finalHomeScore !== null && game.finalAwayScore !== null;
     const clv = grade?.clv as Record<string, unknown> | undefined;

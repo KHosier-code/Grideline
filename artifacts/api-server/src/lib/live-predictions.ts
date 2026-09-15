@@ -235,6 +235,35 @@ export function isValidPredictionSnapshot(snapshot: {
     validatePredictionOutputs(snapshot).length === 0;
 }
 
+export function hasVerifiedPredictionInputs(snapshot: {
+  inputFeatureCount: number | null;
+  inputMissingFeatureCount: number | null;
+}) {
+  return Number.isInteger(snapshot.inputFeatureCount) &&
+    snapshot.inputFeatureCount! > 0 &&
+    snapshot.inputMissingFeatureCount === 0;
+}
+
+export function isEligiblePredictionSnapshot(
+  snapshot: Parameters<typeof isValidPredictionSnapshot>[0] & Parameters<typeof hasVerifiedPredictionInputs>[0],
+) {
+  return isValidPredictionSnapshot(snapshot) && hasVerifiedPredictionInputs(snapshot);
+}
+
+export function filterEligiblePredictionRows<
+  T extends { prediction: Parameters<typeof isEligiblePredictionSnapshot>[0] },
+>(rows: T[]) {
+  return rows.filter((row) => isEligiblePredictionSnapshot(row.prediction));
+}
+
+export function gameSpecificSnapshot<T extends { gameId: string }>(
+  gameId: string,
+  snapshots: ReadonlyMap<string, T>,
+) {
+  const snapshot = snapshots.get(gameId);
+  return snapshot?.gameId === gameId ? snapshot : undefined;
+}
+
 type PredictionResult = {
   value: number | null;
   reason?: string;
@@ -276,10 +305,15 @@ export function vectorForRows(rows: Array<{ gameId: string; isHome: boolean; fea
   const home = rows.find((row) => row.isHome);
   const away = rows.find((row) => !row.isHome);
   if (!home || !away) return null;
+  let inputMissingFeatureCount = 0;
   const x = names.map((name) => {
     const homeValue = home.features[name];
     const awayValue = away.features[name];
-    return typeof homeValue === "number" && Number.isFinite(homeValue) && typeof awayValue === "number" && Number.isFinite(awayValue) ? homeValue - awayValue : 0;
+    if (typeof homeValue === "number" && Number.isFinite(homeValue) && typeof awayValue === "number" && Number.isFinite(awayValue)) {
+      return homeValue - awayValue;
+    }
+    inputMissingFeatureCount += 1;
+    return 0;
   });
   const homeQb = typeof home.features.qb_data_confidence === "number" && Number.isFinite(home.features.qb_data_confidence) ? home.features.qb_data_confidence : 0;
   const awayQb = typeof away.features.qb_data_confidence === "number" && Number.isFinite(away.features.qb_data_confidence) ? away.features.qb_data_confidence : 0;
@@ -287,6 +321,8 @@ export function vectorForRows(rows: Array<{ gameId: string; isHome: boolean; fea
     x: [...x, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb],
     lowSample: home.lowSample || away.lowSample,
     qbConfidence: (homeQb + awayQb) / 2,
+    inputFeatureCount: names.length,
+    inputMissingFeatureCount,
   };
 }
 
@@ -320,6 +356,7 @@ export async function generateLivePredictions(now = new Date()) {
   const teamById = new Map(teamRows.map((team) => [team.teamId, team]));
   let snapshotsCreated = 0;
   let skippedNoVector = 0;
+  let skippedIncompleteInputs = 0;
   let skippedNoHomeTeam = 0;
   let skippedNonFinite = 0;
   let firstNonFinite: Record<string, unknown> | null = null;
@@ -329,6 +366,10 @@ export async function generateLivePredictions(now = new Date()) {
     const vector = vectorForRows(rowsByGame.get(game.gameId) ?? [], names);
     if (!vector) {
       skippedNoVector += 1;
+      continue;
+    }
+    if (vector.inputFeatureCount === 0 || vector.inputMissingFeatureCount > 0) {
+      skippedIncompleteInputs += 1;
       continue;
     }
     const marginResult = predictWithModel(models.get("spread")!, examplesResult.examples, vector.x);
@@ -400,6 +441,8 @@ export async function generateLivePredictions(now = new Date()) {
       marketComparison: comparisonData(marketSnapshot, margin, total, homeProbability),
       lowSample: vector.lowSample,
       qbConfidence: vector.qbConfidence,
+      inputFeatureCount: vector.inputFeatureCount,
+      inputMissingFeatureCount: vector.inputMissingFeatureCount,
     }).onConflictDoNothing({ target: predictionSnapshotsTable.snapshotKey }).returning({ id: predictionSnapshotsTable.id });
     if (insert.length) snapshotsCreated += 1;
     considered.push(game.gameId);
@@ -409,6 +452,7 @@ export async function generateLivePredictions(now = new Date()) {
     snapshotsCreated,
     gamesConsidered: considered.length,
     skippedNoVector,
+    skippedIncompleteInputs,
     skippedNoHomeTeam,
     skippedNonFinite,
     firstNonFinite,
@@ -431,7 +475,9 @@ export async function freezeOfficialFinalPredictions(now = new Date()) {
   )).orderBy(asc(predictionSnapshotsTable.gameId), desc(predictionSnapshotsTable.predictionTimestamp));
   const latest = new Map<string, typeof candidates[number]>();
   for (const candidate of candidates) {
-    if (isValidPredictionSnapshot(candidate) && !latest.has(candidate.gameId)) latest.set(candidate.gameId, candidate);
+    if (isEligiblePredictionSnapshot(candidate) && !latest.has(candidate.gameId)) {
+      latest.set(candidate.gameId, candidate);
+    }
   }
   for (const candidate of latest.values()) {
     await db.update(predictionSnapshotsTable).set({
@@ -512,7 +558,7 @@ async function gradeSnapshot(snapshot: typeof predictionSnapshotsTable.$inferSel
 export async function gradeCompletedPredictions(now = new Date()) {
   await freezeOfficialFinalPredictions(now);
   const predictions = (await db.select().from(predictionSnapshotsTable).where(eq(predictionSnapshotsTable.officialFinalPrediction, true)))
-    .filter((prediction) => isValidPredictionSnapshot(prediction));
+    .filter(isEligiblePredictionSnapshot);
   if (!predictions.length) return { status: "success", graded: 0 };
   const gameIds = [...new Set(predictions.map((prediction) => prediction.gameId))];
   const games = await db.select().from(gamesTable).where(inArray(gamesTable.gameId, gameIds));
@@ -573,7 +619,7 @@ export async function getPredictionPerformance(
     ? selectedRowsWithSentinel
     : selectedRowsWithSentinel.slice(0, maxOfficialPredictions);
   const rows = selectedRows
-    .filter((row) => isValidPredictionSnapshot(row.prediction))
+    .filter((row) => isEligiblePredictionSnapshot(row.prediction))
     .filter((row) => matchesPredictionPerformanceWindow(row, window));
   const graded = rows.filter((row) => row.grade);
   const abs = (values: Array<number | null | undefined>) => values.filter((value): value is number => typeof value === "number").map(Math.abs);
@@ -639,7 +685,7 @@ export async function getModelDriftMonitoring() {
     .innerJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
     .where(eq(predictionSnapshotsTable.officialFinalPrediction, true))
     .orderBy(desc(predictionSnapshotsTable.predictionTimestamp)))
-    .filter((row) => isValidPredictionSnapshot(row.prediction));
+    .filter((row) => isEligiblePredictionSnapshot(row.prediction));
   const results = (["spread", "moneyline", "totals"] as const).map((family) => {
     const versionKey = family === "spread" ? "spreadModelVersion" : family === "moneyline" ? "moneylineModelVersion" : "totalsModelVersion";
     const groups = new Map<string, typeof rows>();
@@ -682,9 +728,7 @@ export async function getLivePredictionBoard() {
     .orderBy(asc(predictionSnapshotsTable.kickoffTime), desc(predictionSnapshotsTable.predictionTimestamp));
   const latest = new Map<string, typeof rows[number]>();
   for (const row of rows) {
-    const valid = [row.projectedMargin, row.projectedTotal, row.homeWinProbability, row.awayWinProbability]
-      .every((value) => typeof value === "number" && Number.isFinite(value));
-    if (valid && !latest.has(row.gameId)) latest.set(row.gameId, row);
+    if (isEligiblePredictionSnapshot(row) && !latest.has(row.gameId)) latest.set(row.gameId, row);
   }
   return [...latest.values()];
 }
@@ -716,6 +760,8 @@ export async function getLatestValidPredictionSnapshots(
         sql`abs(${predictionSnapshotsTable.homeWinProbability} + ${predictionSnapshotsTable.awayWinProbability} - 1) < 0.000001`,
         sql`abs(${predictionSnapshotsTable.projectedHomeScore} - ${predictionSnapshotsTable.projectedAwayScore} - ${predictionSnapshotsTable.projectedMargin}) < 0.000001`,
         sql`abs(${predictionSnapshotsTable.projectedHomeScore} + ${predictionSnapshotsTable.projectedAwayScore} - ${predictionSnapshotsTable.projectedTotal}) < 0.000001`,
+        sql`${predictionSnapshotsTable.inputFeatureCount} > 0`,
+        eq(predictionSnapshotsTable.inputMissingFeatureCount, 0),
       ))
       .orderBy(
         predictionSnapshotsTable.gameId,
@@ -725,7 +771,7 @@ export async function getLatestValidPredictionSnapshots(
       .limit(options.maxRows ?? gameIds.length);
     return new Map(rows
       .map((row) => row.prediction)
-      .filter(isValidPredictionSnapshot)
+      .filter(isEligiblePredictionSnapshot)
       .map((snapshot) => [snapshot.gameId, snapshot]));
   }
   const conditions = [
@@ -740,7 +786,7 @@ export async function getLatestValidPredictionSnapshots(
   const rows = options.maxRows === undefined ? await query : await query.limit(options.maxRows);
   const latest = new Map<string, typeof rows[number]>();
   for (const row of rows) {
-    if (isValidPredictionSnapshot(row) && !latest.has(row.gameId)) latest.set(row.gameId, row);
+    if (isEligiblePredictionSnapshot(row) && !latest.has(row.gameId)) latest.set(row.gameId, row);
   }
   return latest;
 }
@@ -844,7 +890,7 @@ export async function getGamePredictionDetail(gameId: string) {
   const snapshots = await db.select().from(predictionSnapshotsTable)
     .where(eq(predictionSnapshotsTable.gameId, gameId))
     .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id));
-  const valid = snapshots.filter(isValidPredictionSnapshot);
+  const valid = snapshots.filter(isEligiblePredictionSnapshot);
   const teams = new Map((await db.select().from(teamsTable)).map((team) => [team.teamId, team]));
   return predictionRecord(game, valid[0], valid[1], teams);
 }
@@ -872,7 +918,7 @@ export async function getCurrentWeekValidationReport() {
    const latest = new Map<string, typeof snapshots[number]>();
    const previous = new Map<string, typeof snapshots[number]>();
    for (const snapshot of snapshots) {
-       const valid = isValidPredictionSnapshot(snapshot);
+       const valid = isEligiblePredictionSnapshot(snapshot);
       if (!valid) continue;
       if (!latest.has(snapshot.gameId)) latest.set(snapshot.gameId, snapshot);
       else if (!previous.has(snapshot.gameId)) previous.set(snapshot.gameId, snapshot);
@@ -913,16 +959,25 @@ export async function getPredictionValidationFailures(limit = 50) {
 
 export async function generateWeeklyLearningReport(season: number, week: number) {
   const performance = await getPredictionPerformance({ season, week });
-  const rows = await db.select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
+  const queriedRows = await db.select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
     .from(predictionSnapshotsTable)
     .innerJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
     .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
     .where(and(eq(gamesTable.season, season), eq(gamesTable.week, week)));
+  const rows = filterEligiblePredictionRows(queriedRows);
   const misses = rows
     .sort((left, right) => Math.max(Math.abs(right.grade.marginError ?? 0), Math.abs(right.grade.totalError ?? 0)) - Math.max(Math.abs(left.grade.marginError ?? 0), Math.abs(left.grade.totalError ?? 0)))
     .slice(0, 5)
     .map((row) => ({ gameId: row.prediction.gameId, whyMiss: row.grade.whyMiss, projectedMargin: row.prediction.projectedMargin, actualMargin: row.grade.actualMargin, projectedTotal: row.prediction.projectedTotal, actualTotal: row.grade.actualTotal }));
-  const report = { season, week, completedGames: rows.length, performance, misses, generatedAt: new Date().toISOString() };
+  const report = {
+    season,
+    week,
+    completedGames: rows.length,
+    performance,
+    misses,
+    inputProvenance: "verified",
+    generatedAt: new Date().toISOString(),
+  };
   const narrative = rows.length
     ? `Gridline graded ${rows.length} official prediction snapshot${rows.length === 1 ? "" : "s"} for ${season} week ${week}. ` +
       `Spread MAE was ${performance.byFamily.spread.mae === null ? "unavailable" : performance.byFamily.spread.mae.toFixed(2)} points; ` +
@@ -936,5 +991,8 @@ export async function generateWeeklyLearningReport(season: number, week: number)
 }
 
 export async function getLatestLearningReports() {
-  return db.select().from(weeklyLearningReportsTable).orderBy(desc(weeklyLearningReportsTable.generatedAt)).limit(12);
+  return db.select().from(weeklyLearningReportsTable)
+    .where(sql`${weeklyLearningReportsTable.report}->>'inputProvenance' = 'verified'`)
+    .orderBy(desc(weeklyLearningReportsTable.generatedAt))
+    .limit(12);
 }

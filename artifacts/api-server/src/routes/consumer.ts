@@ -10,6 +10,7 @@ import {
   weatherForecastSnapshotsTable,
 } from "@workspace/db";
 import {
+  gameSpecificSnapshot,
   getLatestValidPredictionSnapshots,
   getPredictionPerformance,
 } from "../lib/live-predictions";
@@ -276,7 +277,7 @@ async function consumerGames(filters: ConsumerFilters = {}) {
   ]);
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
   return games.map((game) => {
-    const snapshot = snapshots.get(game.gameId);
+    const snapshot = gameSpecificSnapshot(game.gameId, snapshots);
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
     return {
@@ -303,7 +304,7 @@ async function consumerGames(filters: ConsumerFilters = {}) {
       market: consumerMarket(snapshot, home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined),
       dataConfidence: confidence(snapshot),
       availability: {
-        prediction: snapshot ? null : "Prediction data is being refreshed",
+        prediction: snapshot ? null : "Prediction being generated",
         market: consumerMarket(snapshot, home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined).evidence.available ? null : "Sportsbook line updating",
       },
     };

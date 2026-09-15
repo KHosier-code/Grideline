@@ -1,0 +1,115 @@
+URGENT CONSUMER PROJECTION BUG
+
+The published Gridline Games page is displaying the exact same projected score and margin for multiple different NFL games:
+
+21.2
+23.5
+2.3 margin
+
+Examples visible:
+
+DET @ BUF
+CAR @ ATL
+CIN @ HOU
+CLE @ TB
+GB @ NYJ
+MIN @ CHI
+
+The sportsbook spreads differ, so these should not all be showing identical Gridline projections unless the underlying production data genuinely contains identical predictions.
+
+Do not change or retrain any model.
+
+Diagnose the consumer data path from production prediction snapshots through the consumer API to the frontend.
+
+VERIFY FIRST
+
+For every visible game:
+
+1. Game ID
+2. Latest valid prediction snapshot ID
+3. Prediction snapshot game_id
+4. Projected away score
+5. Projected home score
+6. Projected margin
+7. Projected total
+8. Model versions
+9. Prediction timestamp
+10. Whether a valid game-specific prediction actually exists
+
+Determine whether the duplicate 21.2 / 23.5 / 2.3 values originate from:
+
+- production prediction_snapshots
+- consumer API serialization
+- game/prediction join logic
+- frontend state reuse
+- fallback/default values
+- incorrect cache key
+- incorrect query key
+- a shared prediction object being reused across cards
+
+REQUIREMENTS
+
+Each game card must use ONLY the latest valid prediction associated with that specific game ID.
+
+Never display another game's prediction.
+
+Never use a hardcoded model score as a fallback.
+
+If a game does not yet have a valid prediction, display:
+
+“Prediction being generated”
+
+or another polished unavailable state.
+
+Do NOT display fake projected scores.
+
+CONSUMER API
+
+Audit the consumer games/dashboard endpoint.
+
+Ensure prediction selection is keyed by game ID.
+
+If multiple revisions exist:
+- select the latest valid eligible revision for that game
+- exclude invalid/rejected snapshots
+- preserve immutable history
+
+FRONTEND
+
+Audit game-card rendering.
+
+Ensure each card consumes the prediction returned for its own game.
+
+Verify:
+- React query/cache keys include the correct game identity where required
+- array mapping does not reuse a single prediction object
+- no fallback constants exist for 21.2, 23.5, or 2.3
+- no first-game prediction is reused across the slate
+
+PRODUCTION VERIFICATION
+
+After fixing, show a sample of at least six upcoming games with:
+
+- matchup
+- game ID
+- prediction snapshot ID
+- projected away score
+- projected home score
+- projected margin
+- projected total
+
+Confirm the values come from separate game-specific production records.
+
+Also confirm:
+
+- Phase 6 production models unchanged
+- no model retraining
+- no model promotion
+- no historical prediction overwrite
+- sportsbook data unchanged
+
+Add a regression test that fails if different games are accidentally mapped to the same prediction record.
+
+If a game legitimately has no prediction, the test/UI must treat it as unavailable instead of using another game's values.
+
+Clearly state whether a republish is required.

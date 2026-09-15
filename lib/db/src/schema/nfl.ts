@@ -382,12 +382,19 @@ export const predictionSnapshotsTable = pgTable("prediction_snapshots", {
   marketComparison: jsonb("market_comparison").$type<Record<string, unknown>>().notNull().default({}),
   lowSample: boolean("low_sample").notNull().default(false),
   qbConfidence: doublePrecision("qb_confidence"),
+  inputFeatureCount: integer("input_feature_count").notNull().default(0),
+  inputMissingFeatureCount: integer("input_missing_feature_count").notNull().default(0),
   officialFinalPrediction: boolean("official_final_prediction").notNull().default(false),
   frozenAt: timestamp("frozen_at", { withTimezone: true }),
 }, (table) => [
   unique("prediction_snapshots_key_unique").on(table.snapshotKey),
   index("prediction_snapshots_game_idx").on(table.gameId, table.predictionTimestamp),
   index("prediction_snapshots_official_idx").on(table.officialFinalPrediction, table.kickoffTime),
+  check("prediction_snapshots_input_counts_check", sql`
+    ${table.inputFeatureCount} >= 0
+    and ${table.inputMissingFeatureCount} >= 0
+    and ${table.inputMissingFeatureCount} <= ${table.inputFeatureCount}
+  `),
 ]);
 
 export const predictionValidationFailuresTable = pgTable("prediction_validation_failures", {
