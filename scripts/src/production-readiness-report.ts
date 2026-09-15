@@ -1,5 +1,7 @@
 // This report is deliberately read-only. It only uses SELECTs and must never
 // be used as a substitute for a scheduler tick or an end-to-end game test.
+// The deployed API separately runs a metadata-free database smoke query before
+// starting its API and worker processes.
 import { db, pool } from "@workspace/db";
 import {
   dataSyncRunsTable,

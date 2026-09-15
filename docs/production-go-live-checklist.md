@@ -29,6 +29,10 @@ replace a pending or warning result with an assumption.
 
 - [ ] Publish the reviewed application build through the Replit Publish flow;
   do not use a development preview as the production URL.
+- [ ] Confirm the deployment log contains `Production database smoke check
+  passed` before the API and worker start. A missing/disabled production TLS
+  mode, PostgreSQL TLS compatibility warning, or connectivity error blocks
+  startup. The check runs only `SELECT 1` and never logs connection details.
 - [ ] Confirm the production URL, HTTPS, health endpoint, API routing, static
   assets, and an authenticated read-only page load.
 - [ ] Confirm the UI displays data-health and model/prediction safety states;
@@ -70,6 +74,8 @@ replace a pending or warning result with an assumption.
   reports.
 - [ ] Configure `DATABASE_URL` for the production database and verify the
   application and worker use the intended environment.
+- [ ] Keep the automated production database smoke check enabled in the API
+  deployment startup path after every publish; do not bypass a failed check.
 - [ ] Configure the production Clerk publishable/secret credentials, Clerk
   issuer/configuration, `ADMIN_USER_IDS` (or the approved production admin
   role), and Odds API credentials as applicable.

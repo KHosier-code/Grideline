@@ -94,6 +94,10 @@ author = "agent"
 task = "workflow.run"
 args = "prediction-safety"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "production-db-smoke"
+
 [[workflows.workflow]]
 name = "prediction-safety"
 author = "agent"
@@ -101,6 +105,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/scripts run test:prediction-safety"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "production-db-smoke"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run test:production-database-smoke"
 
 [workflows.workflow.metadata]
 isValidation = true

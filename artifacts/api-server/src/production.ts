@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { verifyProductionDatabase } from "./lib/production-database-smoke";
 
 const workerPath = fileURLToPath(new URL("./worker.mjs", import.meta.url));
 const apiPath = fileURLToPath(new URL("./index.mjs", import.meta.url));
@@ -35,5 +36,17 @@ function stop(signal: NodeJS.Signals) {
 process.once("SIGTERM", () => stop("SIGTERM"));
 process.once("SIGINT", () => stop("SIGINT"));
 
-start("Gridline data worker", workerPath);
-start("Gridline API", apiPath);
+try {
+  await verifyProductionDatabase();
+  console.info("Production database smoke check passed", {
+    query: "SELECT 1",
+    tlsPolicy: "verify-full",
+  });
+  start("Gridline data worker", workerPath);
+  start("Gridline API", apiPath);
+} catch {
+  console.error(
+    "Production database smoke check failed; API and worker were not started",
+  );
+  process.exitCode = 1;
+}
