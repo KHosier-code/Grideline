@@ -62,6 +62,7 @@ interface MigrationRequirements {
   indexes: Set<string>;
   triggers: Set<string>;
   constraints: Set<string>;
+  validatedConstraints: Set<string>;
   absentIndexes: Set<string>;
   absentConstraints: Set<string>;
 }
@@ -154,6 +155,7 @@ export function extractRequirements(sql: string): MigrationRequirements {
     indexes: new Set(),
     triggers: new Set(),
     constraints: new Set(),
+    validatedConstraints: new Set(),
     absentIndexes: new Set(),
     absentConstraints: new Set(),
   };
@@ -212,6 +214,11 @@ export function extractRequirements(sql: string): MigrationRequirements {
     requirements.constraints.add(tableName(match[1], match[2]));
   }
   for (const match of sql.matchAll(
+    /VALIDATE\s+CONSTRAINT\s+(?:"([^"]+)"|([a-z_][a-z0-9_]*))/gi,
+  )) {
+    requirements.validatedConstraints.add(tableName(match[1], match[2]));
+  }
+  for (const match of sql.matchAll(
     /DROP\s+INDEX\s+(?:IF\s+EXISTS\s+)?(?:"([^"]+)"|([a-z_][a-z0-9_]*))/gi,
   )) {
     requirements.absentIndexes.add(tableName(match[1], match[2]));
@@ -266,6 +273,18 @@ async function hasConstraint(client: pg.Client, name: string) {
   return result.rowCount === 1;
 }
 
+async function hasValidatedConstraint(client: pg.Client, name: string) {
+  const result = await client.query(
+    `SELECT 1
+       FROM pg_constraint
+      WHERE connamespace = 'public'::regnamespace
+        AND conname = $1
+        AND convalidated`,
+    [name],
+  );
+  return result.rowCount === 1;
+}
+
 async function hasTrigger(client: pg.Client, name: string) {
   const result = await client.query(
     `SELECT 1
@@ -295,6 +314,9 @@ async function verifyExistingSchema(client: pg.Client, sql: string) {
   }
   for (const constraint of requirements.constraints) {
     if (!(await hasConstraint(client, constraint))) return false;
+  }
+  for (const constraint of requirements.validatedConstraints) {
+    if (!(await hasValidatedConstraint(client, constraint))) return false;
   }
   for (const index of requirements.absentIndexes) {
     if (await hasIndex(client, index)) return false;

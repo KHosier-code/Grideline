@@ -12,3 +12,4 @@
 - [Personnel context query fan-out](personnel-context-query-fanout.md) — bound concurrent context builds and compute once per game so scheduled work cannot starve live API queries.
 - [Database TLS intent](database-tls-intent.md) — local development may use a non-TLS proxy on a remote-looking host; derive TLS policy from the URL mode, not hostname.
 - [Production startup alerts](production-startup-alerts.md) — use Replit App Monitoring email for startup-gate downtime; keep log events allow-listed and secret-safe.
+- [Publish diffs for unvalidated checks](publish-diff-unvalidated-checks.md) — validate PostgreSQL checks in development before Publish; NOT VALID can produce malformed generated DDL.

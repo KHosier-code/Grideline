@@ -53,3 +53,18 @@ test("migration requirements include append-only triggers", () => {
   `);
   assert.deepEqual([...requirements.triggers], ["audit_rows_append_only"]);
 });
+
+test("migration requirements include validated constraints", () => {
+  const requirements = extractRequirements(`
+    ALTER TABLE "model_evaluation_predictions"
+      VALIDATE CONSTRAINT "model_evaluation_future_identity_check",
+      VALIDATE CONSTRAINT model_evaluation_projection_completeness_check;
+  `);
+  assert.deepEqual(
+    [...requirements.validatedConstraints],
+    [
+      "model_evaluation_future_identity_check",
+      "model_evaluation_projection_completeness_check",
+    ],
+  );
+});
