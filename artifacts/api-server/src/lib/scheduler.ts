@@ -31,6 +31,7 @@ const LOCK_TTL_MS = 2 * 60 * 60 * 1000;
 const TICK_MS = 60 * 1000;
 const SCHEDULE_INTERVAL_MS = 30 * 60 * 1000;
 const PERSONNEL_CONTEXT_INTERVAL_MS = 30 * 60 * 1000;
+const FEATURE_REPAIR_INTERVAL_MS = 30 * 60 * 1000;
 export const SCHEDULER_OVERDUE_GRACE_MS = 2 * TICK_MS;
 export const REPEATED_FAILURE_THRESHOLD = 3;
 
@@ -467,6 +468,28 @@ async function ensurePersonnelContextJob(now: Date) {
   }
 }
 
+async function ensurePregameFeatureRepairJob(now: Date) {
+  const jobKey = "pregame-v3-future-repair";
+  const [existing] = await db
+    .select()
+    .from(schedulerJobsTable)
+    .where(eq(schedulerJobsTable.jobKey, jobKey))
+    .limit(1);
+  const nextRunAt = existing?.nextRunAt && existing.nextRunAt.getTime() > now.getTime()
+    ? existing.nextRunAt
+    : new Date(now.getTime() + TICK_MS);
+  if (!existing) {
+    await db.insert(schedulerJobsTable).values({
+      jobKey,
+      provider: "pregame-features",
+      kind: "pregame-feature-repair",
+      timezone: FOOTBALL_TIMEZONE,
+      cadence: "every 30 minutes for games still before kickoff",
+      nextRunAt,
+    });
+  }
+}
+
 async function ensureKickoffJobs(now: Date) {
   const games = await db
     .select({ gameId: gamesTable.gameId, kickoffTime: gamesTable.kickoffTime, gameStatus: gamesTable.gameStatus })
@@ -637,6 +660,7 @@ async function prepareJobs(now: Date) {
   await ensureWeeklyJobs(now);
   await ensureScheduleJob(now);
   await ensureNflverseJob(now);
+  await ensurePregameFeatureRepairJob(now);
   await ensurePersonnelContextJob(now);
   await ensureKickoffJobs(now);
 }
@@ -798,7 +822,7 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
           (result as { handledMissingSeason?: boolean } | null)?.handledMissingSeason === true
         ) {
           nflverseCheckpointed = true;
-          const featureResult = await rebuildPregameFeatures();
+          const featureResult = await rebuildPregameFeatures(undefined, new Date(), { futureOnly: true });
           result = {
             ...(resultMetadata(result) as Record<string, unknown>),
             pregameFeatures: featureResult,
@@ -807,6 +831,8 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
       }
     } else if (job.kind === "personnel-context") {
       result = await rebuildPregamePersonnelContextFeatures();
+    } else if (job.kind === "pregame-feature-repair") {
+      result = await rebuildPregameFeatures(undefined, new Date(), { futureOnly: true });
     } else if (job.kind === "prediction") {
       result = await generateLivePredictions();
     } else if (job.kind === "prediction-grade") {
@@ -829,7 +855,14 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
       result = await freezeOfficialFinalPredictions();
       disable = true;
     } else if (job.kind === "model-challenger") {
-      result = await trainPhase4Models();
+      if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
+        result = await trainPhase4Models();
+      } else {
+        status = "skipped";
+        const reason = "Automatic model fitting is disabled outside an explicit development/test process.";
+        await recordSchedulerSkip(job.provider, job.jobKey, scheduledFor, reason);
+        result = { status, skipReason: reason };
+      }
     } else {
       status = "skipped";
       const reason = `Unknown scheduler job kind "${job.kind}".`;
@@ -854,6 +887,8 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
         ? nextWeeklyOccurrence(now, 2, 4, 0)
         : job.kind === "personnel-context"
           ? new Date(now.getTime() + PERSONNEL_CONTEXT_INTERVAL_MS)
+        : job.kind === "pregame-feature-repair"
+          ? new Date(now.getTime() + FEATURE_REPAIR_INTERVAL_MS)
         : definition
           ? await nextOccurrence(definition, now)
           : nextIntervalOccurrence(now);

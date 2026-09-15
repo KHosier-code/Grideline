@@ -14,6 +14,7 @@ import { getFeedGameDays } from "../lib/feed-game-days";
 import { getProductionModelStatus } from "../lib/live-predictions";
 import { weatherHealth } from "../lib/weather";
 import { requireAdmin } from "../middlewares/admin";
+import { getModelArtifactImmutabilityStatus } from "../lib/phase61-release";
 
 const router: IRouter = Router();
 
@@ -57,6 +58,7 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
   const odds = await getOddsApiHealth();
   const scheduler = await getSchedulerHealth();
   const features = await getPregameFeatureHealth();
+  const modelImmutability = await getModelArtifactImmutabilityStatus();
   const schedulerJob = (provider: string) =>
     scheduler.jobs
       .filter((job) => job.provider === provider && job.enabled)
@@ -106,6 +108,18 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
           : "The first injury synchronization is pending.";
   res.json(
     GetDataHealthResponse.parse([
+      {
+        provider: "model-artifact-immutability",
+        label: "Model artifact immutability",
+        status: ["application_only", "database_and_application"].includes(modelImmutability.status) ? "current" : "unavailable",
+        detail: modelImmutability.note,
+        lastUpdated: now,
+        nextUpdate: null,
+        requestsToday: 0,
+        requestsThisMonth: 0,
+        remainingQuota: null,
+        metadata: modelImmutability,
+      },
       {
         provider: "scheduler",
         label: "Recurring synchronization",

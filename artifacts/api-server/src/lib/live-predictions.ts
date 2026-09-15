@@ -693,6 +693,8 @@ function upcomingInputCause(
     }
     if (!row.generatedAt) {
       reasons.push("Pregame row generation timestamp is unavailable.");
+    } else if (game.kickoffTime && row.generatedAt >= game.kickoffTime) {
+      reasons.push("Pregame row was generated at or after kickoff.");
     } else if (row.generatedAt > now) {
       reasons.push("Pregame row generation timestamp is inconsistent with the upcoming-game audit time.");
     }
@@ -720,6 +722,7 @@ export function evaluateProductionInputEligibility(
     && row.sourceCutoff <= now
     && row.generatedAt instanceof Date
     && Number.isFinite(row.generatedAt.getTime())
+    && Boolean(game.kickoffTime && row.generatedAt < game.kickoffTime)
     && row.generatedAt <= now,
   );
   const vectorValid = Boolean(
@@ -757,6 +760,7 @@ export async function generatePhase61ShadowPredictions(
   }>,
   now = new Date(),
   limit = 6,
+  scope?: { season: number; week: number },
 ) {
   const byFamily = new Map(candidates.map((candidate) => [candidate.family as Family, candidate]));
   const schemaConsistent = candidates.length === 3
@@ -775,12 +779,38 @@ export async function generatePhase61ShadowPredictions(
   for (const row of featureRows) rowsByGame.set(row.gameId, [...(rowsByGame.get(row.gameId) ?? []), row]);
   const selectedFeatureNames = PHASE6_VECTOR_FEATURE_NAMES.slice(0, -3);
   const shadows: Array<Record<string, unknown>> = [];
-  for (const game of games.filter((candidate) => isFutureGame(candidate, now))) {
-    if (shadows.length >= limit || !game.kickoffTime) break;
+  const inputReadiness: Array<Record<string, unknown>> = [];
+  const scopedGames = games.filter((candidate) =>
+    isFutureGame(candidate, now)
+    && (!scope || (candidate.season === scope.season && candidate.week === scope.week)));
+  for (const game of scopedGames) {
+    if (!game.kickoffTime) continue;
     const rows = rowsByGame.get(game.gameId) ?? [];
     const vector = vectorForRows(rows, selectedFeatureNames);
     const eligibility = evaluateProductionInputEligibility(game, rows, vector, schemaConsistent, now);
-    if (!eligibility.eligible || !vector?.x) continue;
+    inputReadiness.push({
+      gameId: game.gameId,
+      season: game.season,
+      week: game.week,
+      matchup: {
+        away: teamsById.get(game.awayTeamId)?.abbreviation ?? game.awayTeamId,
+        home: teamsById.get(game.homeTeamId)?.abbreviation ?? game.homeTeamId,
+      },
+      kickoffTime: game.kickoffTime.toISOString(),
+      requiredFeatureCount: PHASE6_VECTOR_FEATURE_NAMES.length,
+      populatedCount: vector?.inputPopulatedFeatureCount ?? 0,
+      missingCount: vector?.inputMissingFeatureCount ?? PHASE6_VECTOR_FEATURE_NAMES.length,
+      qbConfidence: vector?.qb ?? null,
+      sourceCutoffs: rows.map((row) => ({
+        teamId: row.teamId,
+        sourceCutoff: row.sourceCutoff.toISOString(),
+        generatedAt: row.generatedAt.toISOString(),
+      })),
+      cutoffSafe: eligibility.cutoffValid,
+      vectorReconstructs: eligibility.eligible,
+      causes: eligibility.causes,
+    });
+    if (!eligibility.eligible || !vector?.x || shadows.length >= limit) continue;
     const spread = byFamily.get("spread");
     const totals = byFamily.get("totals");
     const moneyline = byFamily.get("moneyline");
@@ -820,6 +850,10 @@ export async function generatePhase61ShadowPredictions(
     status: shadows.length >= limit ? "complete" : "partial",
     requested: limit,
     returned: shadows.length,
+    scope: scope ?? null,
+    targetGames: scopedGames.length,
+    readyGames: inputReadiness.filter((item) => item.vectorReconstructs === true).length,
+    inputReadiness,
     shadows,
     vectorsDiffer: new Set(shadows.map((shadow) => JSON.stringify(shadow.inputVector))).size === shadows.length,
     writes: { predictionSnapshots: 0, consumerPredictions: 0 },

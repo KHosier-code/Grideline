@@ -4,6 +4,7 @@ import { db, modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspa
 import { getAuth } from "@clerk/express";
 import { generateLivePredictions, generatePhase61ShadowPredictions, getLiveModelInputIntegrityAudit, getModelDriftMonitoring } from "../lib/live-predictions";
 import { getModelEvaluationAudit, getModelEvaluationReport, getPhase4ModelLab, recoverPhase61ArtifactBackedModels, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate, verifyArtifactIntegrity, isFittedModelArtifact, PHASE6_VECTOR_FEATURE_NAMES, type Family } from "../lib/modeling";
+import { PHASE61_RELEASE_MODEL_VERSIONS, getModelArtifactImmutabilityStatus, importPhase61ReleaseCandidates, verifyPersistedPhase61ReleaseCandidates } from "../lib/phase61-release";
 import { PromotionSafetyGateError, runPromotionSafetyGate, type PromotionSafetyGateResult } from "../lib/promotion-safety-gate";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 import { getLifecycleVerificationReport } from "../lib/lifecycle-verification";
@@ -316,6 +317,80 @@ router.post("/models/recover-phase6-1", requireAdmin, async (req, res): Promise<
   } catch (error) {
     req.log.error({ error }, "Phase 6.1 artifact recovery failed");
     res.status(500).json({ error: error instanceof Error ? error.message : "Phase 6.1 artifact recovery failed" });
+  }
+});
+
+async function phase61ReleaseStatus() {
+  const candidateRows = await db.select().from(modelTrainingRunsTable)
+    .where(inArray(modelTrainingRunsTable.modelVersion, PHASE61_RELEASE_MODEL_VERSIONS));
+  const artifactVerification = verifyPersistedPhase61ReleaseCandidates(candidateRows);
+  const exactArtifactsVerified = artifactVerification.length === 3
+    && artifactVerification.every((item) => item.exactVerified);
+  const verifiedRows = exactArtifactsVerified ? candidateRows : [];
+  const shadow = await generatePhase61ShadowPredictions(verifiedRows.map((run) => ({
+    family: run.family,
+    modelVersion: run.modelVersion,
+    modelArtifact: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact : null,
+    artifactId: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactId ?? null : null,
+    artifactChecksum: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactChecksum ?? null : null,
+    artifactMetadata: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata ?? null : null,
+    featureVersion: run.featureVersion,
+    vectorFeatureNames: run.vectorFeatureNames,
+    vectorSchemaFingerprint: run.vectorSchemaFingerprint,
+  })), new Date(), 6, { season: 2026, week: 2 });
+  const featureRecoveryComplete = shadow.targetGames === 16
+    && shadow.readyGames === 16
+    && shadow.returned >= 6
+    && shadow.vectorsDiffer
+    && exactArtifactsVerified;
+  return {
+    state: featureRecoveryComplete && candidateRows.length === 3 ? "ready_for_manual_promotion_review" : "worker_recovery_pending",
+    artifactsPresent: candidateRows.length,
+    artifactsRequired: 3,
+    exactArtifactsVerified,
+    artifactVerification,
+    featureRecovery: {
+      workerOwned: true,
+      season: 2026,
+      week: 2,
+      gamesRequired: 16,
+      gamesFound: shadow.targetGames,
+      gamesReady: shadow.readyGames,
+      complete: featureRecoveryComplete,
+      readiness: shadow.inputReadiness,
+    },
+    shadowInference: shadow,
+    immutability: await getModelArtifactImmutabilityStatus(),
+    noRetrainingOrRefit: true,
+    noAutomaticPromotion: true,
+    consumerVisiblePredictions: false,
+  };
+}
+
+router.get("/admin/releases/phase6-1/status", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    res.json(await phase61ReleaseStatus());
+  } catch (error) {
+    req.log.error({ error }, "Phase 6.1 release status failed");
+    res.status(503).json({ error: "Phase 6.1 release status is temporarily unavailable." });
+  }
+});
+
+router.post("/admin/releases/phase6-1/import", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    if (req.body?.confirmation !== "IMPORT_EXACT_PHASE6_1_ARTIFACTS") {
+      res.status(400).json({ error: "Exact release confirmation is required." });
+      return;
+    }
+    const imported = await importPhase61ReleaseCandidates();
+    const status = await phase61ReleaseStatus();
+    res.status(status.featureRecovery.complete ? 201 : 202).json({
+      ...imported,
+      ...status,
+    });
+  } catch (error) {
+    req.log.error({ error }, "Phase 6.1 release artifact import failed");
+    res.status(409).json({ error: error instanceof Error ? error.message : "Phase 6.1 release artifact import failed" });
   }
 });
 

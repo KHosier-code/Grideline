@@ -1,0 +1,163 @@
+PHASE 6.1 PRODUCTION ARTIFACT + FEATURE RECOVERY
+
+Do not retrain, refit, or replace any model.
+Do not promote anything automatically.
+Do not rewrite historical predictions, promotions, sportsbook history, or evaluation records.
+
+The Phase 6.1 code is published, but production is missing:
+1. the three already-fitted Phase 6.1 candidate artifacts
+2. production immutability enforcement
+3. complete cutoff-safe Week 2 pregame-v3 rows
+
+Goal:
+Make the exact already-fitted Phase 6.1 candidates available in production through a supported, non-destructive path, establish production-safe immutability protection, rebuild legitimate Week 2 pregame-v3 inputs, and then re-evaluate manual promotion readiness.
+
+EXPECTED CANDIDATES
+
+Spread:
+phase6-1-spread-01c85917b47c6e70c258fe0258481c7a
+SHA-256:
+01c85917b47c6e70c258fe0258481c7a2a21e567c95db02cac38988baa4034bf
+
+Moneyline:
+phase6-1-moneyline-917fa6e7417cccb45909ade470c997d0
+SHA-256:
+917fa6e7417cccb45909ade470c997d0841fe8a010bc18899f4b5b913be4d6ae
+
+Totals:
+phase6-1-totals-749279b5856f1be1165c211d3c6233c7
+SHA-256:
+749279b5856f1be1165c211d3c6233c7c4f55d44d12ebcb2c94500db63b60c2f
+
+TASK 1 — SUPPORTED PRODUCTION ARTIFACT IMPORT
+
+Implement a supported production-safe import mechanism for these exact already-fitted artifacts.
+
+Requirements:
+- import only exact verified candidate artifacts
+- verify SHA-256 before insertion
+- preserve exact feature order and artifact metadata
+- preserve original candidate IDs
+- do not refit
+- do not mutate existing production training runs
+- append-only insertion only
+- idempotent
+- safe to rerun
+- secret-safe
+- explicit admin/release operation, not public API
+- no consumer-visible predictions during import
+
+If Replit production migration limitations prevent direct DB triggers or custom SQL functions, use the strongest supported production-safe enforcement available and document the limitation clearly.
+
+TASK 2 — PRODUCTION IMMUTABILITY
+
+Production must prevent accidental artifact mutation.
+
+Preferred:
+- database trigger/function if supported by the production deployment path
+
+If unsupported:
+- enforce application-level append-only behavior
+- block update/delete code paths
+- add regression tests
+- expose immutability status in Admin/Data Health
+- clearly label DB-trigger enforcement as unavailable rather than pretending it exists
+
+Do not bypass Replit production safeguards.
+
+TASK 3 — WEEK 2 FEATURE RECOVERY
+
+Rebuild production pregame-v3 rows for all 16 Week 2 games.
+
+Requirements:
+- use real pre-kickoff as-of timestamps
+- strict cutoff safety
+- no post-kickoff evidence
+- correct team/game IDs
+- exact 27-feature schema
+- finite values only
+- explicit QB confidence
+- no silent zero fill
+- no stale source cutoff
+- idempotent
+- worker-owned
+
+For each game report:
+- game ID
+- matchup
+- required feature count
+- populated count
+- missing count
+- QB confidence
+- source cutoff
+- cutoff-safe yes/no
+- vector reconstructs yes/no
+
+TASK 4 — PRODUCTION ARTIFACT VERIFICATION
+
+After import, verify in production:
+
+- all three candidate rows exist
+- candidate IDs match exactly
+- SHA-256 hashes match exactly
+- feature ordering matches exactly
+- artifact width is correct
+- deterministic inference loads successfully
+- mutation/deletion protection is active through the supported mechanism
+
+TASK 5 — SHADOW INFERENCE
+
+Generate production shadow inference only for Week 2.
+
+Do not expose to consumers.
+Do not promote yet.
+
+For at least 6 games report:
+- matchup
+- spread projection
+- total projection
+- home win probability
+- QB confidence
+- feature completeness
+- artifact IDs used
+
+Confirm vectors differ across games.
+
+TASK 6 — PROMOTION READINESS
+
+Evaluate each family independently.
+
+A family may only be marked SAFE FOR MANUAL PROMOTION if:
+
+- exact artifact exists in production
+- checksum verifies
+- immutable/append-only protection is active
+- 27-feature schema matches
+- Week 2 input vectors reconstruct safely
+- chronology/leakage checks pass
+- deterministic inference passes
+- no consumer exposure occurred before promotion
+
+FINAL REPORT
+
+Return:
+1. Artifact import method used
+2. Whether import was non-destructive
+3. Spread artifact verification
+4. Moneyline artifact verification
+5. Totals artifact verification
+6. Production immutability enforcement status
+7. Week 2 feature-readiness table
+8. Shadow inference sample
+9. Promotion readiness by family
+10. Confirmation no retraining/refit occurred
+11. Confirmation no automatic promotion occurred
+12. Whether another publish is required
+
+Final recommendation for each family must be exactly:
+
+SAFE FOR MANUAL PROMOTION
+
+or
+
+NOT SAFE FOR MANUAL PROMOTION

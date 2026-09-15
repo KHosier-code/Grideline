@@ -16,6 +16,7 @@ import {
 import { createHash } from "node:crypto";
 import { PREGAME_FEATURE_VERSION } from "./features";
 import { NFLVERSE_TEAM_ALIASES, normalizeTeamId } from "./personnel-context-derivation";
+import { assertModelFittingAllowed, assertTrainingRunMutationAllowed } from "./model-runtime-policy";
 
 export type Algorithm = "linear_regression" | "logistic_regression" | "random_forest" | "gradient_boosting";
 export type Family = "spread" | "moneyline" | "totals";
@@ -823,6 +824,7 @@ export async function persistModelEvaluationBundles(bundles: ModelEvaluationBund
 }
 
 export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION) {
+  assertModelFittingAllowed("Phase 4 model training");
   const { examples, names } = await loadExamples(featureVersion);
   const evaluatedGameIds = [...new Set(examples.filter((example) => TEST_SEASONS.includes(example.season)).map((example) => example.gameId))];
   const historicalOdds = evaluatedGameIds.length
@@ -1178,6 +1180,7 @@ function phase61Hyperparameters(algorithm: Algorithm) {
 }
 
 export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATURE_VERSION) {
+  assertModelFittingAllowed("Phase 6 production refit");
   const { examples, names } = await loadExamples(featureVersion);
   const eligibleExamples = examples
     .filter((example) => example.season >= 2021 && example.season <= 2025)
@@ -1305,6 +1308,7 @@ export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATU
  * inserts a model_promotion_history row.
  */
 export async function recoverPhase61ArtifactBackedModels(featureVersion = PREGAME_FEATURE_VERSION) {
+  assertTrainingRunMutationAllowed("Phase 6.1 legacy training-run status recovery");
   const refit = await refitPhase6ProductionModels(featureVersion);
   const versions = refit.candidates.map((candidate) => candidate.modelVersion);
   const candidates = versions.length
@@ -1319,9 +1323,6 @@ export async function recoverPhase61ArtifactBackedModels(featureVersion = PREGAM
   const legacyMarked: string[] = [];
   for (const run of legacyRuns) {
     if (!verifyArtifactIntegrity(run).valid) {
-      await db.update(modelTrainingRunsTable)
-        .set({ status: "legacy_unverifiable_artifact" })
-        .where(eq(modelTrainingRunsTable.modelVersion, run.modelVersion));
       legacyMarked.push(run.modelVersion);
     }
   }
@@ -1368,8 +1369,9 @@ export async function recoverPhase61ArtifactBackedModels(featureVersion = PREGAM
     }),
     legacyMarked: legacyMarked.map((modelVersion) => ({
       modelVersion,
-      status: "legacy_unverifiable_artifact",
+      status: "legacy_unverifiable_artifact_observed",
       promotionHistoryPreserved: true,
+      trainingRunMutated: false,
     })),
     promotion: {
       automatic: false,

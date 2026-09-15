@@ -263,7 +263,23 @@ export function pregameSourceCutoff(kickoff: Date, generatedAt: Date) {
   return new Date(Math.min(kickoff.getTime() - 1, generatedAt.getTime()));
 }
 
-export async function rebuildPregameFeatures(featureVersion = PREGAME_FEATURE_VERSION, generatedAt = new Date()) {
+export function shouldPersistPregameGame(
+  kickoff: Date,
+  generatedAt: Date,
+  futureOnly: boolean,
+) {
+  return !futureOnly || kickoff.getTime() > generatedAt.getTime();
+}
+
+export async function rebuildPregameFeatures(
+  featureVersion = PREGAME_FEATURE_VERSION,
+  generatedAt = new Date(),
+  options: { futureOnly?: boolean } = { futureOnly: true },
+) {
+  const futureOnly = options.futureOnly !== false;
+  if (!futureOnly && process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test") {
+    throw new Error("Historical pregame feature regeneration is disabled outside an explicit development/test process.");
+  }
   const [rawStats, canonicalTeams] = await Promise.all([
     db
       .select()
@@ -359,32 +375,35 @@ export async function rebuildPregameFeatures(featureVersion = PREGAME_FEATURE_VE
   const rows: Array<typeof pregameTeamFeaturesTable.$inferInsert> = [];
   for (const game of games) {
     const kickoff = new Date(game.kickoffTime);
+    const persistTarget = shouldPersistPregameGame(kickoff, generatedAt, futureOnly);
     for (const matchup of game.teams) {
       const team = matchup.teamId;
       const opponent = matchup.opponentTeamId;
-      const history = (historyByTeam.get(team) ?? [])
-        .filter((item) => item.kickoffTime.getTime() < kickoff.getTime())
-        .sort((a, b) => b.kickoffTime.getTime() - a.kickoffTime.getTime());
-      const built = buildFeatures(history, game.season);
-      addOpponentAdjustedFeatures(built, history, historyByTeam.get(opponent) ?? [], game.season);
-      const priorQbs = (qbHistoryByTeam.get(team) ?? []).filter((item) => item.kickoffTime.getTime() < kickoff.getTime());
-      addQbFeatures(built, priorQbs);
-      rows.push({
-        featureVersion,
-        gameId: game.gameId,
-        teamId: team,
-        opponentTeamId: opponent,
-        season: game.season,
-        week: game.week,
-        kickoffTime: kickoff,
-        isHome: matchup.isHome,
-        features: built.features,
-        sampleCounts: built.sampleCounts,
-        featureAudit: built.featureAudit,
-        lowSample: built.lowSample,
-        sourceCutoff: pregameSourceCutoff(kickoff, generatedAt),
-        generatedAt,
-      });
+      if (persistTarget) {
+        const history = (historyByTeam.get(team) ?? [])
+          .filter((item) => item.kickoffTime.getTime() < kickoff.getTime())
+          .sort((a, b) => b.kickoffTime.getTime() - a.kickoffTime.getTime());
+        const built = buildFeatures(history, game.season);
+        addOpponentAdjustedFeatures(built, history, historyByTeam.get(opponent) ?? [], game.season);
+        const priorQbs = (qbHistoryByTeam.get(team) ?? []).filter((item) => item.kickoffTime.getTime() < kickoff.getTime());
+        addQbFeatures(built, priorQbs);
+        rows.push({
+          featureVersion,
+          gameId: game.gameId,
+          teamId: team,
+          opponentTeamId: opponent,
+          season: game.season,
+          week: game.week,
+          kickoffTime: kickoff,
+          isHome: matchup.isHome,
+          features: built.features,
+          sampleCounts: built.sampleCounts,
+          featureAudit: built.featureAudit,
+          lowSample: built.lowSample,
+          sourceCutoff: pregameSourceCutoff(kickoff, generatedAt),
+          generatedAt,
+        });
+      }
       const source = statsByGameTeam.get(`${game.gameId}:${team}`);
       if (source) {
         const existing = historyByTeam.get(team) ?? [];
@@ -402,30 +421,70 @@ export async function rebuildPregameFeatures(featureVersion = PREGAME_FEATURE_VE
       qbHistoryByTeam.set(team, qbHistory);
     }
   }
-  for (let index = 0; index < rows.length; index += 250) {
-    await db.insert(pregameTeamFeaturesTable).values(rows.slice(index, index + 250)).onConflictDoUpdate({
-      target: [pregameTeamFeaturesTable.featureVersion, pregameTeamFeaturesTable.gameId, pregameTeamFeaturesTable.teamId],
-      set: {
-        opponentTeamId: sql`excluded."opponent_team_id"`,
-        season: sql`excluded."season"`,
-        week: sql`excluded."week"`,
-        kickoffTime: sql`excluded."kickoff_time"`,
-        isHome: sql`excluded."is_home"`,
-        features: sql`excluded."features"`,
-        sampleCounts: sql`excluded."sample_counts"`,
-        featureAudit: sql`excluded."feature_audit"`,
-        lowSample: sql`excluded."low_sample"`,
-        sourceCutoff: sql`excluded."source_cutoff"`,
-        generatedAt: sql`excluded."generated_at"`,
-      },
-      setWhere: sql`${pregameTeamFeaturesTable.kickoffTime} > now()`,
-    });
+  if (futureOnly) {
+    for (const row of rows) {
+      await db.execute(sql`
+        insert into pregame_team_features (
+          feature_version, game_id, team_id, opponent_team_id, season, week,
+          kickoff_time, is_home, features, sample_counts, feature_audit,
+          low_sample, source_cutoff, generated_at
+        )
+        select
+          ${row.featureVersion}, ${row.gameId}, ${row.teamId}, ${row.opponentTeamId},
+          ${row.season}, ${row.week}, ${row.kickoffTime}, ${row.isHome},
+          ${JSON.stringify(row.features)}::jsonb,
+          ${JSON.stringify(row.sampleCounts)}::jsonb,
+          ${JSON.stringify(row.featureAudit)}::jsonb,
+          ${row.lowSample}, ${row.sourceCutoff}, clock_timestamp()
+        where exists (
+          select 1
+          from games
+          where game_id = ${row.gameId}
+            and kickoff_time = ${row.kickoffTime}
+            and kickoff_time > clock_timestamp()
+        )
+        on conflict (feature_version, game_id, team_id) do update set
+          opponent_team_id = excluded.opponent_team_id,
+          season = excluded.season,
+          week = excluded.week,
+          kickoff_time = excluded.kickoff_time,
+          is_home = excluded.is_home,
+          features = excluded.features,
+          sample_counts = excluded.sample_counts,
+          feature_audit = excluded.feature_audit,
+          low_sample = excluded.low_sample,
+          source_cutoff = excluded.source_cutoff,
+          generated_at = clock_timestamp()
+        where pregame_team_features.kickoff_time > clock_timestamp()
+          and excluded.kickoff_time > clock_timestamp()
+      `);
+    }
+  } else {
+    for (let index = 0; index < rows.length; index += 250) {
+      await db.insert(pregameTeamFeaturesTable).values(rows.slice(index, index + 250)).onConflictDoUpdate({
+        target: [pregameTeamFeaturesTable.featureVersion, pregameTeamFeaturesTable.gameId, pregameTeamFeaturesTable.teamId],
+        set: {
+          opponentTeamId: sql`excluded."opponent_team_id"`,
+          season: sql`excluded."season"`,
+          week: sql`excluded."week"`,
+          kickoffTime: sql`excluded."kickoff_time"`,
+          isHome: sql`excluded."is_home"`,
+          features: sql`excluded."features"`,
+          sampleCounts: sql`excluded."sample_counts"`,
+          featureAudit: sql`excluded."feature_audit"`,
+          lowSample: sql`excluded."low_sample"`,
+          sourceCutoff: sql`excluded."source_cutoff"`,
+          generatedAt: sql`excluded."generated_at"`,
+        },
+      });
+    }
   }
   return {
     featureVersion,
     gamesConsidered: games.length,
     rowsGenerated: rows.length,
     lowSampleRows: rows.filter((row) => row.lowSample).length,
+    futureOnly,
     definition: PREGAME_FEATURE_DEFINITION,
   };
 }

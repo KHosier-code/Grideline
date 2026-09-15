@@ -12,3 +12,9 @@ Live inference must reject a game when any model-selected feature is unavailable
 **Why:** Early-season feature rows can legitimately contain no eligible history. Silently converting every missing home/away value to zero gives unrelated games the same deterministic projection while still producing mathematically valid scores.
 
 **How to apply:** Treat completed-game feature evidence as immutable. Add a new version when historical source coverage or chronological ordering changes. Future-game rows may refresh as new pre-kickoff history arrives, but unsupported inputs remain unavailable and block snapshot generation rather than becoming numeric proxies.
+
+Future-only repair must still iterate completed games to accumulate chronological team and quarterback history; filter only row emission/persistence. Guard inserts and updates with authoritative game identity and database clock time so crossing kickoff cannot create or rewrite evidence.
+
+**Why:** Filtering completed games before history accumulation produces empty future vectors, while application timestamps or conflict-only guards can still admit late inserts.
+
+**How to apply:** Let completed sources advance in-memory history, emit only future targets, set generation time from the database clock, and require both source cutoff and generation time to be strictly before kickoff.

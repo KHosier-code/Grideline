@@ -1304,6 +1304,43 @@ function ModelLab() {
   const [promotionMessage, setPromotionMessage] = useState<string | null>(null);
   const [promotionSafetyResult, setPromotionSafetyResult] = useState<any>(null);
   const [refitting, setRefitting] = useState(false);
+  const [importingRelease, setImportingRelease] = useState(false);
+  const importPhase61Release = async () => {
+    setImportingRelease(true);
+    setPromotionMessage(null);
+    try {
+      const response = await fetch('/api/admin/releases/phase6-1/import', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ confirmation: 'IMPORT_EXACT_PHASE6_1_ARTIFACTS' }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? 'Phase 6.1 release import was rejected');
+      const inserted = (body.candidates ?? []).filter((candidate: any) => candidate.outcome === 'inserted').length;
+      const existing = (body.candidates ?? []).filter((candidate: any) => candidate.outcome === 'already_present').length;
+      let status = body;
+      for (let attempt = 0; attempt < 24 && !status.featureRecovery?.complete; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 5000));
+        const statusResponse = await fetch('/api/admin/releases/phase6-1/status', {
+          credentials: 'include',
+          headers: await authHeaders(),
+        });
+        status = await statusResponse.json().catch(() => ({}));
+        if (!statusResponse.ok) throw new Error(status.error ?? 'Phase 6.1 worker recovery status unavailable');
+      }
+      setPromotionMessage(
+        status.featureRecovery?.complete
+          ? `Verified Phase 6.1 artifacts: ${inserted} inserted, ${existing} already present. All 16 Week 2 inputs are ready and ${status.shadowInference?.returned ?? 0} shadow inferences completed. No model was promoted.`
+          : `Verified Phase 6.1 artifacts: ${inserted} inserted, ${existing} already present. Worker recovery is still pending (${status.featureRecovery?.gamesReady ?? 0}/16 Week 2 games ready). Promotion remains blocked.`,
+      );
+      await Promise.all([lab.refetch(), promotions.refetch()]);
+    } catch (error) {
+      setPromotionMessage(error instanceof Error ? error.message : 'Phase 6.1 release import was rejected');
+    } finally {
+      setImportingRelease(false);
+    }
+  };
   const refit = async () => {
     setRefitting(true);
     setPromotionMessage(null);
@@ -1366,7 +1403,7 @@ function ModelLab() {
   const topFeatures = (run: any) => Object.entries(run?.featureImportance ?? {}).sort((left: any, right: any) => Number(right[1]) - Number(left[1])).slice(0, 6);
   return (
     <>
-       <PageHeader eyebrow="Research / Phase 6" title="Model lab" detail="Chronological validation plus an explicit, administrator-controlled production refit through 2025." actions={<div className="flex gap-2"><button type="button" className="button button-subtle" onClick={() => lab.refetch()}><RefreshCw className={cx('h-4 w-4', lab.isFetching && 'animate-spin')} /> Refresh results</button><button type="button" className="button button-primary" disabled={refitting || !adminStatus.data?.isAdmin} onClick={refit}>{refitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Refit through 2025</button></div>} />
+       <PageHeader eyebrow="Research / Phase 6" title="Model lab" detail="Chronological validation plus explicit administrator-controlled artifact import and promotion." actions={<div className="flex gap-2"><button type="button" className="button button-subtle" onClick={() => lab.refetch()}><RefreshCw className={cx('h-4 w-4', lab.isFetching && 'animate-spin')} /> Refresh results</button><button type="button" className="button button-primary" disabled={importingRelease || !adminStatus.data?.isAdmin} onClick={importPhase61Release}>{importingRelease ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />} Import verified Phase 6.1 artifacts</button></div>} />
        <div className="readiness-header">
         <div className="readiness-header-icon"><ShieldCheck className="h-5 w-5" /></div>
         <div>
@@ -1374,9 +1411,9 @@ function ModelLab() {
           <h2 className="text-lg font-semibold text-ink">{Object.keys(promotions.data?.current ?? {}).length ? 'Production models are explicitly selected.' : 'No production model is active.'}</h2>
             <p className="mt-1 text-sm text-muted-foreground">Feature version <span className="font-mono text-ink">{lab.data?.featureVersion ?? 'pregame-v3'}</span>. Phase 4 validation and prior promotions are append-only. {promotionMessage ?? 'No automatic promotion occurs.'}</p>
         </div>
-       <Panel eyebrow="Phase 6 / Production refit" title="Candidates trained through 2025" className="mt-5">
-         <p className="text-xs leading-5 text-muted-foreground">These are the unchanged selected algorithms refit on legitimate 2021–2025 data. They remain challengers until an administrator promotes each family explicitly. Promotion creates a new future-game prediction revision; prior snapshots remain preserved.</p>
-         {lab.data?.refitCandidates?.length ? <div className="mt-4 grid gap-3 md:grid-cols-3">{lab.data.refitCandidates.map((candidate: any) => { const isActive = promotions.data?.current?.[candidate.family]?.modelVersion === candidate.modelVersion; return <div className="rounded-lg border border-border bg-secondary/30 p-3" key={candidate.modelVersion}><div className="flex items-center justify-between gap-2"><p className="eyebrow">{candidate.family} · Phase 6</p><StatusPill status={isActive ? 'success' : 'not_configured'}>{isActive ? 'Active' : 'Awaiting promotion'}</StatusPill></div><p className="mt-2 font-semibold capitalize text-ink">{String(candidate.algorithm).replaceAll('_', ' ')}</p><p className="mt-1 text-xs text-muted-foreground">Training cutoff {candidate.trainingCutoff} · {candidate.sampleSize} rows</p><button type="button" className="button button-subtle mt-3 w-full" disabled={isActive || promoting === candidate.modelVersion} onClick={() => promote(candidate)}>{isActive ? 'Phase 6 is active' : promoting === candidate.modelVersion ? 'Promoting…' : `Promote ${candidate.family} Phase 6`}</button></div>; })}</div> : <EmptyPanel title="No Phase 6 candidates yet" detail="An administrator can create the refit candidates with the button above. No production model is replaced automatically." icon={History} />}
+       <Panel eyebrow="Phase 6.1 / Verified release artifacts" title="Candidates fitted through 2025" className="mt-5">
+         <p className="text-xs leading-5 text-muted-foreground">The release action imports only the three checksum-verified already-fitted artifacts. It is idempotent, append-only, creates no consumer prediction, and never promotes automatically.</p>
+         {lab.data?.refitCandidates?.length ? <div className="mt-4 grid gap-3 md:grid-cols-3">{lab.data.refitCandidates.map((candidate: any) => { const isActive = promotions.data?.current?.[candidate.family]?.modelVersion === candidate.modelVersion; return <div className="rounded-lg border border-border bg-secondary/30 p-3" key={candidate.modelVersion}><div className="flex items-center justify-between gap-2"><p className="eyebrow">{candidate.family} · Phase 6</p><StatusPill status={isActive ? 'success' : 'not_configured'}>{isActive ? 'Active' : 'Awaiting promotion'}</StatusPill></div><p className="mt-2 font-semibold capitalize text-ink">{String(candidate.algorithm).replaceAll('_', ' ')}</p><p className="mt-1 text-xs text-muted-foreground">Training cutoff {candidate.trainingCutoff} · {candidate.sampleSize} rows</p><button type="button" className="button button-subtle mt-3 w-full" disabled={isActive || promoting === candidate.modelVersion} onClick={() => promote(candidate)}>{isActive ? 'Phase 6 is active' : promoting === candidate.modelVersion ? 'Promoting…' : `Promote ${candidate.family} Phase 6`}</button></div>; })}</div> : <EmptyPanel title="No Phase 6 candidates yet" detail="Use the verified artifact import action above. Production fitting and automatic promotion are disabled." icon={History} />}
        </Panel>
         <Panel eyebrow="Promotion safety gate" title={promotionSafetyResult?.status === 'passed' ? 'PASS' : promotionSafetyResult?.status === 'failed' ? 'FAIL' : promotionSafetyResult?.status === 'running' ? 'Running checks' : 'No promotion attempt in this session'} className="mt-5" action={promotionSafetyResult ? <StatusPill status={promotionSafetyResult.status === 'passed' ? 'success' : promotionSafetyResult.status === 'failed' ? 'warning' : 'not_configured'}>{String(promotionSafetyResult.status).toUpperCase()}</StatusPill> : null}>
           {promotionSafetyResult ? <div className="grid gap-3 text-xs md:grid-cols-2 xl:grid-cols-4">

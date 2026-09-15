@@ -107,7 +107,7 @@ router.post("/features/pregame/build", requireAdmin, async (req, res): Promise<v
       res.json(await rebuildPregamePersonnelContextFeatures());
       return;
     }
-    res.json(await rebuildPregameFeatures(version || undefined));
+    res.json(await rebuildPregameFeatures(version || undefined, new Date(), { futureOnly: true }));
   } catch (error) {
     req.log.error({ error }, "Pregame feature build failed");
     res.status(500).json({ error: error instanceof Error ? error.message : "Pregame feature build failed" });
