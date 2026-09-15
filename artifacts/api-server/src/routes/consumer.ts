@@ -304,7 +304,7 @@ async function consumerGames(filters: ConsumerFilters = {}) {
       market: consumerMarket(snapshot, home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined),
       dataConfidence: confidence(snapshot),
       availability: {
-        prediction: snapshot ? null : "Prediction being generated",
+        prediction: snapshot ? null : "Prediction pending — incomplete model inputs",
         market: consumerMarket(snapshot, home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined).evidence.available ? null : "Sportsbook line updating",
       },
     };

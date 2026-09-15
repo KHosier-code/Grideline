@@ -267,6 +267,17 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PregameFeatureAuditRow"
+  /features/live-input-integrity:
+    get:
+      operationId: getLiveModelInputIntegrity
+      summary: Audit exact upcoming-game inputs for active production models
+      responses:
+        "200":
+          description: Upcoming live model input integrity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveModelInputIntegrityAudit"
   /features/pregame/build:
     post:
       operationId: buildPregameFeatures
@@ -1114,6 +1125,86 @@ components:
         sampleSize: { type: integer }
         quality: { type: string, enum: [high, low_sample, unavailable] }
         unavailableReason: { type: ["string", "null"] }
+    LiveModelInputIntegrityAudit:
+      type: object
+      required:
+        [generatedAt, featureVersion, modelSchemaStatus, productionModels,
+         selectedFeatureNames, vectorFeatureNames, upcomingGames,
+         trustworthyUpcomingPredictions, inputReadyGames, eligibleGames, incompleteGames,
+         distinctEligibleVectors, vectorsDiffer, modelLifecycleEvidence,
+         records]
+      properties:
+        generatedAt: { type: string, format: date-time }
+        featureVersion: { type: string }
+        modelSchemaStatus: { type: string, enum: [valid, invalid] }
+        productionModels:
+          type: array
+          items: { type: object, additionalProperties: true }
+        selectedFeatureNames:
+          type: array
+          items: { type: string }
+        vectorFeatureNames:
+          type: array
+          items: { type: string }
+        upcomingGames: { type: integer }
+        trustworthyUpcomingPredictions: { type: boolean }
+        inputReadyGames: { type: integer }
+        eligibleGames: { type: integer }
+        incompleteGames: { type: integer }
+        distinctEligibleVectors: { type: integer }
+        vectorsDiffer: { type: ["boolean", "null"] }
+        modelLifecycleEvidence:
+          type: array
+          items:
+            type: object
+            required: [family, modelVersion, trainedAt, promotedAt, immutableArtifactAvailable]
+            properties:
+              family: { type: string }
+              modelVersion: { type: string }
+              trainedAt: { type: string, format: date-time }
+              promotedAt: { type: string, format: date-time }
+              immutableArtifactAvailable: { type: boolean }
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/LiveModelInputIntegrityRecord" }
+    LiveModelInputIntegrityRecord:
+      type: object
+      additionalProperties: true
+      required:
+        [gameId, season, week, kickoffTime, homeTeamId, awayTeamId,
+         snapshotId, featureVersion, models, vectorFeatureNames, vector,
+         requiredCount, populatedCount, missingCount, legitimateZeroCount,
+         formerlyMissingZeroCount, missingInputs, rowIdentityValid,
+         sourceEvidence, teams, inputQualityStatus, predictionEligibility,
+         consumerAvailability, causes, phase7UsedForValidationOnly]
+      properties:
+        gameId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        kickoffTime: { type: string, format: date-time }
+        homeTeamId: { type: string }
+        awayTeamId: { type: string }
+        snapshotId: { type: ["integer", "null"] }
+        featureVersion: { type: string }
+        models: { type: array, items: { type: object, additionalProperties: true } }
+        vectorFeatureNames: { type: array, items: { type: string } }
+        vector:
+          type: ["array", "null"]
+          items: { type: ["number", "null"] }
+        requiredCount: { type: integer }
+        populatedCount: { type: integer }
+        missingCount: { type: integer }
+        legitimateZeroCount: { type: integer }
+        formerlyMissingZeroCount: { type: integer }
+        missingInputs: { type: array, items: { type: object, additionalProperties: true } }
+        rowIdentityValid: { type: boolean }
+        sourceEvidence: { type: array, items: { type: object, additionalProperties: true } }
+        teams: { type: array, items: { type: object, additionalProperties: true } }
+        inputQualityStatus: { type: string, enum: [ready, incomplete] }
+        predictionEligibility: { type: boolean }
+        consumerAvailability: { type: ["string", "null"] }
+        causes: { type: array, items: { type: string } }
+        phase7UsedForValidationOnly: { type: boolean }
     PersonnelContext:
       type: object
       required: [version, gameId, kickoffTime, sourceCutoff, teams, matchup, weather, market, dataConfidence, sources, limitations]

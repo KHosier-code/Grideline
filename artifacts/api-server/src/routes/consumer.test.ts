@@ -182,7 +182,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
       evidence: { available: false, capturedAt: null, message: "Sportsbook line updating" },
     },
     dataConfidence: { label: "Updating" as const, score: null, reason: "Prediction data is being refreshed" },
-    availability: { prediction: "Prediction data is being refreshed", market: "Sportsbook line updating" },
+    availability: { prediction: "Prediction pending — incomplete model inputs", market: "Sportsbook line updating" },
   };
   const detail = {
     ...game,
@@ -237,6 +237,9 @@ test("consumer reads remain bounded and cannot invoke computation side effects",
   assert.match(source, /getPredictionPerformance\(MAX_CONSUMER_PERFORMANCE_ROWS\)/);
   assert.match(predictionSource, /predictionTimestamp\}\s*<\s*\$\{gamesTable\.kickoffTime/);
   assert.match(predictionSource, /selectDistinctOn/);
+  assert.match(predictionSource, /PHASE6_PRODUCTION_VECTOR_WIDTH/);
+  assert.match(predictionSource, /snapshotMatchesProductionModels/);
+  assert.match(predictionSource, /input-integrity-v3/);
   assert.match(predictionSource, /options\.maxRows === undefined \? await query : await query\.limit\(options\.maxRows\)/);
   assert.match(source, /\.limit\(1\)/);
   assert.doesNotMatch(source, /\b(generateLivePredictions|gradeCompletedPredictions|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);

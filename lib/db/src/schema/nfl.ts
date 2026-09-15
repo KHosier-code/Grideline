@@ -237,6 +237,9 @@ export const modelTrainingRunsTable = pgTable("model_training_runs", {
   metrics: jsonb("metrics").$type<Record<string, unknown>>().notNull().default({}),
   calibration: jsonb("calibration").$type<Record<string, unknown>>().notNull().default({}),
   featureImportance: jsonb("feature_importance").$type<Record<string, number>>().notNull().default({}),
+  vectorFeatureNames: jsonb("vector_feature_names").$type<string[]>().notNull().default([]),
+  vectorSchemaFingerprint: text("vector_schema_fingerprint"),
+  modelArtifact: jsonb("model_artifact").$type<Record<string, unknown>>(),
   notes: text("notes"),
   trainedAt: timestamp("trained_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -384,6 +387,10 @@ export const predictionSnapshotsTable = pgTable("prediction_snapshots", {
   qbConfidence: doublePrecision("qb_confidence"),
   inputFeatureCount: integer("input_feature_count").notNull().default(0),
   inputMissingFeatureCount: integer("input_missing_feature_count").notNull().default(0),
+  inputVector: jsonb("input_vector").$type<number[]>(),
+  vectorFeatureNames: jsonb("vector_feature_names").$type<string[]>(),
+  vectorSchemaFingerprint: text("vector_schema_fingerprint"),
+  inputSourceEvidence: jsonb("input_source_evidence").$type<Record<string, unknown>>(),
   officialFinalPrediction: boolean("official_final_prediction").notNull().default(false),
   frozenAt: timestamp("frozen_at", { withTimezone: true }),
 }, (table) => [

@@ -759,10 +759,84 @@ function FeatureAuditPage() {
     },
     staleTime: 30000,
   });
+  const liveInputs = useQuery({
+    queryKey: ['live-model-input-integrity'],
+    queryFn: async () => {
+      const response = await fetch('/api/features/live-input-integrity', { credentials: 'include' });
+      if (!response.ok) throw new Error('Live input integrity unavailable');
+      return response.json() as Promise<{
+        generatedAt: string;
+        modelSchemaStatus: 'valid' | 'invalid';
+        trustworthyUpcomingPredictions: boolean;
+        eligibleGames: number;
+        incompleteGames: number;
+        distinctEligibleVectors: number;
+        vectorsDiffer: boolean | null;
+        modelLifecycleEvidence: Array<{ family: string; modelVersion: string; trainedAt: string; promotedAt: string; immutableArtifactAvailable: boolean }>;
+        records: Array<{
+          gameId: string;
+          kickoffTime: string;
+          inputQualityStatus: 'ready' | 'incomplete';
+          requiredCount: number;
+          populatedCount: number;
+          missingCount: number;
+          legitimateZeroCount: number;
+          formerlyMissingZeroCount: number;
+          snapshotId: number | null;
+          causes: string[];
+          teams: Array<{
+            side: string;
+            abbreviation: string | null;
+            teamName: string | null;
+            phase6QbConfidence: number | null;
+            phase6QbUnavailableReason: string | null;
+            projectedStarter: { playerName: string | null; classification: string } | null;
+            phase7QbCertainty: number | null;
+            phase7QbUnavailableReason: string | null;
+            personnelCompleteness: number | null;
+            sampleQuality: number | null;
+          }>;
+        }>;
+      }>;
+    },
+    staleTime: 30000,
+  });
   const rows = audit.data ?? [];
   return (
     <>
-      <PageHeader eyebrow="Model data / Feature audit" title="Feature audit" detail="Inspect exactly what Gridline had available before a historical kickoff. Unavailable inputs stay visibly unavailable." />
+      <PageHeader eyebrow="Model data / Feature audit" title="Feature audit" detail="Audit exact active-model inputs for upcoming games, then inspect the cutoff-safe historical evidence beneath them." />
+      <Panel eyebrow="Active Phase 6 production vectors" title="Upcoming input integrity" className="mb-5" action={<button type="button" className="button button-subtle" onClick={() => liveInputs.refetch()}><RefreshCw className={cx('h-4 w-4', liveInputs.isFetching && 'animate-spin')} /> Refresh</button>}>
+        {liveInputs.isLoading ? <LoadingPanel label="Auditing upcoming model inputs" /> : liveInputs.isError || !liveInputs.data ? <ErrorPanel message="The live model input audit could not be loaded." /> : (
+          <div>
+            <div className="grid gap-3 md:grid-cols-4">
+              {[
+                { title: 'Model schema', value: liveInputs.data.modelSchemaStatus, good: liveInputs.data.modelSchemaStatus === 'valid', detail: liveInputs.data.modelSchemaStatus === 'valid' ? 'Exact schema and fitted artifacts verified.' : 'Immutable fitted artifacts are unavailable.' },
+                { title: 'Eligible games', value: String(liveInputs.data.eligibleGames), good: liveInputs.data.incompleteGames === 0, detail: `${liveInputs.data.incompleteGames} incomplete.` },
+                { title: 'Vector identity', value: String(liveInputs.data.distinctEligibleVectors), good: liveInputs.data.vectorsDiffer !== false, detail: liveInputs.data.vectorsDiffer === false ? 'Duplicate vectors require review.' : 'Distinct eligible vectors.' },
+                { title: 'Trust status', value: liveInputs.data.trustworthyUpcomingPredictions ? 'Trustworthy' : 'Review required', good: liveInputs.data.trustworthyUpcomingPredictions, detail: liveInputs.data.trustworthyUpcomingPredictions ? 'All upcoming inputs are complete.' : 'Incomplete games remain pending.' },
+              ].map((item) => <div className="readiness-tile" key={item.title}><p className="text-xs font-semibold text-muted-foreground">{item.title}</p><div className="mt-3"><StatusPill status={item.good ? 'success' : 'bad'}>{item.value}</StatusPill></div><p className="mt-3 text-xs leading-5 text-muted-foreground">{item.detail}</p></div>)}
+            </div>
+            <div className="mt-5 space-y-3">
+              {liveInputs.data.records.map((record) => (
+                <div key={record.gameId} className="rounded-xl border border-border bg-secondary/20 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div><p className="font-semibold text-ink">{record.teams.map((team) => team.abbreviation ?? team.teamName ?? team.side).join(' at ')}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(record.kickoffTime, true)} · {record.gameId} · snapshot {record.snapshotId ?? 'none'}</p></div>
+                    <StatusPill status={record.inputQualityStatus === 'ready' ? 'success' : 'bad'}>{record.inputQualityStatus}</StatusPill>
+                  </div>
+                  <div className="mt-3 grid gap-2 text-xs md:grid-cols-5">
+                    <span>Required <strong>{record.requiredCount}</strong></span><span>Populated <strong>{record.populatedCount}</strong></span><span>Missing <strong>{record.missingCount}</strong></span><span>Observed zeroes <strong>{record.legitimateZeroCount}</strong></span><span>Prevented zero fallbacks <strong>{record.formerlyMissingZeroCount}</strong></span>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    {record.teams.map((team) => <div key={team.side} className="rounded-lg border border-border/70 p-3 text-xs"><p className="font-semibold text-ink">{team.side.toUpperCase()} · {team.teamName ?? team.abbreviation}</p><p className="mt-1 text-muted-foreground">Phase 6 QB confidence: {team.phase6QbConfidence ?? 'unavailable'} · Phase 7 certainty: {team.phase7QbCertainty ?? 'unavailable'} · personnel: {team.personnelCompleteness === null ? 'unavailable' : `${team.personnelCompleteness}%`} · sample: {team.sampleQuality === null ? 'unavailable' : `${team.sampleQuality}%`}</p><p className="mt-1 text-muted-foreground">Projected QB: {team.projectedStarter?.playerName ?? 'unavailable'} ({team.projectedStarter?.classification ?? 'no evidence'})</p>{(team.phase6QbUnavailableReason || team.phase7QbUnavailableReason) && <p className="mt-1 text-danger">{team.phase6QbUnavailableReason ?? team.phase7QbUnavailableReason}</p>}</div>)}
+                  </div>
+                  {!!record.causes.length && <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-danger">{record.causes.map((cause) => <li key={cause}>{cause}</li>)}</ul>}
+                </div>
+              ))}
+              {!liveInputs.data.records.length && <EmptyPanel title="No upcoming games" detail="There are no future scheduled NFL games to audit at this time." icon={CalendarDays} />}
+            </div>
+          </div>
+        )}
+      </Panel>
       <Panel eyebrow="Historical point-in-time filters" title="Choose an observation" className="mb-5">
         <div className="grid gap-3 md:grid-cols-5">
           <label className="field-label">Season<input className="field-input mt-2" inputMode="numeric" placeholder="2021" value={season} onChange={(event) => setSeason(event.target.value)} /></label>

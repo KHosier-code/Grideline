@@ -11,7 +11,9 @@ import {
   playerGameStatsTable,
   type PregameFeatureValues,
 } from "@workspace/db";
+import { createHash } from "node:crypto";
 import { PREGAME_FEATURE_VERSION } from "./features";
+import { NFLVERSE_TEAM_ALIASES, normalizeTeamId } from "./personnel-context-derivation";
 
 export type Algorithm = "linear_regression" | "logistic_regression" | "random_forest" | "gradient_boosting";
 export type Family = "spread" | "moneyline" | "totals";
@@ -45,11 +47,42 @@ export type Example = {
 export type MatrixModel = {
   predict: (x: number[]) => number;
   importance: Record<string, number>;
+  artifact: CoreModelArtifact;
+};
+type CoreModelArtifact =
+  | { kind: "linear"; coefficients: number[] }
+  | { kind: "logistic"; coefficients: number[] }
+  | { kind: "forest"; trees: Node[] }
+  | { kind: "boosting"; base: number; trees: Array<{ tree: Node; weight: number }>; classification: boolean };
+export type FittedModelArtifact = {
+  version: 1;
+  algorithm: Algorithm;
+  centers: number[];
+  scales: number[];
+  model: CoreModelArtifact;
 };
 
 const TEST_SEASONS = [2022, 2023, 2024, 2025, 2026];
 const FEATURE_PREFIXES = ["season_to_date", "last_8", "last_5", "last_3"];
 const MAX_FEATURES = 24;
+export const PHASE6_SOURCE_FEATURE_NAMES = [
+  "last_3.defensive_success_rate", "last_3.epa_per_play", "last_3.explosive_pass_rate", "last_3.explosive_rush_rate",
+  "last_3.offensive_success_rate", "last_3.red_zone_touchdown_rate", "last_3.turnover_rate", "last_3.yards_per_play",
+  "last_5.defensive_success_rate", "last_5.epa_per_play", "last_5.explosive_pass_rate", "last_5.explosive_rush_rate",
+  "last_5.offensive_success_rate", "last_5.red_zone_touchdown_rate", "last_5.turnover_rate", "last_5.yards_per_play",
+  "last_8.defensive_success_rate", "last_8.epa_per_play", "last_8.explosive_pass_rate", "last_8.explosive_rush_rate",
+  "last_8.offensive_success_rate", "last_8.red_zone_touchdown_rate", "last_8.turnover_rate", "last_8.yards_per_play",
+] as const;
+export const PHASE6_VECTOR_FEATURE_NAMES = [
+  ...PHASE6_SOURCE_FEATURE_NAMES,
+  "home_low_sample",
+  "away_low_sample",
+  "qb_confidence_difference",
+] as const;
+export function vectorSchemaFingerprint(names: readonly string[]) {
+  return createHash("sha256").update(JSON.stringify(names)).digest("hex");
+}
+export const PHASE6_VECTOR_SCHEMA_FINGERPRINT = vectorSchemaFingerprint(PHASE6_VECTOR_FEATURE_NAMES);
 const SUPPORTED_ALGORITHMS: Record<Family, readonly Algorithm[]> = {
   spread: ["linear_regression", "random_forest", "gradient_boosting"],
   moneyline: ["logistic_regression", "random_forest", "gradient_boosting"],
@@ -85,6 +118,13 @@ export function validateProductionCandidate(
   }
   if (run.featureVersion !== PREGAME_FEATURE_VERSION) {
     failures.push(`feature version "${run.featureVersion}" does not match ${PREGAME_FEATURE_VERSION}`);
+  }
+  if (JSON.stringify(run.vectorFeatureNames) !== JSON.stringify(PHASE6_VECTOR_FEATURE_NAMES) ||
+      run.vectorSchemaFingerprint !== PHASE6_VECTOR_SCHEMA_FINGERPRINT) {
+    failures.push("the ordered Phase 6 vector schema or fingerprint does not match the trained production contract");
+  }
+  if (!isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length)) {
+    failures.push("the candidate does not contain an immutable fitted model artifact");
   }
   if (!seasons.length || seasons.some((season) => !Number.isInteger(season) || season < 2021 || season > 2025) || uniqueSeasons.length !== seasons.length) {
     failures.push("training seasons must be unique integer seasons from 2021 through 2025");
@@ -155,7 +195,7 @@ export function standardize(train: number[][], test: number[][]) {
     return variance > 1e-9 ? Math.sqrt(variance) : 1;
   });
   const transform = (rows: number[][]) => rows.map((row) => row.map((value, column) => (value - centers[column]) / scales[column]));
-  return { train: transform(safeTrain), test: transform(safeTest) };
+  return { train: transform(safeTrain), test: transform(safeTest), centers, scales };
 }
 function solve(matrix: number[][], target: number[]) {
   const size = target.length;
@@ -185,6 +225,7 @@ function ridge(train: number[][], target: number[], lambda: number): MatrixModel
   return {
     predict: (row) => coefficients[0] + row.reduce((sum, value, index) => sum + value * coefficients[index + 1], 0),
     importance: Object.fromEntries(coefficients.slice(1).map((value, index) => [`${index}`, Math.abs(value)])),
+    artifact: { kind: "linear", coefficients },
   };
 }
 function logistic(train: number[][], target: number[]): MatrixModel {
@@ -207,6 +248,7 @@ function logistic(train: number[][], target: number[]): MatrixModel {
   return {
     predict: (row) => sigmoid(coefficients[0] + row.reduce((sum, value, index) => sum + value * coefficients[index + 1], 0)),
     importance: Object.fromEntries(coefficients.slice(1).map((value, index) => [`${index}`, Math.abs(value)])),
+    artifact: { kind: "logistic", coefficients },
   };
 }
 
@@ -262,6 +304,7 @@ function forest(train: number[][], target: number[], classification: boolean): M
   return {
     predict: (row) => mean(trees.map((tree) => predictTree(tree, row))),
     importance: Object.fromEntries(importance.map((value, index) => [`${index}`, value])),
+    artifact: { kind: "forest", trees },
   };
 }
 function boosting(train: number[][], target: number[], classification: boolean): MatrixModel {
@@ -282,7 +325,73 @@ function boosting(train: number[][], target: number[], classification: boolean):
       return classification ? clamp(value) : value;
     },
     importance: Object.fromEntries(importance.map((value, index) => [`${index}`, value])),
+    artifact: { kind: "boosting", base, trees, classification },
   };
+}
+
+export function isFittedModelArtifact(value: unknown, width: number): value is FittedModelArtifact {
+  if (!value || typeof value !== "object") return false;
+  const artifact = value as Partial<FittedModelArtifact>;
+  const nodeValid = (node: unknown): node is Node => {
+    if (!node || typeof node !== "object") return false;
+    const candidate = node as Node;
+    if (!Number.isFinite(candidate.value)) return false;
+    if (candidate.feature === undefined) return true;
+    return Number.isInteger(candidate.feature)
+      && candidate.feature >= 0
+      && candidate.feature < width
+      && Number.isFinite(candidate.threshold)
+      && nodeValid(candidate.left)
+      && nodeValid(candidate.right);
+  };
+  const model = artifact.model;
+  const modelValid = Boolean(model && (
+    ((model.kind === "linear" || model.kind === "logistic")
+      && Array.isArray(model.coefficients)
+      && model.coefficients.length === width + 1
+      && model.coefficients.every(Number.isFinite))
+    || (model.kind === "forest" && Array.isArray(model.trees) && model.trees.length > 0 && model.trees.every(nodeValid))
+    || (model.kind === "boosting"
+      && Number.isFinite(model.base)
+      && typeof model.classification === "boolean"
+      && Array.isArray(model.trees)
+      && model.trees.length > 0
+      && model.trees.every((item) => Number.isFinite(item.weight) && nodeValid(item.tree)))
+  ));
+  const algorithmMatches = Boolean(model && (
+    (artifact.algorithm === "linear_regression" && model.kind === "linear")
+    || (artifact.algorithm === "logistic_regression" && model.kind === "logistic")
+    || (artifact.algorithm === "random_forest" && model.kind === "forest")
+    || (artifact.algorithm === "gradient_boosting" && model.kind === "boosting")
+  ));
+  return artifact.version === 1
+    && typeof artifact.algorithm === "string"
+    && Array.isArray(artifact.centers)
+    && artifact.centers.length === width
+    && artifact.centers.every(Number.isFinite)
+    && Array.isArray(artifact.scales)
+    && artifact.scales.length === width
+    && artifact.scales.every((scale) => Number.isFinite(scale) && scale > 0)
+    && modelValid
+    && algorithmMatches;
+}
+
+export function predictFittedModelArtifact(artifact: FittedModelArtifact, row: number[]) {
+  if (!isFittedModelArtifact(artifact, row.length) || !row.every(Number.isFinite)) return null;
+  const scaled = row.map((value, index) => (value - artifact.centers[index]) / artifact.scales[index]);
+  const model = artifact.model;
+  let value: number;
+  if (model.kind === "linear") {
+    value = model.coefficients[0] + scaled.reduce((sum, item, index) => sum + item * model.coefficients[index + 1], 0);
+  } else if (model.kind === "logistic") {
+    value = sigmoid(model.coefficients[0] + scaled.reduce((sum, item, index) => sum + item * model.coefficients[index + 1], 0));
+  } else if (model.kind === "forest") {
+    value = mean(model.trees.map((tree) => predictTree(tree, scaled)));
+  } else {
+    const raw = model.base + model.trees.reduce((sum, item) => sum + item.weight * predictTree(item.tree, scaled), 0);
+    value = model.classification ? clamp(raw) : raw;
+  }
+  return Number.isFinite(value) ? value : null;
 }
 function calibration(actual: number[], predicted: number[]) {
   const buckets = Array.from({ length: 10 }, (_, index) => ({
@@ -313,6 +422,26 @@ export function sourceFeatureNames(rows: Array<{ features: PregameFeatureValues 
   return [...counts.entries()].filter(([, count]) => count >= 25).sort((left, right) => right[1] - left[1]).slice(0, MAX_FEATURES).map(([key]) => key).sort();
 }
 
+export function trainingVectorForRows(
+  home: { features: PregameFeatureValues; lowSample: boolean },
+  away: { features: PregameFeatureValues; lowSample: boolean },
+  names: readonly string[] = PHASE6_SOURCE_FEATURE_NAMES,
+) {
+  const differences: number[] = [];
+  for (const name of names) {
+    const homeValue = home.features[name];
+    const awayValue = away.features[name];
+    if (typeof homeValue !== "number" || !Number.isFinite(homeValue) ||
+        typeof awayValue !== "number" || !Number.isFinite(awayValue)) return null;
+    differences.push(homeValue - awayValue);
+  }
+  const homeQb = home.features.qb_data_confidence;
+  const awayQb = away.features.qb_data_confidence;
+  if (typeof homeQb !== "number" || !Number.isFinite(homeQb) ||
+      typeof awayQb !== "number" || !Number.isFinite(awayQb)) return null;
+  return [...differences, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb];
+}
+
 export async function loadExamples(featureVersion: string) {
   const rows = await db.select().from(pregameTeamFeaturesTable).where(eq(pregameTeamFeaturesTable.featureVersion, featureVersion));
   const [stats, gameStages, teams] = await Promise.all([
@@ -327,15 +456,25 @@ export async function loadExamples(featureVersion: string) {
     db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable),
   ]);
   const abbreviationByTeamId = new Map(teams.map((team) => [team.teamId, team.abbreviation]));
-  const scoreByTeamGame = new Map(stats.map((row) => [`${row.gameId}:${row.teamId}`, row]));
+  const teamByAbbreviation = new Map(teams.map((team) => [team.abbreviation.toUpperCase(), team.teamId]));
+  for (const [source, canonical] of Object.entries(NFLVERSE_TEAM_ALIASES)) {
+    const teamId = teamByAbbreviation.get(canonical)
+      ?? (canonical === "WAS" ? teamByAbbreviation.get("WSH") : undefined);
+    if (teamId) teamByAbbreviation.set(source, teamId);
+  }
+  const scoreByTeamGame = new Map(stats.map((row) => [
+    `${row.gameId}:${normalizeTeamId(row.teamId, teamByAbbreviation)}`,
+    row,
+  ]));
   const stageByMatchup = new Map(gameStages.map((row) => [
     `${row.season}:${row.week}:${row.teamId ?? ""}:${row.opponentTeamId ?? ""}`,
     row.seasonType,
   ]));
-  const names = sourceFeatureNames(rows);
+  const names = [...PHASE6_SOURCE_FEATURE_NAMES];
   const grouped = new Map<string, typeof rows>();
   for (const row of rows) grouped.set(row.gameId, [...(grouped.get(row.gameId) ?? []), row]);
   const examples: Example[] = [];
+  let skippedIncompleteInputs = 0;
   for (const gameRows of grouped.values()) {
     const home = gameRows.find((row) => row.isHome);
     const away = gameRows.find((row) => !row.isHome);
@@ -343,19 +482,19 @@ export async function loadExamples(featureVersion: string) {
     const homeScore = scoreByTeamGame.get(`${home.gameId}:${home.teamId}`)?.teamScore;
     const awayScore = scoreByTeamGame.get(`${away.gameId}:${away.teamId}`)?.teamScore;
     if (homeScore === null || homeScore === undefined || awayScore === null || awayScore === undefined) continue;
-    const features = names.map((name) => {
-      const homeValue = home.features[name];
-      const awayValue = away.features[name];
-      return typeof homeValue === "number" && Number.isFinite(homeValue) && typeof awayValue === "number" && Number.isFinite(awayValue) ? homeValue - awayValue : 0;
-    });
-    const homeQb = typeof home.features["qb_data_confidence"] === "number" && Number.isFinite(home.features["qb_data_confidence"]) ? home.features["qb_data_confidence"] : 0;
-    const awayQb = typeof away.features["qb_data_confidence"] === "number" && Number.isFinite(away.features["qb_data_confidence"]) ? away.features["qb_data_confidence"] : 0;
+    const vector = trainingVectorForRows(home, away, names);
+    if (!vector) {
+      skippedIncompleteInputs += 1;
+      continue;
+    }
+    const homeQb = home.features.qb_data_confidence as number;
+    const awayQb = away.features.qb_data_confidence as number;
     examples.push({
       gameId: home.gameId,
       season: home.season,
       week: home.week,
       kickoffTime: home.kickoffTime,
-    x: [...features, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb],
+      x: vector,
       lowSample: home.lowSample || away.lowSample,
       qbConfidence: (homeQb + awayQb) / 2,
       homeTeamId: home.teamId,
@@ -372,7 +511,11 @@ export async function loadExamples(featureVersion: string) {
       homeWin: homeScore > awayScore ? 1 : 0,
     });
   }
-  return { examples, names: [...names, "home_low_sample", "away_low_sample", "qb_confidence_difference"] };
+  return {
+    examples,
+    names: [...PHASE6_VECTOR_FEATURE_NAMES],
+    diagnostics: { skippedIncompleteInputs },
+  };
 }
 
 function buildMetrics(family: Family, actual: number[], predicted: number[], examples: Example[]) {
@@ -553,6 +696,15 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
               metrics,
               calibration: (config.classification ? calibration(actual, predicted) : { status: "not_applicable" }) as unknown as Record<string, unknown>,
               featureImportance: normalizeImportance(model.importance, names),
+              vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
+              vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+              modelArtifact: {
+                version: 1,
+                algorithm,
+                centers: weightedScaled.centers,
+                scales: weightedScaled.scales,
+                model: model.artifact,
+              } satisfies FittedModelArtifact,
               notes: "Chronological walk-forward evaluation with a controlled recency-weighting challenger variant. No automatic promotion. Betting performance is unavailable unless a legitimate pre-prediction sportsbook line exists.",
             } satisfies typeof modelTrainingRunsTable.$inferInsert;
             const evidence = testRows.map((example, index) => {
@@ -838,6 +990,15 @@ export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATU
       },
       calibration: config.classification ? { status: "training_only", note: "No 2026 outcomes were used for refit or calibration." } : { status: "not_applicable" },
       featureImportance: normalizeImportance(model.importance, names),
+      vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
+      vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+      modelArtifact: {
+        version: 1,
+        algorithm: config.algorithm,
+        centers: scaled.centers,
+        scales: scaled.scales,
+        model: model.artifact,
+      } satisfies FittedModelArtifact,
       notes: "Phase 6 production refit of the unchanged selected Phase 4 algorithm using legitimate 2021-2025 data only. 2026 remains forward/out-of-sample. Administrator promotion required.",
     });
   }

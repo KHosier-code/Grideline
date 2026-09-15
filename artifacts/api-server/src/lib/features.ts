@@ -5,10 +5,12 @@ import {
   qbGameStatsTable,
   pregameTeamFeaturesTable,
   teamGameStatsTable,
+  teamsTable,
   type PregameFeatureSamples,
   type PregameFeatureAuditEntry,
   type PregameFeatureValues,
 } from "@workspace/db";
+import { NFLVERSE_TEAM_ALIASES, normalizeTeamId } from "./personnel-context-derivation";
 
 export const PREGAME_FEATURE_VERSION = "pregame-v3";
 const WINDOWS = [
@@ -242,6 +244,7 @@ export function buildPregameFeaturesForTesting(input: {
   teamRows: HistoryRow[];
   opponentRows?: HistoryRow[];
   qbRows?: QbHistoryRow[];
+  asOf?: Date;
 }) {
   const history = input.teamRows
     .filter((row) => row.kickoffTime.getTime() < input.targetKickoff.getTime())
@@ -252,20 +255,44 @@ export function buildPregameFeaturesForTesting(input: {
   return {
     ...build,
     eligibleGameIds: history.map((row) => row.gameId),
-    sourceCutoff: new Date(input.targetKickoff.getTime() - 1),
+    sourceCutoff: pregameSourceCutoff(input.targetKickoff, input.asOf ?? new Date(input.targetKickoff.getTime() - 1)),
   };
 }
 
-export async function rebuildPregameFeatures(featureVersion = PREGAME_FEATURE_VERSION) {
-  const stats = await db
-    .select()
-    .from(teamGameStatsTable)
-    .leftJoin(gamesTable, eq(teamGameStatsTable.gameId, gamesTable.gameId))
-    .orderBy(asc(teamGameStatsTable.season), asc(teamGameStatsTable.week), asc(teamGameStatsTable.gameId), asc(teamGameStatsTable.teamId));
+export function pregameSourceCutoff(kickoff: Date, generatedAt: Date) {
+  return new Date(Math.min(kickoff.getTime() - 1, generatedAt.getTime()));
+}
+
+export async function rebuildPregameFeatures(featureVersion = PREGAME_FEATURE_VERSION, generatedAt = new Date()) {
+  const [rawStats, canonicalTeams] = await Promise.all([
+    db
+      .select()
+      .from(teamGameStatsTable)
+      .leftJoin(gamesTable, eq(teamGameStatsTable.gameId, gamesTable.gameId))
+      .orderBy(asc(teamGameStatsTable.season), asc(teamGameStatsTable.week), asc(teamGameStatsTable.gameId), asc(teamGameStatsTable.teamId)),
+    db.select().from(teamsTable),
+  ]);
+  const teamByAbbreviation = new Map(canonicalTeams.map((team) => [team.abbreviation.toUpperCase(), team.teamId]));
+  for (const [source, canonical] of Object.entries(NFLVERSE_TEAM_ALIASES)) {
+    const teamId = teamByAbbreviation.get(canonical)
+      ?? (canonical === "WAS" ? teamByAbbreviation.get("WSH") : undefined);
+    if (teamId) teamByAbbreviation.set(source, teamId);
+  }
+  const stats = rawStats.map((item) => ({
+    ...item,
+    team_game_stats: {
+      ...item.team_game_stats,
+      teamId: normalizeTeamId(item.team_game_stats.teamId, teamByAbbreviation),
+      opponentTeamId: normalizeTeamId(item.team_game_stats.opponentTeamId, teamByAbbreviation),
+    },
+  }));
   const statsByGameTeam = new Map(
     stats.map((item) => [`${item.team_game_stats.gameId}:${item.team_game_stats.teamId}`, item.team_game_stats]),
   );
-  const qbStats = await db.select().from(qbGameStatsTable);
+  const qbStats = (await db.select().from(qbGameStatsTable)).map((row) => ({
+    ...row,
+    teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
+  }));
   const qbsByGame = new Map<string, typeof qbStats>();
   for (const qb of qbStats) qbsByGame.set(qb.gameId, [...(qbsByGame.get(qb.gameId) ?? []), qb]);
   const scheduledGames = new Map(
@@ -355,8 +382,8 @@ export async function rebuildPregameFeatures(featureVersion = PREGAME_FEATURE_VE
         sampleCounts: built.sampleCounts,
         featureAudit: built.featureAudit,
         lowSample: built.lowSample,
-        sourceCutoff: new Date(kickoff.getTime() - 1),
-        generatedAt: new Date(),
+        sourceCutoff: pregameSourceCutoff(kickoff, generatedAt),
+        generatedAt,
       });
       const source = statsByGameTeam.get(`${game.gameId}:${team}`);
       if (source) {

@@ -13,3 +13,5 @@
 - [Database TLS intent](database-tls-intent.md) — local development may use a non-TLS proxy on a remote-looking host; derive TLS policy from the URL mode, not hostname.
 - [Production startup alerts](production-startup-alerts.md) — use Replit App Monitoring email for startup-gate downtime; keep log events allow-listed and secret-safe.
 - [Publish diffs for unvalidated checks](publish-diff-unvalidated-checks.md) — validate PostgreSQL checks in development before Publish; NOT VALID can produce malformed generated DDL.
+- [Phase 6 identifier boundary](phase6-identifier-boundary.md) — canonicalize schedule and nflverse team IDs before feature, QB, or score joins.
+- [Immutable model provenance](immutable-model-provenance.md) — a production version must bind schema, preprocessing, and fitted parameters; never refit it during inference.

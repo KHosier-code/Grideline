@@ -2,10 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createPromotionHandler } from "./models";
 import { PromotionSafetyGateError } from "../lib/promotion-safety-gate";
+import { PHASE6_VECTOR_FEATURE_NAMES, PHASE6_VECTOR_SCHEMA_FINGERPRINT } from "../lib/modeling";
 import { modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspace/db";
 
 type TrainingRun = typeof modelTrainingRunsTable.$inferSelect;
 type Promotion = typeof modelPromotionHistoryTable.$inferSelect;
+const modelArtifact = {
+  version: 1 as const,
+  algorithm: "linear_regression",
+  centers: Array(27).fill(0),
+  scales: Array(27).fill(1),
+  model: { kind: "linear", coefficients: Array(28).fill(0) },
+};
 
 const candidate: TrainingRun = {
   id: 10,
@@ -22,6 +30,9 @@ const candidate: TrainingRun = {
   metrics: { outputValidation: "finite" },
   calibration: {},
   featureImportance: {},
+  vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
+  vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+  modelArtifact,
   notes: null,
   trainedAt: new Date("2026-09-14T12:00:00.000Z"),
 };

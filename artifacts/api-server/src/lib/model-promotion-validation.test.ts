@@ -1,9 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateProductionCandidate } from "./modeling";
+import { PHASE6_VECTOR_FEATURE_NAMES, PHASE6_VECTOR_SCHEMA_FINGERPRINT, validateProductionCandidate } from "./modeling";
 import { modelTrainingRunsTable } from "@workspace/db";
 
 type TrainingRun = typeof modelTrainingRunsTable.$inferSelect;
+const modelArtifact = {
+  version: 1 as const,
+  algorithm: "linear_regression",
+  centers: Array(27).fill(0),
+  scales: Array(27).fill(1),
+  model: { kind: "linear", coefficients: Array(28).fill(0) },
+};
 
 function candidate(overrides: Partial<TrainingRun> = {}): TrainingRun {
   return {
@@ -21,6 +28,9 @@ function candidate(overrides: Partial<TrainingRun> = {}): TrainingRun {
     metrics: { outputValidation: "finite" },
     calibration: {},
     featureImportance: {},
+    vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
+    vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+    modelArtifact,
     notes: null,
     trainedAt: new Date("2026-01-01T00:00:00.000Z"),
     ...overrides,
@@ -69,6 +79,19 @@ test("rejects a Phase 6 run with the wrong family algorithm and sample policy", 
   assert.equal(validation.valid, false);
   assert.ok(validation.failures.some((failure) => failure.includes("gradient_boosting")));
   assert.ok(validation.failures.some((failure) => failure.includes("exclude_low_sample")));
+});
+
+test("rejects same-width ordered feature schema drift", () => {
+  const drifted = [...PHASE6_VECTOR_FEATURE_NAMES.slice(1), PHASE6_VECTOR_FEATURE_NAMES[0]];
+  const validation = validateProductionCandidate(candidate({ vectorFeatureNames: drifted }));
+  assert.equal(validation.valid, false);
+  assert.ok(validation.failures.some((failure) => failure.includes("ordered Phase 6 vector schema")));
+});
+
+test("rejects a candidate without immutable fitted parameters", () => {
+  const validation = validateProductionCandidate(candidate({ modelArtifact: null }));
+  assert.equal(validation.valid, false);
+  assert.ok(validation.failures.some((failure) => failure.includes("immutable fitted model artifact")));
 });
 
 test("rejects forward-season data and incomplete Phase 6 training cutoffs", () => {

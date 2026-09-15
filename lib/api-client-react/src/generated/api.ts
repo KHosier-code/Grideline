@@ -42,6 +42,7 @@ import type {
   ListOddsAuditsParams,
   ListPersonnelContextAuditParams,
   ListPregameFeatureAuditParams,
+  LiveModelInputIntegrityAudit,
   OddsCaptureResult,
   OddsEventAudit,
   OddsHistory,
@@ -1036,6 +1037,83 @@ export function useListPregameFeatureAudit<TData = Awaited<ReturnType<typeof lis
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListPregameFeatureAuditQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetLiveModelInputIntegrityUrl = () => {
+
+
+
+
+  return `/api/features/live-input-integrity`
+}
+
+/**
+ * @summary Audit exact upcoming-game inputs for active production models
+ */
+export const getLiveModelInputIntegrity = async ( options?: Parameters<typeof customFetch>[1]): Promise<LiveModelInputIntegrityAudit> => {
+
+  return customFetch<LiveModelInputIntegrityAudit>(getGetLiveModelInputIntegrityUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLiveModelInputIntegrityQueryKey = () => {
+    return [
+    `/api/features/live-input-integrity`
+    ] as const;
+    }
+
+
+export const getGetLiveModelInputIntegrityQueryOptions = <TData = Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLiveModelInputIntegrityQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>> = ({ signal }) => getLiveModelInputIntegrity({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLiveModelInputIntegrityQueryResult = NonNullable<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>>
+export type GetLiveModelInputIntegrityQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Audit exact upcoming-game inputs for active production models
+ */
+
+export function useGetLiveModelInputIntegrity<TData = Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLiveModelInputIntegrityQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

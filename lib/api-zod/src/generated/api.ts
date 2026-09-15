@@ -402,6 +402,60 @@ export const ListPregameFeatureAuditResponse = zod.array(ListPregameFeatureAudit
 
 
 /**
+ * @summary Audit exact upcoming-game inputs for active production models
+ */
+export const GetLiveModelInputIntegrityResponse = zod.object({
+  "generatedAt": zod.coerce.date(),
+  "featureVersion": zod.string(),
+  "modelSchemaStatus": zod.enum(['valid', 'invalid']),
+  "productionModels": zod.array(zod.record(zod.string(), zod.unknown())),
+  "selectedFeatureNames": zod.array(zod.string()),
+  "vectorFeatureNames": zod.array(zod.string()),
+  "upcomingGames": zod.number().int(),
+  "trustworthyUpcomingPredictions": zod.boolean(),
+  "inputReadyGames": zod.number().int(),
+  "eligibleGames": zod.number().int(),
+  "incompleteGames": zod.number().int(),
+  "distinctEligibleVectors": zod.number().int(),
+  "vectorsDiffer": zod.boolean().nullable(),
+  "modelLifecycleEvidence": zod.array(zod.object({
+  "family": zod.string(),
+  "modelVersion": zod.string(),
+  "trainedAt": zod.coerce.date(),
+  "promotedAt": zod.coerce.date(),
+  "immutableArtifactAvailable": zod.boolean()
+})),
+  "records": zod.array(zod.object({
+  "gameId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date(),
+  "homeTeamId": zod.string(),
+  "awayTeamId": zod.string(),
+  "snapshotId": zod.number().int().nullable(),
+  "featureVersion": zod.string(),
+  "models": zod.array(zod.record(zod.string(), zod.unknown())),
+  "vectorFeatureNames": zod.array(zod.string()),
+  "vector": zod.array(zod.number().nullable()).nullable(),
+  "requiredCount": zod.number().int(),
+  "populatedCount": zod.number().int(),
+  "missingCount": zod.number().int(),
+  "legitimateZeroCount": zod.number().int(),
+  "formerlyMissingZeroCount": zod.number().int(),
+  "missingInputs": zod.array(zod.record(zod.string(), zod.unknown())),
+  "rowIdentityValid": zod.boolean(),
+  "sourceEvidence": zod.array(zod.record(zod.string(), zod.unknown())),
+  "teams": zod.array(zod.record(zod.string(), zod.unknown())),
+  "inputQualityStatus": zod.enum(['ready', 'incomplete']),
+  "predictionEligibility": zod.boolean(),
+  "consumerAvailability": zod.string().nullable(),
+  "causes": zod.array(zod.string()),
+  "phase7UsedForValidationOnly": zod.boolean()
+}))
+})
+
+
+/**
  * Requires authenticated administrator access. The optional featureVersion pregame-v4-personnel-context creates additive rows from pregame-v3 and never overwrites v3. Never trains or scores a betting model.
  * @summary Build an immutable version of historical pregame features
  */

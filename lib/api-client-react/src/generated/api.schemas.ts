@@ -791,6 +791,91 @@ export interface PregameFeatureAuditRow {
   unavailableReason?: string | null;
 }
 
+export type LiveModelInputIntegrityAuditModelSchemaStatus = typeof LiveModelInputIntegrityAuditModelSchemaStatus[keyof typeof LiveModelInputIntegrityAuditModelSchemaStatus];
+
+
+export const LiveModelInputIntegrityAuditModelSchemaStatus = {
+  valid: 'valid',
+  invalid: 'invalid',
+} as const;
+
+export type LiveModelInputIntegrityAuditProductionModelsItem = { [key: string]: unknown };
+
+export type LiveModelInputIntegrityAuditModelLifecycleEvidenceItem = {
+  family: string;
+  modelVersion: string;
+  trainedAt: string;
+  promotedAt: string;
+  immutableArtifactAvailable: boolean;
+};
+
+export type LiveModelInputIntegrityRecordInputQualityStatus = typeof LiveModelInputIntegrityRecordInputQualityStatus[keyof typeof LiveModelInputIntegrityRecordInputQualityStatus];
+
+
+export const LiveModelInputIntegrityRecordInputQualityStatus = {
+  ready: 'ready',
+  incomplete: 'incomplete',
+} as const;
+
+export type LiveModelInputIntegrityRecordModelsItem = { [key: string]: unknown };
+
+export type LiveModelInputIntegrityRecordMissingInputsItem = { [key: string]: unknown };
+
+export type LiveModelInputIntegrityRecordSourceEvidenceItem = { [key: string]: unknown };
+
+export type LiveModelInputIntegrityRecordTeamsItem = { [key: string]: unknown };
+
+export interface LiveModelInputIntegrityRecord {
+  gameId: string;
+  season: number;
+  week: number;
+  kickoffTime: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  /** @nullable */
+  snapshotId: number | null;
+  featureVersion: string;
+  models: LiveModelInputIntegrityRecordModelsItem[];
+  vectorFeatureNames: string[];
+  /** @nullable */
+  vector: (number | null)[] | null;
+  requiredCount: number;
+  populatedCount: number;
+  missingCount: number;
+  legitimateZeroCount: number;
+  formerlyMissingZeroCount: number;
+  missingInputs: LiveModelInputIntegrityRecordMissingInputsItem[];
+  rowIdentityValid: boolean;
+  sourceEvidence: LiveModelInputIntegrityRecordSourceEvidenceItem[];
+  teams: LiveModelInputIntegrityRecordTeamsItem[];
+  inputQualityStatus: LiveModelInputIntegrityRecordInputQualityStatus;
+  predictionEligibility: boolean;
+  /** @nullable */
+  consumerAvailability: string | null;
+  causes: string[];
+  phase7UsedForValidationOnly: boolean;
+  [key: string]: unknown;
+ }
+
+export interface LiveModelInputIntegrityAudit {
+  generatedAt: string;
+  featureVersion: string;
+  modelSchemaStatus: LiveModelInputIntegrityAuditModelSchemaStatus;
+  productionModels: LiveModelInputIntegrityAuditProductionModelsItem[];
+  selectedFeatureNames: string[];
+  vectorFeatureNames: string[];
+  upcomingGames: number;
+  trustworthyUpcomingPredictions: boolean;
+  inputReadyGames: number;
+  eligibleGames: number;
+  incompleteGames: number;
+  distinctEligibleVectors: number;
+  /** @nullable */
+  vectorsDiffer: boolean | null;
+  modelLifecycleEvidence: LiveModelInputIntegrityAuditModelLifecycleEvidenceItem[];
+  records: LiveModelInputIntegrityRecord[];
+}
+
 export type PersonnelContextVersion = typeof PersonnelContextVersion[keyof typeof PersonnelContextVersion];
 
 

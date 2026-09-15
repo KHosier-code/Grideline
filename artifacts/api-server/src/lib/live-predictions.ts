@@ -15,17 +15,20 @@ import {
 } from "@workspace/db";
 import { safeNoVigProbabilities, validatePredictionOutputs } from "./prediction-validation";
 import {
-  loadExamples,
+  isFittedModelArtifact,
   mean,
-  modelFor,
+  PHASE6_VECTOR_FEATURE_NAMES,
+  PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+  predictFittedModelArtifact,
   sourceFeatureNames,
-  standardize,
+  vectorSchemaFingerprint,
   type Algorithm,
-  type Example,
+  type FittedModelArtifact,
   type Family,
   type SamplePolicy,
 } from "./modeling";
 import { PREGAME_FEATURE_VERSION } from "./features";
+import { getPersonnelContextForGame } from "./personnel-context";
 
 type ProductionModel = {
   family: Family;
@@ -37,6 +40,10 @@ type ProductionModel = {
   recencyWeighting: string;
   trainingCutoff: string;
   promotedAt: Date;
+  vectorFeatureNames: string[];
+  vectorSchemaFingerprint: string | null;
+  modelArtifact: FittedModelArtifact | null;
+  trainedAt: Date;
 };
 
 type Quote = {
@@ -206,13 +213,37 @@ async function productionModels() {
       recencyWeighting: run.recencyWeighting,
       trainingCutoff: promotion.trainingCutoff,
       promotedAt: promotion.promotedAt,
+      vectorFeatureNames: Array.isArray(run.vectorFeatureNames) ? run.vectorFeatureNames : [],
+      vectorSchemaFingerprint: run.vectorSchemaFingerprint,
+      modelArtifact: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact : null,
+      trainedAt: run.trainedAt,
     });
   }
   return models;
 }
 
-function targetFor(family: Family, example: Example) {
-  return family === "spread" ? example.margin : family === "totals" ? example.total : example.homeWin;
+export function sharedProductionFeatureVersion(models: Array<{ featureVersion: string }>) {
+  const versions = [...new Set(models.map((model) => model.featureVersion))];
+  return models.length === 3 && versions.length === 1 ? versions[0] : null;
+}
+
+function sharedProductionSchema(models: ProductionModel[]) {
+  const featureVersion = sharedProductionFeatureVersion(models);
+  if (!featureVersion) return null;
+  const names = models[0]?.vectorFeatureNames ?? [];
+  const fingerprint = models[0]?.vectorSchemaFingerprint ?? null;
+  const exactNames = JSON.stringify(names);
+  if (
+    exactNames !== JSON.stringify(PHASE6_VECTOR_FEATURE_NAMES)
+    || fingerprint !== PHASE6_VECTOR_SCHEMA_FINGERPRINT
+    || vectorSchemaFingerprint(names) !== fingerprint
+    || models.some((model) =>
+      JSON.stringify(model.vectorFeatureNames) !== exactNames
+      || model.vectorSchemaFingerprint !== fingerprint
+      || !model.modelArtifact
+      || model.modelArtifact.algorithm !== model.algorithm)
+  ) return null;
+  return { featureVersion, names, fingerprint };
 }
 
 export function isValidPredictionSnapshot(snapshot: {
@@ -239,15 +270,86 @@ export function hasVerifiedPredictionInputs(snapshot: {
   inputFeatureCount: number | null;
   inputMissingFeatureCount: number | null;
 }) {
-  return Number.isInteger(snapshot.inputFeatureCount) &&
-    snapshot.inputFeatureCount! > 0 &&
+  return snapshot.inputFeatureCount === PHASE6_PRODUCTION_VECTOR_WIDTH &&
     snapshot.inputMissingFeatureCount === 0;
 }
 
 export function isEligiblePredictionSnapshot(
-  snapshot: Parameters<typeof isValidPredictionSnapshot>[0] & Parameters<typeof hasVerifiedPredictionInputs>[0],
+  snapshot: Parameters<typeof isValidPredictionSnapshot>[0] & Parameters<typeof hasVerifiedPredictionInputs>[0] & {
+    gameId: string;
+    predictionTimestamp: Date;
+    kickoffTime: Date | null;
+    snapshotKey: string;
+    spreadModelVersion: string | null;
+    moneylineModelVersion: string | null;
+    totalsModelVersion: string | null;
+    inputVector: number[] | null;
+    vectorFeatureNames: string[] | null;
+    vectorSchemaFingerprint: string | null;
+    inputSourceEvidence: Record<string, unknown> | null;
+  },
 ) {
-  return isValidPredictionSnapshot(snapshot) && hasVerifiedPredictionInputs(snapshot);
+  return isValidPredictionSnapshot(snapshot)
+    && hasVerifiedPredictionInputs(snapshot)
+    && Boolean(snapshot.spreadModelVersion && snapshot.moneylineModelVersion && snapshot.totalsModelVersion)
+    && Array.isArray(snapshot.inputVector)
+    && snapshot.inputVector.length === PHASE6_PRODUCTION_VECTOR_WIDTH
+    && snapshot.inputVector.every((value) => typeof value === "number" && Number.isFinite(value))
+    && JSON.stringify(snapshot.vectorFeatureNames) === JSON.stringify(PHASE6_VECTOR_FEATURE_NAMES)
+    && snapshot.vectorSchemaFingerprint === PHASE6_VECTOR_SCHEMA_FINGERPRINT
+    && snapshotEvidenceMatchesVector(snapshot)
+    && snapshot.snapshotKey.endsWith(`:input-integrity-v3:${PHASE6_VECTOR_SCHEMA_FINGERPRINT}`);
+}
+
+function snapshotEvidenceMatchesVector(snapshot: {
+  gameId: string;
+  predictionTimestamp: Date;
+  kickoffTime: Date | null;
+  inputVector: number[] | null;
+  inputSourceEvidence: Record<string, unknown> | null;
+}) {
+  if (!snapshot.kickoffTime || !Array.isArray(snapshot.inputVector)) return false;
+  const evidenceRows = (snapshot.inputSourceEvidence as { rows?: unknown[] } | null)?.rows;
+  if (!Array.isArray(evidenceRows) || evidenceRows.length !== 2) return false;
+  const rows = evidenceRows.filter((row): row is Record<string, unknown> => Boolean(row && typeof row === "object"));
+  const home = rows.find((row) => row.isHome === true);
+  const away = rows.find((row) => row.isHome === false);
+  if (!home || !away ||
+      home.gameId !== snapshot.gameId || away.gameId !== snapshot.gameId ||
+      typeof home.teamId !== "string" || typeof away.teamId !== "string" ||
+      home.teamId === away.teamId ||
+      home.opponentTeamId !== away.teamId || away.opponentTeamId !== home.teamId) return false;
+  const kickoff = snapshot.kickoffTime.getTime();
+  const predictionTimestamp = snapshot.predictionTimestamp.getTime();
+  for (const row of [home, away]) {
+    const sourceCutoff = typeof row.sourceCutoff === "string" ? Date.parse(row.sourceCutoff) : Number.NaN;
+    const generatedAt = typeof row.generatedAt === "string" ? Date.parse(row.generatedAt) : Number.NaN;
+    if (!Number.isFinite(sourceCutoff) || !Number.isFinite(generatedAt) ||
+        sourceCutoff >= kickoff || sourceCutoff > predictionTimestamp ||
+        generatedAt >= kickoff || generatedAt > predictionTimestamp) return false;
+  }
+  const homeValues = home.selectedValues;
+  const awayValues = away.selectedValues;
+  if (!homeValues || typeof homeValues !== "object" || !awayValues || typeof awayValues !== "object") return false;
+  const differences: number[] = [];
+  for (const name of PHASE6_VECTOR_FEATURE_NAMES.slice(0, -3)) {
+    const homeValue = (homeValues as Record<string, unknown>)[name];
+    const awayValue = (awayValues as Record<string, unknown>)[name];
+    if (typeof homeValue !== "number" || !Number.isFinite(homeValue) ||
+        typeof awayValue !== "number" || !Number.isFinite(awayValue)) return false;
+    differences.push(homeValue - awayValue);
+  }
+  if (typeof home.lowSample !== "boolean" || typeof away.lowSample !== "boolean" ||
+      typeof home.qbDataConfidence !== "number" || !Number.isFinite(home.qbDataConfidence) ||
+      typeof away.qbDataConfidence !== "number" || !Number.isFinite(away.qbDataConfidence)) return false;
+  const reconstructed = [
+    ...differences,
+    home.lowSample ? 1 : 0,
+    away.lowSample ? 1 : 0,
+    home.qbDataConfidence - away.qbDataConfidence,
+  ];
+  return reconstructed.length === snapshot.inputVector.length
+    && reconstructed.every((value, index) => Math.abs(value - snapshot.inputVector![index]) <= 1e-12);
 }
 
 export function filterEligiblePredictionRows<
@@ -270,23 +372,10 @@ type PredictionResult = {
   diagnostics?: Record<string, unknown>;
 };
 
-function predictWithModel(model: ProductionModel, examples: Example[], vector: number[]): PredictionResult {
-  const baseRows = examples.filter((example) =>
-    model.trainingSeasons.includes(example.season) &&
-    (model.samplePolicy === "include_low_sample" || !example.lowSample),
-  );
-  const latestSeason = baseRows.length ? Math.max(...baseRows.map((row) => row.season)) : null;
-  const rows = !latestSeason || model.recencyWeighting === "none"
-    ? baseRows
-    : [...baseRows, ...baseRows.filter((row) => row.season === latestSeason).slice(0, Math.ceil(baseRows.filter((row) => row.season === latestSeason).length * (model.recencyWeighting === "recent_2x" ? 1 : 0.5)))];
-  if (rows.length < 20) return { value: null, reason: "insufficient_training_rows", diagnostics: { rows: rows.length } };
-  const scaled = standardize(rows.map((row) => row.x), [vector]);
-  if (!scaled.train.flat().every(Number.isFinite) || !scaled.test[0]?.every(Number.isFinite)) {
-    return { value: null, reason: "nonfinite_scaled_features" };
-  }
-  const fitted = modelFor(model.algorithm, scaled.train, rows.map((row) => targetFor(model.family, row)), model.family === "moneyline");
-  const value = fitted.predict(scaled.test[0]);
-  if (!Number.isFinite(value)) return { value: null, reason: "nonfinite_model_output" };
+function predictWithModel(model: ProductionModel, vector: number[]): PredictionResult {
+  if (!model.modelArtifact) return { value: null, reason: "immutable_model_artifact_unavailable" };
+  const value = predictFittedModelArtifact(model.modelArtifact, vector);
+  if (value === null) return { value: null, reason: "invalid_persisted_model_artifact_or_input" };
   const prediction = model.family === "moneyline" ? clamp(value) : value;
   return Number.isFinite(prediction) ? { value: prediction } : { value: null, reason: "nonfinite_clamped_output" };
 }
@@ -301,28 +390,85 @@ function snapshotLabel(now: Date, kickoff: Date) {
   return "final-pre-kickoff";
 }
 
-export function vectorForRows(rows: Array<{ gameId: string; isHome: boolean; features: PregameFeatureValues; lowSample: boolean }>, names: string[]) {
+type VectorRow = {
+  gameId: string;
+  teamId?: string;
+  opponentTeamId?: string;
+  isHome: boolean;
+  features: PregameFeatureValues;
+  featureAudit?: Record<string, { unavailableReason?: string; sampleSize?: number; quality?: string }>;
+  lowSample: boolean;
+  sourceCutoff?: Date;
+  generatedAt?: Date;
+};
+
+const PHASE6_PRODUCTION_VECTOR_WIDTH = PHASE6_VECTOR_FEATURE_NAMES.length;
+
+export function vectorForRows(rows: VectorRow[], names: string[]) {
   const home = rows.find((row) => row.isHome);
   const away = rows.find((row) => !row.isHome);
   if (!home || !away) return null;
-  let inputMissingFeatureCount = 0;
-  const x = names.map((name) => {
+  const missingFeatures: Array<{ name: string; side: "home" | "away"; reason: string }> = [];
+  const selectedValues = names.map((name) => {
     const homeValue = home.features[name];
     const awayValue = away.features[name];
-    if (typeof homeValue === "number" && Number.isFinite(homeValue) && typeof awayValue === "number" && Number.isFinite(awayValue)) {
-      return homeValue - awayValue;
+    const homeValid = typeof homeValue === "number" && Number.isFinite(homeValue);
+    const awayValid = typeof awayValue === "number" && Number.isFinite(awayValue);
+    if (!homeValid) {
+      missingFeatures.push({
+        name,
+        side: "home",
+        reason: home.featureAudit?.[name]?.unavailableReason ?? "Selected feature is missing or non-finite in the home pregame row.",
+      });
     }
-    inputMissingFeatureCount += 1;
-    return 0;
+    if (!awayValid) {
+      missingFeatures.push({
+        name,
+        side: "away",
+        reason: away.featureAudit?.[name]?.unavailableReason ?? "Selected feature is missing or non-finite in the away pregame row.",
+      });
+    }
+    if (!homeValid || !awayValid) return null;
+    return homeValue - awayValue;
   });
-  const homeQb = typeof home.features.qb_data_confidence === "number" && Number.isFinite(home.features.qb_data_confidence) ? home.features.qb_data_confidence : 0;
-  const awayQb = typeof away.features.qb_data_confidence === "number" && Number.isFinite(away.features.qb_data_confidence) ? away.features.qb_data_confidence : 0;
+  const qbValue = (row: VectorRow, side: "home" | "away") => {
+    const value = row.features.qb_data_confidence;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    missingFeatures.push({
+      name: "qb_data_confidence",
+      side,
+      reason: row.featureAudit?.qb_data_confidence?.unavailableReason ?? `Quarterback confidence is unavailable for the ${side} team.`,
+    });
+    return null;
+  };
+  const homeQb = qbValue(home, "home");
+  const awayQb = qbValue(away, "away");
+  const values = [
+    ...selectedValues,
+    home.lowSample ? 1 : 0,
+    away.lowSample ? 1 : 0,
+    homeQb === null || awayQb === null ? null : homeQb - awayQb,
+  ];
+  const inputFeatureCount = names.length + 3;
+  const inputMissingFeatureCount = values.filter((value) => value === null).length;
+  const legitimateZeroCount = values.filter((value) => value === 0).length;
   return {
-    x: [...x, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb],
+    x: inputMissingFeatureCount === 0 ? values as number[] : null,
+    values,
     lowSample: home.lowSample || away.lowSample,
-    qbConfidence: (homeQb + awayQb) / 2,
-    inputFeatureCount: names.length,
+    qbConfidence: homeQb === null || awayQb === null ? null : (homeQb + awayQb) / 2,
+    qb: {
+      home: { confidence: homeQb, unavailableReason: missingFeatures.find((item) => item.name === "qb_data_confidence" && item.side === "home")?.reason ?? null },
+      away: { confidence: awayQb, unavailableReason: missingFeatures.find((item) => item.name === "qb_data_confidence" && item.side === "away")?.reason ?? null },
+    },
+    inputFeatureCount,
     inputMissingFeatureCount,
+    inputPopulatedFeatureCount: inputFeatureCount - inputMissingFeatureCount,
+    legitimateZeroCount,
+    formerlyMissingZeroCount: inputMissingFeatureCount,
+    missingFeatures,
   };
 }
 
@@ -343,13 +489,22 @@ export async function generateLivePredictions(now = new Date()) {
       snapshotsCreated: 0,
     };
   }
-  const featureVersion = [...models.values()][0].featureVersion;
-  const [examplesResult, featureRows, games] = await Promise.all([
-    loadExamples(featureVersion),
+  const productionSchema = sharedProductionSchema([...models.values()]);
+  if (!productionSchema) {
+    return {
+      status: "not_configured",
+      reason: "Active production model families require one exact persisted schema and immutable fitted artifact.",
+      productionFamilies: [...models.keys()],
+      snapshotsCreated: 0,
+    };
+  }
+  const { featureVersion } = productionSchema;
+  const [featureRows, games] = await Promise.all([
     db.select().from(pregameTeamFeaturesTable).where(eq(pregameTeamFeaturesTable.featureVersion, featureVersion)),
     db.select().from(gamesTable).where(sql`${gamesTable.kickoffTime} is not null`).orderBy(asc(gamesTable.kickoffTime)),
   ]);
-  const names = examplesResult.names;
+  const names = productionSchema.names;
+  const selectedFeatureNames = names.slice(0, -3);
   const rowsByGame = new Map<string, typeof featureRows>();
   for (const row of featureRows) rowsByGame.set(row.gameId, [...(rowsByGame.get(row.gameId) ?? []), row]);
   const teamRows = await db.select().from(teamsTable);
@@ -363,18 +518,30 @@ export async function generateLivePredictions(now = new Date()) {
   const considered = [];
   for (const game of games.filter((candidate) => isFutureGame(candidate, now))) {
     if (!game.kickoffTime) continue;
-    const vector = vectorForRows(rowsByGame.get(game.gameId) ?? [], names);
+    const vector = vectorForRows(rowsByGame.get(game.gameId) ?? [], selectedFeatureNames);
     if (!vector) {
       skippedNoVector += 1;
       continue;
     }
-    if (vector.inputFeatureCount === 0 || vector.inputMissingFeatureCount > 0) {
+    const inputEligibility = evaluateProductionInputEligibility(
+      game,
+      rowsByGame.get(game.gameId) ?? [],
+      vector,
+      true,
+      now,
+    );
+    if (!inputEligibility.eligible) {
       skippedIncompleteInputs += 1;
       continue;
     }
-    const marginResult = predictWithModel(models.get("spread")!, examplesResult.examples, vector.x);
-    const totalResult = predictWithModel(models.get("totals")!, examplesResult.examples, vector.x);
-    const homeProbabilityResult = predictWithModel(models.get("moneyline")!, examplesResult.examples, vector.x);
+    if (!vector.x) {
+      skippedIncompleteInputs += 1;
+      continue;
+    }
+    const inputVector = vector.x;
+    const marginResult = predictWithModel(models.get("spread")!, inputVector);
+    const totalResult = predictWithModel(models.get("totals")!, inputVector);
+    const homeProbabilityResult = predictWithModel(models.get("moneyline")!, inputVector);
     const margin = marginResult.value;
     const total = totalResult.value;
     const homeProbability = homeProbabilityResult.value;
@@ -402,8 +569,8 @@ export async function generateLivePredictions(now = new Date()) {
       })));
       if (!firstNonFinite) firstNonFinite = {
         gameId: game.gameId,
-        vectorLength: vector.x.length,
-        finiteVector: vector.x.every(Number.isFinite),
+        vectorLength: inputVector.length,
+        finiteVector: inputVector.every(Number.isFinite),
         failures: validationFailures,
         modelResults: { spread: marginResult, totals: totalResult, moneyline: homeProbabilityResult },
       };
@@ -420,8 +587,23 @@ export async function generateLivePredictions(now = new Date()) {
       abbreviation: home.abbreviation,
     });
     const label = snapshotLabel(now, game.kickoffTime!);
+    const inputSourceEvidence = {
+      rows: (rowsByGame.get(game.gameId) ?? []).map((row) => ({
+        gameId: row.gameId,
+        teamId: row.teamId,
+        opponentTeamId: row.opponentTeamId,
+        isHome: row.isHome,
+        sourceCutoff: row.sourceCutoff.toISOString(),
+        generatedAt: row.generatedAt.toISOString(),
+        lowSample: row.lowSample,
+        selectedValues: Object.fromEntries(selectedFeatureNames.map((name) => [name, row.features[name] ?? null])),
+        selectedAudit: Object.fromEntries(selectedFeatureNames.map((name) => [name, row.featureAudit[name] ?? null])),
+        qbDataConfidence: row.features.qb_data_confidence ?? null,
+        qbDataConfidenceAudit: row.featureAudit.qb_data_confidence ?? null,
+      })),
+    };
     const insert = await db.insert(predictionSnapshotsTable).values({
-      snapshotKey: `${game.gameId}:${label}:${models.get("spread")!.modelVersion}:${models.get("moneyline")!.modelVersion}:${models.get("totals")!.modelVersion}`,
+      snapshotKey: `${game.gameId}:${label}:${models.get("spread")!.modelVersion}:${models.get("moneyline")!.modelVersion}:${models.get("totals")!.modelVersion}:input-integrity-v3:${productionSchema.fingerprint}`,
       gameId: game.gameId,
       predictionTimestamp: now,
       snapshotLabel: label,
@@ -443,6 +625,10 @@ export async function generateLivePredictions(now = new Date()) {
       qbConfidence: vector.qbConfidence,
       inputFeatureCount: vector.inputFeatureCount,
       inputMissingFeatureCount: vector.inputMissingFeatureCount,
+      inputVector,
+      vectorFeatureNames: names,
+      vectorSchemaFingerprint: productionSchema.fingerprint,
+      inputSourceEvidence,
     }).onConflictDoNothing({ target: predictionSnapshotsTable.snapshotKey }).returning({ id: predictionSnapshotsTable.id });
     if (insert.length) snapshotsCreated += 1;
     considered.push(game.gameId);
@@ -463,6 +649,256 @@ export async function generateLivePredictions(now = new Date()) {
       featureVersion: model.featureVersion,
       trainingCutoff: model.trainingCutoff,
     })),
+  };
+}
+
+function upcomingInputCause(
+  game: typeof gamesTable.$inferSelect,
+  rows: VectorRow[],
+  featureVersion: string,
+  vector: ReturnType<typeof vectorForRows>,
+  now: Date,
+) {
+  const reasons: string[] = [];
+  const expected = [
+    { teamId: game.homeTeamId, opponentTeamId: game.awayTeamId, isHome: true },
+    { teamId: game.awayTeamId, opponentTeamId: game.homeTeamId, isHome: false },
+  ];
+  if (!rows.length) reasons.push(`No ${featureVersion} rows exist for this scheduled game; the future-game feature build has not covered it.`);
+  for (const side of expected) {
+    const row = rows.find((candidate) => candidate.teamId === side.teamId);
+    if (!row) {
+      reasons.push(`Missing ${side.isHome ? "home" : "away"} pregame row for scheduled team ${side.teamId}; check schedule-to-feature team identifiers.`);
+      continue;
+    }
+    if (row.opponentTeamId !== side.opponentTeamId || row.isHome !== side.isHome) {
+      reasons.push(`Pregame row identity does not match the scheduled ${side.isHome ? "home" : "away"} team/opponent pairing.`);
+    }
+    if (!row.sourceCutoff) {
+      reasons.push("Pregame source cutoff is unavailable.");
+    } else if (game.kickoffTime && row.sourceCutoff >= game.kickoffTime) {
+      reasons.push("Pregame source cutoff is not strictly before kickoff.");
+    } else if (row.sourceCutoff > now) {
+      reasons.push("Pregame source cutoff is later than the prediction or audit time.");
+    }
+    if (!row.generatedAt) {
+      reasons.push("Pregame row generation timestamp is unavailable.");
+    } else if (row.generatedAt > now) {
+      reasons.push("Pregame row generation timestamp is inconsistent with the upcoming-game audit time.");
+    }
+  }
+  reasons.push(...(vector?.missingFeatures ?? []).map((item) => `${item.side} ${item.name}: ${item.reason}`));
+  return [...new Set(reasons)];
+}
+
+export function evaluateProductionInputEligibility(
+  game: typeof gamesTable.$inferSelect,
+  rows: VectorRow[],
+  vector: ReturnType<typeof vectorForRows>,
+  schemaConsistent: boolean,
+  now: Date,
+) {
+  const causes = upcomingInputCause(game, rows, game.kickoffTime ? "active feature version" : "unknown feature version", vector, now);
+  if (!schemaConsistent) causes.unshift("Active production model families do not share one complete feature schema/version.");
+  const identityValid = rows.length === 2
+    && rows.some((row) => row.teamId === game.homeTeamId && row.opponentTeamId === game.awayTeamId && row.isHome)
+    && rows.some((row) => row.teamId === game.awayTeamId && row.opponentTeamId === game.homeTeamId && !row.isHome);
+  const cutoffValid = rows.length === 2 && rows.every((row) =>
+    row.sourceCutoff instanceof Date
+    && Number.isFinite(row.sourceCutoff.getTime())
+    && Boolean(game.kickoffTime && row.sourceCutoff < game.kickoffTime)
+    && row.sourceCutoff <= now
+    && row.generatedAt instanceof Date
+    && Number.isFinite(row.generatedAt.getTime())
+    && row.generatedAt <= now,
+  );
+  const vectorValid = Boolean(
+    vector?.x
+    && vector.inputFeatureCount === PHASE6_PRODUCTION_VECTOR_WIDTH
+    && vector.inputMissingFeatureCount === 0
+    && vector.x.length === PHASE6_PRODUCTION_VECTOR_WIDTH
+    && vector.x.every(Number.isFinite),
+  );
+  return {
+    eligible: schemaConsistent && identityValid && cutoffValid && vectorValid,
+    identityValid,
+    cutoffValid,
+    vectorValid,
+    causes: [...new Set(causes)],
+  };
+}
+
+export function snapshotMatchesProductionModels(
+  snapshot: typeof predictionSnapshotsTable.$inferSelect,
+  models: Map<Family, ProductionModel>,
+) {
+  const schema = sharedProductionSchema([...models.values()]);
+  return models.size === 3
+    && schema !== null
+    && snapshot.featureVersion === schema.featureVersion
+    && snapshot.spreadModelVersion === models.get("spread")?.modelVersion
+    && snapshot.moneylineModelVersion === models.get("moneyline")?.modelVersion
+    && snapshot.totalsModelVersion === models.get("totals")?.modelVersion
+    && snapshot.inputFeatureCount === PHASE6_PRODUCTION_VECTOR_WIDTH
+    && Array.isArray(snapshot.inputVector)
+    && snapshot.inputVector.length === schema.names.length
+    && snapshot.inputVector.every((value) => typeof value === "number" && Number.isFinite(value))
+    && JSON.stringify(snapshot.vectorFeatureNames) === JSON.stringify(schema.names)
+    && snapshot.vectorSchemaFingerprint === schema.fingerprint
+    && isEligiblePredictionSnapshot(snapshot)
+    && snapshot.snapshotKey.endsWith(`:input-integrity-v3:${schema.fingerprint}`);
+}
+
+export function immutableAuditVector(
+  snapshot: { inputVector: number[] | null } | undefined,
+  currentVector: Array<number | null> | null,
+) {
+  return Array.isArray(snapshot?.inputVector) ? [...snapshot.inputVector] : currentVector;
+}
+
+export async function getLiveModelInputIntegrityAudit(now = new Date()) {
+  const models = await productionModels();
+  const modelList = [...models.values()];
+  const productionSchema = sharedProductionSchema(modelList);
+  const schemaConsistent = productionSchema !== null;
+  const featureVersion = productionSchema?.featureVersion ?? modelList[0]?.featureVersion ?? PREGAME_FEATURE_VERSION;
+  const [featureRows, games, teams, snapshots] = await Promise.all([
+    db.select().from(pregameTeamFeaturesTable).where(eq(pregameTeamFeaturesTable.featureVersion, featureVersion)),
+    db.select().from(gamesTable).where(sql`${gamesTable.kickoffTime} is not null`).orderBy(asc(gamesTable.kickoffTime)),
+    db.select().from(teamsTable),
+    db.select().from(predictionSnapshotsTable).orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id)),
+  ]);
+  const diagnosticSourceNames = sourceFeatureNames(featureRows);
+  const vectorFeatureNames = productionSchema?.names ?? [
+    ...diagnosticSourceNames,
+    "home_low_sample",
+    "away_low_sample",
+    "qb_confidence_difference",
+  ];
+  const selectedFeatureNames = vectorFeatureNames.slice(0, -3);
+  const rowsByGame = new Map<string, typeof featureRows>();
+  for (const row of featureRows) rowsByGame.set(row.gameId, [...(rowsByGame.get(row.gameId) ?? []), row]);
+  const teamById = new Map(teams.map((team) => [team.teamId, team]));
+  const latestSnapshot = new Map<string, typeof snapshots[number]>();
+  for (const snapshot of snapshots) {
+    if (isValidPredictionSnapshot(snapshot) && hasVerifiedPredictionInputs(snapshot) && snapshotMatchesProductionModels(snapshot, models) && !latestSnapshot.has(snapshot.gameId)) {
+      latestSnapshot.set(snapshot.gameId, snapshot);
+    }
+  }
+  const upcoming = games.filter((game) => isFutureGame(game, now));
+  const records = [];
+  for (const game of upcoming) {
+    const rows = rowsByGame.get(game.gameId) ?? [];
+    const vector = vectorForRows(rows, selectedFeatureNames);
+    const context = await getPersonnelContextForGame(game.gameId, now);
+    const eligibility = evaluateProductionInputEligibility(game, rows, vector, schemaConsistent, now);
+    const causes = eligibility.causes.map((cause) => cause.replace("active feature version", featureVersion));
+    const snapshot = latestSnapshot.get(game.gameId);
+    const inputsReady = eligibility.eligible;
+    const eligible = Boolean(snapshot);
+    if (inputsReady && !snapshot) causes.push("Current inputs are ready, but no valid current-model snapshot is available.");
+    const teamAudit = (teamId: string, side: "home" | "away") => {
+      const row = rows.find((candidate) => candidate.teamId === teamId);
+      const personnel = context?.teams[teamId];
+      const qb = personnel?.qb;
+      return {
+        side,
+        teamId,
+        teamName: teamById.get(teamId)?.teamName ?? null,
+        abbreviation: teamById.get(teamId)?.abbreviation ?? null,
+        pregameRow: row ? {
+          opponentTeamId: row.opponentTeamId,
+          isHome: row.isHome,
+          sourceCutoff: row.sourceCutoff.toISOString(),
+          generatedAt: row.generatedAt.toISOString(),
+          lowSample: row.lowSample,
+        } : null,
+        phase6QbConfidence: vector?.qb[side].confidence ?? null,
+        phase6QbUnavailableReason: vector?.qb[side].unavailableReason ?? null,
+        projectedStarter: qb?.projectedStarter ? {
+          playerId: qb.projectedStarter.playerId,
+          playerName: qb.projectedStarter.playerName,
+          source: qb.projectedStarter.source,
+          classification: qb.projectedStarter.classification,
+          confidence: qb.projectedStarter.confidence,
+          evidence: qb.projectedStarter.evidence,
+          unavailableReason: qb.projectedStarter.unavailableReason,
+        } : null,
+        phase7QbCertainty: qb?.projectedStarter ? qb.starterCertainty : null,
+        phase7QbUnavailableReason: qb?.projectedStarter ? null : qb?.unavailableReasons[0] ?? "Phase 7 projected-starter evidence is unavailable.",
+        personnelCompleteness: personnel?.personnelCompleteness ?? null,
+        sampleQuality: context?.dataConfidence.components.sampleQuality ?? null,
+      };
+    };
+    records.push({
+      gameId: game.gameId,
+      season: game.season,
+      week: game.week,
+      kickoffTime: game.kickoffTime!.toISOString(),
+      homeTeamId: game.homeTeamId,
+      awayTeamId: game.awayTeamId,
+      snapshotId: snapshot?.id ?? null,
+      featureVersion,
+      models: modelList.map((model) => ({ family: model.family, modelVersion: model.modelVersion, algorithm: model.algorithm, featureVersion: model.featureVersion })),
+      vectorFeatureNames,
+      vector: immutableAuditVector(snapshot, vector?.values ?? null),
+      currentVector: vector?.values ?? null,
+      snapshotVector: snapshot?.inputVector ?? null,
+      vectorSchemaFingerprint: productionSchema?.fingerprint ?? null,
+      vectorProvenance: productionSchema ? "persisted_active_model_contract" : "diagnostic_only_unverified_legacy_contract",
+      snapshotInputSourceEvidence: snapshot?.inputSourceEvidence ?? null,
+      requiredCount: snapshot?.inputFeatureCount ?? vector?.inputFeatureCount ?? vectorFeatureNames.length,
+      populatedCount: snapshot
+        ? snapshot.inputFeatureCount - snapshot.inputMissingFeatureCount
+        : vector?.inputPopulatedFeatureCount ?? 0,
+      missingCount: snapshot?.inputMissingFeatureCount ?? vector?.inputMissingFeatureCount ?? vectorFeatureNames.length,
+      legitimateZeroCount: snapshot?.inputVector?.filter((value) => value === 0).length ?? vector?.legitimateZeroCount ?? 0,
+      formerlyMissingZeroCount: snapshot ? 0 : vector?.formerlyMissingZeroCount ?? vectorFeatureNames.length,
+      missingInputs: snapshot ? [] : vector?.missingFeatures ?? [],
+      rowIdentityValid: eligibility.identityValid,
+      sourceEvidence: (snapshot?.inputSourceEvidence as { rows?: unknown[] } | null)?.rows ?? rows.map((row) => ({
+        teamId: row.teamId,
+        sourceCutoff: row.sourceCutoff.toISOString(),
+        selectedFeatures: Object.fromEntries(selectedFeatureNames.map((name) => [name, row.featureAudit[name] ?? { value: row.features[name] ?? null }])),
+      })),
+      currentSourceEvidence: rows.map((row) => ({
+        teamId: row.teamId,
+        sourceCutoff: row.sourceCutoff.toISOString(),
+        selectedFeatures: Object.fromEntries(selectedFeatureNames.map((name) => [name, row.featureAudit[name] ?? { value: row.features[name] ?? null }])),
+      })),
+      teams: [teamAudit(game.homeTeamId, "home"), teamAudit(game.awayTeamId, "away")],
+      inputQualityStatus: inputsReady ? "ready" : "incomplete",
+      inputReadiness: inputsReady,
+      predictionEligibility: eligible,
+      consumerAvailability: eligible ? null : "Prediction pending — incomplete model inputs",
+      causes,
+      phase7UsedForValidationOnly: true,
+    });
+  }
+  const eligibleVectors = records.filter((record) => record.predictionEligibility && record.vector);
+  const vectorFingerprints = new Set(eligibleVectors.map((record) => JSON.stringify(record.vector)));
+  return {
+    generatedAt: now.toISOString(),
+    featureVersion,
+    modelSchemaStatus: schemaConsistent ? "valid" : "invalid",
+    productionModels: modelList.map((model) => ({ family: model.family, modelVersion: model.modelVersion, algorithm: model.algorithm, featureVersion: model.featureVersion })),
+    selectedFeatureNames,
+    vectorFeatureNames,
+    upcomingGames: records.length,
+    trustworthyUpcomingPredictions: records.length > 0 && records.every((record) => record.predictionEligibility),
+    inputReadyGames: records.filter((record) => record.inputReadiness).length,
+    eligibleGames: eligibleVectors.length,
+    incompleteGames: records.length - eligibleVectors.length,
+    distinctEligibleVectors: vectorFingerprints.size,
+    vectorsDiffer: eligibleVectors.length < 2 ? null : vectorFingerprints.size === eligibleVectors.length,
+    modelLifecycleEvidence: modelList.map((model) => ({
+      family: model.family,
+      modelVersion: model.modelVersion,
+      trainedAt: model.trainedAt.toISOString(),
+      promotedAt: model.promotedAt.toISOString(),
+      immutableArtifactAvailable: Boolean(model.modelArtifact),
+    })),
+    records,
   };
 }
 
@@ -723,12 +1159,15 @@ export async function getModelDriftMonitoring() {
 
 export async function getLivePredictionBoard() {
   const now = new Date();
+  const models = await productionModels();
   const rows = await db.select().from(predictionSnapshotsTable)
     .where(sql`${predictionSnapshotsTable.kickoffTime} > ${now}`)
     .orderBy(asc(predictionSnapshotsTable.kickoffTime), desc(predictionSnapshotsTable.predictionTimestamp));
   const latest = new Map<string, typeof rows[number]>();
   for (const row of rows) {
-    if (isEligiblePredictionSnapshot(row) && !latest.has(row.gameId)) latest.set(row.gameId, row);
+    const valid = [row.projectedMargin, row.projectedTotal, row.homeWinProbability, row.awayWinProbability]
+      .every((value) => typeof value === "number" && Number.isFinite(value));
+    if (valid && hasVerifiedPredictionInputs(row) && snapshotMatchesProductionModels(row, models) && !latest.has(row.gameId)) latest.set(row.gameId, row);
   }
   return [...latest.values()];
 }
@@ -738,6 +1177,23 @@ export async function getLatestValidPredictionSnapshots(
   options: { preKickoffOnly?: boolean; authoritativeGameKickoff?: boolean; maxRows?: number } = {},
 ) {
   if (!gameIds.length) return new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
+  const models = await productionModels();
+  const schema = sharedProductionSchema([...models.values()]);
+  if (!schema) return new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
+  const featureVersion = schema.featureVersion;
+  const productionConditions = [
+    eq(predictionSnapshotsTable.featureVersion, featureVersion),
+    eq(predictionSnapshotsTable.spreadModelVersion, models.get("spread")!.modelVersion),
+    eq(predictionSnapshotsTable.moneylineModelVersion, models.get("moneyline")!.modelVersion),
+    eq(predictionSnapshotsTable.totalsModelVersion, models.get("totals")!.modelVersion),
+    eq(predictionSnapshotsTable.inputFeatureCount, PHASE6_PRODUCTION_VECTOR_WIDTH),
+    eq(predictionSnapshotsTable.inputMissingFeatureCount, 0),
+    eq(predictionSnapshotsTable.vectorSchemaFingerprint, schema.fingerprint),
+    sql`${predictionSnapshotsTable.vectorFeatureNames} = ${JSON.stringify(schema.names)}::jsonb`,
+    sql`${predictionSnapshotsTable.inputVector} is not null`,
+    sql`${predictionSnapshotsTable.inputSourceEvidence} is not null`,
+    sql`${predictionSnapshotsTable.snapshotKey} like ${`%:input-integrity-v3:${schema.fingerprint}`}`,
+  ];
   if (options.authoritativeGameKickoff) {
     const rows = await db.selectDistinctOn(
       [predictionSnapshotsTable.gameId],
@@ -747,6 +1203,7 @@ export async function getLatestValidPredictionSnapshots(
       .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
       .where(and(
         inArray(predictionSnapshotsTable.gameId, gameIds),
+        ...productionConditions,
         sql`${predictionSnapshotsTable.predictionTimestamp} < ${gamesTable.kickoffTime}`,
         sql`${predictionSnapshotsTable.projectedHomeScore} is not null`,
         sql`${predictionSnapshotsTable.projectedAwayScore} is not null`,
@@ -760,8 +1217,6 @@ export async function getLatestValidPredictionSnapshots(
         sql`abs(${predictionSnapshotsTable.homeWinProbability} + ${predictionSnapshotsTable.awayWinProbability} - 1) < 0.000001`,
         sql`abs(${predictionSnapshotsTable.projectedHomeScore} - ${predictionSnapshotsTable.projectedAwayScore} - ${predictionSnapshotsTable.projectedMargin}) < 0.000001`,
         sql`abs(${predictionSnapshotsTable.projectedHomeScore} + ${predictionSnapshotsTable.projectedAwayScore} - ${predictionSnapshotsTable.projectedTotal}) < 0.000001`,
-        sql`${predictionSnapshotsTable.inputFeatureCount} > 0`,
-        eq(predictionSnapshotsTable.inputMissingFeatureCount, 0),
       ))
       .orderBy(
         predictionSnapshotsTable.gameId,
@@ -771,11 +1226,12 @@ export async function getLatestValidPredictionSnapshots(
       .limit(options.maxRows ?? gameIds.length);
     return new Map(rows
       .map((row) => row.prediction)
-      .filter(isEligiblePredictionSnapshot)
+      .filter((snapshot) => isValidPredictionSnapshot(snapshot) && hasVerifiedPredictionInputs(snapshot) && snapshotMatchesProductionModels(snapshot, models))
       .map((snapshot) => [snapshot.gameId, snapshot]));
   }
   const conditions = [
     inArray(predictionSnapshotsTable.gameId, gameIds),
+    ...productionConditions,
     options.preKickoffOnly
       ? sql`${predictionSnapshotsTable.predictionTimestamp} < ${predictionSnapshotsTable.kickoffTime}`
       : undefined,
@@ -786,14 +1242,14 @@ export async function getLatestValidPredictionSnapshots(
   const rows = options.maxRows === undefined ? await query : await query.limit(options.maxRows);
   const latest = new Map<string, typeof rows[number]>();
   for (const row of rows) {
-    if (isEligiblePredictionSnapshot(row) && !latest.has(row.gameId)) latest.set(row.gameId, row);
+    if (isValidPredictionSnapshot(row) && hasVerifiedPredictionInputs(row) && snapshotMatchesProductionModels(row, models) && !latest.has(row.gameId)) latest.set(row.gameId, row);
   }
   return latest;
 }
 
 export async function getProductionModelStatus() {
   const models = await productionModels();
-  return models.size === 3 ? "available" as const : "not_trained" as const;
+  return sharedProductionSchema([...models.values()]) ? "available" as const : "not_trained" as const;
 }
 
 function predictionRecord(
@@ -959,27 +1415,19 @@ export async function getPredictionValidationFailures(limit = 50) {
 
 export async function generateWeeklyLearningReport(season: number, week: number) {
   const performance = await getPredictionPerformance({ season, week });
-  const queriedRows = await db.select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
+  const selectedRows = (await db.select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
     .from(predictionSnapshotsTable)
     .innerJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
     .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
-    .where(and(eq(gamesTable.season, season), eq(gamesTable.week, week)));
-  const rows = filterEligiblePredictionRows(queriedRows);
-  const misses = rows
+    .where(and(eq(gamesTable.season, season), eq(gamesTable.week, week))))
+    .filter((row) => isEligiblePredictionSnapshot(row.prediction));
+  const misses = selectedRows
     .sort((left, right) => Math.max(Math.abs(right.grade.marginError ?? 0), Math.abs(right.grade.totalError ?? 0)) - Math.max(Math.abs(left.grade.marginError ?? 0), Math.abs(left.grade.totalError ?? 0)))
     .slice(0, 5)
     .map((row) => ({ gameId: row.prediction.gameId, whyMiss: row.grade.whyMiss, projectedMargin: row.prediction.projectedMargin, actualMargin: row.grade.actualMargin, projectedTotal: row.prediction.projectedTotal, actualTotal: row.grade.actualTotal }));
-  const report = {
-    season,
-    week,
-    completedGames: rows.length,
-    performance,
-    misses,
-    inputProvenance: "verified",
-    generatedAt: new Date().toISOString(),
-  };
-  const narrative = rows.length
-    ? `Gridline graded ${rows.length} official prediction snapshot${rows.length === 1 ? "" : "s"} for ${season} week ${week}. ` +
+  const report = { season, week, completedGames: selectedRows.length, performance, misses, generatedAt: new Date().toISOString() };
+  const narrative = selectedRows.length
+    ? `Gridline graded ${selectedRows.length} official prediction snapshot${selectedRows.length === 1 ? "" : "s"} for ${season} week ${week}. ` +
       `Spread MAE was ${performance.byFamily.spread.mae === null ? "unavailable" : performance.byFamily.spread.mae.toFixed(2)} points; ` +
       `totals MAE was ${performance.byFamily.totals.mae === null ? "unavailable" : performance.byFamily.totals.mae.toFixed(2)} points; ` +
       `moneyline accuracy was ${typeof performance.byFamily.moneyline.accuracy === "number" ? `${(performance.byFamily.moneyline.accuracy * 100).toFixed(1)}%` : "unavailable"}. ` +
@@ -991,8 +1439,5 @@ export async function generateWeeklyLearningReport(season: number, week: number)
 }
 
 export async function getLatestLearningReports() {
-  return db.select().from(weeklyLearningReportsTable)
-    .where(sql`${weeklyLearningReportsTable.report}->>'inputProvenance' = 'verified'`)
-    .orderBy(desc(weeklyLearningReportsTable.generatedAt))
-    .limit(12);
+  return db.select().from(weeklyLearningReportsTable).orderBy(desc(weeklyLearningReportsTable.generatedAt)).limit(12);
 }
