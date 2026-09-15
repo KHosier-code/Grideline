@@ -2,22 +2,40 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createPromotionHandler } from "./models";
 import { PromotionSafetyGateError } from "../lib/promotion-safety-gate";
-import { PHASE6_VECTOR_FEATURE_NAMES, PHASE6_VECTOR_SCHEMA_FINGERPRINT } from "../lib/modeling";
+import {
+  artifactIdentityFor,
+  PHASE6_VECTOR_FEATURE_NAMES,
+  PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+  type FittedModelArtifact,
+} from "../lib/modeling";
 import { modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspace/db";
 
 type TrainingRun = typeof modelTrainingRunsTable.$inferSelect;
 type Promotion = typeof modelPromotionHistoryTable.$inferSelect;
-const modelArtifact = {
+const modelArtifact: FittedModelArtifact = {
   version: 1 as const,
   algorithm: "linear_regression",
   centers: Array(27).fill(0),
   scales: Array(27).fill(1),
   model: { kind: "linear", coefficients: Array(28).fill(0) },
 };
+modelArtifact.metadata = artifactIdentityFor(modelArtifact, {
+  family: "spread",
+  algorithm: "linear_regression",
+  featureVersion: "pregame-v3",
+  vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
+  vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+  trainingSeasons: [2021, 2022, 2023, 2024, 2025],
+  trainingCutoff: "2025-12-31T23:59:59.999Z",
+  samplePolicy: "include_low_sample",
+  hyperparameters: { ridgeLambda: 1 },
+  randomSeed: null,
+  trainingSampleCount: 100,
+});
 
 const candidate: TrainingRun = {
   id: 10,
-  modelVersion: "phase6-refit-spread-linear_regression-through-2025-test",
+  modelVersion: `phase6-1-spread-${modelArtifact.metadata.artifactChecksum.slice(0, 24)}`,
   family: "spread",
   algorithm: "linear_regression",
   featureVersion: "pregame-v3",
@@ -27,7 +45,7 @@ const candidate: TrainingRun = {
   recencyWeighting: "none",
   status: "refit_candidate",
   sampleSize: 100,
-  metrics: { outputValidation: "finite" },
+  metrics: { outputValidation: "finite", historicalComparisonClassification: "materially_consistent" },
   calibration: {},
   featureImportance: {},
   vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
@@ -79,6 +97,7 @@ test("a failed safety gate returns 412 without changing production state", async
       snapshotGenerationCalls += 1;
       return { status: "unexpected" } as never;
     },
+    verifyCurrentInference: async () => ({ passed: true, returned: 6, vectorsDiffer: true }),
     getPromotedBy: () => "test-admin",
   });
 

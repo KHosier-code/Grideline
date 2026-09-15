@@ -1,0 +1,197 @@
+GRIDLINE PHASE 6.1 — ARTIFACT-BACKED PRODUCTION MODEL RECOVERY
+
+The live-model input audit confirmed that the currently promoted legacy Phase 6 models do not have immutable fitted artifacts and therefore cannot satisfy the new production-integrity requirements.
+
+The goal of this task is to create reproducible, artifact-backed production candidates that match the approved Phase 6 configurations as closely as possible.
+
+Do not add new model families.
+Do not change feature definitions.
+Do not use 2026 games for fitting.
+Do not add Phase 7/v4 features to the model yet.
+Do not promote automatically.
+Do not fabricate historical equivalence.
+
+CURRENT APPROVED CONFIGURATIONS
+
+Spread:
+- regularized linear regression
+- include low-sample games
+- feature version: pregame-v3
+- training seasons: 2021–2025
+
+Moneyline:
+- logistic regression
+- include low-sample games
+- feature version: pregame-v3
+- training seasons: 2021–2025
+
+Totals:
+- gradient boosting
+- exclude low-sample games
+- feature version: pregame-v3
+- training seasons: 2021–2025
+
+TASK 1 — TRAIN NEW REPRODUCIBLE CANDIDATES
+
+Train one new candidate for each family using exactly the approved configuration.
+
+Persist immutable fitted artifacts containing the exact learned model state required for inference.
+
+Examples as appropriate:
+- coefficients
+- intercepts
+- feature order
+- scaling/normalization parameters
+- tree structures
+- estimator configuration
+- random seed
+- library/runtime version
+- training-data cutoff
+- feature version
+- training seasons
+- sample policy
+
+The fitted artifact must be sufficient to reproduce inference without refitting.
+
+TASK 2 — ARTIFACT IDENTITY
+
+For every fitted artifact persist:
+
+- artifact ID
+- cryptographic checksum/hash
+- model family
+- algorithm
+- feature schema
+- exact feature order
+- training seasons
+- training cutoff
+- sample policy
+- hyperparameters
+- random seed where applicable
+- runtime/library versions
+- training sample count
+- creation timestamp
+
+Artifacts must be immutable.
+
+TASK 3 — VALIDATION
+
+Run the existing prediction-safety and chronology/leakage checks.
+
+Also verify:
+
+- artifact can be loaded independently
+- inference is deterministic
+- feature count exactly matches expected schema
+- feature ordering is fixed
+- missing features fail closed
+- non-finite values fail closed
+- artifact checksum verifies before inference
+
+TASK 4 — COMPARE AGAINST STORED HISTORICAL PHASE 6 METRICS
+
+Do not claim the new fitted artifacts are identical to the old unpreserved ones.
+
+Instead compare the new candidates against the retained historical 2025 out-of-sample metrics.
+
+Historical reference:
+
+Spread selected configuration:
+- MAE: 10.1982
+- RMSE: 13.2414
+- 285 games
+
+Moneyline selected configuration:
+- accuracy: 61.7544%
+- log loss: 0.633853
+- Brier: 0.222487
+- 285 games
+
+Totals selected configuration:
+- MAE: 10.8809
+- RMSE: 13.8065
+- 237 games
+
+Report whether the new reproducible candidates are:
+- materially consistent
+- better
+- worse
+
+Do not force exact equality.
+
+TASK 5 — CURRENT GAME INPUT READINESS
+
+After artifact-backed candidates exist, verify for upcoming games:
+
+- pregame-v3 row exists
+- exact required feature set exists
+- all required values are finite
+- provenance is valid
+- cutoff is pre-kickoff
+- QB context is explicitly available or unavailable with reason
+- model vector reconstruction succeeds
+
+Do not generate a prediction where inputs are incomplete.
+
+TASK 6 — SHADOW PREDICTIONS
+
+Generate shadow predictions only.
+
+Do not make them consumer-visible yet.
+
+For at least 6 upcoming games report:
+
+- matchup
+- artifact ID
+- populated feature count
+- missing feature count
+- QB confidence
+- projected margin
+- projected total
+- home win probability
+- input-quality status
+
+Confirm input vectors differ across games.
+
+TASK 7 — PROMOTION GATE
+
+Do not promote automatically.
+
+A candidate is eligible for manual promotion only if:
+
+- immutable artifact exists
+- artifact checksum verifies
+- feature schema matches exactly
+- chronology/leakage tests pass
+- safety tests pass
+- current-game inference succeeds on complete inputs
+- historical evaluation is acceptably consistent with prior Phase 6 performance
+
+TASK 8 — PRESERVE LEGACY HISTORY
+
+Do not delete old Phase 6 promotion records.
+
+Mark legacy models clearly as:
+
+legacy_unverifiable_artifact
+
+Preserve all historical promotion and prediction records for audit.
+
+FINAL REPORT
+
+Return:
+
+1. New spread candidate artifact ID/hash
+2. New moneyline candidate artifact ID/hash
+3. New totals candidate artifact ID/hash
+4. Training sample counts
+5. Feature schemas
+6. Historical comparison against prior Phase 6 metrics
+7. Safety/leakage results
+8. Artifact reproducibility result
+9. Current upcoming-game input readiness
+10. Shadow prediction sample
+11. Promotion eligibility for each family
+12. Confirmation no automatic promotion occurred
+
+Do not expose consumer predictions until a new artifact-backed model has been explicitly promoted.

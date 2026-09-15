@@ -28,3 +28,17 @@ mtime_ms = 1789423870846
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/52c64d59-7f2a-404b-b2eb-3359c12b360c/3a33c0e6-6caf-4940-9090-f321f34ed75f"
 storage_version_token = "1789423882219280"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "DHRXLgDqwDlr0WxcnQBrk"
+uri = "file://artifacts/api-server/reports/phase6-1-artifact-recovery-report.md"
+type = "text"
+title = "Gridline Phase 6.1 Recovery Report"
+description = "Validated artifact IDs and checksums, historical comparisons, safety results, six shadow predictions, and promotion status."
+logical_id = "41c99f10-9a8b-49f8-8f78-b7dc13d7f11f"
+content_hash = "sha256:30e9bba56f97254e9c893a510fb26910cc6c2f17e0f84369d8497b7f2a74607c"
+size = 5423
+mtime_ms = 1789438672800
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/41c99f10-9a8b-49f8-8f78-b7dc13d7f11f/f8c80d5d-c271-4a25-83f1-01695898f589"
+storage_version_token = "1789438687484843"
+content_type = "text/markdown"

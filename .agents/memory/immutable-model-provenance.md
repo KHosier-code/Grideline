@@ -7,4 +7,4 @@ A promoted model version is valid only when its ordered feature schema, preproce
 
 **Why:** Rebuilding a model from repaired or refreshed historical rows under an existing version silently changes effective model behavior and makes snapshot provenance impossible to prove.
 
-**How to apply:** Execute inference only from persisted fitted artifacts. Require snapshots and all downstream reporting paths to validate exact vector/schema/source provenance, and report legacy models without artifacts as unavailable rather than retraining them implicitly.
+**How to apply:** Execute inference only from persisted fitted artifacts. Require snapshots and downstream reports to validate exact vector/schema/source provenance. Checksums must cover invariant training metadata as well as fitted state, and checksum-backed training-run evidence must be database-immutable. Keep unverifiable legacy rows auditable rather than reconstructing them.

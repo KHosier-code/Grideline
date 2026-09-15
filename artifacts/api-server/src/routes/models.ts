@@ -1,9 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db, modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspace/db";
 import { getAuth } from "@clerk/express";
-import { generateLivePredictions, getModelDriftMonitoring } from "../lib/live-predictions";
-import { getModelEvaluationAudit, getModelEvaluationReport, getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate, type Family } from "../lib/modeling";
+import { generateLivePredictions, generatePhase61ShadowPredictions, getLiveModelInputIntegrityAudit, getModelDriftMonitoring } from "../lib/live-predictions";
+import { getModelEvaluationAudit, getModelEvaluationReport, getPhase4ModelLab, recoverPhase61ArtifactBackedModels, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate, verifyArtifactIntegrity, isFittedModelArtifact, PHASE6_VECTOR_FEATURE_NAMES, type Family } from "../lib/modeling";
 import { PromotionSafetyGateError, runPromotionSafetyGate, type PromotionSafetyGateResult } from "../lib/promotion-safety-gate";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 import { getLifecycleVerificationReport } from "../lib/lifecycle-verification";
@@ -23,6 +23,11 @@ type PromotionDependencies = {
   }) => Promise<Promotion>;
   findCurrentPromotion: (family: string) => Promise<Promotion | null>;
   generateRevision: (now: Date) => ReturnType<typeof generateLivePredictions>;
+  verifyCurrentInference: (run: TrainingRun) => Promise<{
+    passed: boolean;
+    returned: number;
+    vectorsDiffer: boolean;
+  }>;
   getPromotedBy: (req: Request) => string;
 };
 
@@ -54,6 +59,36 @@ const defaultPromotionDependencies: PromotionDependencies = {
     return current ?? null;
   },
   generateRevision: generateLivePredictions,
+  verifyCurrentInference: async (run) => {
+    const rows = await db.select().from(modelTrainingRunsTable)
+      .where(eq(modelTrainingRunsTable.status, "refit_candidate"))
+      .orderBy(desc(modelTrainingRunsTable.trainedAt), desc(modelTrainingRunsTable.id));
+    const byFamily = new Map<string, TrainingRun>();
+    for (const candidate of rows) {
+      if (!candidate.modelVersion.startsWith("phase6-1-")
+        || !verifyArtifactIntegrity(candidate).valid
+        || !isFittedModelArtifact(candidate.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length)
+        || byFamily.has(candidate.family)) continue;
+      byFamily.set(candidate.family, candidate);
+    }
+    byFamily.set(run.family, run);
+    const shadow = await generatePhase61ShadowPredictions([...byFamily.values()].map((candidate) => ({
+      family: candidate.family,
+      modelVersion: candidate.modelVersion,
+      modelArtifact: isFittedModelArtifact(candidate.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? candidate.modelArtifact : null,
+      artifactId: isFittedModelArtifact(candidate.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? candidate.modelArtifact.metadata?.artifactId ?? null : null,
+      artifactChecksum: isFittedModelArtifact(candidate.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? candidate.modelArtifact.metadata?.artifactChecksum ?? null : null,
+      artifactMetadata: isFittedModelArtifact(candidate.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? candidate.modelArtifact.metadata ?? null : null,
+      featureVersion: candidate.featureVersion,
+      vectorFeatureNames: candidate.vectorFeatureNames,
+      vectorSchemaFingerprint: candidate.vectorSchemaFingerprint,
+    })), new Date(), 6);
+    return {
+      passed: shadow.returned >= 6 && shadow.vectorsDiffer,
+      returned: shadow.returned,
+      vectorsDiffer: shadow.vectorsDiffer,
+    };
+  },
   getPromotedBy: (req) => getAuth(req).userId ?? "unknown-admin",
 };
 
@@ -81,6 +116,34 @@ export function createPromotionHandler(
         });
         return;
       }
+      const artifactIntegrity = verifyArtifactIntegrity(run);
+      if (!artifactIntegrity.valid) {
+        res.status(409).json({
+          error: "Model promotion rejected: this run has no independently verifiable immutable artifact.",
+          reason: "unverifiable_artifact",
+          artifactIntegrity,
+        });
+        return;
+      }
+      if (run.status === "refit_candidate"
+        && !["materially_consistent", "better"].includes(String(run.metrics?.historicalComparisonClassification ?? ""))) {
+        res.status(409).json({
+          error: "Model promotion rejected: the 2025 holdout comparison is not acceptably consistent with the retained Phase 6 reference.",
+          reason: "historical_comparison",
+          candidateValidation,
+          artifactIntegrity,
+        });
+        return;
+      }
+      const currentInference = await dependencies.verifyCurrentInference(run);
+      if (!currentInference.passed) {
+        res.status(409).json({
+          error: "Model promotion rejected: current complete game inputs did not produce six distinct shadow inferences.",
+          reason: "current_game_inference",
+          currentInference,
+        });
+        return;
+      }
       const safetyGate = await dependencies.runSafetyGate(modelVersion);
       const promotion = await dependencies.insertPromotion({
         run,
@@ -88,13 +151,15 @@ export function createPromotionHandler(
         promotedBy: dependencies.getPromotedBy(req),
         reason: typeof req.body?.notes === "string" ? req.body.notes.trim() || null : null,
       });
-      const activeProductionModel = await dependencies.findCurrentPromotion(run.family);
-      const revision = await dependencies.generateRevision(new Date());
       res.status(201).json({
         promotion,
-        activeProductionModel,
-        revision,
+        activeProductionModel: promotion,
+        revision: {
+          status: "deferred",
+          reason: "The durable worker will generate the first artifact-backed revision after this atomic promotion record is committed.",
+        },
         safetyGate,
+        currentInference,
         candidateValidation,
         note: "Promotion is explicit and append-only. The latest production promotion for this family is used; no automatic promotion occurred.",
       });
@@ -186,6 +251,71 @@ router.post("/models/refit-production", requireAdmin, async (req, res): Promise<
   } catch (error) {
     req.log.error({ error }, "Phase 6 production refit failed");
     res.status(500).json({ error: error instanceof Error ? error.message : "Phase 6 production refit failed" });
+  }
+});
+
+router.post("/models/recover-phase6-1", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    const featureVersion = typeof req.body?.featureVersion === "string" && req.body.featureVersion.trim()
+      ? req.body.featureVersion.trim()
+      : "pregame-v3";
+    if (featureVersion !== "pregame-v3") {
+      res.status(400).json({ error: "Phase 6.1 recovery is restricted to the approved pregame-v3 feature version." });
+      return;
+    }
+    const report = await recoverPhase61ArtifactBackedModels(featureVersion);
+    const versions = report.candidates.map((candidate) => candidate.modelVersion);
+    const candidateRows = versions.length
+      ? await db.select().from(modelTrainingRunsTable).where(inArray(modelTrainingRunsTable.modelVersion, versions))
+      : [];
+    const shadow = await generatePhase61ShadowPredictions(candidateRows.map((run) => ({
+      family: run.family,
+      modelVersion: run.modelVersion,
+      modelArtifact: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact : null,
+      artifactId: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactId ?? null : null,
+      artifactChecksum: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactChecksum ?? null : null,
+      artifactMetadata: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata as Record<string, unknown> ?? null : null,
+      featureVersion: run.featureVersion,
+      vectorFeatureNames: run.vectorFeatureNames,
+      vectorSchemaFingerprint: run.vectorSchemaFingerprint,
+    })), new Date(), 6);
+    const safetyGate = await runPromotionSafetyGate("phase6.1-recovery");
+    const shadowGatePassed = shadow.returned >= 6
+      && shadow.vectorsDiffer
+      && shadow.writes.predictionSnapshots === 0
+      && shadow.writes.consumerPredictions === 0;
+    const candidates = report.candidates.map((candidate) => ({
+      ...candidate,
+      safety: {
+        ...candidate.safety,
+        predictionSafety: safetyGate,
+        currentGameInference: shadowGatePassed ? "passed" : "failed",
+      },
+      promotionEligibility: candidate.artifactEligibility
+        && safetyGate.status === "passed"
+        && shadowGatePassed,
+    }));
+    const readiness = await getLiveModelInputIntegrityAudit(new Date());
+    res.status(201).json({
+      ...report,
+      candidates,
+      currentUpcomingGameReadiness: {
+        productionReadiness: readiness,
+        candidateShadowReadiness: {
+          status: shadow.status,
+          completeInputsReturned: shadow.returned,
+          requiredMinimum: 6,
+          allInputsComplete: shadow.returned >= 6,
+        },
+      },
+      shadowPredictions: shadow,
+      recoverySafetyGate: safetyGate,
+      noAutomaticPromotion: true,
+      consumerVisiblePredictions: false,
+    });
+  } catch (error) {
+    req.log.error({ error }, "Phase 6.1 artifact recovery failed");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Phase 6.1 artifact recovery failed" });
   }
 });
 

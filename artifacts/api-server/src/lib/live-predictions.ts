@@ -20,6 +20,9 @@ import {
   PHASE6_VECTOR_FEATURE_NAMES,
   PHASE6_VECTOR_SCHEMA_FINGERPRINT,
   predictFittedModelArtifact,
+  predictPersistedModelArtifact,
+  verifyArtifactIntegrity,
+  artifactMetadataMatchesTrainingRun,
   sourceFeatureNames,
   vectorSchemaFingerprint,
   type Algorithm,
@@ -44,6 +47,9 @@ type ProductionModel = {
   vectorSchemaFingerprint: string | null;
   modelArtifact: FittedModelArtifact | null;
   trainedAt: Date;
+  artifactId: string | null;
+  artifactChecksum: string | null;
+  artifactMetadata: Record<string, unknown> | null;
 };
 
 type Quote = {
@@ -215,8 +221,12 @@ async function productionModels() {
       promotedAt: promotion.promotedAt,
       vectorFeatureNames: Array.isArray(run.vectorFeatureNames) ? run.vectorFeatureNames : [],
       vectorSchemaFingerprint: run.vectorSchemaFingerprint,
-      modelArtifact: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact : null,
+       modelArtifact: verifyArtifactIntegrity(run).valid && artifactMetadataMatchesTrainingRun(run)
+         && isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact : null,
       trainedAt: run.trainedAt,
+       artifactId: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactId ?? null : null,
+       artifactChecksum: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactChecksum ?? null : null,
+       artifactMetadata: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata as Record<string, unknown> ?? null : null,
     });
   }
   return models;
@@ -374,7 +384,7 @@ type PredictionResult = {
 
 function predictWithModel(model: ProductionModel, vector: number[]): PredictionResult {
   if (!model.modelArtifact) return { value: null, reason: "immutable_model_artifact_unavailable" };
-  const value = predictFittedModelArtifact(model.modelArtifact, vector);
+   const value = predictPersistedModelArtifact(model, vector);
   if (value === null) return { value: null, reason: "invalid_persisted_model_artifact_or_input" };
   const prediction = model.family === "moneyline" ? clamp(value) : value;
   return Number.isFinite(prediction) ? { value: prediction } : { value: null, reason: "nonfinite_clamped_output" };
@@ -725,6 +735,95 @@ export function evaluateProductionInputEligibility(
     cutoffValid,
     vectorValid,
     causes: [...new Set(causes)],
+  };
+}
+
+/**
+ * Recovery shadow path.  It deliberately has no writes (in particular, it
+ * never touches prediction_snapshots or validation-failure tables) and is not
+ * called by consumer routes.
+ */
+export async function generatePhase61ShadowPredictions(
+  candidates: Array<{
+    family: string;
+    modelVersion: string;
+    modelArtifact: FittedModelArtifact | null;
+    artifactId: string | null;
+    artifactChecksum: string | null;
+    artifactMetadata: Record<string, unknown> | null;
+    featureVersion: string;
+    vectorFeatureNames: string[];
+    vectorSchemaFingerprint: string | null;
+  }>,
+  now = new Date(),
+  limit = 6,
+) {
+  const byFamily = new Map(candidates.map((candidate) => [candidate.family as Family, candidate]));
+  const schemaConsistent = candidates.length === 3
+    && candidates.every((candidate) =>
+      JSON.stringify(candidate.vectorFeatureNames) === JSON.stringify(PHASE6_VECTOR_FEATURE_NAMES)
+      && candidate.vectorSchemaFingerprint === PHASE6_VECTOR_SCHEMA_FINGERPRINT
+      && verifyArtifactIntegrity(candidate).valid);
+  const featureVersion = candidates[0]?.featureVersion ?? PREGAME_FEATURE_VERSION;
+  const [featureRows, games, teamRows] = await Promise.all([
+    db.select().from(pregameTeamFeaturesTable).where(eq(pregameTeamFeaturesTable.featureVersion, featureVersion)),
+    db.select().from(gamesTable).where(sql`${gamesTable.kickoffTime} is not null`).orderBy(asc(gamesTable.kickoffTime)),
+    db.select().from(teamsTable),
+  ]);
+  const teamsById = new Map(teamRows.map((team) => [team.teamId, team]));
+  const rowsByGame = new Map<string, typeof featureRows>();
+  for (const row of featureRows) rowsByGame.set(row.gameId, [...(rowsByGame.get(row.gameId) ?? []), row]);
+  const selectedFeatureNames = PHASE6_VECTOR_FEATURE_NAMES.slice(0, -3);
+  const shadows: Array<Record<string, unknown>> = [];
+  for (const game of games.filter((candidate) => isFutureGame(candidate, now))) {
+    if (shadows.length >= limit || !game.kickoffTime) break;
+    const rows = rowsByGame.get(game.gameId) ?? [];
+    const vector = vectorForRows(rows, selectedFeatureNames);
+    const eligibility = evaluateProductionInputEligibility(game, rows, vector, schemaConsistent, now);
+    if (!eligibility.eligible || !vector?.x) continue;
+    const spread = byFamily.get("spread");
+    const totals = byFamily.get("totals");
+    const moneyline = byFamily.get("moneyline");
+    if (!spread || !totals || !moneyline) continue;
+    const projectedMargin = predictPersistedModelArtifact(spread, vector.x);
+    const projectedTotal = predictPersistedModelArtifact(totals, vector.x);
+    const homeWinProbability = predictPersistedModelArtifact(moneyline, vector.x);
+    if (![projectedMargin, projectedTotal, homeWinProbability].every((value) => typeof value === "number" && Number.isFinite(value))) continue;
+    shadows.push({
+      gameId: game.gameId,
+      matchup: {
+        away: teamsById.get(game.awayTeamId)?.abbreviation ?? game.awayTeamId,
+        home: teamsById.get(game.homeTeamId)?.abbreviation ?? game.homeTeamId,
+      },
+      kickoffTime: game.kickoffTime.toISOString(),
+      artifactIds: {
+        spread: spread.artifactId,
+        moneyline: moneyline.artifactId,
+        totals: totals.artifactId,
+      },
+      artifactChecksums: {
+        spread: spread.artifactChecksum,
+        moneyline: moneyline.artifactChecksum,
+        totals: totals.artifactChecksum,
+      },
+      populatedFeatureCount: vector.inputPopulatedFeatureCount,
+      missingFeatureCount: vector.inputMissingFeatureCount,
+      qbConfidence: vector.qbConfidence,
+      projectedMargin,
+      projectedTotal,
+      homeWinProbability,
+      inputQualityStatus: "complete_verified",
+      inputVector: [...vector.x],
+    });
+  }
+  return {
+    status: shadows.length >= limit ? "complete" : "partial",
+    requested: limit,
+    returned: shadows.length,
+    shadows,
+    vectorsDiffer: new Set(shadows.map((shadow) => JSON.stringify(shadow.inputVector))).size === shadows.length,
+    writes: { predictionSnapshots: 0, consumerPredictions: 0 },
+    note: "Shadow inference used candidate artifacts only; no prediction snapshot or consumer record was written.",
   };
 }
 

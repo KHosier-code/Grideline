@@ -4,10 +4,12 @@ import {
   db,
   modelEvaluationPredictionsTable,
   pregameTeamFeaturesTable,
+  qbGameStatsTable,
   teamGameStatsTable,
   sportsbookOddsTable,
   teamsTable,
   modelTrainingRunsTable,
+  modelPromotionHistoryTable,
   playerGameStatsTable,
   type PregameFeatureValues,
 } from "@workspace/db";
@@ -60,7 +62,126 @@ export type FittedModelArtifact = {
   centers: number[];
   scales: number[];
   model: CoreModelArtifact;
+  metadata?: ModelArtifactMetadata;
 };
+
+/**
+ * The identity is deliberately kept beside (rather than inside) the fitted
+ * payload.  This preserves the shape of legacy artifacts for audit readers,
+ * while making the payload itself the exact thing covered by the checksum.
+ */
+export type ModelArtifactMetadata = {
+  artifactId: string;
+  artifactChecksum: string;
+  family: Family;
+  algorithm: Algorithm;
+  featureVersion: string;
+  vectorFeatureNames: string[];
+  vectorSchemaFingerprint: string;
+  trainingSeasons: number[];
+  trainingCutoff: string;
+  samplePolicy: SamplePolicy;
+  hyperparameters: Record<string, unknown>;
+  randomSeed: number | null;
+  runtimeVersions: Record<string, string>;
+  trainingSampleCount: number;
+  createdAt: string;
+};
+
+export type ArtifactIntegrityResult = {
+  valid: boolean;
+  failures: string[];
+  checksum: string | null;
+};
+
+/**
+ * JSON has no canonical object ordering.  Sorting keys recursively means the
+ * same fitted artifact always produces the same digest independent of the
+ * database driver or object construction order.
+ */
+export function canonicalArtifactJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalArtifactJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value as Record<string, unknown>).sort().map((key) =>
+      `${JSON.stringify(key)}:${canonicalArtifactJson((value as Record<string, unknown>)[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
+export function fittedArtifactChecksum(artifact: FittedModelArtifact): string {
+  const { metadata, ...payload } = artifact;
+  if (!metadata) return createHash("sha256").update(canonicalArtifactJson(payload)).digest("hex");
+  const {
+    artifactId: _artifactId,
+    artifactChecksum: _artifactChecksum,
+    createdAt: _createdAt,
+    ...invariantMetadata
+  } = metadata;
+  return createHash("sha256")
+    .update(canonicalArtifactJson({ ...payload, metadata: invariantMetadata }))
+    .digest("hex");
+}
+
+export function artifactIdentityFor(
+  artifact: FittedModelArtifact,
+  config: Pick<ModelArtifactMetadata, "family" | "algorithm" | "featureVersion" | "vectorFeatureNames"
+    | "vectorSchemaFingerprint" | "trainingSeasons" | "trainingCutoff" | "samplePolicy"
+    | "hyperparameters" | "randomSeed" | "trainingSampleCount">,
+): ModelArtifactMetadata {
+  const runtimeVersions = { node: process.version, v8: process.versions.v8 ?? "unknown", modeling: "phase6.1" };
+  const { metadata: _metadata, ...payload } = artifact;
+  const artifactChecksum = createHash("sha256")
+    .update(canonicalArtifactJson({ ...payload, metadata: { ...config, runtimeVersions } }))
+    .digest("hex");
+  return {
+    ...config,
+    artifactId: `phase6-1-${config.family}-${artifactChecksum.slice(0, 32)}`,
+    artifactChecksum,
+    runtimeVersions,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function verifyArtifactIntegrity(
+  run: Pick<typeof modelTrainingRunsTable.$inferSelect, "modelArtifact">,
+  width = PHASE6_VECTOR_FEATURE_NAMES.length,
+): ArtifactIntegrityResult {
+  const failures: string[] = [];
+  if (!isFittedModelArtifact(run.modelArtifact, width)) {
+    failures.push("immutable fitted model artifact is missing or malformed");
+    return { valid: false, failures, checksum: null };
+  }
+  const checksum = fittedArtifactChecksum(run.modelArtifact);
+  const metadata = isFittedModelArtifact(run.modelArtifact, width)
+    ? run.modelArtifact.metadata
+    : undefined;
+  if (!metadata?.artifactId || !metadata.artifactChecksum) {
+    failures.push("artifact identity/checksum metadata is unavailable (legacy artifact)");
+  } else {
+    if (metadata.artifactChecksum !== checksum) failures.push("artifact checksum mismatch");
+    if (metadata.artifactId !== `phase6-1-${metadata.family}-${checksum.slice(0, 32)}`) {
+      failures.push("artifact metadata identity does not match persisted columns");
+    }
+    if (metadata.vectorSchemaFingerprint !== PHASE6_VECTOR_SCHEMA_FINGERPRINT
+      || JSON.stringify(metadata.vectorFeatureNames) !== JSON.stringify(PHASE6_VECTOR_FEATURE_NAMES)) {
+      failures.push("artifact metadata schema does not match the Phase 6 contract");
+    }
+  }
+  return { valid: failures.length === 0, failures, checksum };
+}
+
+export function artifactMetadataMatchesTrainingRun(
+  run: Pick<typeof modelTrainingRunsTable.$inferSelect, "modelArtifact" | "family" | "algorithm" | "featureVersion" | "trainingSeasons" | "samplePolicy" | "sampleSize">,
+) {
+  if (!isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) || !run.modelArtifact.metadata) return false;
+  const metadata = run.modelArtifact.metadata;
+  return metadata.family === run.family
+    && metadata.algorithm === run.algorithm
+    && metadata.featureVersion === run.featureVersion
+    && JSON.stringify(metadata.trainingSeasons) === JSON.stringify(run.trainingSeasons)
+    && metadata.samplePolicy === run.samplePolicy
+    && metadata.trainingSampleCount === run.sampleSize;
+}
 
 const TEST_SEASONS = [2022, 2023, 2024, 2025, 2026];
 const FEATURE_PREFIXES = ["season_to_date", "last_8", "last_5", "last_3"];
@@ -132,7 +253,7 @@ export function validateProductionCandidate(
   if (run.sampleSize <= 0) failures.push("the candidate must contain at least one training row");
 
   if (run.status === "refit_candidate") {
-    if (!run.modelVersion.startsWith("phase6-refit-")) failures.push("refit candidates must use a phase6-refit model version");
+    if (!run.modelVersion.startsWith("phase6-refit-") && !run.modelVersion.startsWith("phase6-1-")) failures.push("refit candidates must use a phase6-refit or phase6-1 model version");
     if (Object.hasOwn(PHASE6_ALGORITHMS, family) && algorithm !== PHASE6_ALGORITHMS[family]) {
       failures.push(`Phase 6 ${family} refits must use ${PHASE6_ALGORITHMS[family]}`);
     }
@@ -393,6 +514,16 @@ export function predictFittedModelArtifact(artifact: FittedModelArtifact, row: n
   }
   return Number.isFinite(value) ? value : null;
 }
+
+/** Production inference entry point: identity is checked before any math. */
+export function predictPersistedModelArtifact(
+  run: Pick<typeof modelTrainingRunsTable.$inferSelect, "modelArtifact">,
+  row: number[],
+) {
+  const integrity = verifyArtifactIntegrity(run);
+  if (!integrity.valid || !run.modelArtifact) return null;
+  return predictFittedModelArtifact(run.modelArtifact as FittedModelArtifact, row);
+}
 function calibration(actual: number[], predicted: number[]) {
   const buckets = Array.from({ length: 10 }, (_, index) => ({
     label: `${index * 10}-${index === 9 ? 100 : index * 10 + 9}%`,
@@ -442,9 +573,21 @@ export function trainingVectorForRows(
   return [...differences, home.lowSample ? 1 : 0, away.lowSample ? 1 : 0, homeQb - awayQb];
 }
 
+export function historicalQbConfidenceForTraining(
+  history: Array<{ gameId: string; kickoffTime: Date; primary: boolean }>,
+  targetKickoff: Date,
+) {
+  const games = [...new Map(history
+    .filter((row) => row.primary && row.kickoffTime < targetKickoff)
+    .sort((left, right) => right.kickoffTime.getTime() - left.kickoffTime.getTime())
+    .map((row) => [row.gameId, row])).values()]
+    .slice(0, 5).length;
+  return games >= 3 ? 1 : games > 0 ? 0.5 : null;
+}
+
 export async function loadExamples(featureVersion: string) {
   const rows = await db.select().from(pregameTeamFeaturesTable).where(eq(pregameTeamFeaturesTable.featureVersion, featureVersion));
-  const [stats, gameStages, teams] = await Promise.all([
+  const [stats, gameStages, teams, qbStats] = await Promise.all([
     db.select({ gameId: teamGameStatsTable.gameId, teamId: teamGameStatsTable.teamId, teamScore: teamGameStatsTable.teamScore, opponentScore: teamGameStatsTable.opponentScore }).from(teamGameStatsTable),
     db.selectDistinct({
       season: playerGameStatsTable.season,
@@ -454,6 +597,7 @@ export async function loadExamples(featureVersion: string) {
       seasonType: playerGameStatsTable.seasonType,
     }).from(playerGameStatsTable),
     db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable),
+    db.select().from(qbGameStatsTable),
   ]);
   const abbreviationByTeamId = new Map(teams.map((team) => [team.teamId, team.abbreviation]));
   const teamByAbbreviation = new Map(teams.map((team) => [team.abbreviation.toUpperCase(), team.teamId]));
@@ -461,6 +605,30 @@ export async function loadExamples(featureVersion: string) {
     const teamId = teamByAbbreviation.get(canonical)
       ?? (canonical === "WAS" ? teamByAbbreviation.get("WSH") : undefined);
     if (teamId) teamByAbbreviation.set(source, teamId);
+  }
+  const kickoffByGame = new Map(rows.map((row) => [row.gameId, row.kickoffTime]));
+  const normalizedQbs = qbStats.map((row) => ({
+    ...row,
+    teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
+  }));
+  const qbsByGameTeam = new Map<string, typeof normalizedQbs>();
+  for (const qb of normalizedQbs) {
+    const key = `${qb.gameId}:${qb.teamId}`;
+    qbsByGameTeam.set(key, [...(qbsByGameTeam.get(key) ?? []), qb]);
+  }
+  const qbHistoryByTeam = new Map<string, Array<{ gameId: string; kickoffTime: Date; primary: boolean }>>();
+  for (const [key, gameQbs] of qbsByGameTeam) {
+    const kickoffTime = kickoffByGame.get(gameQbs[0].gameId);
+    if (!kickoffTime) continue;
+    const primaryDropbacks = Math.max(0, ...gameQbs.map((row) => row.dropbacks));
+    const teamId = key.slice(key.indexOf(":") + 1);
+    const history = qbHistoryByTeam.get(teamId) ?? [];
+    history.push(...gameQbs.map((row) => ({
+      gameId: row.gameId,
+      kickoffTime,
+      primary: primaryDropbacks > 0 && row.dropbacks === primaryDropbacks,
+    })));
+    qbHistoryByTeam.set(teamId, history);
   }
   const scoreByTeamGame = new Map(stats.map((row) => [
     `${row.gameId}:${normalizeTeamId(row.teamId, teamByAbbreviation)}`,
@@ -479,16 +647,30 @@ export async function loadExamples(featureVersion: string) {
     const home = gameRows.find((row) => row.isHome);
     const away = gameRows.find((row) => !row.isHome);
     if (!home || !away) continue;
-    const homeScore = scoreByTeamGame.get(`${home.gameId}:${home.teamId}`)?.teamScore;
-    const awayScore = scoreByTeamGame.get(`${away.gameId}:${away.teamId}`)?.teamScore;
+    const canonicalHomeTeamId = normalizeTeamId(home.teamId, teamByAbbreviation);
+    const canonicalAwayTeamId = normalizeTeamId(away.teamId, teamByAbbreviation);
+    const homeScore = scoreByTeamGame.get(`${home.gameId}:${canonicalHomeTeamId}`)?.teamScore;
+    const awayScore = scoreByTeamGame.get(`${away.gameId}:${canonicalAwayTeamId}`)?.teamScore;
     if (homeScore === null || homeScore === undefined || awayScore === null || awayScore === undefined) continue;
-    const vector = trainingVectorForRows(home, away, names);
+    const homeQb = typeof home.features.qb_data_confidence === "number"
+      ? home.features.qb_data_confidence
+      : historicalQbConfidenceForTraining(qbHistoryByTeam.get(canonicalHomeTeamId) ?? [], home.kickoffTime);
+    const awayQb = typeof away.features.qb_data_confidence === "number"
+      ? away.features.qb_data_confidence
+      : historicalQbConfidenceForTraining(qbHistoryByTeam.get(canonicalAwayTeamId) ?? [], away.kickoffTime);
+    const vector = trainingVectorForRows(
+      { ...home, features: { ...home.features, qb_data_confidence: homeQb } },
+      { ...away, features: { ...away.features, qb_data_confidence: awayQb } },
+      names,
+    );
     if (!vector) {
       skippedIncompleteInputs += 1;
       continue;
     }
-    const homeQb = home.features.qb_data_confidence as number;
-    const awayQb = away.features.qb_data_confidence as number;
+    if (homeQb === null || awayQb === null) {
+      skippedIncompleteInputs += 1;
+      continue;
+    }
     examples.push({
       gameId: home.gameId,
       season: home.season,
@@ -497,10 +679,10 @@ export async function loadExamples(featureVersion: string) {
       x: vector,
       lowSample: home.lowSample || away.lowSample,
       qbConfidence: (homeQb + awayQb) / 2,
-      homeTeamId: home.teamId,
-      awayTeamId: away.teamId,
-      homeTeamAbbreviation: abbreviationByTeamId.get(home.teamId) ?? home.teamId,
-      awayTeamAbbreviation: abbreviationByTeamId.get(away.teamId) ?? away.teamId,
+      homeTeamId: canonicalHomeTeamId,
+      awayTeamId: canonicalAwayTeamId,
+      homeTeamAbbreviation: abbreviationByTeamId.get(canonicalHomeTeamId) ?? home.teamId,
+      awayTeamAbbreviation: abbreviationByTeamId.get(canonicalAwayTeamId) ?? away.teamId,
       homeFeatureSourceCutoff: home.sourceCutoff,
       awayFeatureSourceCutoff: away.sourceCutoff,
       actualHomeScore: homeScore,
@@ -949,9 +1131,61 @@ export async function getModelEvaluationReport(filters: EvaluationAuditFilters =
   return { filters, ...summarizeModelEvaluationEvidence(audit.rows) };
 }
 
+export const PHASE61_HISTORICAL_REFERENCES: Record<Family, Record<string, number>> = {
+  spread: { mae: 10.1982, rmse: 13.2414, sampleSize: 285 },
+  moneyline: { accuracy: 0.617544, logLoss: 0.633853, brierScore: 0.222487, sampleSize: 285 },
+  totals: { mae: 10.8809, rmse: 13.8065, sampleSize: 237 },
+};
+
+/**
+ * A deterministic, deliberately conservative comparison rule.  Regression
+ * metrics and moneyline loss/Brier use a 10% materiality band; accuracy uses
+ * 2.5 percentage points.  A candidate is "better" only when no metric is
+ * materially worse and at least one is materially better.
+ */
+export function classifyPhase61Holdout(
+  family: Family,
+  metrics: Record<string, unknown> | null,
+) {
+  const reference = PHASE61_HISTORICAL_REFERENCES[family];
+  const measured = metrics ?? {};
+  const directions = family === "moneyline"
+    ? { accuracy: "higher", logLoss: "lower", brierScore: "lower" }
+    : { mae: "lower", rmse: "lower" };
+  let materiallyWorse = false;
+  let materiallyBetter = false;
+  for (const [metric, direction] of Object.entries(directions)) {
+    const actual = Number(measured[metric]);
+    const expected = reference[metric];
+    if (!Number.isFinite(actual)) return "worse";
+    const band = metric === "accuracy" ? 0.025 : expected * 0.1;
+    if (direction === "higher") {
+      if (actual < expected - band) materiallyWorse = true;
+      if (actual > expected + band) materiallyBetter = true;
+    } else {
+      if (actual > expected + band) materiallyWorse = true;
+      if (actual < expected - band) materiallyBetter = true;
+    }
+  }
+  return materiallyWorse ? "worse" : materiallyBetter ? "better" : "materially_consistent";
+}
+
+function phase61Hyperparameters(algorithm: Algorithm) {
+  if (algorithm === "linear_regression") return { ridgeLambda: 1 };
+  if (algorithm === "logistic_regression") return { epochs: 350, learningRate: 0.08, coefficientRegularization: 0.02 };
+  if (algorithm === "gradient_boosting") return { rounds: 8, depth: 2, learningRate: 0.08, minLeafSamples: 5 };
+  return { trees: 4, depth: 2, seed: 17, minLeafSamples: 5 };
+}
+
 export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATURE_VERSION) {
   const { examples, names } = await loadExamples(featureVersion);
-  const trainingSeasons = [...new Set(examples.map((example) => example.season).filter((season) => season >= 2021 && season <= 2025))].sort();
+  const eligibleExamples = examples
+    .filter((example) => example.season >= 2021 && example.season <= 2025)
+    .sort((left, right) => left.season - right.season || left.week - right.week || left.gameId.localeCompare(right.gameId));
+  const trainingSeasons = [...new Set(eligibleExamples.map((example) => example.season))].sort();
+  if (JSON.stringify(trainingSeasons) !== JSON.stringify(PHASE6_TRAINING_SEASONS)) {
+    throw new Error(`Phase 6.1 recovery requires complete training coverage for 2021-2025; found ${trainingSeasons.join(", ") || "none"}.`);
+  }
   const forwardSeasonsPresent = [...new Set(examples.map((example) => example.season).filter((season) => season >= 2026))].sort();
   const selected: Array<{ family: Family; algorithm: Algorithm; samplePolicy: SamplePolicy; target: (example: Example) => number; classification: boolean }> = [
     { family: "spread", algorithm: "linear_regression", samplePolicy: "include_low_sample", target: (example) => example.margin, classification: false },
@@ -960,7 +1194,7 @@ export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATU
   ];
   const runs: Array<typeof modelTrainingRunsTable.$inferInsert> = [];
   for (const config of selected) {
-    const rows = examples.filter((example) =>
+    const rows = eligibleExamples.filter((example) =>
       trainingSeasons.includes(example.season) &&
       (config.samplePolicy === "include_low_sample" || !example.lowSample),
     );
@@ -970,7 +1204,47 @@ export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATU
     const trainingPredictions = scaled.test.map((row) => model.predict(row));
     const finiteOutputs = trainingPredictions.every(Number.isFinite);
     if (!finiteOutputs) continue;
-    const modelVersion = `phase6-refit-${config.family}-${config.algorithm}-through-2025-${Date.now()}-${runs.length}`;
+    const artifact: FittedModelArtifact = {
+      version: 1,
+      algorithm: config.algorithm,
+      centers: scaled.centers,
+      scales: scaled.scales,
+      model: model.artifact,
+    };
+    const holdoutTrainRows = eligibleExamples.filter((example) =>
+      example.season >= 2021 && example.season <= 2024
+      && (config.samplePolicy === "include_low_sample" || !example.lowSample),
+    );
+    const holdoutRows = eligibleExamples.filter((example) =>
+      example.season === 2025
+      && (config.samplePolicy === "include_low_sample" || !example.lowSample),
+    );
+    let holdoutMetrics: Record<string, unknown> | null = null;
+    if (holdoutTrainRows.length >= 20 && holdoutRows.length >= 5) {
+      const holdoutScaled = standardize(holdoutTrainRows.map((row) => row.x), holdoutRows.map((row) => row.x));
+      const holdoutModel = modelFor(config.algorithm, holdoutScaled.train, holdoutTrainRows.map(config.target), config.classification);
+      const holdoutPredicted = holdoutScaled.test.map((row) => config.classification ? clamp(holdoutModel.predict(row)) : holdoutModel.predict(row));
+      if (holdoutPredicted.every(Number.isFinite)) holdoutMetrics = buildMetrics(config.family, holdoutRows.map(config.target), holdoutPredicted, holdoutRows);
+    }
+    const trainingCutoff = new Date(Math.max(...rows.map((row) => row.kickoffTime.getTime()))).toISOString();
+    const metadata = artifactIdentityFor(artifact, {
+      family: config.family,
+      algorithm: config.algorithm,
+      featureVersion,
+      vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
+      vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+      trainingSeasons,
+      trainingCutoff,
+      samplePolicy: config.samplePolicy,
+      hyperparameters: phase61Hyperparameters(config.algorithm),
+      randomSeed: null,
+      trainingSampleCount: rows.length,
+    });
+    artifact.metadata = metadata;
+    const comparison = holdoutMetrics
+      ? classifyPhase61Holdout(config.family, holdoutMetrics)
+      : "worse";
+    const modelVersion = `phase6-1-${config.family}-${metadata.artifactChecksum.slice(0, 24)}`;
     runs.push({
       modelVersion,
       family: config.family,
@@ -983,33 +1257,125 @@ export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATU
       status: "refit_candidate",
       sampleSize: rows.length,
       metrics: {
-        status: "training_only",
+        status: "2025_holdout",
         trainingSampleSize: rows.length,
+        holdoutTrainingSampleSize: holdoutTrainRows.length,
+        holdoutSampleSize: holdoutRows.length,
+        holdoutMetrics,
+        historicalReference: PHASE61_HISTORICAL_REFERENCES[config.family],
+        historicalComparisonClassification: comparison,
+        comparisonThreshold: "10% relative metric band; moneyline accuracy 2.5 percentage-point band",
         outputValidation: finiteOutputs ? "finite" : "failed",
         forwardSeasonsExcluded: forwardSeasonsPresent,
       },
-      calibration: config.classification ? { status: "training_only", note: "No 2026 outcomes were used for refit or calibration." } : { status: "not_applicable" },
+      calibration: config.classification ? { status: "holdout_only", note: "Only 2025 holdout outcomes were used for comparison; no 2026 outcomes were used." } : { status: "not_applicable" },
       featureImportance: normalizeImportance(model.importance, names),
       vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
       vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
-      modelArtifact: {
-        version: 1,
-        algorithm: config.algorithm,
-        centers: scaled.centers,
-        scales: scaled.scales,
-        model: model.artifact,
-      } satisfies FittedModelArtifact,
+      modelArtifact: artifact,
       notes: "Phase 6 production refit of the unchanged selected Phase 4 algorithm using legitimate 2021-2025 data only. 2026 remains forward/out-of-sample. Administrator promotion required.",
     });
   }
-  for (let index = 0; index < runs.length; index += 200) await db.insert(modelTrainingRunsTable).values(runs.slice(index, index + 200));
+  // Idempotency is keyed by the deterministic model version, not by a clock
+  // or generated UUID.  Existing immutable rows are never overwritten.
+  const persistedRuns: Array<typeof modelTrainingRunsTable.$inferSelect> = [];
+  for (const run of runs) {
+    const [existing] = await db.select().from(modelTrainingRunsTable)
+      .where(eq(modelTrainingRunsTable.modelVersion, run.modelVersion)).limit(1);
+    if (!existing) {
+      const [inserted] = await db.insert(modelTrainingRunsTable).values(run).returning();
+      if (inserted) persistedRuns.push(inserted);
+    } else {
+      persistedRuns.push(existing);
+    }
+  }
   return {
     featureVersion,
     trainingSeasons,
     forwardSeasonsExcluded: forwardSeasonsPresent,
-    runsCreated: runs.length,
-    candidates: runs.map((run) => ({ modelVersion: run.modelVersion, family: run.family, algorithm: run.algorithm, samplePolicy: run.samplePolicy, trainingSeasons: run.trainingSeasons, status: run.status })),
+    runsCreated: persistedRuns.length,
+    candidates: persistedRuns.map((run) => ({ modelVersion: run.modelVersion, artifactId: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactId ?? null : null, artifactChecksum: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactChecksum ?? null : null, family: run.family, algorithm: run.algorithm, samplePolicy: run.samplePolicy, trainingSeasons: run.trainingSeasons, sampleSize: run.sampleSize, schema: { names: run.vectorFeatureNames, fingerprint: run.vectorSchemaFingerprint }, historicalComparison: run.metrics?.historicalComparisonClassification, status: run.status })),
     promotion: { required: true, automatic: false },
+  };
+}
+
+/**
+ * Admin-only recovery primitive.  It is intentionally separate from the
+ * explicit promotion endpoint: fitting is append-only and this function never
+ * inserts a model_promotion_history row.
+ */
+export async function recoverPhase61ArtifactBackedModels(featureVersion = PREGAME_FEATURE_VERSION) {
+  const refit = await refitPhase6ProductionModels(featureVersion);
+  const versions = refit.candidates.map((candidate) => candidate.modelVersion);
+  const candidates = versions.length
+    ? await db.select().from(modelTrainingRunsTable).where(inArray(modelTrainingRunsTable.modelVersion, versions))
+    : [];
+  const promotions = await db.select().from(modelPromotionHistoryTable)
+    .where(eq(modelPromotionHistoryTable.role, "production"));
+  const promotedVersions = [...new Set(promotions.map((promotion) => promotion.modelVersion))];
+  const legacyRuns = promotedVersions.length
+    ? await db.select().from(modelTrainingRunsTable).where(inArray(modelTrainingRunsTable.modelVersion, promotedVersions))
+    : [];
+  const legacyMarked: string[] = [];
+  for (const run of legacyRuns) {
+    if (!verifyArtifactIntegrity(run).valid) {
+      await db.update(modelTrainingRunsTable)
+        .set({ status: "legacy_unverifiable_artifact" })
+        .where(eq(modelTrainingRunsTable.modelVersion, run.modelVersion));
+      legacyMarked.push(run.modelVersion);
+    }
+  }
+  return {
+    ...refit,
+    candidates: candidates.map((run) => {
+      const integrity = verifyArtifactIntegrity(run);
+      const metadataMatchesRun = artifactMetadataMatchesTrainingRun(run);
+      const comparison = String(run.metrics?.historicalComparisonClassification ?? "worse");
+      return {
+        modelVersion: run.modelVersion,
+        family: run.family,
+        algorithm: run.algorithm,
+        samplePolicy: run.samplePolicy,
+        trainingSeasons: run.trainingSeasons,
+        trainingCutoff: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length)
+          ? run.modelArtifact.metadata?.trainingCutoff ?? null
+          : null,
+        trainingSampleCount: run.sampleSize,
+        artifactId: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactId ?? null : null,
+        artifactChecksum: isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length) ? run.modelArtifact.metadata?.artifactChecksum ?? null : null,
+        schema: { names: run.vectorFeatureNames, fingerprint: run.vectorSchemaFingerprint },
+        historicalComparison: {
+          classification: comparison,
+          metrics: run.metrics?.holdoutMetrics ?? null,
+          reference: run.metrics?.historicalReference ?? null,
+          threshold: run.metrics?.comparisonThreshold ?? null,
+        },
+        safety: {
+          artifactChecksumVerified: integrity.valid && metadataMatchesRun,
+          schemaExact: JSON.stringify(run.vectorFeatureNames) === JSON.stringify(PHASE6_VECTOR_FEATURE_NAMES)
+            && run.vectorSchemaFingerprint === PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+          outputValidation: run.metrics?.outputValidation === "finite",
+          noForwardSeasonsUsed: !(run.metrics?.forwardSeasonsExcluded as unknown[] | undefined)?.some((season) => Number(season) <= 2025),
+        },
+        artifactEligibility: integrity.valid
+          && metadataMatchesRun
+          && comparison !== "worse"
+          && run.metrics?.outputValidation === "finite"
+          && run.status === "refit_candidate",
+        promotionEligibility: false,
+        promotionEligibilityStatus: "pending_safety_and_current_game_inference",
+      };
+    }),
+    legacyMarked: legacyMarked.map((modelVersion) => ({
+      modelVersion,
+      status: "legacy_unverifiable_artifact",
+      promotionHistoryPreserved: true,
+    })),
+    promotion: {
+      automatic: false,
+      occurred: false,
+      note: "Candidates are append-only and require an explicit administrator promotion.",
+    },
   };
 }
 
