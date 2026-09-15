@@ -1,0 +1,270 @@
+FINAL GRIDLINE INTEGRATION VERIFICATION BEFORE PUBLISH
+
+Do not add any new features.
+
+Do not train, refit, promote, or replace any model.
+
+Do not modify production predictions.
+
+Do not publish until every required verification step below passes.
+
+CURRENT STATE
+
+The following tasks have already been merged:
+
+- Task #18 — Production Stability & QA
+- Task #32 — Evaluation Retention & Performance
+- Task #33 — Consumer Data/API Layer
+- Task #35 — Consumer UI Foundation
+- Task #36 — PostgreSQL TLS verification
+- Task #37 — Scheduler backlog detection
+- Task #43 — Production database security gate
+- Task #48 — Unsafe production database startup alerting
+
+Do not recreate or duplicate their work.
+
+The current problem is integration/runtime verification.
+
+==================================================
+1. RESTART REQUIRED WORKFLOWS
+==================================================
+
+Restart and verify:
+
+- artifacts/api-server
+- artifacts/nfl-analytics
+- Gridline data worker
+- production-db-smoke
+
+For every failed workflow:
+
+- inspect the actual error
+- fix only real integration defects caused by the merged work
+- do not add unrelated features
+- restart until clean
+
+==================================================
+2. API VERIFICATION
+==================================================
+
+Verify:
+
+- API starts successfully
+- database connection succeeds
+- secure TLS normalization works
+- no PostgreSQL SSL compatibility warnings
+- production database security startup gate passes in the appropriate environment
+- consumer routes load
+- admin routes remain protected
+- prediction routes remain functional
+- evaluation reporting routes load
+- health endpoint returns HTTP 200
+
+Run:
+
+- API typecheck
+- API production build
+- relevant API tests
+- consumer API tests
+- authorization tests
+- evaluation tests
+- database TLS tests
+- prediction-safety tests
+- leakage tests
+
+==================================================
+3. WEB VERIFICATION
+==================================================
+
+Verify:
+
+- frontend starts successfully
+- production build passes
+- generated API clients match current contracts
+- no missing imports
+- no stale generated types
+- consumer routes render
+- Admin routes still render
+- Clerk authentication still works
+- role-aware navigation works
+- no raw technical errors appear in consumer view
+- no browser console errors
+
+Verify desktop and mobile for:
+
+- Home
+- Games
+- Game Detail
+- Performance
+- Trends
+- Props placeholder
+- Admin entry for administrators
+
+==================================================
+4. WORKER VERIFICATION
+==================================================
+
+Start the Gridline worker.
+
+Verify:
+
+- worker starts cleanly
+- worker owns recurring scheduler
+- worker owns automatic feed scheduler
+- API does not duplicate scheduler ownership
+- personnel-context concurrency remains bounded
+- v4 feature scheduling still works
+- scheduler backlog detection works
+- worker does not exhaust database capacity
+
+Confirm API remains responsive while worker activity is running.
+
+==================================================
+5. DATABASE / MIGRATION VERIFICATION
+==================================================
+
+Inspect all new schema changes from the merged tasks.
+
+Verify:
+
+- additive migrations only
+- no destructive schema change
+- no truncation
+- no unintended table/column removal
+- evaluation-retention migrations are valid
+- existing prediction history remains intact
+- existing model promotion history remains intact
+
+Run migration checks against development.
+
+Do not alter production manually.
+
+==================================================
+6. MODEL SAFETY
+==================================================
+
+Confirm active production models are still the existing Phase 6 versions for:
+
+- spread
+- moneyline
+- totals
+
+Confirm:
+
+- no model training occurred
+- no model promotion occurred
+- no production prediction rewrite occurred
+- no 2025 historical prediction regeneration occurred
+
+==================================================
+7. CONSUMER / ADMIN SEPARATION
+==================================================
+
+Verify ordinary consumer users do not see:
+
+- raw JSON
+- SQL
+- migration details
+- scheduler internals
+- provider error payloads
+- stack traces
+- giant model version strings
+- database IDs
+- developer debugging output
+
+Admins must retain access to technical tooling.
+
+==================================================
+8. EVALUATION RETENTION
+==================================================
+
+Verify Task #32's retained per-game evaluation system works for FUTURE evaluations.
+
+Do not regenerate missing 2025 predictions.
+
+Verify:
+
+- append-only behavior
+- run-level integrity
+- canonical market sides
+- week reporting
+- season reporting
+- game reporting
+- cumulative reporting
+- calibration reporting
+- candidate comparison
+- edge reporting where legitimate market evidence exists
+
+==================================================
+9. DATABASE SECURITY / ALERTING
+==================================================
+
+Run:
+
+`production-db-smoke`
+
+Verify:
+
+- secure DB connection succeeds
+- startup security gate behaves correctly
+- alert behavior is secret-safe
+- failed secure startup would produce the configured operator alert path
+- successful startup does not generate false alarms
+
+==================================================
+10. FULL FINAL TEST SUITE
+==================================================
+
+Run all relevant combined tests, including:
+
+- prediction safety
+- leakage
+- scheduler
+- durable scheduler
+- evaluation retention
+- consumer API
+- auth
+- TLS
+- database smoke
+- personnel context
+- readiness
+- weather
+- immutability
+
+Then run:
+
+- full workspace typecheck
+- API production build
+- frontend production build
+
+==================================================
+11. FINAL REPORT
+==================================================
+
+Return:
+
+1. API workflow status
+2. Web workflow status
+3. Worker workflow status
+4. production-db-smoke status
+5. Failed integration defects discovered
+6. Bugs fixed
+7. Full test totals
+8. Typecheck result
+9. API build result
+10. Web build result
+11. Migration safety status
+12. Consumer/Admin separation status
+13. Active Phase 6 model confirmation
+14. Whether any production data/model behavior changed
+15. Whether publishing is now safe
+
+Final verdict must be exactly one of:
+
+NOT SAFE TO PUBLISH
+
+or
+
+SAFE TO PUBLISH
+
+Do not publish automatically.
