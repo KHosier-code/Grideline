@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { comparisonData, isValidPredictionSnapshot, vectorForRows } from "./live-predictions";
+import { comparisonData, isValidPredictionSnapshot, matchesPredictionPerformanceWindow, vectorForRows } from "./live-predictions";
 import { safeNoVigProbabilities, validatePredictionOutputs } from "./prediction-validation";
 import { standardize } from "./modeling";
 
@@ -98,4 +98,13 @@ test("invalid legacy snapshots are excluded from official prediction views", () 
   assert.equal(isValidPredictionSnapshot({ ...valid, projectedMargin: Number.NaN }), false);
   assert.equal(isValidPredictionSnapshot({ ...valid, homeWinProbability: 1.1, awayWinProbability: -0.1 }), false);
   assert.equal(isValidPredictionSnapshot({ ...valid, projectedTotal: null }), false);
+});
+
+test("weekly performance includes only games in the requested season and week", () => {
+  const requested = { season: 2026, week: 2 };
+  assert.equal(matchesPredictionPerformanceWindow({ game: { season: 2026, week: 2 } }, requested), true);
+  assert.equal(matchesPredictionPerformanceWindow({ game: { season: 2026, week: 1 } }, requested), false);
+  assert.equal(matchesPredictionPerformanceWindow({ game: { season: 2025, week: 2 } }, requested), false);
+  assert.equal(matchesPredictionPerformanceWindow({ game: null }, requested), false);
+  assert.equal(matchesPredictionPerformanceWindow({ game: null }), true);
 });

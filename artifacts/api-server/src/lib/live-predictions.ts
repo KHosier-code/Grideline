@@ -537,14 +537,26 @@ function bucketEdge(value: unknown) {
   return absolute < 0.02 ? "0-2%" : absolute < 0.05 ? "2-5%" : "5%+";
 }
 
-export async function getPredictionPerformance() {
+export function matchesPredictionPerformanceWindow(
+  row: { game: { season: number; week: number } | null },
+  window?: { season: number; week: number },
+) {
+  return !window || Boolean(
+    row.game
+    && row.game.season === window.season
+    && row.game.week === window.week,
+  );
+}
+
+export async function getPredictionPerformance(window?: { season: number; week: number }) {
   const rows = (await db
     .select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
     .from(predictionSnapshotsTable)
     .leftJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
     .leftJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
     .where(eq(predictionSnapshotsTable.officialFinalPrediction, true)))
-    .filter((row) => isValidPredictionSnapshot(row.prediction));
+    .filter((row) => isValidPredictionSnapshot(row.prediction))
+    .filter((row) => matchesPredictionPerformanceWindow(row, window));
   const graded = rows.filter((row) => row.grade);
   const abs = (values: Array<number | null | undefined>) => values.filter((value): value is number => typeof value === "number").map(Math.abs);
   const average = (values: Array<number | null | undefined>) => {
@@ -837,7 +849,7 @@ export async function getPredictionValidationFailures(limit = 50) {
 }
 
 export async function generateWeeklyLearningReport(season: number, week: number) {
-  const performance = await getPredictionPerformance();
+  const performance = await getPredictionPerformance({ season, week });
   const rows = await db.select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
     .from(predictionSnapshotsTable)
     .innerJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
