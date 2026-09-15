@@ -15,3 +15,4 @@
 - [Publish diffs for unvalidated checks](publish-diff-unvalidated-checks.md) — validate PostgreSQL checks in development before Publish; NOT VALID can produce malformed generated DDL.
 - [Phase 6 identifier boundary](phase6-identifier-boundary.md) — canonicalize schedule and nflverse team IDs before feature, QB, or score joins.
 - [Immutable model provenance](immutable-model-provenance.md) — a production version must bind schema, preprocessing, and fitted parameters; never refit it during inference.
+- [Production artifact release boundary](production-artifact-release-boundary.md) — verify production rows and triggers after Publish; development artifacts and custom triggers may not transfer.

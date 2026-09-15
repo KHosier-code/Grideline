@@ -42,3 +42,17 @@ mtime_ms = 1789438672800
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/41c99f10-9a8b-49f8-8f78-b7dc13d7f11f/f8c80d5d-c271-4a25-83f1-01695898f589"
 storage_version_token = "1789438687484843"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "Yk7KjqUq_-_hVJMoYFYnV"
+uri = "file://artifacts/api-server/reports/phase6-1-production-release-report.md"
+type = "text"
+title = "Phase 6.1 Production Release Report"
+description = "Post-publish database, artifact, immutability, legacy-status, and Week 2 readiness verification."
+logical_id = "176185ac-3390-44c0-b66b-63868e7f6701"
+content_hash = "sha256:aa5fbb627ebb57cd1195062ce8c936030da8a99b4eab00a090d6386a767bc1c9"
+size = 5409
+mtime_ms = 1789439914437
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/176185ac-3390-44c0-b66b-63868e7f6701/c46096cb-5ab2-4e87-ad5e-5060a3fccb0e"
+storage_version_token = "1789439939721038"
+content_type = "text/markdown"
