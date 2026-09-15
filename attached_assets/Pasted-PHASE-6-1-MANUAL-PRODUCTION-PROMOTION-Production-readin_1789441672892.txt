@@ -1,0 +1,95 @@
+PHASE 6.1 MANUAL PRODUCTION PROMOTION
+
+Production readiness has been verified.
+
+Approved production candidates:
+
+Spread:
+phase6-1-spread-01c85917b47c6e70c258fe0258481c7a
+
+Moneyline:
+phase6-1-moneyline-917fa6e7417cccb45909ade470c997d0
+
+Totals:
+phase6-1-totals-749279b5856f1be1165c211d3c6233c7
+
+All three are SAFE FOR MANUAL PROMOTION.
+
+Proceed with explicit manual promotion, one family at a time.
+
+ORDER
+
+1. Spread
+2. Moneyline
+3. Totals
+
+For each family before promotion verify:
+
+- exact artifact ID matches approved candidate
+- stored SHA-256 matches approved manifest
+- exact 27-feature schema matches
+- artifact checksum verifies
+- deterministic inference passes
+- Week 2 input readiness remains valid
+- no missing selected features
+- no post-kickoff evidence
+- no game identity errors
+- no automatic promotion occurred
+
+Then manually promote that family.
+
+After each promotion verify:
+
+- exactly one new append-only production promotion record exists
+- active production model for that family is the Phase 6.1 artifact
+- previous legacy promotion history remains preserved
+- no historical prediction snapshot was overwritten
+- no sportsbook history was modified
+
+After all three promotions:
+
+1. Confirm active production models are:
+   - Phase 6.1 Spread
+   - Phase 6.1 Moneyline
+   - Phase 6.1 Totals
+
+2. Allow the worker to generate fresh Week 2 prediction snapshots.
+
+3. Verify at least six Week 2 games with:
+   - game ID
+   - matchup
+   - snapshot ID
+   - artifact IDs used
+   - projected away score
+   - projected home score
+   - projected margin
+   - projected total
+   - home win probability
+   - QB confidence
+   - 27 populated features
+   - 0 missing features
+
+4. Confirm the six games have distinct effective model input vectors.
+
+5. Confirm consumer endpoints now return the new Phase 6.1 predictions.
+
+6. Confirm legacy invalid snapshots remain excluded.
+
+Do not retrain or refit any model.
+
+Do not create any additional promotion beyond these three explicit Phase 6.1 promotions.
+
+FINAL REPORT
+
+Return:
+
+- Spread promotion result
+- Moneyline promotion result
+- Totals promotion result
+- active production model IDs
+- production promotion count before/after
+- Week 2 snapshot count created
+- six-game prediction sample
+- confirmation vectors differ
+- confirmation no historical overwrite occurred
+- confirmation consumer predictions are now Phase 6.1-backed
