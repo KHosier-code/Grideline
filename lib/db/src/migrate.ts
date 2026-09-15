@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { withExplicitTlsMode } from "./connection";
 
 const { Client } = pg;
 
@@ -405,7 +406,9 @@ export async function runMigrations(options: {
 
   const dryRun = options.dryRun === true;
   const migrations = await readMigrations();
-  const client = new Client({ connectionString: databaseUrl });
+  const client = new Client({
+    connectionString: withExplicitTlsMode(databaseUrl),
+  });
   await client.connect();
   let lockHeld = false;
   try {
