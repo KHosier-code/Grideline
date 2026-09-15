@@ -1925,15 +1925,43 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
+const authBasePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+function AuthPageShell({ children }: { children: ReactNode }) {
+  return <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4">{children}</div>;
+}
+
+function SignInPage() {
+  return (
+    <AuthPageShell>
+      <SignIn
+        routing="path"
+        path={`${authBasePath}/sign-in`}
+        signUpUrl={`${authBasePath}/sign-up`}
+      />
+    </AuthPageShell>
+  );
+}
+
+function SignUpPage() {
+  return (
+    <AuthPageShell>
+      <SignUp
+        routing="path"
+        path={`${authBasePath}/sign-up`}
+        signInUrl={`${authBasePath}/sign-in`}
+      />
+    </AuthPageShell>
+  );
+}
+
 function Router() {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return <ConsumerLoadingFallback />;
-  const signIn = () => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>;
-  const signInPrompt = () => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
-    <Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} />
-    <Route path="/sign-in/*?" component={signIn} />
-    <Route component={signInPrompt} />
+    <Route path="/sign-up/*?" component={SignUpPage} />
+    <Route path="/sign-in/*?" component={SignInPage} />
+    <Route component={SignInPage} />
   </Switch></RoutedErrorBoundary>;
   return <RoutedErrorBoundary><Switch>
       <Route path="/admin" component={AdminRoutes} />
