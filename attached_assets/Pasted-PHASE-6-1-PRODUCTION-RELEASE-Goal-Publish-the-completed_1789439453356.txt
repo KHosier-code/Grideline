@@ -1,0 +1,165 @@
+PHASE 6.1 PRODUCTION RELEASE
+
+Goal:
+Publish the completed Phase 6.1 artifact-backed model recovery safely.
+
+Do not retrain any model.
+Do not refit any model.
+Do not promote any candidate automatically.
+Do not generate consumer-visible candidate predictions before explicit promotion.
+
+CURRENT PHASE 6.1 CANDIDATES
+
+Spread:
+phase6-1-spread-01c85917b47c6e70c258fe0258481c7a
+
+SHA-256:
+01c85917b47c6e70c258fe0258481c7a2a21e567c95db02cac38988baa4034bf
+
+Moneyline:
+phase6-1-moneyline-917fa6e7417cccb45909ade470c997d0
+
+SHA-256:
+917fa6e7417cccb45909ade470c997d0841fe8a010bc18899f4b5b913be4d6ae
+
+Totals:
+phase6-1-totals-749279b5856f1be1165c211d3c6233c7
+
+SHA-256:
+749279b5856f1be1165c211d3c6233c7c4f55d44d12ebcb2c94500db63b60c2f
+
+
+STEP 1 — PRE-PUBLISH RELEASE CHECK
+
+Before publishing verify:
+
+- workspace typecheck passes
+- API production build passes
+- web production build passes
+- worker build passes
+- prediction-integrity tests pass
+- chronology/leakage tests pass
+- promotion-policy tests pass
+- production database smoke tests pass
+- migration diff is additive only
+- artifact immutability safeguards are included
+- no model has been retrained since Phase 6.1 completion
+- no candidate has been promoted
+- no candidate-linked consumer prediction exists
+
+If any blocking test fails, stop and return NOT SAFE TO PUBLISH.
+
+
+STEP 2 — PUBLISH
+
+If all release checks pass:
+
+Publish the current Phase 6.1 release.
+
+Do not promote models during publish.
+
+Do not alter historical prediction records.
+
+Do not alter sportsbook history.
+
+
+STEP 3 — POST-PUBLISH DATABASE VERIFICATION
+
+After publish:
+
+Run the production database smoke check.
+
+Verify the new model-artifact/provenance schema is present.
+
+Confirm the production database contains the three expected Phase 6.1 candidate artifacts.
+
+Verify each exact SHA-256 hash matches the expected value.
+
+Verify:
+
+- artifact mutation is blocked
+- artifact deletion is blocked
+- evidence mutation is blocked
+- model feature ordering is persisted
+- artifact checksums are available for inference verification
+
+
+STEP 4 — PRODUCTION MODEL STATUS
+
+Confirm:
+
+- legacy Phase 6 records are preserved
+- legacy Phase 6 models remain classified as legacy_unverifiable_artifact
+- no automatic promotion occurred
+- the new Phase 6.1 candidates remain candidates
+- consumer predictions remain pending until promotion
+
+
+STEP 5 — WEEK 2 INPUT READINESS
+
+For every upcoming Week 2 game report:
+
+- game ID
+- matchup
+- 27 required features
+- populated count
+- missing count
+- QB confidence
+- input provenance status
+- cutoff-safe status
+- whether vector reconstruction succeeds
+- whether the game would be eligible immediately after manual promotion
+
+Do not generate a prediction yet unless the model has actually been promoted.
+
+
+STEP 6 — PROMOTION READINESS
+
+Evaluate each candidate independently.
+
+Return one of:
+
+SAFE FOR MANUAL PROMOTION
+
+or
+
+NOT SAFE FOR MANUAL PROMOTION
+
+for:
+
+- Spread
+- Moneyline
+- Totals
+
+A candidate may only be marked safe if:
+
+- production artifact exists
+- SHA-256 verifies
+- immutable artifact protection is active
+- exact 27-feature schema matches
+- deterministic inference verification passes
+- missing/non-finite input checks pass
+- chronology/leakage checks pass
+- promotion-policy checks pass
+- Week 2 inputs can be reconstructed legitimately
+
+
+FINAL REPORT
+
+Return:
+
+1. Publish result
+2. Production DB smoke result
+3. Migration result
+4. Spread artifact verification
+5. Moneyline artifact verification
+6. Totals artifact verification
+7. Artifact immutability result
+8. Legacy model status
+9. Week 2 input-readiness summary
+10. Spread promotion recommendation
+11. Moneyline promotion recommendation
+12. Totals promotion recommendation
+13. Confirmation that no automatic promotion occurred
+
+Do not manually promote anything yet.
