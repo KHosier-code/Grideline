@@ -288,6 +288,7 @@ export const modelEvaluationPredictionsTable = pgTable("model_evaluation_predict
   marketSportsbook: text("market_sportsbook"),
   marketName: text("market_name"),
   marketSelection: text("market_selection"),
+  marketSide: text("market_side"),
   marketPoint: doublePrecision("market_point"),
   marketPrice: integer("market_price"),
   marketObservedAt: timestamp("market_observed_at", { withTimezone: true }),
@@ -312,6 +313,7 @@ export const modelEvaluationPredictionsTable = pgTable("model_evaluation_predict
   unique("model_evaluation_prediction_version_game_unique").on(table.modelVersion, table.gameId),
   index("model_evaluation_prediction_season_week_idx").on(table.testSeason, table.week, table.family),
   index("model_evaluation_prediction_game_idx").on(table.gameId),
+  index("model_evaluation_prediction_run_id_idx").on(table.evaluationRunId, table.id),
   check("model_evaluation_prediction_cutoff_check", sql`${table.predictionCutoff} <= ${table.kickoffTime}`),
   check("model_evaluation_home_feature_chronology_check", sql`${table.homeFeatureSourceCutoff} < ${table.predictionCutoff}`),
   check("model_evaluation_away_feature_chronology_check", sql`${table.awayFeatureSourceCutoff} < ${table.predictionCutoff}`),
@@ -320,6 +322,26 @@ export const modelEvaluationPredictionsTable = pgTable("model_evaluation_predict
     (${table.marketObservedAt} is null and ${table.marketSportsbook} is null and ${table.marketName} is null and ${table.marketSelection} is null and ${table.marketPrice} is null)
     or
     (${table.marketObservedAt} is not null and ${table.marketSportsbook} is not null and ${table.marketName} is not null and ${table.marketSelection} is not null and ${table.marketPrice} is not null)
+  `),
+  check("model_evaluation_future_market_side_check", sql`
+    ${table.evaluationRunId} is null or
+    (${table.marketObservedAt} is null and ${table.marketSide} is null) or
+    (${table.marketObservedAt} is not null and ${table.marketSide} in ('home', 'away', 'over', 'under'))
+  `),
+  check("model_evaluation_future_identity_check", sql`
+    ${table.evaluationRunId} is null or
+    (${table.homeTeamId} is not null and ${table.awayTeamId} is not null and ${table.homeTeamId} <> ${table.awayTeamId})
+  `),
+  check("model_evaluation_outcome_consistency_check", sql`
+    ${table.actualMargin} = ${table.actualHomeScore} - ${table.actualAwayScore}
+    and ${table.actualTotal} = ${table.actualHomeScore} + ${table.actualAwayScore}
+    and ${table.actualHomeWin} = case when ${table.actualHomeScore} > ${table.actualAwayScore} then 1 else 0 end
+  `),
+  check("model_evaluation_projection_completeness_check", sql`
+    ${table.evaluationRunId} is null or
+    (${table.family} = 'spread' and ${table.projectedMargin} is not null) or
+    (${table.family} = 'totals' and ${table.projectedTotal} is not null) or
+    (${table.family} = 'moneyline' and ${table.projectedHomeWinProbability} is not null and ${table.projectedAwayWinProbability} is not null)
   `),
 ]);
 

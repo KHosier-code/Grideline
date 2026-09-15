@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { after } from "node:test";
 import { pool } from "@workspace/db";
-import { assertCompleteModelEvaluationBundle } from "./modeling";
+import { assertCompleteModelEvaluationBundle, getModelEvaluationAudit, persistModelEvaluationBundles, summarizeModelEvaluationEvidence } from "./modeling";
 
 type ConnectCallback = Exclude<Parameters<typeof pool.connect>[0], undefined>;
 type PoolClient = NonNullable<Parameters<ConnectCallback>[1]>;
@@ -66,12 +66,16 @@ function completenessBundle(modelVersion: string, sampleSize: number, evidenceCo
     },
     evidence: Array.from({ length: evidenceCount }, (_, index) => ({
       modelVersion,
+      evaluationRunId: "integration-run",
       family: "spread",
       algorithm: "linear_regression",
       featureVersion: "integration-test",
+      trainingSeasons: [2023],
       testSeason: 2024,
       week: 1,
       gameId: `completeness-${index}`,
+      homeTeamId: "HOME",
+      awayTeamId: "AWAY",
       kickoffTime: new Date("2024-09-08T17:00:00.000Z"),
       predictionCutoff: new Date("2024-09-08T17:00:00.000Z"),
       trainingCutoff: "through-2023",
@@ -86,9 +90,175 @@ function completenessBundle(modelVersion: string, sampleSize: number, evidenceCo
       actualMargin: 7,
       actualTotal: 47,
       actualHomeWin: 1,
+      projectedMargin: 3.5,
+      marketPoint: null as number | null,
+      marketSelection: null as string | null,
+      marketSide: null as "home" | "away" | "over" | "under" | null,
+      marketEvidence: null as Array<{
+        sportsbook: string;
+        market: string;
+        selection: string;
+        point: number | null;
+        price: number;
+        observedAt: string;
+      }> | null,
+      closingMarketEvidence: null as Array<{
+        sportsbook: string;
+        market: string;
+        selection: string;
+        point: number | null;
+        price: number;
+        observedAt: string;
+      }> | null,
     })),
   };
 }
+
+test("bundle validation rejects mismatched provenance and leaked market timestamps", () => {
+  const provenance = completenessBundle(runVersion("provenance-unit"), 1, 1);
+  provenance.evidence[0].family = "totals";
+  assert.throws(() => assertCompleteModelEvaluationBundle(provenance), /Inconsistent run provenance/);
+
+  const leaked = completenessBundle(runVersion("leakage-unit"), 1, 1);
+  leaked.evidence[0].marketEvidence = [{
+    sportsbook: "book",
+    market: "spread",
+    selection: "HOME",
+    point: -3,
+    price: -110,
+    observedAt: leaked.evidence[0].predictionCutoff.toISOString(),
+  }];
+  assert.throws(() => assertCompleteModelEvaluationBundle(leaked), /Invalid prediction-time market evidence/);
+
+  const closingAtKickoff = completenessBundle(runVersion("closing-unit"), 1, 1);
+  closingAtKickoff.evidence[0].closingMarketEvidence = [{
+    sportsbook: "book",
+    market: "spread",
+    selection: "HOME",
+    point: -3,
+    price: -110,
+    observedAt: closingAtKickoff.evidence[0].kickoffTime.toISOString(),
+  }];
+  assert.throws(() => assertCompleteModelEvaluationBundle(closingAtKickoff), /Invalid closing market evidence/);
+});
+
+test("retained evidence summaries calculate audit math and preserve unavailable edge analysis", () => {
+  const base = completenessBundle("summary-model", 2, 2).evidence;
+  base[0].predictedValue = 3;
+  base[0].actualValue = 7;
+  base[0].week = 2;
+  base[1].predictedValue = -1;
+  base[1].actualValue = 1;
+  base[1].week = 1;
+  const report = summarizeModelEvaluationEvidence(base as never);
+  assert.equal(report.sampleSize, 2);
+  assert.equal(report.models[0].mae, 3);
+  assert.equal(report.models[0].rmse, Math.sqrt(10));
+  assert.deepEqual(report.cumulative.map((row) => row.week), [1, 2]);
+  assert.deepEqual(report.cumulative.map((row) => row.metric), ["meanAbsoluteError", "meanAbsoluteError"]);
+  assert.deepEqual(report.cumulative.map((row) => row.score), [2, 3]);
+  assert.equal(report.models[0].edgeAnalysis.status, "unavailable");
+  assert.equal(report.comparison.status, "unavailable");
+});
+
+test("model comparison is same-family and game-paired", () => {
+  const left = completenessBundle("left-model", 2, 2).evidence;
+  const right = completenessBundle("right-model", 1, 1).evidence;
+  right[0].gameId = left[0].gameId;
+  right[0].predictedValue = 6;
+  const report = summarizeModelEvaluationEvidence([...left, ...right] as never);
+  assert.equal(report.comparison.status, "measured");
+  if (report.comparison.status === "measured") {
+    assert.equal(report.comparison.pairs![0].pairedSampleSize, 1);
+    assert.equal(report.comparison.pairs![0].metric, "meanAbsoluteError");
+    assert.equal(report.comparison.pairs![0].leftScore, 3.5);
+    assert.equal(report.comparison.pairs![0].rightScore, 1);
+  }
+});
+
+test("edge analysis orients home, away, over, and under selections", () => {
+  const spreads = completenessBundle("spread-edge", 2, 2).evidence;
+  spreads[0].predictedValue = 6;
+  spreads[0].marketPoint = -3;
+  spreads[0].marketSelection = "DAL";
+  spreads[0].marketSide = "home";
+  spreads[1].predictedValue = 6;
+  spreads[1].marketPoint = 3;
+  spreads[1].marketSelection = "PHI";
+  spreads[1].marketSide = "away";
+
+  const totals = completenessBundle("totals-edge", 2, 2).evidence;
+  totals.forEach((row, index) => {
+    row.family = "totals";
+    row.gameId = `total-${index}`;
+    row.predictedValue = 47;
+    row.marketPoint = 44;
+  });
+  totals[0].marketSelection = "Over";
+  totals[0].marketSide = "over";
+  totals[1].marketSelection = "Under";
+  totals[1].marketSide = "under";
+
+  const report = summarizeModelEvaluationEvidence([...spreads, ...totals] as never);
+  for (const model of report.models) {
+    assert.equal(model.edgeAnalysis.status, "measured");
+    assert.equal(model.edgeAnalysis.sampleSize, 2);
+    assert.equal(model.edgeAnalysis.meanEdge, 0);
+  }
+});
+
+test("bundle validation rejects mixed evaluation run identities", () => {
+  const bundle = completenessBundle(runVersion("mixed-run"), 2, 2);
+  bundle.evidence[1].evaluationRunId = "different-run";
+  assert.throws(() => assertCompleteModelEvaluationBundle(bundle), /Inconsistent evaluation run identity/);
+});
+
+test("evaluation batches reject bundles from different run identities", async () => {
+  const first = completenessBundle(runVersion("batch-a"), 1, 1);
+  const second = completenessBundle(runVersion("batch-b"), 1, 1);
+  second.evidence[0].evaluationRunId = "different-run";
+  await assert.rejects(
+    () => persistModelEvaluationBundles([first, second]),
+    /must share one evaluation run identity/,
+  );
+});
+
+test("moneyline calibration accounts for probabilities below and above one half", () => {
+  const rows = completenessBundle("moneyline-summary", 2, 2).evidence;
+  rows.forEach((row) => {
+    row.family = "moneyline";
+    (row as { projectedMargin: number | null }).projectedMargin = null;
+  });
+  rows[0].predictedValue = 0.2;
+  rows[0].actualValue = 0;
+  rows[1].predictedValue = 0.8;
+  rows[1].actualValue = 1;
+  const report = summarizeModelEvaluationEvidence(rows as never);
+  const model = report.models[0];
+  assert.equal(model.family, "moneyline");
+  assert.equal(model.calibration!.reduce((sum, bucket) => sum + bucket.predictions, 0), 2);
+  assert.deepEqual(report.cumulative.map((row) => row.metric), ["brierScore", "brierScore"]);
+  for (const row of report.cumulative) assert.ok(Math.abs(row.score - 0.04) < 1e-12);
+});
+
+test("evaluation audit pagination remains bounded", async () => {
+  const page = await getModelEvaluationAudit({ limit: -10 });
+  assert.ok(page.rows.length <= 1);
+  assert.equal(page.nextCursor === null || page.nextCursor === undefined || page.nextCursor > 0, true);
+});
+
+test("a later bundle failure rolls back every run in the evaluation transaction", async () => {
+  const firstVersion = runVersion("atomic-first");
+  const first = completenessBundle(firstVersion, 1, 1);
+  const duplicate = completenessBundle(firstVersion, 1, 1);
+  duplicate.evidence[0].gameId = "other-game";
+  await assert.rejects(() => persistModelEvaluationBundles([first, duplicate]), /Failed query/i);
+  const result = await pool.query(
+    "SELECT count(*)::integer AS count FROM model_training_runs WHERE model_version = $1",
+    [firstVersion],
+  );
+  assert.equal(result.rows[0].count, 0);
+});
 
 async function insertAggregate(client: PoolClient, modelVersion: string, sampleSize: number) {
   await client.query(aggregateInsert, [

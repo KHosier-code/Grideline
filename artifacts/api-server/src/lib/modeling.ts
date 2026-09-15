@@ -6,6 +6,7 @@ import {
   pregameTeamFeaturesTable,
   teamGameStatsTable,
   sportsbookOddsTable,
+  teamsTable,
   modelTrainingRunsTable,
   playerGameStatsTable,
   type PregameFeatureValues,
@@ -30,6 +31,8 @@ export type Example = {
   qbConfidence: number;
   homeTeamId: string;
   awayTeamId: string;
+  homeTeamAbbreviation: string;
+  awayTeamAbbreviation: string;
   homeFeatureSourceCutoff: Date;
   awayFeatureSourceCutoff: Date;
   actualHomeScore: number;
@@ -282,13 +285,11 @@ function boosting(train: number[][], target: number[], classification: boolean):
   };
 }
 function calibration(actual: number[], predicted: number[]) {
-  const buckets = [
-    { label: "50-54%", min: 0.5, max: 0.55 },
-    { label: "55-59%", min: 0.55, max: 0.6 },
-    { label: "60-64%", min: 0.6, max: 0.65 },
-    { label: "65-69%", min: 0.65, max: 0.7 },
-    { label: "70%+", min: 0.7, max: 1.01 },
-  ];
+  const buckets = Array.from({ length: 10 }, (_, index) => ({
+    label: `${index * 10}-${index === 9 ? 100 : index * 10 + 9}%`,
+    min: index / 10,
+    max: index === 9 ? 1.01 : (index + 1) / 10,
+  }));
   return buckets.map((bucket) => {
     const items = predicted.map((value, index) => ({ value, actual: actual[index] })).filter((item) => item.value >= bucket.min && item.value < bucket.max);
     return { bucket: bucket.label, predictedProbability: items.length ? mean(items.map((item) => item.value)) : null, actualRate: items.length ? mean(items.map((item) => item.actual)) : null, predictions: items.length };
@@ -314,7 +315,7 @@ export function sourceFeatureNames(rows: Array<{ features: PregameFeatureValues 
 
 export async function loadExamples(featureVersion: string) {
   const rows = await db.select().from(pregameTeamFeaturesTable).where(eq(pregameTeamFeaturesTable.featureVersion, featureVersion));
-  const [stats, gameStages] = await Promise.all([
+  const [stats, gameStages, teams] = await Promise.all([
     db.select({ gameId: teamGameStatsTable.gameId, teamId: teamGameStatsTable.teamId, teamScore: teamGameStatsTable.teamScore, opponentScore: teamGameStatsTable.opponentScore }).from(teamGameStatsTable),
     db.selectDistinct({
       season: playerGameStatsTable.season,
@@ -323,7 +324,9 @@ export async function loadExamples(featureVersion: string) {
       opponentTeamId: playerGameStatsTable.opponentTeamId,
       seasonType: playerGameStatsTable.seasonType,
     }).from(playerGameStatsTable),
+    db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable),
   ]);
+  const abbreviationByTeamId = new Map(teams.map((team) => [team.teamId, team.abbreviation]));
   const scoreByTeamGame = new Map(stats.map((row) => [`${row.gameId}:${row.teamId}`, row]));
   const stageByMatchup = new Map(gameStages.map((row) => [
     `${row.season}:${row.week}:${row.teamId ?? ""}:${row.opponentTeamId ?? ""}`,
@@ -357,6 +360,8 @@ export async function loadExamples(featureVersion: string) {
       qbConfidence: (homeQb + awayQb) / 2,
       homeTeamId: home.teamId,
       awayTeamId: away.teamId,
+      homeTeamAbbreviation: abbreviationByTeamId.get(home.teamId) ?? home.teamId,
+      awayTeamAbbreviation: abbreviationByTeamId.get(away.teamId) ?? away.teamId,
       homeFeatureSourceCutoff: home.sourceCutoff,
       awayFeatureSourceCutoff: away.sourceCutoff,
       actualHomeScore: homeScore,
@@ -391,6 +396,32 @@ type ModelEvaluationBundle = {
   evidence: Array<typeof modelEvaluationPredictionsTable.$inferInsert>;
 };
 
+type MarketEvidenceItem = {
+  sportsbook: string;
+  market: string;
+  selection: string;
+  point: number | null;
+  price: number;
+  observedAt: string;
+};
+
+function assertMarketEvidence(
+  items: MarketEvidenceItem[] | null | undefined,
+  earliest: Date | null,
+  latest: Date,
+  label: string,
+) {
+  for (const item of items ?? []) {
+    const observedAt = new Date(item.observedAt);
+    if (!item.sportsbook || !item.market || !item.selection || !Number.isInteger(item.price)
+      || !Number.isFinite(observedAt.getTime())
+      || (earliest ? observedAt < earliest : observedAt >= latest)
+      || observedAt >= latest) {
+      throw new Error(`Invalid ${label} market evidence`);
+    }
+  }
+}
+
 export function assertCompleteModelEvaluationBundle(bundle: ModelEvaluationBundle) {
   if (bundle.evidence.length !== bundle.run.sampleSize) {
     throw new Error(
@@ -404,6 +435,66 @@ export function assertCompleteModelEvaluationBundle(bundle: ModelEvaluationBundl
   if (bundle.evidence.some((row) => row.modelVersion !== bundle.run.modelVersion)) {
     throw new Error(`Mismatched game evidence for ${bundle.run.modelVersion}`);
   }
+  const runSeasons = JSON.stringify([...(bundle.run.trainingSeasons ?? [])].sort());
+  const evaluationRunIds = new Set(bundle.evidence.map((row) => row.evaluationRunId));
+  if (evaluationRunIds.size !== 1 || !bundle.evidence[0]?.evaluationRunId) {
+    throw new Error(`Inconsistent evaluation run identity for ${bundle.run.modelVersion}`);
+  }
+  for (const row of bundle.evidence) {
+    if (!row.evaluationRunId || !row.homeTeamId || !row.awayTeamId || row.homeTeamId === row.awayTeamId) {
+      throw new Error(`Incomplete game identity evidence for ${bundle.run.modelVersion}`);
+    }
+    if (row.family !== bundle.run.family || row.algorithm !== bundle.run.algorithm
+      || row.featureVersion !== bundle.run.featureVersion || row.testSeason !== bundle.run.testSeason
+      || JSON.stringify([...(row.trainingSeasons ?? [])].sort()) !== runSeasons) {
+      throw new Error(`Inconsistent run provenance for ${bundle.run.modelVersion}`);
+    }
+    const kickoff = new Date(row.kickoffTime);
+    const cutoff = new Date(row.predictionCutoff);
+    const homeCutoff = new Date(row.homeFeatureSourceCutoff);
+    const awayCutoff = new Date(row.awayFeatureSourceCutoff);
+    if (!(homeCutoff < cutoff) || !(awayCutoff < cutoff) || cutoff > kickoff) {
+      throw new Error(`Invalid evidence chronology for ${bundle.run.modelVersion}`);
+    }
+    if (row.actualMargin !== row.actualHomeScore - row.actualAwayScore
+      || row.actualTotal !== row.actualHomeScore + row.actualAwayScore
+      || row.actualHomeWin !== (row.actualHomeScore > row.actualAwayScore ? 1 : 0)) {
+      throw new Error(`Inconsistent outcome evidence for ${bundle.run.modelVersion}`);
+    }
+    if ((row.family === "spread" && row.projectedMargin == null)
+      || (row.family === "totals" && row.projectedTotal == null)
+      || (row.family === "moneyline"
+        && (row.projectedHomeWinProbability == null || row.projectedAwayWinProbability == null))) {
+      throw new Error(`Incomplete projection evidence for ${bundle.run.modelVersion}`);
+    }
+    if (row.family === "moneyline"
+      && (row.projectedHomeWinProbability! < 0 || row.projectedHomeWinProbability! > 1
+        || row.projectedAwayWinProbability! < 0 || row.projectedAwayWinProbability! > 1
+        || Math.abs(row.projectedHomeWinProbability! + row.projectedAwayWinProbability! - 1) > 1e-9)) {
+      throw new Error(`Invalid probability projection evidence for ${bundle.run.modelVersion}`);
+    }
+    if (row.marketObservedAt && !["home", "away", "over", "under"].includes(row.marketSide ?? "")) {
+      throw new Error(`Missing canonical market side for ${bundle.run.modelVersion}`);
+    }
+    assertMarketEvidence(row.marketEvidence as MarketEvidenceItem[] | null, null, cutoff, "prediction-time");
+    assertMarketEvidence(row.closingMarketEvidence as MarketEvidenceItem[] | null, cutoff, kickoff, "closing");
+  }
+}
+
+export async function persistModelEvaluationBundles(bundles: ModelEvaluationBundle[]) {
+  for (const bundle of bundles) assertCompleteModelEvaluationBundle(bundle);
+  const evaluationRunIds = new Set(bundles.map((bundle) => bundle.evidence[0]?.evaluationRunId));
+  if (evaluationRunIds.size > 1) {
+    throw new Error("Evaluation bundles must share one evaluation run identity");
+  }
+  await db.transaction(async (tx) => {
+    for (const bundle of bundles) {
+      await tx.insert(modelTrainingRunsTable).values(bundle.run);
+      for (let index = 0; index < bundle.evidence.length; index += 500) {
+        await tx.insert(modelEvaluationPredictionsTable).values(bundle.evidence.slice(index, index + 500));
+      }
+    }
+  });
 }
 
 export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION) {
@@ -467,13 +558,23 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
             const evidence = testRows.map((example, index) => {
               const marketName = config.family === "totals" ? "total" : config.family;
               const gameQuotes = oddsByGame.get(example.gameId) ?? [];
+              const predictionCutoff = new Date(Math.max(
+                example.homeFeatureSourceCutoff.getTime(),
+                example.awayFeatureSourceCutoff.getTime(),
+              ) + 1);
               const quote = gameQuotes
-                .filter((candidate) => candidate.market === marketName && candidate.capturedAt < example.kickoffTime)
+                .filter((candidate) => candidate.market === marketName && candidate.capturedAt < predictionCutoff)
                 .at(-1);
-              const latestEvidenceAt = (cutoff: Date) => {
+              const marketSide = !quote ? null
+                : quote.market === "total"
+                  ? quote.selection.toLowerCase() === "over" ? "over" : quote.selection.toLowerCase() === "under" ? "under" : null
+                  : quote.selection.toUpperCase() === example.homeTeamAbbreviation.toUpperCase() ? "home"
+                    : quote.selection.toUpperCase() === example.awayTeamAbbreviation.toUpperCase() ? "away"
+                      : null;
+              const latestEvidenceBetween = (after: Date | null, cutoff: Date) => {
                 const latest = new Map<string, typeof gameQuotes[number]>();
                 for (const candidate of gameQuotes) {
-                  if (candidate.capturedAt >= cutoff) continue;
+                  if (candidate.capturedAt >= cutoff || (after && candidate.capturedAt < after)) continue;
                   const key = `${candidate.sportsbook}:${candidate.market}:${candidate.selection}`;
                   latest.set(key, candidate);
                 }
@@ -497,7 +598,7 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
                 evaluationStage: "season_holdout",
                 gameId: example.gameId,
                 kickoffTime: example.kickoffTime,
-                predictionCutoff: example.kickoffTime,
+                predictionCutoff,
                 trainingSeasons,
                 trainingCutoff,
                 gameStage: example.gameStage,
@@ -520,13 +621,12 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
                 marketSportsbook: quote?.sportsbook ?? null,
                 marketName: quote?.market ?? null,
                 marketSelection: quote?.selection ?? null,
+                marketSide,
                 marketPoint: quote?.point ?? null,
                 marketPrice: quote?.price ?? null,
                 marketObservedAt: quote?.capturedAt ?? null,
-                // Both are persisted observation evidence, never generated
-                // lines. Closing evidence is only a genuine pre-kickoff quote.
-                marketEvidence: latestEvidenceAt(example.kickoffTime),
-                closingMarketEvidence: latestEvidenceAt(example.kickoffTime),
+                marketEvidence: latestEvidenceBetween(null, predictionCutoff),
+                closingMarketEvidence: latestEvidenceBetween(predictionCutoff, example.kickoffTime),
               };
             });
             runs.push({ run, evidence });
@@ -535,38 +635,34 @@ export async function trainPhase4Models(featureVersion = PREGAME_FEATURE_VERSION
       }
     }
   }
-  for (const bundle of runs) {
-    assertCompleteModelEvaluationBundle(bundle);
-    await db.transaction(async (tx) => {
-      await tx.insert(modelTrainingRunsTable).values(bundle.run);
-      for (let index = 0; index < bundle.evidence.length; index += 500) {
-        await tx.insert(modelEvaluationPredictionsTable).values(bundle.evidence.slice(index, index + 500));
-      }
-    });
-  }
+  await persistModelEvaluationBundles(runs);
   return { featureVersion, examples: examples.length, runsCreated: runs.length, testSeasons: availableSeasons, bettingEvaluation: { status: "unavailable", reason: "Historical DraftKings/FanDuel snapshots are insufficient for a complete pre-prediction market evaluation; no lines were fabricated." } };
 }
 
 export type EvaluationAuditFilters = {
+  evaluationRunId?: string;
   modelVersion?: string;
   family?: Family;
   testSeason?: number;
   week?: number;
+  gameId?: string;
   limit?: number;
   cursor?: number;
 };
 
-export async function getModelEvaluationAudit(filters: EvaluationAuditFilters = {}) {
+export async function getModelEvaluationAudit(filters: EvaluationAuditFilters = {}, maximumLimit = 1000) {
   const baseConditions = [
+    filters.evaluationRunId ? eq(modelEvaluationPredictionsTable.evaluationRunId, filters.evaluationRunId) : undefined,
     filters.modelVersion ? eq(modelEvaluationPredictionsTable.modelVersion, filters.modelVersion) : undefined,
     filters.family ? eq(modelEvaluationPredictionsTable.family, filters.family) : undefined,
     filters.testSeason ? eq(modelEvaluationPredictionsTable.testSeason, filters.testSeason) : undefined,
     filters.week ? eq(modelEvaluationPredictionsTable.week, filters.week) : undefined,
+    filters.gameId ? eq(modelEvaluationPredictionsTable.gameId, filters.gameId) : undefined,
   ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
   const conditions = filters.cursor
     ? [...baseConditions, lt(modelEvaluationPredictionsTable.id, filters.cursor)]
     : baseConditions;
-  const limit = Math.max(1, Math.min(1000, Math.floor(filters.limit ?? 250)));
+  const limit = Math.max(1, Math.min(maximumLimit, Math.floor(filters.limit ?? 250)));
   const [rows, totalResult] = await Promise.all([
     db.select().from(modelEvaluationPredictionsTable)
     .where(conditions.length ? and(...conditions) : undefined)
@@ -589,6 +685,116 @@ export async function getModelEvaluationAudit(filters: EvaluationAuditFilters = 
       ? "Stored evaluation-time evidence only. This read did not train, refit, generate, promote, or change a production model."
       : "No game-level evidence is stored for the requested run. Legacy aggregate runs, including existing 2025 results, are not backfilled or reconstructed.",
   };
+}
+
+type EvaluationEvidenceRow = typeof modelEvaluationPredictionsTable.$inferSelect;
+
+export function summarizeModelEvaluationEvidence(rows: EvaluationEvidenceRow[]) {
+  const byModel = new Map<string, EvaluationEvidenceRow[]>();
+  for (const row of rows) byModel.set(row.modelVersion, [...(byModel.get(row.modelVersion) ?? []), row]);
+  const models = [...byModel.entries()].map(([modelVersion, values]) => {
+    const family = values[0].family as Family;
+    const errors = values.map((row) => row.predictedValue - row.actualValue);
+    const summary = family === "moneyline"
+      ? {
+          accuracy: mean(values.map((row) => (row.predictedValue >= 0.5 ? 1 : 0) === row.actualValue ? 1 : 0)),
+          brierScore: brier(values.map((row) => row.actualValue), values.map((row) => row.predictedValue)),
+          logLoss: logLoss(values.map((row) => row.actualValue), values.map((row) => row.predictedValue)),
+          calibration: calibration(values.map((row) => row.actualValue), values.map((row) => row.predictedValue)),
+        }
+      : { mae: mean(errors.map(Math.abs)), rmse: Math.sqrt(mean(errors.map((value) => value ** 2))) };
+    const edgeRows = values.flatMap((row) => {
+      if (family === "moneyline" || row.marketPoint == null || !row.marketSide) return [];
+      let edge: number | null = null;
+      if (family === "spread") {
+        if (row.marketSide === "home") edge = row.predictedValue + row.marketPoint;
+        if (row.marketSide === "away") edge = row.marketPoint - row.predictedValue;
+      } else {
+        if (row.marketSide === "over") edge = row.predictedValue - row.marketPoint;
+        if (row.marketSide === "under") edge = row.marketPoint - row.predictedValue;
+      }
+      return edge == null ? [] : [{ edge, error: Math.abs(row.predictedValue - row.actualValue) }];
+    });
+    const edgeBuckets = [
+      { label: "0-2", min: 0, max: 2 },
+      { label: "2-5", min: 2, max: 5 },
+      { label: "5+", min: 5, max: Number.POSITIVE_INFINITY },
+    ].map((bucket) => {
+      const bucketRows = edgeRows.filter((row) => Math.abs(row.edge) >= bucket.min && Math.abs(row.edge) < bucket.max);
+      return {
+        bucket: bucket.label,
+        sampleSize: bucketRows.length,
+        meanAbsoluteError: bucketRows.length ? mean(bucketRows.map((row) => row.error)) : null,
+      };
+    });
+    return {
+      modelVersion,
+      family,
+      sampleSize: values.length,
+      ...summary,
+      edgeAnalysis: edgeRows.length
+        ? { status: "measured", sampleSize: edgeRows.length, meanAbsoluteError: mean(edgeRows.map((row) => row.error)), meanEdge: mean(edgeRows.map((row) => row.edge)), buckets: edgeBuckets }
+        : { status: "unavailable", reason: "No legitimate prediction-time market evidence supports edge analysis." },
+    };
+  });
+  const cumulative = [...byModel.entries()].flatMap(([modelVersion, values]) => {
+    const ordered = [...values].sort((a, b) => a.testSeason - b.testSeason || a.week - b.week || a.gameId.localeCompare(b.gameId));
+    return ordered.map((row, index) => ({
+      testSeason: row.testSeason,
+      week: row.week,
+      gameId: row.gameId,
+      modelVersion,
+      sampleSize: index + 1,
+      metric: row.family === "moneyline" ? "brierScore" : "meanAbsoluteError",
+      score: mean(ordered.slice(0, index + 1).map((item) => row.family === "moneyline"
+        ? (item.predictedValue - item.actualValue) ** 2
+        : Math.abs(item.predictedValue - item.actualValue))),
+    }));
+  });
+  const comparisons = [...byModel.entries()].flatMap(([leftVersion, leftRows], leftIndex, entries) =>
+    entries.slice(leftIndex + 1).flatMap(([rightVersion, rightRows]) => {
+      if (leftRows[0].family !== rightRows[0].family) return [];
+      const rightByGame = new Map(rightRows.map((row) => [row.gameId, row]));
+      const paired = leftRows.flatMap((left) => {
+        const right = rightByGame.get(left.gameId);
+        return right ? [{ left, right }] : [];
+      });
+      if (!paired.length) return [];
+      const probability = leftRows[0].family === "moneyline";
+      const leftErrors = paired.map(({ left }) => probability
+        ? (left.predictedValue - left.actualValue) ** 2
+        : Math.abs(left.predictedValue - left.actualValue));
+      const rightErrors = paired.map(({ right }) => probability
+        ? (right.predictedValue - right.actualValue) ** 2
+        : Math.abs(right.predictedValue - right.actualValue));
+      return [{
+        family: leftRows[0].family,
+        metric: probability ? "brierScore" : "meanAbsoluteError",
+        leftModelVersion: leftVersion,
+        rightModelVersion: rightVersion,
+        pairedSampleSize: paired.length,
+        leftScore: mean(leftErrors),
+        rightScore: mean(rightErrors),
+        scoreDelta: mean(leftErrors) - mean(rightErrors),
+      }];
+    }),
+  );
+  return {
+    status: rows.length ? "measured" : "unavailable",
+    sampleSize: rows.length,
+    models,
+    cumulative,
+    comparison: comparisons.length
+      ? { status: "measured", pairs: comparisons }
+      : { status: "unavailable", reason: "At least two same-family retained model runs with overlapping games are required." },
+  };
+}
+
+export async function getModelEvaluationReport(filters: EvaluationAuditFilters = {}) {
+  const reportRowLimit = 10_000;
+  const audit = await getModelEvaluationAudit({ ...filters, cursor: undefined, limit: reportRowLimit }, reportRowLimit);
+  if (audit.total > reportRowLimit) throw new Error("Evaluation report exceeds the 10000-row bound; narrow the season, week, game, run, family, or model filters.");
+  return { filters, ...summarizeModelEvaluationEvidence(audit.rows) };
 }
 
 export async function refitPhase6ProductionModels(featureVersion = PREGAME_FEATURE_VERSION) {

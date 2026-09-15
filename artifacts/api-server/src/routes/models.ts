@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db, modelPromotionHistoryTable, modelTrainingRunsTable } from "@workspace/db";
 import { getAuth } from "@clerk/express";
 import { generateLivePredictions, getModelDriftMonitoring } from "../lib/live-predictions";
-import { getModelEvaluationAudit, getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate, type Family } from "../lib/modeling";
+import { getModelEvaluationAudit, getModelEvaluationReport, getPhase4ModelLab, refitPhase6ProductionModels, trainPhase4Models, validateProductionCandidate, type Family } from "../lib/modeling";
 import { PromotionSafetyGateError, runPromotionSafetyGate, type PromotionSafetyGateResult } from "../lib/promotion-safety-gate";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 import { getLifecycleVerificationReport } from "../lib/lifecycle-verification";
@@ -138,14 +138,34 @@ router.get("/models/evaluations/audit", requireAdmin, async (req, res): Promise<
     };
     res.json(await getModelEvaluationAudit({
       modelVersion: typeof req.query.modelVersion === "string" ? req.query.modelVersion.trim() || undefined : undefined,
+      evaluationRunId: typeof req.query.evaluationRunId === "string" ? req.query.evaluationRunId.trim() || undefined : undefined,
       family,
       testSeason: integerQuery(req.query.testSeason),
       week: integerQuery(req.query.week),
+      gameId: typeof req.query.gameId === "string" ? req.query.gameId.trim() || undefined : undefined,
       limit: integerQuery(req.query.limit),
       cursor: integerQuery(req.query.cursor),
     }));
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Model evaluation audit unavailable" });
+  }
+});
+
+router.get("/models/evaluations/report", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    const integerQuery = (value: unknown) => typeof value === "string" && /^\d+$/.test(value) ? Number(value) : undefined;
+    const family = typeof req.query.family === "string" && ["spread", "moneyline", "totals"].includes(req.query.family)
+      ? req.query.family as Family : undefined;
+    res.json(await getModelEvaluationReport({
+      evaluationRunId: typeof req.query.evaluationRunId === "string" ? req.query.evaluationRunId.trim() || undefined : undefined,
+      modelVersion: typeof req.query.modelVersion === "string" ? req.query.modelVersion.trim() || undefined : undefined,
+      family,
+      testSeason: integerQuery(req.query.testSeason),
+      week: integerQuery(req.query.week),
+      gameId: typeof req.query.gameId === "string" ? req.query.gameId.trim() || undefined : undefined,
+    }));
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "Model evaluation report unavailable" });
   }
 });
 
