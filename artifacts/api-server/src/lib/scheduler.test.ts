@@ -4,6 +4,7 @@ import {
   FOOTBALL_TIMEZONE,
   INJURY_WEEKLY_SLOTS,
   ODDS_WEEKLY_SLOTS,
+  classifySchedulerAlerts,
   nextWeeklyOccurrence,
   groupSundayKickoffWindows,
   shouldRecoverMissedOccurrence,
@@ -130,4 +131,59 @@ test("quota counters prefer per-call cost and otherwise derive a positive delta"
   assert.equal(calculatePaidRequestCredits(null, 101, 100), 1);
   assert.equal(calculatePaidRequestCredits(null, 99, 100), null);
   assert.equal(calculatePaidRequestCredits(null, null, null), null);
+});
+
+test("scheduler health identifies overdue jobs, expired locks, and repeated failures without executing work", () => {
+  const now = new Date("2025-09-07T12:00:00.000Z");
+  const alerts = classifySchedulerAlerts([
+    {
+      jobKey: "overdue",
+      enabled: true,
+      nextRunAt: new Date("2025-09-07T11:50:00.000Z"),
+      lockOwner: null,
+      lockUntil: null,
+    },
+    {
+      jobKey: "expired",
+      enabled: true,
+      nextRunAt: new Date("2025-09-07T11:30:00.000Z"),
+      lockOwner: "worker-a",
+      lockUntil: new Date("2025-09-07T11:59:00.000Z"),
+    },
+    {
+      jobKey: "failing",
+      enabled: true,
+      nextRunAt: new Date("2025-09-07T13:00:00.000Z"),
+      lockOwner: null,
+      lockUntil: null,
+    },
+    {
+      jobKey: "disabled",
+      enabled: false,
+      nextRunAt: new Date("2025-09-01T00:00:00.000Z"),
+      lockOwner: "old-worker",
+      lockUntil: new Date("2025-09-02T00:00:00.000Z"),
+    },
+  ], [
+    { jobKey: "failing", status: "failed" },
+    { jobKey: "failing", status: "failed" },
+    { jobKey: "failing", status: "failed" },
+    { jobKey: "overdue", status: "success" },
+  ], now);
+
+  assert.ok(alerts.some((alert) => alert.jobKey === "overdue" && alert.code === "overdue"));
+  assert.ok(alerts.some((alert) => alert.jobKey === "expired" && alert.code === "expired_lock"));
+  assert.ok(alerts.some((alert) => alert.jobKey === "failing" && alert.code === "repeated_failures"));
+  assert.equal(alerts.some((alert) => alert.jobKey === "disabled"), false);
+});
+
+test("scheduler health distinguishes a still-valid overdue lock", () => {
+  const alerts = classifySchedulerAlerts([{
+    jobKey: "running-long",
+    enabled: true,
+    nextRunAt: new Date("2025-09-07T11:50:00.000Z"),
+    lockOwner: "worker-a",
+    lockUntil: new Date("2025-09-07T13:00:00.000Z"),
+  }], [], new Date("2025-09-07T12:00:00.000Z"));
+  assert.deepEqual(alerts.map((alert) => alert.code), ["overdue_locked"]);
 });

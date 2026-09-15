@@ -109,10 +109,12 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
       {
         provider: "scheduler",
         label: "Recurring synchronization",
-        status: scheduler.activeInThisProcess || scheduler.persistentWorkerExpected ? "current" : "stale",
-        detail: scheduler.activeInThisProcess
-          ? "The in-process scheduler is active. Persisted locks prevent duplicate work across server processes."
-          : "The persistent Gridline data worker owns recurring synchronization; the API process can be inactive without stopping scheduled work.",
+        status: scheduler.status === "healthy" ? "current" : "stale",
+        detail: scheduler.alerts.length > 0
+          ? `${scheduler.alerts.length} durable worker scheduler alert${scheduler.alerts.length === 1 ? "" : "s"} detected. This API process only reports persisted state.`
+          : scheduler.activeInThisProcess
+            ? "The durable worker scheduler is active in this process. Persisted locks prevent duplicate work."
+            : "This API process is healthy but does not own recurring work; persisted durable worker state has no backlog alerts.",
         lastUpdated: scheduler.processStartedAt,
         nextUpdate: scheduler.jobs
           .map((job) => job.nextRunAt)
@@ -127,6 +129,9 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
           processRole: scheduler.processRole,
           persistentWorkerExpected: scheduler.persistentWorkerExpected,
           alwaysOnServiceRequired: scheduler.alwaysOnServiceRequired,
+          schedulerStatus: scheduler.status,
+          checkedAt: scheduler.checkedAt,
+          alerts: scheduler.alerts,
           jobs: scheduler.jobs,
           recentRuns: scheduler.runs.slice(0, 40),
           note: scheduler.note,

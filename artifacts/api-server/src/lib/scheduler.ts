@@ -31,6 +31,94 @@ const LOCK_TTL_MS = 2 * 60 * 60 * 1000;
 const TICK_MS = 60 * 1000;
 const SCHEDULE_INTERVAL_MS = 30 * 60 * 1000;
 const PERSONNEL_CONTEXT_INTERVAL_MS = 30 * 60 * 1000;
+export const SCHEDULER_OVERDUE_GRACE_MS = 2 * TICK_MS;
+export const REPEATED_FAILURE_THRESHOLD = 3;
+
+type SchedulerHealthJob = {
+  jobKey: string;
+  enabled: boolean;
+  nextRunAt: Date | null;
+  lockOwner: string | null;
+  lockUntil: Date | null;
+};
+
+type SchedulerHealthRun = {
+  jobKey: string | null;
+  status: string;
+};
+
+export type SchedulerAlert = {
+  code: "overdue" | "overdue_locked" | "expired_lock" | "repeated_failures";
+  severity: "warning" | "critical";
+  jobKey: string;
+  detail: string;
+  overdueByMs?: number;
+  consecutiveFailures?: number;
+  lockUntil?: string | null;
+};
+
+export function classifySchedulerAlerts(
+  jobs: SchedulerHealthJob[],
+  runs: SchedulerHealthRun[],
+  now = new Date(),
+): SchedulerAlert[] {
+  const alerts: SchedulerAlert[] = [];
+  const runsByJob = new Map<string, SchedulerHealthRun[]>();
+  for (const run of runs) {
+    if (!run.jobKey) continue;
+    const jobRuns = runsByJob.get(run.jobKey) ?? [];
+    jobRuns.push(run);
+    runsByJob.set(run.jobKey, jobRuns);
+  }
+
+  for (const job of jobs) {
+    if (!job.enabled) continue;
+    const overdueByMs = job.nextRunAt ? now.getTime() - job.nextRunAt.getTime() : 0;
+    const hasLock = Boolean(job.lockOwner || job.lockUntil);
+    const lockIsExpired = Boolean(job.lockUntil && job.lockUntil.getTime() <= now.getTime());
+
+    if (lockIsExpired) {
+      alerts.push({
+        code: "expired_lock",
+        severity: "critical",
+        jobKey: job.jobKey,
+        detail: "The scheduler lease expired without being cleared.",
+        lockUntil: job.lockUntil?.toISOString() ?? null,
+      });
+    }
+    if (job.nextRunAt && overdueByMs > SCHEDULER_OVERDUE_GRACE_MS) {
+      alerts.push({
+        code: hasLock && !lockIsExpired ? "overdue_locked" : "overdue",
+        severity: lockIsExpired ? "critical" : "warning",
+        jobKey: job.jobKey,
+        detail: hasLock && !lockIsExpired
+          ? "The job remains locked after its scheduled time."
+          : "The enabled job has not advanced past its scheduled time.",
+        overdueByMs,
+        lockUntil: job.lockUntil?.toISOString() ?? null,
+      });
+    }
+
+    let consecutiveFailures = 0;
+    for (const run of runsByJob.get(job.jobKey) ?? []) {
+      if (run.status !== "failed") break;
+      consecutiveFailures += 1;
+    }
+    if (consecutiveFailures >= REPEATED_FAILURE_THRESHOLD) {
+      alerts.push({
+        code: "repeated_failures",
+        severity: "critical",
+        jobKey: job.jobKey,
+        detail: `The job has failed ${consecutiveFailures} consecutive times.`,
+        consecutiveFailures,
+      });
+    }
+  }
+  return alerts.sort((left, right) =>
+    (left.severity === right.severity ? 0 : left.severity === "critical" ? -1 : 1)
+    || left.jobKey.localeCompare(right.jobKey)
+    || left.code.localeCompare(right.code));
+}
 
 type WeeklyDefinition = {
   jobKey: string;
@@ -840,6 +928,7 @@ export function stopDataScheduler() {
 }
 
 export async function getSchedulerHealth() {
+  const checkedAt = new Date();
   const jobs = await db
     .select()
     .from(schedulerJobsTable)
@@ -849,7 +938,15 @@ export async function getSchedulerHealth() {
     .from(dataSyncRunsTable)
     .orderBy(desc(dataSyncRunsTable.startedAt), desc(dataSyncRunsTable.id))
     .limit(100);
+  const alerts = classifySchedulerAlerts(jobs, runs, checkedAt);
   return {
+    status: alerts.some((alert) => alert.severity === "critical")
+      ? "critical"
+      : alerts.length > 0
+        ? "warning"
+        : "healthy",
+    checkedAt: checkedAt.toISOString(),
+    alerts,
     activeInThisProcess: Boolean(timer),
     processRole: process.env.GRIDLINE_SCHEDULER_WORKER === "1" ? "persistent_worker" : "api",
     persistentWorkerExpected: true,
@@ -870,6 +967,9 @@ export async function getSchedulerHealth() {
       lastStatus: job.lastStatus,
       lastError: job.lastError,
       locked: Boolean(job.lockUntil && job.lockUntil.getTime() > Date.now()),
+      lockOwner: job.lockOwner,
+      lockAcquiredAt: job.lockAcquiredAt?.toISOString() ?? null,
+      lockUntil: job.lockUntil?.toISOString() ?? null,
     })),
     runs: runs.map((run) => ({
       id: run.id,
