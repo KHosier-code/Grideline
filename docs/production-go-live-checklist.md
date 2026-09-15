@@ -143,6 +143,13 @@ replace a pending or warning result with an assumption.
 
 ## Logging and operations
 
+- [ ] Enable Replit App Monitoring email alerts for the published app and assign
+  an operator recipient. A failed production database startup gate leaves the
+  app unavailable, so App Monitoring sends the rate-limited downtime alert.
+- [ ] For a database startup alert, find
+  `production_database_startup_gate_failed` in deployment logs and use its
+  `failureCategory` to triage. The event intentionally excludes database URLs,
+  credentials, hosts, and raw error messages.
 - [ ] Route, worker, scheduler, feed, authorization, promotion, freeze, grade,
   and backup failures are logged with a correlation/request or job key.
 - [ ] Logs contain error class and operational context but no API keys, Clerk

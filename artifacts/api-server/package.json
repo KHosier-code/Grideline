@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "worker": "node --enable-source-maps ./dist/worker.mjs",
-    "test:production-database-smoke": "pnpm run build && node --test ./dist/lib/production-database-smoke.test.mjs",
+    "test:production-database-smoke": "pnpm run build && node --test ./dist/lib/production-database-smoke.test.mjs ./dist/lib/production-startup-alert.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

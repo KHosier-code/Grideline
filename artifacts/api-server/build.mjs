@@ -20,6 +20,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/worker.ts"),
       path.resolve(artifactDir, "src/production.ts"),
       path.resolve(artifactDir, "src/lib/production-database-smoke.test.ts"),
+      path.resolve(artifactDir, "src/lib/production-startup-alert.test.ts"),
     ],
     platform: "node",
     bundle: true,
