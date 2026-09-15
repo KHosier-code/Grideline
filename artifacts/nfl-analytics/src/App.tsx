@@ -15,6 +15,7 @@ import {
   Gauge,
   FileSearch,
   History,
+  Home,
   LayoutDashboard,
   LineChart,
   ListFilter,
@@ -67,6 +68,13 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import ConsumerHome from '@/pages/consumer/ConsumerHome';
+import ConsumerGames from '@/pages/consumer/ConsumerGames';
+import ConsumerGameDetail from '@/pages/consumer/ConsumerGameDetail';
+import ConsumerPerformance from '@/pages/consumer/ConsumerPerformance';
+import ConsumerTrends from '@/pages/consumer/ConsumerTrends';
+import ConsumerProps from '@/pages/consumer/ConsumerProps';
+import { useAdminStatus } from '@/hooks/use-admin-status';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -337,7 +345,7 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="app-shell">
       <aside className={cx('sidebar', mobileOpen && 'sidebar-open')}>
         <div className="sidebar-top">
-          <Link href="/" className="brand" data-testid="link-home">
+          <Link href="/admin" className="brand" data-testid="link-home">
             <span className="brand-mark"><Target className="h-4 w-4" /></span>
             <span><strong>Gridline</strong><small>NFL ANALYTICS</small></span>
           </Link>
@@ -348,10 +356,11 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="nav-group" key={group.label}>
               <p className="nav-label">{group.label}</p>
               {group.items.map((item) => {
-                const active = item.href === '/' ? location === '/' : location.startsWith(item.href);
+                const href = item.href === '/' ? '/admin' : `/admin${item.href}`;
+                const active = location === href || (href !== '/admin' && location.startsWith(href));
                 const Icon = item.icon;
                 return (
-                  <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={cx('nav-item', active && 'nav-item-active')} data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <Link key={item.href} href={href} onClick={() => setMobileOpen(false)} className={cx('nav-item', active && 'nav-item-active')} data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>
                     <Icon className="h-[17px] w-[17px]" /><span>{item.label}</span>{active && <ChevronRight className="ml-auto h-3.5 w-3.5" />}
                   </Link>
                 );
@@ -372,17 +381,51 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-shell">
         <div className="mobile-topbar">
           <button type="button" className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation" data-testid="button-open-navigation"><Menu className="h-5 w-5" /></button>
-          <Link href="/" className="brand brand-mobile" data-testid="link-mobile-home"><span className="brand-mark"><Target className="h-4 w-4" /></span><strong>Gridline</strong></Link>
+          <Link href="/admin" className="brand brand-mobile" data-testid="link-mobile-home"><span className="brand-mark"><Target className="h-4 w-4" /></span><strong>Gridline</strong></Link>
           <span className="ml-auto"><StatusPill status={isHealthy ? 'current' : 'unavailable'}>{isHealthy ? 'Live' : 'Offline'}</StatusPill></span>
         </div>
         <div className="topbar">
           <div className="topbar-context"><span className="live-kicker"><span className="live-pulse" />CONTROL ROOM</span><span className="topbar-divider" />{new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div>
-          <div className="topbar-actions"><button type="button" className="icon-button" aria-label="Notifications" data-testid="button-notifications"><Bell className="h-4 w-4" /><span className="notification-dot" /></button>{isSignedIn ? <UserButton /> : <Link href="/sign-in" className="button button-subtle" data-testid="link-sign-in">Sign in</Link>}<Link href="/settings" className="avatar-link" aria-label="Open settings" data-testid="link-settings-quick"><span className="user-avatar user-avatar-small">A</span></Link></div>
+          <div className="topbar-actions"><Link href="/" className="button button-subtle">Consumer view</Link><button type="button" className="icon-button" aria-label="Notifications" data-testid="button-notifications"><Bell className="h-4 w-4" /><span className="notification-dot" /></button>{isSignedIn ? <UserButton /> : <Link href="/sign-in" className="button button-subtle" data-testid="link-sign-in">Sign in</Link>}<Link href="/admin/settings" className="avatar-link" aria-label="Open settings" data-testid="link-settings-quick"><span className="user-avatar user-avatar-small">A</span></Link></div>
         </div>
         <div className="page-wrap">{children}</div>
       </main>
     </div>
   );
+}
+
+const consumerNav = [
+  { href: '/', label: 'Home', icon: Home },
+  { href: '/games', label: 'Games', icon: CalendarDays },
+  { href: '/performance', label: 'Performance', icon: BarChart3 },
+  { href: '/trends', label: 'Trends', icon: TrendingUp },
+  { href: '/props', label: 'Props', icon: LockKeyhole },
+];
+
+function ConsumerShell({ children }: { children: ReactNode }) {
+  const [location] = useLocation();
+  const [open, setOpen] = useState(false);
+  const admin = useAdminStatus();
+  return <div className="consumer-shell">
+    <header className="consumer-topbar">
+      <Link href="/" className="consumer-brand"><span className="brand-mark"><Target className="h-4 w-4" /></span><strong>Gridline</strong></Link>
+      <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''}><Icon />{item.label}{item.href === '/props' && <small>Soon</small>}</Link>; })}{admin.data === true && <Link href="/admin"><ShieldCheck />Admin</Link>}</nav>
+      <div className="consumer-account"><UserButton /><button aria-label="Open navigation" onClick={() => setOpen(!open)}><Menu /></button></div>
+    </header>
+    {open && <nav className="consumer-mobile-nav" aria-label="Mobile navigation">{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</Link>}</nav>}
+    <main className="consumer-main">{children}</main>
+  </div>;
+}
+
+function AdminOnly({ children }: { children: ReactNode }) {
+  const admin = useAdminStatus();
+  if (admin.isLoading) return <ConsumerLoadingFallback />;
+  if (admin.data !== true) return <ConsumerShell><div className="consumer-state"><LockKeyhole className="h-7 w-7" /><h2>Administrator access required</h2><p>This workspace is available only to authorized administrators.</p><Link className="button button-primary" href="/">Return home</Link></div></ConsumerShell>;
+  return <Shell>{children}</Shell>;
+}
+
+function ConsumerLoadingFallback() {
+  return <div className="consumer-state"><Loader2 className="h-6 w-6 animate-spin" /><p>Checking access…</p></div>;
 }
 
 function Dashboard() {
@@ -395,7 +438,7 @@ function Dashboard() {
   const ledger = [{ label: 'ATS', metric: data.ats, icon: Target }, { label: 'Moneyline', metric: data.moneyline, icon: TrendingUp }, { label: 'Totals', metric: data.totals, icon: Gauge }];
   return (
     <>
-      <PageHeader eyebrow={`Season ${data.season} / Week ${data.currentWeek ?? '—'}`} title="The weekly read" detail="A clear view of the current market before you make a decision." actions={<Link href="/this-week" className="button button-primary" data-testid="link-view-week"><CalendarDays className="h-4 w-4" /> View this week</Link>} />
+      <PageHeader eyebrow={`Season ${data.season} / Week ${data.currentWeek ?? '—'}`} title="The weekly read" detail="A clear view of the current market before you make a decision." actions={<Link href="/admin/this-week" className="button button-primary" data-testid="link-view-week"><CalendarDays className="h-4 w-4" /> View this week</Link>} />
       <div className="overview-banner">
         <div><p className="eyebrow text-accent">MODEL OPERATING STATUS</p><h2 className="banner-title">{data.modelStatus === 'not_trained' ? 'Model not yet trained' : 'Production model online'}</h2><p className="banner-copy">{data.modelStatus === 'not_trained' ? 'No probabilities or edges will be shown until a trained model is promoted. This is intentional.' : 'Current production signals are available for review.'}</p></div>
         <div className="banner-side"><StatusPill status={data.modelStatus}>{data.modelStatus === 'not_trained' ? 'Not trained' : 'Available'}</StatusPill><span className="font-mono text-[10px] text-white/45">LAST CHECK {formatDate(new Date().toISOString(), true).toUpperCase()}</span></div>
@@ -408,9 +451,9 @@ function Dashboard() {
       </div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
         <Panel eyebrow="Signal queue" title="Top edges" action={<span className="section-meta">{topEdges.length} surfaced</span>}>
-          {topEdges.length > 0 ? <div className="divide-y divide-border">{topEdges.map((edge, index) => <Link href={`/games/${edge.gameId}`} key={edge.gameId} className="edge-row" data-testid={`link-edge-${edge.gameId}`}><div className="edge-index">0{index + 1}</div><div className="min-w-0 flex-1"><p className="font-semibold text-ink">{edge.label}</p><p className="mt-1 truncate text-xs text-muted-foreground">{edge.detail}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>)}</div> : <EmptyPanel title="No edges are being surfaced" detail="The model gate is closed. Once training completes, qualifying edges will appear here with a direct path to the game." icon={Target} />}
+          {topEdges.length > 0 ? <div className="divide-y divide-border">{topEdges.map((edge, index) => <Link href={`/admin/games/${edge.gameId}`} key={edge.gameId} className="edge-row" data-testid={`link-edge-${edge.gameId}`}><div className="edge-index">0{index + 1}</div><div className="min-w-0 flex-1"><p className="font-semibold text-ink">{edge.label}</p><p className="mt-1 truncate text-xs text-muted-foreground">{edge.detail}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>)}</div> : <EmptyPanel title="No edges are being surfaced" detail="The model gate is closed. Once training completes, qualifying edges will appear here with a direct path to the game." icon={Target} />}
         </Panel>
-        <Panel eyebrow="Data observability" title="Freshness" action={<Link href="/data-health" className="text-xs font-semibold text-accent hover:underline" data-testid="link-data-health">View health</Link>}>
+        <Panel eyebrow="Data observability" title="Freshness" action={<Link href="/admin/data-health" className="text-xs font-semibold text-accent hover:underline" data-testid="link-data-health">View health</Link>}>
           {health.isLoading ? <div className="space-y-3"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : health.isError ? <ErrorPanel message="Provider health is temporarily unavailable." /> : health.data?.length ? <div className="space-y-3">{health.data.slice(0, 4).map((item) => <FreshnessCard key={item.provider} item={item} />)}</div> : <EmptyPanel title="No provider checks yet" detail="Health records will appear when the first provider sync is captured." icon={Database} />}
         </Panel>
       </div>
@@ -426,7 +469,7 @@ function Dashboard() {
 function GameRow({ game }: { game: any }) {
   const isFinal = ['final', 'completed'].includes(String(game.gameStatus).toLowerCase());
   return (
-    <Link href={`/games/${game.gameId}`} className="game-row" data-testid={`link-game-${game.gameId}`}>
+    <Link href={`/admin/games/${game.gameId}`} className="game-row" data-testid={`link-game-${game.gameId}`}>
       <div className="game-date"><span>{formatDate(game.gameDate)}</span><small>{game.kickoffTime ? formatDate(game.kickoffTime, true) : 'Time TBD'}</small></div>
       <div className="matchup"><div className="team-side"><span className="team-abbr">{game.awayTeam.abbreviation}</span><span>{game.awayTeam.teamName}</span></div><span className="at-mark">@</span><div className="team-side team-home"><span className="team-abbr">{game.homeTeam.abbreviation}</span><span>{game.homeTeam.teamName}</span></div></div>
       <div className="hidden text-xs text-muted-foreground lg:block">{game.venue || 'Venue pending'}{game.broadcast ? <><br /><span className="font-mono text-[10px]">{game.broadcast}</span></> : null}</div>
@@ -552,7 +595,7 @@ function OddsBoard() {
       </div>
       {captureMessage && <div className="callout callout-neutral mt-5"><ShieldCheck className="h-4 w-4 shrink-0 text-accent" /><p>{captureMessage}</p></div>}
       <Panel className="mt-5" title="Current market comparison" eyebrow="Side-by-side board" action={<span className="section-meta">{games.data?.length ?? 0} games</span>}>
-        {games.isLoading ? <div className="space-y-3"><Skeleton className="h-28" /><Skeleton className="h-28" /></div> : games.isError ? <ErrorPanel /> : games.data?.length ? <div className="space-y-5">{games.data.map((game) => <div className="rounded-xl border border-border p-4" key={game.gameId}><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold text-ink">{game.awayTeam.abbreviation} at {game.homeTeam.abbreviation}</p><p className="mt-1 text-xs text-muted-foreground">{game.kickoffTime ? formatDate(String(game.kickoffTime), true) : 'Kickoff TBD'} · {game.latestOdds?.length ?? 0} current quotes</p></div><Link href={`/games/${game.gameId}`} className="text-xs font-semibold text-accent hover:underline">History & detail <ChevronRight className="inline h-3 w-3" /></Link></div><OddsMarketTable quotes={(game.latestOdds ?? []) as any[]} /></div>)}</div> : <EmptyPanel title="No games returned for this week" detail="The live schedule is empty, so no sportsbook market can be safely matched." icon={CalendarDays} />}
+        {games.isLoading ? <div className="space-y-3"><Skeleton className="h-28" /><Skeleton className="h-28" /></div> : games.isError ? <ErrorPanel /> : games.data?.length ? <div className="space-y-5">{games.data.map((game) => <div className="rounded-xl border border-border p-4" key={game.gameId}><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold text-ink">{game.awayTeam.abbreviation} at {game.homeTeam.abbreviation}</p><p className="mt-1 text-xs text-muted-foreground">{game.kickoffTime ? formatDate(String(game.kickoffTime), true) : 'Kickoff TBD'} · {game.latestOdds?.length ?? 0} current quotes</p></div><Link href={`/admin/games/${game.gameId}`} className="text-xs font-semibold text-accent hover:underline">History & detail <ChevronRight className="inline h-3 w-3" /></Link></div><OddsMarketTable quotes={(game.latestOdds ?? []) as any[]} /></div>)}</div> : <EmptyPanel title="No games returned for this week" detail="The live schedule is empty, so no sportsbook market can be safely matched." icon={CalendarDays} />}
       </Panel>
       <div className="callout callout-warn mt-5"><AlertTriangle className="h-4 w-4 shrink-0" /><p>Missing or stale markets remain visibly missing. The board does not infer a line, fill a bookmaker gap, or turn market differences into prediction logic.</p></div>
     </>
@@ -615,7 +658,7 @@ function GameDetail() {
   const marketLine = (quote: any) => quote && typeof quote.point === 'number' ? `${quote.point > 0 ? '+' : ''}${quote.point} (${quote.sportsbook})` : 'Unavailable';
   return (
     <>
-      <PageHeader eyebrow={`Week ${item.week} / ${formatDate(item.gameDate)}`} title={`${item.awayTeam.abbreviation} at ${item.homeTeam.abbreviation}`} detail={`${item.awayTeam.teamName} at ${item.homeTeam.teamName}${item.venue ? ` · ${item.venue}` : ''}`} actions={<Link href="/this-week" className="button button-subtle" data-testid="link-back-week"><ChevronRight className="h-4 w-4 rotate-180" /> Back to slate</Link>} />
+      <PageHeader eyebrow={`Week ${item.week} / ${formatDate(item.gameDate)}`} title={`${item.awayTeam.abbreviation} at ${item.homeTeam.abbreviation}`} detail={`${item.awayTeam.teamName} at ${item.homeTeam.teamName}${item.venue ? ` · ${item.venue}` : ''}`} actions={<Link href="/admin/this-week" className="button button-subtle" data-testid="link-back-week"><ChevronRight className="h-4 w-4 rotate-180" /> Back to slate</Link>} />
       <div className="game-hero"><div className="hero-team"><span className="hero-abbr">{item.awayTeam.abbreviation}</span><span>{item.awayTeam.teamName}</span><small>AWAY</small></div><div className="hero-center"><span className="hero-at">@</span><StatusPill status={item.gameStatus}>{item.gameStatus}</StatusPill><span className="text-xs text-sidebar-foreground/55">{item.kickoffTime ? formatDate(item.kickoffTime, true) : 'Kickoff TBD'}</span></div><div className="hero-team hero-team-right"><span className="hero-abbr">{item.homeTeam.abbreviation}</span><span>{item.homeTeam.teamName}</span><small>HOME</small></div></div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
         <Panel eyebrow="Current market" title="Latest odds" action={<span className="section-meta">{odds.length} quotes</span>}>
@@ -1772,7 +1815,38 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function Router() {
-  return <RoutedErrorBoundary><Switch><Route path="/sign-in/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>} /><Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} /><Route><Shell><Switch><Route path="/" component={Dashboard} /><Route path="/this-week" component={ThisWeek} /><Route path="/games/:gameId" component={GameDetail} /><Route path="/live-predictions" component={LivePredictions} /><Route path="/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route><Route path="/feature-audit" component={FeatureAuditPage} /><Route path="/evaluation-audit" component={EvaluationAudit} /><Route path="/personnel-context" component={PersonnelContextPage} /><Route path="/odds" component={OddsBoard} /><Route path="/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices. Open a game from the Odds board to inspect every preserved change." preferred="odds" /></Route><Route path="/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route><Route path="/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route><Route path="/backtesting" component={Backtesting} /><Route path="/model-lab" component={ModelLab} /><Route path="/performance" component={Performance} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></Route></Switch></RoutedErrorBoundary>;
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <ConsumerLoadingFallback />;
+  const signIn = () => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>;
+  const signInPrompt = () => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignIn signUpUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} /></div>;
+  if (!isSignedIn) return <RoutedErrorBoundary><Switch>
+    <Route path="/sign-up/*?" component={() => <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4"><SignUp routing="path" path={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-up`} signInUrl={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`} /></div>} />
+    <Route path="/sign-in/*?" component={signIn} />
+    <Route component={signInPrompt} />
+  </Switch></RoutedErrorBoundary>;
+  return <RoutedErrorBoundary><Switch>
+      <Route path="/admin" component={AdminRoutes} />
+      <Route path="/admin/*" component={AdminRoutes} />
+      <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
+      <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
+      <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
+      <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
+      <Route path="/props"><ConsumerShell><ConsumerProps /></ConsumerShell></Route>
+      <Route path="/"><ConsumerShell><ConsumerHome /></ConsumerShell></Route>
+      <Route component={NotFound} />
+  </Switch></RoutedErrorBoundary>;
+}
+
+function AdminRoutes() {
+  return <AdminOnly><Switch>
+    <Route path="/admin" component={Dashboard} /><Route path="/admin/this-week" component={ThisWeek} /><Route path="/admin/games/:gameId" component={GameDetail} /><Route path="/admin/live-predictions" component={LivePredictions} />
+    <Route path="/admin/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route>
+    <Route path="/admin/feature-audit" component={FeatureAuditPage} /><Route path="/admin/evaluation-audit" component={EvaluationAudit} /><Route path="/admin/personnel-context" component={PersonnelContextPage} /><Route path="/admin/odds" component={OddsBoard} />
+    <Route path="/admin/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices." preferred="odds" /></Route>
+    <Route path="/admin/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route>
+    <Route path="/admin/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route>
+    <Route path="/admin/backtesting" component={Backtesting} /><Route path="/admin/model-lab" component={ModelLab} /><Route path="/admin/performance" component={Performance} /><Route path="/admin/settings" component={SettingsPage} /><Route component={NotFound} />
+  </Switch></AdminOnly>;
 }
 
 function App() {
