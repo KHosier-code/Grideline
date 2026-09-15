@@ -5,12 +5,15 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerContext } from './consumerContext';
 import type { ConsumerGame } from './consumerGame';
 import type { ConsumerGameDetailAnalysis } from './consumerGameDetailAnalysis';
-import type { ConsumerGameDetailWeather } from './consumerGameDetailWeather';
+import type { ConsumerMovement } from './consumerMovement';
+import type { ConsumerWeather } from './consumerWeather';
 
 export type ConsumerGameDetail = ConsumerGame & {
-  /** @nullable */
-  weather: ConsumerGameDetailWeather;
+  weather: ConsumerWeather;
+  movement: ConsumerMovement;
+  context: ConsumerContext;
   analysis: ConsumerGameDetailAnalysis;
 };

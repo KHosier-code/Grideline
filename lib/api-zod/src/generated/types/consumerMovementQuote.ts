@@ -6,4 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConsumerTrendsByConfidenceItem = { [key: string]: unknown };
+export interface ConsumerMovementQuote {
+  /** @nullable */
+  point: number | null;
+  price: number;
+  capturedAt: Date;
+}

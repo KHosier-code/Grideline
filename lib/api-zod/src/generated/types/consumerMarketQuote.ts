@@ -8,6 +8,7 @@
 
 export interface ConsumerMarketQuote {
   sportsbook: string;
+  selection: string;
   /** @nullable */
   point: number | null;
   price: number;

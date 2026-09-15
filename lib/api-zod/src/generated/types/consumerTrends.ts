@@ -5,15 +5,15 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
-import type { ConsumerTrendsByConfidenceItem } from './consumerTrendsByConfidenceItem';
-import type { ConsumerTrendsByEdgeItem } from './consumerTrendsByEdgeItem';
-import type { ConsumerTrendsByWeekItem } from './consumerTrendsByWeekItem';
+import type { ConsumerPerformanceBreakdown } from './consumerPerformanceBreakdown';
 import type { ConsumerTrendsStatus } from './consumerTrendsStatus';
+import type { ConsumerTrendsWindow } from './consumerTrendsWindow';
 
 export interface ConsumerTrends {
   status: ConsumerTrendsStatus;
-  byWeek: ConsumerTrendsByWeekItem[];
-  byConfidence: ConsumerTrendsByConfidenceItem[];
-  byEdge: ConsumerTrendsByEdgeItem[];
+  byWeek: ConsumerPerformanceBreakdown[];
+  byConfidence: ConsumerPerformanceBreakdown[];
+  byEdge: ConsumerPerformanceBreakdown[];
+  window: ConsumerTrendsWindow;
   note: string;
 }

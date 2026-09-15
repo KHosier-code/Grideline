@@ -58,3 +58,21 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     );
   }
 });
+
+test("consumer API is public and read-only", () => {
+  const source = readFileSync(fileURLToPath(new URL("./consumer.ts", import.meta.url)), "utf8");
+  const expected = [
+    "/consumer/dashboard",
+    "/consumer/games",
+    "/consumer/games/:gameId",
+    "/consumer/performance",
+    "/consumer/trends",
+    "/consumer/props",
+  ];
+  for (const path of expected) {
+    const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(source, new RegExp(`router\\.get\\(\\s*["']${escapedPath}["']`));
+  }
+  assert.doesNotMatch(source, /router\.(post|put|patch|delete)\s*\(/);
+  assert.doesNotMatch(source, /\brequireAdmin\b/);
+});

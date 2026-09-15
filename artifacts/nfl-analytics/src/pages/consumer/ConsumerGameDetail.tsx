@@ -1,6 +1,7 @@
 import { getGetConsumerGameQueryKey, useGetConsumerGame } from '@workspace/api-client-react';
 import { ChevronLeft, CloudRain, Gauge, ShieldCheck, Users } from 'lucide-react';
 import { useParams, Link } from 'wouter';
+import { getConsumerPersonnelContent } from '../../lib/consumer-personnel';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } from './consumer-ui';
 
 export default function ConsumerGameDetail() {
@@ -17,6 +18,7 @@ export default function ConsumerGameDetail() {
     typeof weather.sustainedWind === 'number' ? `${weather.sustainedWind.toFixed(0)} mph wind` : null,
     typeof weather.precipitationProbability === 'number' ? `${weather.precipitationProbability.toFixed(0)}% precipitation` : null,
   ].filter(Boolean) : [];
+  const personnelContent = getConsumerPersonnelContent(game.context);
   return <div className="consumer-page consumer-detail">
     <Link href="/games" className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
     <section className="consumer-matchup-hero">
@@ -38,7 +40,7 @@ export default function ConsumerGameDetail() {
       <div className="consumer-evidence-grid">
         <details><summary><Gauge /> Current market</summary><div><p><b>Spread</b>{formatQuote(game.market.spread, 'spread')}</p><p><b>Moneyline</b>{formatQuote(game.market.moneyline, 'moneyline')}</p><p><b>Total</b>{formatQuote(game.market.total, 'total')}</p>{game.availability.market && <em>{game.availability.market}</em>}</div></details>
         <details><summary><CloudRain /> Weather</summary><div>{weatherParts.length ? <p>{weatherParts.join(' · ')}</p> : <p>{game.analysis.availability.weather ?? 'Weather is not available for this matchup.'}</p>}</div></details>
-        <details><summary><Users /> Personnel</summary><div><p>{game.analysis.availability.personnel ?? 'No material personnel alert is available.'}</p></div></details>
+        <details><summary><Users /> Personnel</summary><div>{personnelContent.drivers.length ? <ul>{personnelContent.drivers.map(driver => <li key={driver}>{driver}</li>)}</ul> : <p>{personnelContent.message}</p>}</div></details>
         <details><summary><ShieldCheck /> Analysis drivers</summary><div>{game.analysis.drivers.length ? <ul>{game.analysis.drivers.map(driver => <li key={driver}>{driver}</li>)}</ul> : <p>No verified analysis drivers are available for this matchup.</p>}</div></details>
       </div>
     </section>

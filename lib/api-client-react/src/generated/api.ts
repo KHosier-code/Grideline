@@ -155,6 +155,13 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getGetDashboardSummaryUrl = () => {
 
 
@@ -231,6 +238,7 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
 
 
 
+
 export const getGetDataHealthUrl = () => {
 
 
@@ -301,6 +309,13 @@ export function useGetDataHealth<TData = Awaited<ReturnType<typeof getDataHealth
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getListGamesUrl = (params?: ListGamesParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1775,6 +1790,7 @@ export const getListConsumerGamesUrl = (params?: ListConsumerGamesParams,) => {
 }
 
 /**
+ * Returns at most 100 games in kickoff order from persisted data. It never starts synchronization, context builds, prediction generation, or grading.
  * @summary Read consumer-safe persisted games
  */
 export const listConsumerGames = async (params?: ListConsumerGamesParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerGames> => {
@@ -2145,3 +2161,4 @@ export function useGetConsumerPropsAvailability<TData = Awaited<ReturnType<typeo
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+// End generated API client.

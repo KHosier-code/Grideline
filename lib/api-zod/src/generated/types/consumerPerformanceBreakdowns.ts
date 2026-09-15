@@ -5,5 +5,11 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerPerformanceBreakdown } from './consumerPerformanceBreakdown';
 
-export type ConsumerPerformanceBreakdowns = { [key: string]: unknown };
+export type ConsumerPerformanceBreakdowns = {
+  season: ConsumerPerformanceBreakdown[];
+  week: ConsumerPerformanceBreakdown[];
+  confidence: ConsumerPerformanceBreakdown[];
+  edge: ConsumerPerformanceBreakdown[];
+};

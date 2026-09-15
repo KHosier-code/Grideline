@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConsumerTrendsByWeekItem = { [key: string]: unknown };
+export type ConsumerTrendsWindow = {
+  maximumOfficialPredictions: 5000;
+  truncated: boolean;
+};

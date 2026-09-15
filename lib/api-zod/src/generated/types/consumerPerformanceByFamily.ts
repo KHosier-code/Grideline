@@ -5,5 +5,10 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerPerformanceFamily } from './consumerPerformanceFamily';
 
-export type ConsumerPerformanceByFamily = { [key: string]: unknown };
+export type ConsumerPerformanceByFamily = {
+  spread: ConsumerPerformanceFamily;
+  moneyline: ConsumerPerformanceFamily;
+  totals: ConsumerPerformanceFamily;
+};

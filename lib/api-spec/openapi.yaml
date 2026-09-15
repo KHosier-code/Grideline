@@ -428,6 +428,7 @@ paths:
       operationId: listConsumerGames
       tags: [nfl]
       summary: Read consumer-safe persisted games
+      description: Returns at most 100 games in kickoff order from persisted data. It never starts synchronization, context builds, prediction generation, or grading.
       parameters:
         - name: season
           in: query
@@ -541,12 +542,28 @@ components:
         logoUrl: { type: ["string", "null"] }
     ConsumerMarketQuote:
       type: object
-      required: [sportsbook, point, price, capturedAt]
+      required: [sportsbook, selection, point, price, capturedAt]
       properties:
         sportsbook: { type: string }
+        selection: { type: string }
         point: { type: ["number", "null"] }
         price: { type: number }
         capturedAt: { type: ["string", "null"], format: date-time }
+    ConsumerMarketEvidence:
+      type: object
+      required: [available, capturedAt, message]
+      properties:
+        available: { type: boolean }
+        capturedAt: { type: ["string", "null"], format: date-time }
+        message: { type: ["string", "null"] }
+    ConsumerGameMarket:
+      type: object
+      required: [spread, moneyline, total, evidence]
+      properties:
+        spread: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        moneyline: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        total: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        evidence: { $ref: "#/components/schemas/ConsumerMarketEvidence" }
     ConsumerGame:
       type: object
       required: [gameId, season, week, kickoffTime, gameStatus, venue, matchup, finalScore, prediction, market, dataConfidence, availability]
@@ -565,11 +582,13 @@ components:
             away: { $ref: "#/components/schemas/ConsumerTeam" }
         finalScore:
           type: ["object", "null"]
+          required: [home, away]
           properties:
             home: { type: integer }
             away: { type: integer }
         prediction:
           type: ["object", "null"]
+          required: [modelLabel, projectedHomeScore, projectedAwayScore, projectedMargin, projectedTotal, homeWinProbability, awayWinProbability]
           properties:
             modelLabel: { type: string, const: Gridline Production Model }
             projectedHomeScore: { type: ["number", "null"] }
@@ -578,13 +597,7 @@ components:
             projectedTotal: { type: ["number", "null"] }
             homeWinProbability: { type: ["number", "null"] }
             awayWinProbability: { type: ["number", "null"] }
-        market:
-          type: object
-          required: [spread, moneyline, total]
-          properties:
-            spread: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
-            moneyline: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
-            total: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        market: { $ref: "#/components/schemas/ConsumerGameMarket" }
         dataConfidence:
           type: object
           required: [label, score, reason]
@@ -619,11 +632,11 @@ components:
       allOf:
         - $ref: "#/components/schemas/ConsumerGame"
         - type: object
-          required: [weather, analysis]
+          required: [weather, movement, context, analysis]
           properties:
-            weather:
-              type: ["object", "null"]
-              additionalProperties: true
+            weather: { $ref: "#/components/schemas/ConsumerWeather" }
+            movement: { $ref: "#/components/schemas/ConsumerMovement" }
+            context: { $ref: "#/components/schemas/ConsumerContext" }
             analysis:
               type: object
               required: [drivers, availability]
@@ -631,28 +644,148 @@ components:
                 drivers: { type: array, items: { type: string } }
                 availability:
                   type: object
-                  required: [weather, personnel]
+                  required: [weather, personnel, movement]
                   properties:
                     weather: { type: ["string", "null"] }
                     personnel: { type: ["string", "null"] }
+                    movement: { type: ["string", "null"] }
+    ConsumerWeather:
+      type: object
+      required: [available, summary, temperature, sustainedWind, windGust, precipitationProbability, precipitationType, humidity, indoorOutdoor, roofStatus, validTime, message]
+      properties:
+        available: { type: boolean }
+        summary: { type: ["string", "null"] }
+        temperature: { type: ["number", "null"] }
+        sustainedWind: { type: ["number", "null"] }
+        windGust: { type: ["number", "null"] }
+        precipitationProbability: { type: ["number", "null"] }
+        precipitationType: { type: ["string", "null"] }
+        humidity: { type: ["number", "null"] }
+        indoorOutdoor: { type: ["string", "null"] }
+        roofStatus: { type: ["string", "null"] }
+        validTime: { type: ["string", "null"], format: date-time }
+        message: { type: ["string", "null"] }
+    ConsumerMovementQuote:
+      type: object
+      required: [point, price, capturedAt]
+      properties:
+        point: { type: ["number", "null"] }
+        price: { type: number }
+        capturedAt: { type: string, format: date-time }
+    ConsumerMovementItem:
+      type: object
+      required: [sportsbook, market, selection, earliestRetained, current, pointChange, priceChange, observationsInWindow]
+      properties:
+        sportsbook: { type: string }
+        market: { type: string }
+        selection: { type: string }
+        earliestRetained: { $ref: "#/components/schemas/ConsumerMovementQuote" }
+        current: { $ref: "#/components/schemas/ConsumerMovementQuote" }
+        pointChange: { type: ["number", "null"] }
+        priceChange: { type: number }
+        observationsInWindow: { type: integer }
+    ConsumerMovement:
+      type: object
+      required: [available, movements, window, message]
+      properties:
+        available: { type: boolean }
+        movements:
+          type: array
+          maxItems: 24
+          items: { $ref: "#/components/schemas/ConsumerMovementItem" }
+        window:
+          type: object
+          required: [maximumRows, truncated]
+          properties:
+            maximumRows: { type: integer, const: 200 }
+            truncated: { type: boolean }
+        message: { type: ["string", "null"] }
+    ConsumerContextTeam:
+      type: object
+      required: [side, qbCertainty, qbChange, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact]
+      properties:
+        side: { type: string, enum: [home, away] }
+        qbCertainty: { type: ["number", "null"] }
+        qbChange: { type: ["boolean", "null"] }
+        personnelCompleteness: { type: ["number", "null"] }
+        offenseInjuryImpact: { type: ["number", "null"] }
+        defenseInjuryImpact: { type: ["number", "null"] }
+    ConsumerContext:
+      type: object
+      required: [available, dataConfidence, teams, drivers, message]
+      properties:
+        available: { type: boolean }
+        dataConfidence: { type: ["number", "null"] }
+        teams:
+          type: array
+          maxItems: 2
+          items: { $ref: "#/components/schemas/ConsumerContextTeam" }
+        drivers: { type: array, maxItems: 4, items: { type: string } }
+        message: { type: ["string", "null"] }
+    ConsumerPerformanceFamily:
+      type: object
+      required: [predictions, mae, rmse, accuracy, brier, logLoss, avgClv]
+      properties:
+        predictions: { type: integer }
+        mae: { type: ["number", "null"] }
+        rmse: { type: ["number", "null"] }
+        accuracy: { type: ["number", "null"] }
+        brier: { type: ["number", "null"] }
+        logLoss: { type: ["number", "null"] }
+        avgClv: { type: ["number", "null"] }
+    ConsumerPerformanceBreakdown:
+      type: object
+      required: [group, predictions, spreadMae, totalsMae, moneylineAccuracy, avgClv]
+      properties:
+        group: { type: string }
+        predictions: { type: integer }
+        spreadMae: { type: ["number", "null"] }
+        totalsMae: { type: ["number", "null"] }
+        moneylineAccuracy: { type: ["number", "null"] }
+        avgClv: { type: ["number", "null"] }
     ConsumerPerformance:
       type: object
-      required: [status, officialPredictions, gradedPredictions, byFamily, breakdowns, note]
+      required: [status, officialPredictions, gradedPredictions, byFamily, breakdowns, window, note]
       properties:
         status: { type: string, enum: [available, unavailable] }
         officialPredictions: { type: integer }
         gradedPredictions: { type: integer }
-        byFamily: { type: object, additionalProperties: true }
-        breakdowns: { type: object, additionalProperties: true }
+        byFamily:
+          type: object
+          required: [spread, moneyline, totals]
+          properties:
+            spread: { $ref: "#/components/schemas/ConsumerPerformanceFamily" }
+            moneyline: { $ref: "#/components/schemas/ConsumerPerformanceFamily" }
+            totals: { $ref: "#/components/schemas/ConsumerPerformanceFamily" }
+        breakdowns:
+          type: object
+          required: [season, week, confidence, edge]
+          properties:
+            season: { type: array, items: { $ref: "#/components/schemas/ConsumerPerformanceBreakdown" } }
+            week: { type: array, items: { $ref: "#/components/schemas/ConsumerPerformanceBreakdown" } }
+            confidence: { type: array, items: { $ref: "#/components/schemas/ConsumerPerformanceBreakdown" } }
+            edge: { type: array, items: { $ref: "#/components/schemas/ConsumerPerformanceBreakdown" } }
+        window:
+          type: object
+          required: [maximumOfficialPredictions, truncated]
+          properties:
+            maximumOfficialPredictions: { type: integer, const: 5000 }
+            truncated: { type: boolean }
         note: { type: string }
     ConsumerTrends:
       type: object
-      required: [status, byWeek, byConfidence, byEdge, note]
+      required: [status, byWeek, byConfidence, byEdge, window, note]
       properties:
         status: { type: string, enum: [available, unavailable] }
-        byWeek: { type: array, items: { type: object, additionalProperties: true } }
-        byConfidence: { type: array, items: { type: object, additionalProperties: true } }
-        byEdge: { type: array, items: { type: object, additionalProperties: true } }
+        byWeek: { type: array, items: { $ref: "#/components/schemas/ConsumerPerformanceBreakdown" } }
+        byConfidence: { type: array, items: { $ref: "#/components/schemas/ConsumerPerformanceBreakdown" } }
+        byEdge: { type: array, items: { $ref: "#/components/schemas/ConsumerPerformanceBreakdown" } }
+        window:
+          type: object
+          required: [maximumOfficialPredictions, truncated]
+          properties:
+            maximumOfficialPredictions: { type: integer, const: 5000 }
+            truncated: { type: boolean }
         note: { type: string }
     ConsumerPropsAvailability:
       type: object

@@ -10,6 +10,6 @@
  * @nullable
  */
 export type ConsumerGameFinalScore = {
-  home?: number;
-  away?: number;
+  home: number;
+  away: number;
 } | null;

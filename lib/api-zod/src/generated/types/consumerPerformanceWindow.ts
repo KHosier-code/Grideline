@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * @nullable
- */
-export type ConsumerGameDetailWeather = { [key: string]: unknown } | null;
+export type ConsumerPerformanceWindow = {
+  maximumOfficialPredictions: 5000;
+  truncated: boolean;
+};

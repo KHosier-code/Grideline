@@ -8,6 +8,7 @@
 import type { ConsumerPerformanceBreakdowns } from './consumerPerformanceBreakdowns';
 import type { ConsumerPerformanceByFamily } from './consumerPerformanceByFamily';
 import type { ConsumerPerformanceStatus } from './consumerPerformanceStatus';
+import type { ConsumerPerformanceWindow } from './consumerPerformanceWindow';
 
 export interface ConsumerPerformance {
   status: ConsumerPerformanceStatus;
@@ -15,5 +16,6 @@ export interface ConsumerPerformance {
   gradedPredictions: number;
   byFamily: ConsumerPerformanceByFamily;
   breakdowns: ConsumerPerformanceBreakdowns;
+  window: ConsumerPerformanceWindow;
   note: string;
 }

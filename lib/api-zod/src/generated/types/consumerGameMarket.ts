@@ -5,10 +5,12 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerMarketEvidence } from './consumerMarketEvidence';
 import type { ConsumerMarketQuote } from './consumerMarketQuote';
 
-export type ConsumerGameMarket = {
+export interface ConsumerGameMarket {
   spread: ConsumerMarketQuote | null;
   moneyline: ConsumerMarketQuote | null;
   total: ConsumerMarketQuote | null;
-};
+  evidence: ConsumerMarketEvidence;
+}

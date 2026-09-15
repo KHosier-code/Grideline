@@ -689,37 +689,45 @@ export const GetConsumerDashboardResponse = zod.object({
 })
 }),
   "finalScore": zod.object({
-  "home": zod.number().int().optional(),
-  "away": zod.number().int().optional()
+  "home": zod.number().int(),
+  "away": zod.number().int()
 }).nullable(),
   "prediction": zod.object({
-  "modelLabel": zod.literal("Gridline Production Model").optional(),
-  "projectedHomeScore": zod.number().nullish(),
-  "projectedAwayScore": zod.number().nullish(),
-  "projectedMargin": zod.number().nullish(),
-  "projectedTotal": zod.number().nullish(),
-  "homeWinProbability": zod.number().nullish(),
-  "awayWinProbability": zod.number().nullish()
+  "modelLabel": zod.literal("Gridline Production Model"),
+  "projectedHomeScore": zod.number().nullable(),
+  "projectedAwayScore": zod.number().nullable(),
+  "projectedMargin": zod.number().nullable(),
+  "projectedTotal": zod.number().nullable(),
+  "homeWinProbability": zod.number().nullable(),
+  "awayWinProbability": zod.number().nullable()
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
   "moneyline": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
   "total": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
-}),zod.null()])
+}),zod.null()]),
+  "evidence": zod.object({
+  "available": zod.boolean(),
+  "capturedAt": zod.coerce.date().nullable(),
+  "message": zod.string().nullable()
+})
 }),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
@@ -736,6 +744,7 @@ export const GetConsumerDashboardResponse = zod.object({
 
 
 /**
+ * Returns at most 100 games in kickoff order from persisted data. It never starts synchronization, context builds, prediction generation, or grading.
  * @summary Read consumer-safe persisted games
  */
 export const listConsumerGamesQuerySeasonMin = 2020;
@@ -771,37 +780,45 @@ export const ListConsumerGamesResponse = zod.object({
 })
 }),
   "finalScore": zod.object({
-  "home": zod.number().int().optional(),
-  "away": zod.number().int().optional()
+  "home": zod.number().int(),
+  "away": zod.number().int()
 }).nullable(),
   "prediction": zod.object({
-  "modelLabel": zod.literal("Gridline Production Model").optional(),
-  "projectedHomeScore": zod.number().nullish(),
-  "projectedAwayScore": zod.number().nullish(),
-  "projectedMargin": zod.number().nullish(),
-  "projectedTotal": zod.number().nullish(),
-  "homeWinProbability": zod.number().nullish(),
-  "awayWinProbability": zod.number().nullish()
+  "modelLabel": zod.literal("Gridline Production Model"),
+  "projectedHomeScore": zod.number().nullable(),
+  "projectedAwayScore": zod.number().nullable(),
+  "projectedMargin": zod.number().nullable(),
+  "projectedTotal": zod.number().nullable(),
+  "homeWinProbability": zod.number().nullable(),
+  "awayWinProbability": zod.number().nullable()
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
   "moneyline": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
   "total": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
-}),zod.null()])
+}),zod.null()]),
+  "evidence": zod.object({
+  "available": zod.boolean(),
+  "capturedAt": zod.coerce.date().nullable(),
+  "message": zod.string().nullable()
+})
 }),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
@@ -823,6 +840,14 @@ export const GetConsumerGameParams = zod.object({
   "gameId": zod.coerce.string()
 })
 
+export const getConsumerGameResponseTwoMovementMovementsMax = 24;
+
+export const getConsumerGameResponseTwoContextTeamsMax = 2;
+
+export const getConsumerGameResponseTwoContextDriversMax = 4;
+
+
+
 export const GetConsumerGameResponse = zod.object({
   "gameId": zod.string(),
   "season": zod.number().int(),
@@ -843,37 +868,45 @@ export const GetConsumerGameResponse = zod.object({
 })
 }),
   "finalScore": zod.object({
-  "home": zod.number().int().optional(),
-  "away": zod.number().int().optional()
+  "home": zod.number().int(),
+  "away": zod.number().int()
 }).nullable(),
   "prediction": zod.object({
-  "modelLabel": zod.literal("Gridline Production Model").optional(),
-  "projectedHomeScore": zod.number().nullish(),
-  "projectedAwayScore": zod.number().nullish(),
-  "projectedMargin": zod.number().nullish(),
-  "projectedTotal": zod.number().nullish(),
-  "homeWinProbability": zod.number().nullish(),
-  "awayWinProbability": zod.number().nullish()
+  "modelLabel": zod.literal("Gridline Production Model"),
+  "projectedHomeScore": zod.number().nullable(),
+  "projectedAwayScore": zod.number().nullable(),
+  "projectedMargin": zod.number().nullable(),
+  "projectedTotal": zod.number().nullable(),
+  "homeWinProbability": zod.number().nullable(),
+  "awayWinProbability": zod.number().nullable()
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
   "moneyline": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
   "total": zod.union([zod.object({
   "sportsbook": zod.string(),
+  "selection": zod.string(),
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
-}),zod.null()])
+}),zod.null()]),
+  "evidence": zod.object({
+  "available": zod.boolean(),
+  "capturedAt": zod.coerce.date().nullable(),
+  "message": zod.string().nullable()
+})
 }),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
@@ -885,12 +918,66 @@ export const GetConsumerGameResponse = zod.object({
   "market": zod.string().nullable()
 })
 }).and(zod.object({
-  "weather": zod.record(zod.string(), zod.unknown()).nullable(),
+  "weather": zod.object({
+  "available": zod.boolean(),
+  "summary": zod.string().nullable(),
+  "temperature": zod.number().nullable(),
+  "sustainedWind": zod.number().nullable(),
+  "windGust": zod.number().nullable(),
+  "precipitationProbability": zod.number().nullable(),
+  "precipitationType": zod.string().nullable(),
+  "humidity": zod.number().nullable(),
+  "indoorOutdoor": zod.string().nullable(),
+  "roofStatus": zod.string().nullable(),
+  "validTime": zod.coerce.date().nullable(),
+  "message": zod.string().nullable()
+}),
+  "movement": zod.object({
+  "available": zod.boolean(),
+  "movements": zod.array(zod.object({
+  "sportsbook": zod.string(),
+  "market": zod.string(),
+  "selection": zod.string(),
+  "earliestRetained": zod.object({
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date()
+}),
+  "current": zod.object({
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date()
+}),
+  "pointChange": zod.number().nullable(),
+  "priceChange": zod.number(),
+  "observationsInWindow": zod.number().int()
+})).max(getConsumerGameResponseTwoMovementMovementsMax),
+  "window": zod.object({
+  "maximumRows": zod.literal(200),
+  "truncated": zod.boolean()
+}),
+  "message": zod.string().nullable()
+}),
+  "context": zod.object({
+  "available": zod.boolean(),
+  "dataConfidence": zod.number().nullable(),
+  "teams": zod.array(zod.object({
+  "side": zod.enum(['home', 'away']),
+  "qbCertainty": zod.number().nullable(),
+  "qbChange": zod.boolean().nullable(),
+  "personnelCompleteness": zod.number().nullable(),
+  "offenseInjuryImpact": zod.number().nullable(),
+  "defenseInjuryImpact": zod.number().nullable()
+})).max(getConsumerGameResponseTwoContextTeamsMax),
+  "drivers": zod.array(zod.string()).max(getConsumerGameResponseTwoContextDriversMax),
+  "message": zod.string().nullable()
+}),
   "analysis": zod.object({
   "drivers": zod.array(zod.string()),
   "availability": zod.object({
   "weather": zod.string().nullable(),
-  "personnel": zod.string().nullable()
+  "personnel": zod.string().nullable(),
+  "movement": zod.string().nullable()
 })
 })
 }))
@@ -903,8 +990,73 @@ export const GetConsumerPerformanceResponse = zod.object({
   "status": zod.enum(['available', 'unavailable']),
   "officialPredictions": zod.number().int(),
   "gradedPredictions": zod.number().int(),
-  "byFamily": zod.record(zod.string(), zod.unknown()),
-  "breakdowns": zod.record(zod.string(), zod.unknown()),
+  "byFamily": zod.object({
+  "spread": zod.object({
+  "predictions": zod.number().int(),
+  "mae": zod.number().nullable(),
+  "rmse": zod.number().nullable(),
+  "accuracy": zod.number().nullable(),
+  "brier": zod.number().nullable(),
+  "logLoss": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+}),
+  "moneyline": zod.object({
+  "predictions": zod.number().int(),
+  "mae": zod.number().nullable(),
+  "rmse": zod.number().nullable(),
+  "accuracy": zod.number().nullable(),
+  "brier": zod.number().nullable(),
+  "logLoss": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+}),
+  "totals": zod.object({
+  "predictions": zod.number().int(),
+  "mae": zod.number().nullable(),
+  "rmse": zod.number().nullable(),
+  "accuracy": zod.number().nullable(),
+  "brier": zod.number().nullable(),
+  "logLoss": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+})
+}),
+  "breakdowns": zod.object({
+  "season": zod.array(zod.object({
+  "group": zod.string(),
+  "predictions": zod.number().int(),
+  "spreadMae": zod.number().nullable(),
+  "totalsMae": zod.number().nullable(),
+  "moneylineAccuracy": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+})),
+  "week": zod.array(zod.object({
+  "group": zod.string(),
+  "predictions": zod.number().int(),
+  "spreadMae": zod.number().nullable(),
+  "totalsMae": zod.number().nullable(),
+  "moneylineAccuracy": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+})),
+  "confidence": zod.array(zod.object({
+  "group": zod.string(),
+  "predictions": zod.number().int(),
+  "spreadMae": zod.number().nullable(),
+  "totalsMae": zod.number().nullable(),
+  "moneylineAccuracy": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+})),
+  "edge": zod.array(zod.object({
+  "group": zod.string(),
+  "predictions": zod.number().int(),
+  "spreadMae": zod.number().nullable(),
+  "totalsMae": zod.number().nullable(),
+  "moneylineAccuracy": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+}))
+}),
+  "window": zod.object({
+  "maximumOfficialPredictions": zod.literal(5000),
+  "truncated": zod.boolean()
+}),
   "note": zod.string()
 })
 
@@ -914,9 +1066,34 @@ export const GetConsumerPerformanceResponse = zod.object({
  */
 export const GetConsumerTrendsResponse = zod.object({
   "status": zod.enum(['available', 'unavailable']),
-  "byWeek": zod.array(zod.record(zod.string(), zod.unknown())),
-  "byConfidence": zod.array(zod.record(zod.string(), zod.unknown())),
-  "byEdge": zod.array(zod.record(zod.string(), zod.unknown())),
+  "byWeek": zod.array(zod.object({
+  "group": zod.string(),
+  "predictions": zod.number().int(),
+  "spreadMae": zod.number().nullable(),
+  "totalsMae": zod.number().nullable(),
+  "moneylineAccuracy": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+})),
+  "byConfidence": zod.array(zod.object({
+  "group": zod.string(),
+  "predictions": zod.number().int(),
+  "spreadMae": zod.number().nullable(),
+  "totalsMae": zod.number().nullable(),
+  "moneylineAccuracy": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+})),
+  "byEdge": zod.array(zod.object({
+  "group": zod.string(),
+  "predictions": zod.number().int(),
+  "spreadMae": zod.number().nullable(),
+  "totalsMae": zod.number().nullable(),
+  "moneylineAccuracy": zod.number().nullable(),
+  "avgClv": zod.number().nullable()
+})),
+  "window": zod.object({
+  "maximumOfficialPredictions": zod.literal(5000),
+  "truncated": zod.boolean()
+}),
   "note": zod.string()
 })
 

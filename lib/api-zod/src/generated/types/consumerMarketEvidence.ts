@@ -6,11 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConsumerGameDetailAnalysisAvailability = {
+export interface ConsumerMarketEvidence {
+  available: boolean;
   /** @nullable */
-  weather: string | null;
+  capturedAt: Date | null;
   /** @nullable */
-  personnel: string | null;
-  /** @nullable */
-  movement: string | null;
-};
+  message: string | null;
+}

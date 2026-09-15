@@ -10,17 +10,17 @@
  * @nullable
  */
 export type ConsumerGamePrediction = {
-  modelLabel?: 'Gridline Production Model';
+  modelLabel: 'Gridline Production Model';
   /** @nullable */
-  projectedHomeScore?: number | null;
+  projectedHomeScore: number | null;
   /** @nullable */
-  projectedAwayScore?: number | null;
+  projectedAwayScore: number | null;
   /** @nullable */
-  projectedMargin?: number | null;
+  projectedMargin: number | null;
   /** @nullable */
-  projectedTotal?: number | null;
+  projectedTotal: number | null;
   /** @nullable */
-  homeWinProbability?: number | null;
+  homeWinProbability: number | null;
   /** @nullable */
-  awayWinProbability?: number | null;
+  awayWinProbability: number | null;
 } | null;

@@ -548,13 +548,31 @@ export function matchesPredictionPerformanceWindow(
   );
 }
 
-export async function getPredictionPerformance(window?: { season: number; week: number }) {
-  const rows = (await db
+export async function getPredictionPerformance(
+  windowOrMax?: { season: number; week: number } | number,
+) {
+  const window = typeof windowOrMax === "object" ? windowOrMax : undefined;
+  const maxOfficialPredictions = typeof windowOrMax === "number" ? windowOrMax : undefined;
+  const query = db
     .select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
     .from(predictionSnapshotsTable)
     .leftJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
     .leftJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
-    .where(eq(predictionSnapshotsTable.officialFinalPrediction, true)))
+    .where(and(
+      eq(predictionSnapshotsTable.officialFinalPrediction, true),
+      window ? eq(gamesTable.season, window.season) : undefined,
+      window ? eq(gamesTable.week, window.week) : undefined,
+    ))
+    .orderBy(desc(predictionSnapshotsTable.predictionTimestamp));
+  const selectedRowsWithSentinel = maxOfficialPredictions === undefined
+    ? await query
+    : await query.limit(maxOfficialPredictions + 1);
+  const windowTruncated = maxOfficialPredictions !== undefined
+    && selectedRowsWithSentinel.length > maxOfficialPredictions;
+  const selectedRows = maxOfficialPredictions === undefined
+    ? selectedRowsWithSentinel
+    : selectedRowsWithSentinel.slice(0, maxOfficialPredictions);
+  const rows = selectedRows
     .filter((row) => isValidPredictionSnapshot(row.prediction))
     .filter((row) => matchesPredictionPerformanceWindow(row, window));
   const graded = rows.filter((row) => row.grade);
@@ -596,6 +614,7 @@ export async function getPredictionPerformance(window?: { season: number; week: 
   };
   return {
     status: graded.length ? "measured" : "not_configured",
+    windowTruncated,
     officialPredictions: rows.length,
     gradedPredictions: graded.length,
     byFamily,
@@ -670,11 +689,55 @@ export async function getLivePredictionBoard() {
   return [...latest.values()];
 }
 
-export async function getLatestValidPredictionSnapshots(gameIds: string[]) {
+export async function getLatestValidPredictionSnapshots(
+  gameIds: string[],
+  options: { preKickoffOnly?: boolean; authoritativeGameKickoff?: boolean; maxRows?: number } = {},
+) {
   if (!gameIds.length) return new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
-  const rows = await db.select().from(predictionSnapshotsTable)
-    .where(inArray(predictionSnapshotsTable.gameId, gameIds))
+  if (options.authoritativeGameKickoff) {
+    const rows = await db.selectDistinctOn(
+      [predictionSnapshotsTable.gameId],
+      { prediction: predictionSnapshotsTable },
+    )
+      .from(predictionSnapshotsTable)
+      .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
+      .where(and(
+        inArray(predictionSnapshotsTable.gameId, gameIds),
+        sql`${predictionSnapshotsTable.predictionTimestamp} < ${gamesTable.kickoffTime}`,
+        sql`${predictionSnapshotsTable.projectedHomeScore} is not null`,
+        sql`${predictionSnapshotsTable.projectedAwayScore} is not null`,
+        sql`${predictionSnapshotsTable.projectedMargin} is not null`,
+        sql`${predictionSnapshotsTable.projectedTotal} is not null`,
+        sql`${predictionSnapshotsTable.projectedHomeScore} >= 0`,
+        sql`${predictionSnapshotsTable.projectedAwayScore} >= 0`,
+        sql`${predictionSnapshotsTable.projectedTotal} >= 0`,
+        sql`${predictionSnapshotsTable.homeWinProbability} between 0 and 1`,
+        sql`${predictionSnapshotsTable.awayWinProbability} between 0 and 1`,
+        sql`abs(${predictionSnapshotsTable.homeWinProbability} + ${predictionSnapshotsTable.awayWinProbability} - 1) < 0.000001`,
+        sql`abs(${predictionSnapshotsTable.projectedHomeScore} - ${predictionSnapshotsTable.projectedAwayScore} - ${predictionSnapshotsTable.projectedMargin}) < 0.000001`,
+        sql`abs(${predictionSnapshotsTable.projectedHomeScore} + ${predictionSnapshotsTable.projectedAwayScore} - ${predictionSnapshotsTable.projectedTotal}) < 0.000001`,
+      ))
+      .orderBy(
+        predictionSnapshotsTable.gameId,
+        desc(predictionSnapshotsTable.predictionTimestamp),
+        desc(predictionSnapshotsTable.id),
+      )
+      .limit(options.maxRows ?? gameIds.length);
+    return new Map(rows
+      .map((row) => row.prediction)
+      .filter(isValidPredictionSnapshot)
+      .map((snapshot) => [snapshot.gameId, snapshot]));
+  }
+  const conditions = [
+    inArray(predictionSnapshotsTable.gameId, gameIds),
+    options.preKickoffOnly
+      ? sql`${predictionSnapshotsTable.predictionTimestamp} < ${predictionSnapshotsTable.kickoffTime}`
+      : undefined,
+  ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
+  const query = db.select().from(predictionSnapshotsTable)
+    .where(and(...conditions))
     .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id));
+  const rows = options.maxRows === undefined ? await query : await query.limit(options.maxRows);
   const latest = new Map<string, typeof rows[number]>();
   for (const row of rows) {
     if (isValidPredictionSnapshot(row) && !latest.has(row.gameId)) latest.set(row.gameId, row);

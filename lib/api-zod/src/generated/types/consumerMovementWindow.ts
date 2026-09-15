@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConsumerTrendsByEdgeItem = { [key: string]: unknown };
+export type ConsumerMovementWindow = {
+  maximumRows: 200;
+  truncated: boolean;
+};
