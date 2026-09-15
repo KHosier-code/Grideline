@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import { verifyProductionDatabase } from "./lib/production-database-smoke";
 import { createProductionDatabaseAlert } from "./lib/production-startup-alert";
 
+declare const __GRIDLINE_BUILD_ID__: string;
+
 const workerPath = fileURLToPath(new URL("./worker.mjs", import.meta.url));
 const apiPath = fileURLToPath(new URL("./index.mjs", import.meta.url));
 const children: ChildProcess[] = [];
@@ -38,10 +40,12 @@ process.once("SIGTERM", () => stop("SIGTERM"));
 process.once("SIGINT", () => stop("SIGINT"));
 
 try {
-  await verifyProductionDatabase();
+  const evidence = await verifyProductionDatabase(__GRIDLINE_BUILD_ID__);
   console.info("Production database smoke check passed", {
-    query: "SELECT 1",
-    tlsPolicy: "verify-full",
+    buildId: evidence.buildId,
+    checkedAt: evidence.checkedAt.toISOString(),
+    selectOneResult: evidence.selectOneResult,
+    verifyFullPassed: evidence.verifyFullPassed,
   });
   start("Gridline data worker", workerPath);
   start("Gridline API", apiPath);

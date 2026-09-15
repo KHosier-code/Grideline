@@ -29,10 +29,13 @@ replace a pending or warning result with an assumption.
 
 - [ ] Publish the reviewed application build through the Replit Publish flow;
   do not use a development preview as the production URL.
-- [ ] Confirm the deployment log contains `Production database smoke check
-  passed` before the API and worker start. A missing/disabled production TLS
-  mode, PostgreSQL TLS compatibility warning, or connectivity error blocks
-  startup. The check runs only `SELECT 1` and never logs connection details.
+- [ ] Confirm `release_security_evidence` contains one row for the published
+  build before the API and worker start. The row records the build identifier,
+  check timestamp, `SELECT 1` result, and verify-full policy outcome only. A
+  missing/disabled production TLS mode, PostgreSQL TLS compatibility warning,
+  connectivity error, or evidence-write failure blocks startup and creates no
+  success row. Evidence never contains a database URL, hostname, username, or
+  credentials.
 - [ ] Confirm the production URL, HTTPS, health endpoint, API routing, static
   assets, and an authenticated read-only page load.
 - [ ] Confirm the UI displays data-health and model/prediction safety states;

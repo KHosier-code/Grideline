@@ -1,0 +1,112 @@
+FINAL PRE-PUBLISH AUTHENTICATED VISUAL QA
+
+Do not add features.
+Do not merge Task #49.
+Do not change models, predictions, worker behavior, or database logic.
+
+The only remaining release gate is authenticated visual verification.
+
+Use my authenticated development session and verify the signed-in application.
+
+DESKTOP
+
+Verify these routes:
+
+1. Home
+2. Games
+3. Game Detail
+4. Performance
+5. Trends
+6. Props
+7. Admin entry
+8. Admin workspace
+
+For each route verify:
+
+- page loads successfully
+- no raw JSON
+- no SQL
+- no stack traces
+- no migration/debug text
+- no provider error payloads
+- no giant internal model IDs
+- no broken components
+- no overlapping UI
+- no missing navigation
+- no obvious unreadable text
+- no console exceptions
+- consumer data renders from consumer-safe endpoints
+- unavailable data uses polished fallback states
+
+MOBILE
+
+Repeat visual verification at approximately 390px width for:
+
+- Home
+- Games
+- Game Detail
+- Performance
+- Trends
+- Props
+- navigation
+- Admin entry if administrator
+
+Verify:
+
+- no horizontal overflow
+- cards fit correctly
+- tables or metrics remain readable
+- navigation remains usable
+- buttons are tappable
+- no clipped text
+- no overlapping content
+
+ADMIN
+
+Verify:
+
+- administrator is recognized
+- Admin entry appears only for administrator
+- Model Lab loads
+- Data Health loads
+- existing Admin functionality remains intact
+
+Do not redesign anything unless a genuine rendering defect is found.
+
+If a visual defect is found:
+- fix only that defect
+- rerun the affected route
+- do not expand scope
+
+After visual QA, rerun only the minimum necessary verification:
+
+- frontend typecheck
+- frontend production build
+- consumer API contract tests if frontend/API code changed
+
+Do not rerun the entire 121-test suite unless a backend/shared-code change was required.
+
+FINAL REPORT
+
+Return:
+
+- desktop route verification
+- mobile route verification
+- Admin verification
+- console status
+- visual defects found
+- fixes made
+- typecheck status
+- build status
+- confirmation Task #49 was not merged
+- final verdict
+
+Final verdict must be exactly:
+
+SAFE TO PUBLISH
+
+or
+
+NOT SAFE TO PUBLISH
+
+Do not publish automatically.

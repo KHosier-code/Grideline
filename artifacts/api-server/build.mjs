@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
@@ -12,6 +13,11 @@ const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
+  const revision = execFileSync("git", ["rev-parse", "--short=12", "HEAD"], {
+    cwd: artifactDir,
+    encoding: "utf8",
+  }).trim();
+  const buildId = `${revision}-${new Date().toISOString()}`;
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
@@ -28,6 +34,9 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
+    define: {
+      __GRIDLINE_BUILD_ID__: JSON.stringify(buildId),
+    },
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
     // Examples of unbundleable packages:

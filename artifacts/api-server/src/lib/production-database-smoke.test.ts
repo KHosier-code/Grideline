@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   assertNoPostgresTlsCompatibilityWarnings,
   isPostgresTlsCompatibilityWarning,
+  recordReleaseSecurityEvidence,
   runProductionDatabaseSmokeCheck,
 } from "./production-database-smoke";
 
@@ -28,6 +29,45 @@ test("rejects an unexpected smoke-query result", async () => {
     }),
     /unexpected result/,
   );
+});
+
+test("records only credential-free release security evidence", async () => {
+  const checkedAt = new Date("2026-09-15T12:00:00.000Z");
+  let query = "";
+  let values: readonly unknown[] | undefined;
+  const evidence = await recordReleaseSecurityEvidence(
+    {
+      async query(text, parameters) {
+        query = text;
+        values = parameters;
+        return {
+          rows: [{
+            build_id: "abc123-2026-09-15T12:00:00.000Z",
+            checked_at: checkedAt,
+            select_one_result: 1,
+            verify_full_passed: true,
+          }],
+        };
+      },
+    },
+    "abc123-2026-09-15T12:00:00.000Z",
+    1,
+  );
+
+  assert.deepEqual(values, ["abc123-2026-09-15T12:00:00.000Z", 1]);
+  assert.doesNotMatch(query, /database_url|hostname|username|password|credential/i);
+  assert.deepEqual(evidence, {
+    buildId: "abc123-2026-09-15T12:00:00.000Z",
+    checkedAt,
+    selectOneResult: 1,
+    verifyFullPassed: true,
+  });
+  assert.deepEqual(Object.keys(evidence), [
+    "buildId",
+    "checkedAt",
+    "selectOneResult",
+    "verifyFullPassed",
+  ]);
 });
 
 test("recognizes PostgreSQL TLS compatibility warnings", () => {

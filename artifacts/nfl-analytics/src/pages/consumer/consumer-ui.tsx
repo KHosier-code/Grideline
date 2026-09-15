@@ -20,9 +20,10 @@ export function formatKickoff(value: string | null) {
 export function formatQuote(quote: ConsumerMarketQuote | null, kind: 'spread' | 'moneyline' | 'total') {
   if (!quote) return 'Updating';
   const price = quote.price > 0 ? `+${quote.price}` : String(quote.price);
-  if (kind === 'moneyline') return `${quote.selection} ${price} · ${quote.sportsbook}`;
+  const selection = typeof quote.selection === 'string' ? quote.selection.trim() : '';
+  if (kind === 'moneyline') return `${selection ? `${selection} ` : ''}${price} · ${quote.sportsbook}`;
   const point = quote.point === null ? '—' : `${quote.point > 0 ? '+' : ''}${quote.point}`;
-  return `${quote.selection} ${point} (${price}) · ${quote.sportsbook}`;
+  return `${selection ? `${selection} ` : ''}${point} (${price}) · ${quote.sportsbook}`;
 }
 
 const score = (value?: number | null) => value === null || value === undefined ? '—' : value.toFixed(1);
