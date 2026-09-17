@@ -6,7 +6,8 @@ import {
   usageAnalyticsRetentionTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import dashboardRouter from "./dashboard";
+import dashboardRouter, { createDataHealthHandler } from "./dashboard";
+import { PREGAME_FEATURE_DEFINITION } from "../lib/features";
 import { requireAdmin } from "../middlewares/admin";
 
 // node:test runs files in parallel, but the retention health fixture replaces
@@ -49,8 +50,135 @@ assert.equal(
   "the data-health route must remain protected by requireAdmin",
 );
 
-const dataHealthHandler = dataHealthRoute.stack.at(-1)?.handle as DataHealthHandler | undefined;
-assert.ok(dataHealthHandler, "the data-health route should have a response handler");
+const protectedDataHealthHandler = dataHealthRoute.stack.at(-1)?.handle as DataHealthHandler | undefined;
+assert.ok(protectedDataHealthHandler, "the data-health route should have a response handler");
+
+const now = new Date();
+
+const dataHealthHandler = createDataHealthHandler({
+  getEspnHealth: () => ({
+    lastSuccessfulRequest: null,
+    requestsToday: 0,
+    requestsThisMonth: 0,
+  }),
+  getScheduleHealth: async () => ({
+    records: 0,
+    unfinished: 0,
+    lastUpdated: null,
+    latestRun: null,
+    runs: [],
+  }),
+  getNflverseHealth: async () => ({
+    status: "stale",
+    detail: "Historical sync has not completed.",
+    lastUpdated: null,
+    requestsToday: 0,
+    requestsThisMonth: 0,
+    remainingQuota: "Test fixture",
+    metadata: {
+      seasonsLoaded: 0,
+      gamesLoaded: 0,
+      teamGameRows: 0,
+      playerGameRows: 0,
+      snapCountRows: 0,
+      historicalDepthRows: 0,
+      failures: [],
+    },
+  }),
+  getAvailabilityHealth: async () => ({
+    injury: {
+      records: 0,
+      lastUpdated: null,
+      failure: null,
+      failureAt: null,
+    },
+    depth: {
+      records: 0,
+      teams: 0,
+      lastUpdated: null,
+      failures: [],
+    },
+    runs: [],
+  }),
+  getSleeperHealth: async () => ({
+    status: "unavailable",
+    lastUpdated: null,
+    staleAgeMs: null,
+    snapshotCount: 0,
+    lastCapturedAt: null,
+    playerCount: 0,
+    teamCount: 0,
+    depthOrderCount: 0,
+    lastAttempted: new Date(0).toISOString(),
+    latestFailure: null,
+    recentFailureCount: 0,
+    latestMetadata: {},
+    cadenceHours: 24,
+  }),
+  getSleeperIdentityHealth: async () => ({
+    status: "unavailable",
+    mappingVersion: null,
+    latestAttemptMappingVersion: null,
+    mappingRunId: null,
+    sourceSnapshotId: null,
+    lastUpdated: null,
+    lastAttempted: null,
+    staleAgeMs: null,
+    latestFailure: null,
+    recentFailureCount: 0,
+    durationMs: null,
+    metadata: {},
+  }),
+  getRecentScheduledRuns: async () => [],
+  getOddsApiHealth: async () => ({
+    status: "not_configured",
+    detail: "Test fixture",
+    lastUpdated: null,
+    requestsToday: 0,
+    requestsThisMonth: 0,
+    remainingQuota: null,
+    metadata: {},
+  }),
+  getSchedulerHealth: async () => ({
+    status: "healthy",
+    checkedAt: now.toISOString(),
+    alerts: [],
+    activeInThisProcess: false,
+    processRole: "api",
+    persistentWorkerExpected: true,
+    processStartedAt: null,
+    timezone: "UTC",
+    alwaysOnServiceRequired: true,
+    note: "Test fixture",
+    jobs: [],
+    runs: [],
+  }),
+  getPregameFeatureHealth: async () => ({
+    featureVersion: "test",
+    definition: PREGAME_FEATURE_DEFINITION,
+    rows: 0,
+    games: 0,
+    lowSampleRows: 0,
+    latestGeneratedAt: null,
+  }),
+  getModelArtifactImmutabilityStatus: async () => ({
+    status: "application_only",
+    mechanism: "application_append_only",
+    applicationUpdateDeleteBlocked: true,
+    productionFittingBlocked: true,
+    databaseTriggerActive: false,
+    databaseTriggerSupport: "unavailable_through_current_publish_path",
+    verification: "test fixture",
+    note: "Test fixture",
+  }),
+  getFeedGameDays: async () => new Set<string>(),
+  weatherHealth: async () => ({
+    source: "Test fixture",
+    cost: "Test fixture",
+    userAgentConfigured: false,
+    lastRun: null,
+  }),
+}) as unknown as DataHealthHandler;
 
 type RetentionRow = typeof usageAnalyticsRetentionTable.$inferSelect;
 
@@ -72,7 +200,7 @@ async function replaceRetentionRow(row: RetentionRow | null): Promise<void> {
 
 async function readDataHealth(): Promise<unknown[]> {
   let responseBody: unknown;
-  await dataHealthHandler!({}, {
+  await dataHealthHandler({}, {
     json(body) {
       responseBody = body;
       return body;
@@ -94,7 +222,6 @@ function usageRetentionProvider(body: unknown[]) {
   return provider;
 }
 
-const now = new Date();
 const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
 

@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import {
   GetDashboardSummaryResponse,
   GetDataHealthResponse,
@@ -22,6 +22,42 @@ import { weatherHealth } from "../lib/weather";
 import { requireAdmin } from "../middlewares/admin";
 import { getModelArtifactImmutabilityStatus } from "../lib/phase61-release";
 import { getUsageAnalyticsRetentionHealth } from "../lib/usage-analytics-retention";
+
+type DataHealthDependencies = {
+  getEspnHealth: typeof getEspnHealth;
+  getScheduleHealth: typeof getScheduleHealth;
+  getNflverseHealth: typeof getNflverseHealth;
+  getAvailabilityHealth: typeof getAvailabilityHealth;
+  getSleeperHealth: typeof getSleeperHealth;
+  getSleeperIdentityHealth: typeof getSleeperIdentityHealth;
+  getRecentScheduledRuns: typeof getRecentScheduledRuns;
+  getOddsApiHealth: typeof getOddsApiHealth;
+  getSchedulerHealth: typeof getSchedulerHealth;
+  getPregameFeatureHealth: typeof getPregameFeatureHealth;
+  getModelArtifactImmutabilityStatus: typeof getModelArtifactImmutabilityStatus;
+  getUsageAnalyticsRetentionHealth: typeof getUsageAnalyticsRetentionHealth;
+  getFeedGameDays: typeof getFeedGameDays;
+  nextFeedUpdate: typeof nextFeedUpdate;
+  weatherHealth: typeof weatherHealth;
+};
+
+const defaultDataHealthDependencies: DataHealthDependencies = {
+  getEspnHealth,
+  getScheduleHealth,
+  getNflverseHealth,
+  getAvailabilityHealth,
+  getSleeperHealth,
+  getSleeperIdentityHealth,
+  getRecentScheduledRuns,
+  getOddsApiHealth,
+  getSchedulerHealth,
+  getPregameFeatureHealth,
+  getModelArtifactImmutabilityStatus,
+  getUsageAnalyticsRetentionHealth,
+  getFeedGameDays,
+  nextFeedUpdate,
+  weatherHealth,
+};
 
 const router: IRouter = Router();
 
@@ -51,24 +87,28 @@ router.get("/dashboard/summary", requireAdmin, async (req, res): Promise<void> =
   );
 });
 
-router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
-  const espn = getEspnHealth();
-  const schedule = await getScheduleHealth();
-  const nflverse = await getNflverseHealth();
-  const availability = await getAvailabilityHealth();
-  const sleeper = await getSleeperHealth();
-  const sleeperIdentity = await getSleeperIdentityHealth();
+export function createDataHealthHandler(
+  overrides: Partial<DataHealthDependencies> = {},
+) {
+  const dependencies = { ...defaultDataHealthDependencies, ...overrides };
+  return async (_req: Request, res: Response): Promise<void> => {
+  const espn = dependencies.getEspnHealth();
+  const schedule = await dependencies.getScheduleHealth();
+  const nflverse = await dependencies.getNflverseHealth();
+  const availability = await dependencies.getAvailabilityHealth();
+  const sleeper = await dependencies.getSleeperHealth();
+  const sleeperIdentity = await dependencies.getSleeperIdentityHealth();
 
   const [scheduledInjuryRuns, scheduledNflverseRuns, scheduledWeatherRuns] = await Promise.all([
-    getRecentScheduledRuns("scheduled:injuries"),
-    getRecentScheduledRuns("scheduled:nflverse"),
-    getRecentScheduledRuns("scheduled:weather"),
+    dependencies.getRecentScheduledRuns("scheduled:injuries"),
+    dependencies.getRecentScheduledRuns("scheduled:nflverse"),
+    dependencies.getRecentScheduledRuns("scheduled:weather"),
   ]);
-  const odds = await getOddsApiHealth();
-  const scheduler = await getSchedulerHealth();
-  const features = await getPregameFeatureHealth();
-  const modelImmutability = await getModelArtifactImmutabilityStatus();
-  const usageAnalyticsRetention = await getUsageAnalyticsRetentionHealth();
+  const odds = await dependencies.getOddsApiHealth();
+  const scheduler = await dependencies.getSchedulerHealth();
+  const features = await dependencies.getPregameFeatureHealth();
+  const modelImmutability = await dependencies.getModelArtifactImmutabilityStatus();
+  const usageAnalyticsRetention = await dependencies.getUsageAnalyticsRetentionHealth();
   const schedulerJob = (provider: string) =>
     scheduler.jobs
       .filter((job) => job.provider === provider && job.enabled)
@@ -76,11 +116,11 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
   const scheduleJob = schedulerJob("espn-schedule");
   const oddsJob = schedulerJob("odds-api");
   const now = new Date();
-  const gameDays = await getFeedGameDays(now);
-  const injuryNextUpdate = nextFeedUpdate("injuries", now, scheduledInjuryRuns, gameDays)?.toISOString() ?? null;
-  const nflverseNextUpdate = nextFeedUpdate("nflverse", now, scheduledNflverseRuns)?.toISOString() ?? null;
-  const weatherNextUpdate = nextFeedUpdate("weather", now, scheduledWeatherRuns)?.toISOString() ?? null;
-  const weather = await weatherHealth();
+  const gameDays = await dependencies.getFeedGameDays(now);
+  const injuryNextUpdate = dependencies.nextFeedUpdate("injuries", now, scheduledInjuryRuns, gameDays)?.toISOString() ?? null;
+  const nflverseNextUpdate = dependencies.nextFeedUpdate("nflverse", now, scheduledNflverseRuns)?.toISOString() ?? null;
+  const weatherNextUpdate = dependencies.nextFeedUpdate("weather", now, scheduledWeatherRuns)?.toISOString() ?? null;
+  const weather = await dependencies.weatherHealth();
   const month = now.getUTCMonth() + 1;
   const latestFailedScheduledInjuryRun = scheduledInjuryRuns.find((run) => run.status === "failed");
   const nativeFailureAt = availability.injury.failureAt ? new Date(availability.injury.failureAt) : null;
@@ -381,7 +421,10 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
       },
     ]),
   );
-});
+  };
+}
+
+router.get("/data-health", requireAdmin, createDataHealthHandler());
 
 router.get("/admin/sleeper-identity-report", requireAdmin, async (_req, res): Promise<void> => {
   res.json(GetSleeperIdentityReportResponse.parse(await getSleeperIdentityReport()));
