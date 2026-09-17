@@ -98,3 +98,17 @@ mtime_ms = 1789615758968
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/fefcea55-b53b-4460-a62c-e5e1ee3220bd/9f176540-0992-4cc9-a8f8-5f13090de342"
 storage_version_token = "1789615766079811"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "TKkp9XHOieTCqb9s0_G2D"
+uri = "file://reports/week-1-2026-all-position-matchup-evidence.csv"
+type = "table"
+title = "Week 1 2026 All-Position Matchup Evidence"
+description = "Player-level Week 1 participation for every position, joined to 2025 snap continuity and team-change indicators."
+logical_id = "eabab408-db26-4e06-8454-e2460575d388"
+content_hash = "sha256:fa79c2e47da268e088702198c4e82262cb4a3a4e19e25ccc5b312b0757e620c1"
+size = 188418
+mtime_ms = 1789657724964
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/eabab408-db26-4e06-8454-e2460575d388/f722645a-c932-42e3-afab-0ff9f3b23113"
+storage_version_token = "1789657725758997"
+content_type = "text/csv"
