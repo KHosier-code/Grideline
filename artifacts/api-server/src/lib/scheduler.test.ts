@@ -5,9 +5,11 @@ import {
   INJURY_WEEKLY_SLOTS,
   ODDS_WEEKLY_SLOTS,
   classifySchedulerAlerts,
+  confidenceCaptureOccurrences,
   nextWeeklyOccurrence,
   groupSundayKickoffWindows,
   shouldRecoverMissedOccurrence,
+  shouldRetireFlexedConfidenceOccurrence,
   shouldRearmDynamicOccurrence,
   zonedTimeToUtc,
 } from "./scheduler";
@@ -112,6 +114,35 @@ test("Sunday injury windows dedupe same kickoff and retain late/SNF windows", ()
   assert.deepEqual(windows[0].gameIds, ["early-a", "early-b"]);
 });
 
+test("confidence captures use documented kickoff-relative windows", () => {
+  const kickoff = new Date("2026-09-20T17:00:00.000Z");
+  assert.deepEqual(
+    confidenceCaptureOccurrences("game-1", kickoff).map((occurrence) => ({
+      jobKey: occurrence.jobKey,
+      scheduledFor: occurrence.scheduledFor.toISOString(),
+    })),
+    [
+      { jobKey: "confidence-24h-game-1", scheduledFor: "2026-09-19T17:00:00.000Z" },
+      { jobKey: "confidence-6h-game-1", scheduledFor: "2026-09-20T11:00:00.000Z" },
+      { jobKey: "confidence-75m-game-1", scheduledFor: "2026-09-20T15:45:00.000Z" },
+    ],
+  );
+});
+
+test("normal due confidence jobs remain claimable while earlier kickoff flexes retire stale slots", () => {
+  const now = new Date("2026-09-20T11:01:00.000Z");
+  const normalOccurrence = new Date("2026-09-20T11:00:00.000Z");
+  assert.equal(shouldRetireFlexedConfidenceOccurrence(normalOccurrence, normalOccurrence, now), false);
+  assert.equal(
+    shouldRetireFlexedConfidenceOccurrence(
+      new Date("2026-09-20T12:00:00.000Z"),
+      new Date("2026-09-20T11:00:00.000Z"),
+      now,
+    ),
+    true,
+  );
+});
+
 test("latest-state injury dedupe preserves A-B-A history", () => {
   assert.equal(shouldInsertLatestState(null, "A"), true);
   assert.equal(shouldInsertLatestState("A", "B"), true);
@@ -164,7 +195,15 @@ test("scheduler health identifies overdue jobs, expired locks, and repeated fail
       lockOwner: "old-worker",
       lockUntil: new Date("2025-09-02T00:00:00.000Z"),
     },
+    {
+      jobKey: "failed-one-shot",
+      enabled: false,
+      nextRunAt: null,
+      lockOwner: null,
+      lockUntil: null,
+    },
   ], [
+    { jobKey: "failed-one-shot", status: "failed" },
     { jobKey: "failing", status: "failed" },
     { jobKey: "failing", status: "failed" },
     { jobKey: "failing", status: "failed" },
@@ -175,6 +214,7 @@ test("scheduler health identifies overdue jobs, expired locks, and repeated fail
   assert.ok(alerts.some((alert) => alert.jobKey === "expired" && alert.code === "expired_lock"));
   assert.ok(alerts.some((alert) => alert.jobKey === "failing" && alert.code === "repeated_failures"));
   assert.equal(alerts.some((alert) => alert.jobKey === "disabled"), false);
+  assert.ok(alerts.some((alert) => alert.jobKey === "failed-one-shot" && alert.code === "last_run_failed"));
 });
 
 test("scheduler health distinguishes a still-valid overdue lock", () => {

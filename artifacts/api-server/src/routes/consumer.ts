@@ -44,7 +44,7 @@ const SUPPORTED_CONSUMER_BOOKS = new Set(["DraftKings", "FanDuel"]);
 const SUPPORTED_CONSUMER_MARKETS = new Set(["spread", "total", "moneyline"]);
 const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
 
-type ConsumerFilters = { season?: number; week?: number; gameId?: string };
+type ConsumerFilters = { season?: number; week?: number; gameId?: string; asOf?: Date };
 
 export const USAGE_METRICS = ["snapShare", "targets", "targetShare", "receptions", "receivingYards", "carries", "rushingYards", "totalTd", "yardsPerTarget", "yardsPerCarry"] as const;
 export const UNSUPPORTED_USAGE_METRICS = ["redZoneTouches", "redZoneTargets", "explosiveRate"] as const;
@@ -857,12 +857,13 @@ export function serializePerformance(performance: Awaited<ReturnType<typeof getP
 }
 
 export async function consumerGames(filters: ConsumerFilters = {}, persistConfidence = false) {
+  const asOf = filters.asOf ?? new Date();
   const conditions = [
     filters.season === undefined ? undefined : eq(gamesTable.season, filters.season),
     filters.week === undefined ? undefined : eq(gamesTable.week, filters.week),
     filters.gameId === undefined ? undefined : eq(gamesTable.gameId, filters.gameId),
     filters.season === undefined && filters.week === undefined && filters.gameId === undefined
-      ? gt(gamesTable.kickoffTime, new Date())
+      ? gt(gamesTable.kickoffTime, asOf)
       : undefined,
   ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
   const games = await db.select().from(gamesTable)
@@ -876,6 +877,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       preKickoffOnly: true,
       authoritativeGameKickoff: true,
       maxRows: MAX_CONSUMER_SNAPSHOT_ROWS,
+      cutoffAt: asOf,
     }),
     (games.length ? db.select({
       gameId: sportsbookOddsTable.gameId,
@@ -894,7 +896,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id)) : []) as Promise<Array<MovementRow & { gameId: string }>>,
     db.select().from(modelTrainingRunsTable),
     games.length ? db.select().from(predictionSnapshotsTable)
-      .where(and(inArray(predictionSnapshotsTable.gameId, games.map((game) => game.gameId)), lte(predictionSnapshotsTable.predictionTimestamp, new Date())))
+      .where(and(inArray(predictionSnapshotsTable.gameId, games.map((game) => game.gameId)), lte(predictionSnapshotsTable.predictionTimestamp, asOf)))
       .orderBy(asc(predictionSnapshotsTable.predictionTimestamp), asc(predictionSnapshotsTable.id)) : [],
   ]);
   const verifiedArtifacts = new Map(modelRuns.filter((run) => verifyArtifactIntegrity(run).valid).map((run) => [run.modelVersion, true]));
@@ -912,6 +914,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       marketRows.filter((row) => row.gameId === game.gameId),
       consumerHome,
       game.kickoffTime,
+      asOf,
     );
     const dataConfidence = confidence(snapshot);
     const confidenceData = snapshot ? snapshotDataConfidence({
@@ -1004,6 +1007,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
         moneyline: historicalFor("moneyline", comparisonFor("moneyline")?.difference ?? null),
         total: historicalFor("total", comparisonFor("total")?.difference ?? null),
       },
+      calculatedAt: asOf,
     });
     if (persistConfidence && snapshot) {
       const auditInputs = Object.fromEntries((["spread", "moneyline", "total"] as const).map((confidenceMarket) => {

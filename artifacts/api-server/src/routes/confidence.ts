@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { db, confidenceMethodologiesTable, predictionConfidenceResultsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/admin";
 import { CONFIDENCE_NORMALIZATION, CONFIDENCE_THRESHOLDS, CONFIDENCE_VERSION, CONFIDENCE_WEIGHTS, methodologyChecksum } from "../lib/confidence-framework";
-import { consumerGames } from "./consumer";
+import { captureConfidenceResults } from "../lib/confidence-capture";
 
 const router: IRouter = Router();
 
@@ -43,13 +43,7 @@ router.post("/admin/confidence/calculate", requireAdmin, async (req, res): Promi
     return;
   }
   try {
-    const games = await consumerGames({ season, week }, true);
-    res.json({
-      gamesEvaluated: games.length,
-      marketResultsCalculated: games.reduce((sum, game) => sum + game.confidence.markets.length, 0),
-      marketResultsPersisted: games.persistedConfidenceResults,
-      version: CONFIDENCE_VERSION,
-    });
+    res.json(await captureConfidenceResults({ season, week }));
   } catch (error) {
     req.log.error({ error }, "Confidence calculation failed");
     res.status(503).json({ error: "Confidence calculation is temporarily unavailable", code: "confidence_calculation_unavailable" });

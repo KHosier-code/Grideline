@@ -1307,7 +1307,7 @@ export async function getLivePredictionBoard() {
 
 export async function getLatestValidPredictionSnapshots(
   gameIds: string[],
-  options: { preKickoffOnly?: boolean; authoritativeGameKickoff?: boolean; maxRows?: number } = {},
+  options: { preKickoffOnly?: boolean; authoritativeGameKickoff?: boolean; maxRows?: number; cutoffAt?: Date } = {},
 ) {
   if (!gameIds.length) return new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
   const models = await productionModels();
@@ -1337,6 +1337,7 @@ export async function getLatestValidPredictionSnapshots(
       .where(and(
         inArray(predictionSnapshotsTable.gameId, gameIds),
         ...productionConditions,
+        options.cutoffAt ? lte(predictionSnapshotsTable.predictionTimestamp, options.cutoffAt) : undefined,
         sql`${predictionSnapshotsTable.predictionTimestamp} < ${gamesTable.kickoffTime}`,
         sql`${predictionSnapshotsTable.projectedHomeScore} is not null`,
         sql`${predictionSnapshotsTable.projectedAwayScore} is not null`,
@@ -1368,6 +1369,7 @@ export async function getLatestValidPredictionSnapshots(
     options.preKickoffOnly
       ? sql`${predictionSnapshotsTable.predictionTimestamp} < ${predictionSnapshotsTable.kickoffTime}`
       : undefined,
+    options.cutoffAt ? lte(predictionSnapshotsTable.predictionTimestamp, options.cutoffAt) : undefined,
   ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
   const query = db.select().from(predictionSnapshotsTable)
     .where(and(...conditions))

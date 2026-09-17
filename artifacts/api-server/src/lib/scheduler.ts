@@ -28,6 +28,7 @@ import { syncEspnScheduleCoverage } from "./schedule";
 import { freezeOfficialFinalPredictions, generateLivePredictions, generateWeeklyLearningReport, gradeCompletedPredictions } from "./live-predictions";
 import { trainPhase4Models } from "./modeling";
 import { logger } from "./logger";
+import { captureConfidenceResults } from "./confidence-capture";
 
 export const FOOTBALL_TIMEZONE = "America/New_York";
 const LOCK_TTL_MS = 2 * 60 * 60 * 1000;
@@ -37,6 +38,11 @@ const PERSONNEL_CONTEXT_INTERVAL_MS = 30 * 60 * 1000;
 const FEATURE_REPAIR_INTERVAL_MS = 30 * 60 * 1000;
 export const SCHEDULER_OVERDUE_GRACE_MS = 2 * TICK_MS;
 export const REPEATED_FAILURE_THRESHOLD = 3;
+export const CONFIDENCE_CAPTURE_OFFSETS = [
+  { key: "24h", minutes: 24 * 60 },
+  { key: "6h", minutes: 6 * 60 },
+  { key: "75m", minutes: 75 },
+] as const;
 
 type SchedulerHealthJob = {
   jobKey: string;
@@ -52,7 +58,7 @@ type SchedulerHealthRun = {
 };
 
 export type SchedulerAlert = {
-  code: "overdue" | "overdue_locked" | "expired_lock" | "repeated_failures";
+  code: "overdue" | "overdue_locked" | "expired_lock" | "last_run_failed" | "repeated_failures";
   severity: "warning" | "critical";
   jobKey: string;
   detail: string;
@@ -76,6 +82,29 @@ export function classifySchedulerAlerts(
   }
 
   for (const job of jobs) {
+    const jobRuns = runsByJob.get(job.jobKey) ?? [];
+    let consecutiveFailures = 0;
+    for (const run of jobRuns) {
+      if (run.status !== "failed") break;
+      consecutiveFailures += 1;
+    }
+    if (consecutiveFailures >= REPEATED_FAILURE_THRESHOLD) {
+      alerts.push({
+        code: "repeated_failures",
+        severity: "critical",
+        jobKey: job.jobKey,
+        detail: `The job has failed ${consecutiveFailures} consecutive times.`,
+        consecutiveFailures,
+      });
+    } else if (jobRuns[0]?.status === "failed") {
+      alerts.push({
+        code: "last_run_failed",
+        severity: "warning",
+        jobKey: job.jobKey,
+        detail: "The most recent scheduled run failed.",
+        consecutiveFailures: 1,
+      });
+    }
     if (!job.enabled) continue;
     const overdueByMs = job.nextRunAt ? now.getTime() - job.nextRunAt.getTime() : 0;
     const hasLock = Boolean(job.lockOwner || job.lockUntil);
@@ -103,20 +132,6 @@ export function classifySchedulerAlerts(
       });
     }
 
-    let consecutiveFailures = 0;
-    for (const run of runsByJob.get(job.jobKey) ?? []) {
-      if (run.status !== "failed") break;
-      consecutiveFailures += 1;
-    }
-    if (consecutiveFailures >= REPEATED_FAILURE_THRESHOLD) {
-      alerts.push({
-        code: "repeated_failures",
-        severity: "critical",
-        jobKey: job.jobKey,
-        detail: `The job has failed ${consecutiveFailures} consecutive times.`,
-        consecutiveFailures,
-      });
-    }
   }
   return alerts.sort((left, right) =>
     (left.severity === right.severity ? 0 : left.severity === "critical" ? -1 : 1)
@@ -227,6 +242,32 @@ export function groupSundayKickoffWindows(
     }
   }
   return [...grouped.values()].sort((left, right) => left.kickoffTime.getTime() - right.kickoffTime.getTime());
+}
+
+export function confidenceCaptureOccurrences(gameId: string, kickoffTime: Date) {
+  return CONFIDENCE_CAPTURE_OFFSETS.map((offset) => ({
+    jobKey: `confidence-${offset.key}-${gameId}`,
+    offsetKey: offset.key,
+    scheduledFor: new Date(kickoffTime.getTime() - offset.minutes * 60_000),
+  }));
+}
+
+export function shouldRetireFlexedConfidenceOccurrence(
+  existingNextRunAt: Date | null,
+  recalculatedOccurrence: Date,
+  now: Date,
+) {
+  return recalculatedOccurrence.getTime() <= now.getTime()
+    && Boolean(existingNextRunAt)
+    && Math.abs(existingNextRunAt!.getTime() - recalculatedOccurrence.getTime()) > 60_000;
+}
+
+function confidenceGameId(jobKey: string) {
+  for (const offset of CONFIDENCE_CAPTURE_OFFSETS) {
+    const prefix = `confidence-${offset.key}-`;
+    if (jobKey.startsWith(prefix)) return jobKey.slice(prefix.length);
+  }
+  return null;
 }
 
 let timer: NodeJS.Timeout | null = null;
@@ -637,6 +678,66 @@ async function ensureKickoffJobs(now: Date) {
         updatedAt: now,
       }).where(eq(schedulerJobsTable.jobKey, jobKey));
     }
+    for (const occurrence of confidenceCaptureOccurrences(game.gameId, game.kickoffTime)) {
+      const [confidenceJob] = await db.select().from(schedulerJobsTable)
+        .where(eq(schedulerJobsTable.jobKey, occurrence.jobKey)).limit(1);
+      if (!confidenceJob) {
+        const future = occurrence.scheduledFor.getTime() > now.getTime();
+        const skipReason = "Confidence capture window elapsed before it could be scheduled; no catch-up calculation was made.";
+        await db.insert(schedulerJobsTable).values({
+          jobKey: occurrence.jobKey,
+          provider: "gridline-confidence",
+          kind: "confidence-capture",
+          timezone: FOOTBALL_TIMEZONE,
+          cadence: `one-shot confidence capture ${occurrence.offsetKey} before kickoff (${game.gameId})`,
+          nextRunAt: future ? occurrence.scheduledFor : null,
+          enabled: future,
+          lastScheduledAt: future ? null : occurrence.scheduledFor,
+          lastStatus: future ? "pending" : "skipped",
+          lastError: future ? null : skipReason,
+        });
+        if (!future) await recordSchedulerSkip("gridline-confidence", occurrence.jobKey, occurrence.scheduledFor, skipReason);
+      } else if (
+        occurrence.scheduledFor.getTime() > now.getTime()
+        && !confidenceJob.enabled
+        && (!confidenceJob.lastRunAt || occurrence.scheduledFor.getTime() > confidenceJob.lastRunAt.getTime())
+      ) {
+        await db.update(schedulerJobsTable).set({
+          enabled: true,
+          nextRunAt: occurrence.scheduledFor,
+          lastStatus: "pending",
+          lastError: "Confidence capture rearmed after kickoff moved later.",
+          updatedAt: now,
+        }).where(eq(schedulerJobsTable.jobKey, occurrence.jobKey));
+      } else if (
+        occurrence.scheduledFor.getTime() > now.getTime()
+        &&
+        confidenceJob.enabled
+        && confidenceJob.nextRunAt
+        && Math.abs(confidenceJob.nextRunAt.getTime() - occurrence.scheduledFor.getTime()) > 60_000
+      ) {
+        await db.update(schedulerJobsTable).set({
+          nextRunAt: occurrence.scheduledFor,
+          updatedAt: now,
+          lastError: "Confidence capture recalculated from the latest persisted kickoff.",
+        }).where(eq(schedulerJobsTable.jobKey, occurrence.jobKey));
+      } else if (
+        confidenceJob.enabled
+        && shouldRetireFlexedConfidenceOccurrence(confidenceJob.nextRunAt, occurrence.scheduledFor, now)
+      ) {
+        const skipReason = "Kickoff moved earlier and this confidence capture window has elapsed; no catch-up calculation was made.";
+        await recordSchedulerSkip("gridline-confidence", occurrence.jobKey, occurrence.scheduledFor, skipReason);
+        await db.update(schedulerJobsTable).set({
+          enabled: false,
+          nextRunAt: null,
+          lastScheduledAt: occurrence.scheduledFor,
+          lastRunAt: now,
+          lastStatus: "skipped",
+          lastError: skipReason,
+          updatedAt: now,
+        }).where(eq(schedulerJobsTable.jobKey, occurrence.jobKey));
+      }
+    }
   }
 }
 
@@ -669,8 +770,8 @@ async function recoverMissedJobs(now: Date) {
     await recordSchedulerSkip(job.provider, job.jobKey, job.nextRunAt, skipReason);
     await db.update(schedulerJobsTable)
       .set({
-        nextRunAt: job.kind === "injury-kickoff" ? null : nextRunAt,
-        enabled: job.kind === "injury-kickoff" ? false : true,
+        nextRunAt: job.kind === "injury-kickoff" || job.kind === "confidence-capture" ? null : nextRunAt,
+        enabled: job.kind === "injury-kickoff" || job.kind === "confidence-capture" ? false : true,
         lastStatus: "skipped",
         lastError: skipReason,
         lockOwner: null,
@@ -926,6 +1027,56 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
     } else if (job.kind === "prediction-freeze") {
       result = await freezeOfficialFinalPredictions();
       disable = true;
+    } else if (job.kind === "confidence-capture") {
+      disable = true;
+      const [captureRun] = await db.insert(dataSyncRunsTable).values({
+        provider: "gridline-confidence",
+        status: "running",
+        jobKey: job.jobKey,
+        scheduledFor,
+      }).returning({ id: dataSyncRunsTable.id });
+      try {
+        const gameId = confidenceGameId(job.jobKey);
+        if (!gameId) throw new Error("Confidence capture job has an invalid game identifier.");
+        const [game] = await db.select({
+          kickoffTime: gamesTable.kickoffTime,
+          gameStatus: gamesTable.gameStatus,
+        }).from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1);
+        if (!scheduledFor || !game?.kickoffTime || game.kickoffTime.getTime() <= Date.now() || isFinishedStatus(game.gameStatus)) {
+          status = "skipped";
+          const skipReason = "Game is missing, finished, or no longer before kickoff; confidence was not calculated.";
+          result = { status, skipReason, gameId };
+        } else {
+          result = await captureConfidenceResults({ gameId, asOf: scheduledFor });
+          if ((result as { validSnapshotsEvaluated?: number }).validSnapshotsEvaluated === 0) {
+            result = {
+              ...(result as Record<string, unknown>),
+              status: "skipped",
+              skipReason: "No valid production prediction snapshot existed at the scheduled confidence boundary.",
+            };
+          }
+        }
+        const captureResult = result as {
+          status?: string;
+          marketResultsPersisted?: number;
+          skipReason?: string;
+        };
+        status = captureResult.status ?? status;
+        await db.update(dataSyncRunsTable).set({
+          status,
+          recordsProcessed: captureResult.marketResultsPersisted ?? 0,
+          skipReason: captureResult.skipReason ?? null,
+          completedAt: new Date(),
+          metadata: resultMetadata(result),
+        }).where(eq(dataSyncRunsTable.id, captureRun.id));
+      } catch (error) {
+        await db.update(dataSyncRunsTable).set({
+          status: "failed",
+          errorMessage: error instanceof Error ? error.message : String(error),
+          completedAt: new Date(),
+        }).where(eq(dataSyncRunsTable.id, captureRun.id));
+        throw error;
+      }
     } else if (job.kind === "model-challenger") {
       if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
         result = await trainPhase4Models();
@@ -952,7 +1103,7 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
   const now = new Date();
   const definition = ALL_WEEKLY_SLOTS.find((item) => item.jobKey === job.jobKey);
   let nextRunAt: Date | null = null;
-  if (!disable && job.kind !== "injury-kickoff") {
+  if (!disable && job.kind !== "injury-kickoff" && job.kind !== "confidence-capture") {
     nextRunAt = job.kind === "schedule"
       ? nextIntervalOccurrence(now)
       : job.kind === "nflverse"
