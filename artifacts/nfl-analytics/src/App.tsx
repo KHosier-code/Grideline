@@ -345,6 +345,51 @@ function FreshnessCard({ item }: { item: DataHealth }) {
   );
 }
 
+function DatabaseCapacityNotice({ item }: { item?: DataHealth }) {
+  if (!item) return null;
+
+  const capacityStatus = item.metadata?.capacityStatus;
+  const affectedHealthChecks = Array.isArray(item.metadata?.affectedHealthChecks)
+    ? item.metadata.affectedHealthChecks.filter(
+        (value): value is string => typeof value === 'string',
+      )
+    : [];
+  const isDegraded = capacityStatus === 'degraded';
+  const isUnknown = capacityStatus === 'unknown';
+  if (!isDegraded && !isUnknown) return null;
+
+  return (
+    <div
+      className={cx(
+        'callout',
+        isDegraded ? 'callout-warn' : 'callout-neutral',
+        'mb-5',
+      )}
+      data-testid={`database-capacity-${capacityStatus}`}
+    >
+      {isDegraded ? (
+        <AlertTriangle className="h-4 w-4 shrink-0" />
+      ) : (
+        <Database className="h-4 w-4 shrink-0" />
+      )}
+      <div>
+        <strong>
+          {isDegraded
+            ? 'Database capacity is degraded.'
+            : 'Database capacity is unknown.'}
+        </strong>
+        <p>{item.detail}</p>
+        {isDegraded && affectedHealthChecks.length > 0 && (
+          <p className="mt-1">
+            <strong>Affected checks:</strong>{' '}
+            {affectedHealthChecks.join(', ')}.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Shell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -734,6 +779,7 @@ function ReadinessTile({ icon: Icon, title, detail }: { icon: IconType; title: s
 function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string; title: string; detail: string; eyebrow: string; preferred?: string }) {
   const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000, refetchInterval: 60000 } });
   const focused = useMemo(() => preferred ? health.data?.filter((item) => `${item.provider} ${item.label}`.toLowerCase().includes(preferred)) : health.data, [health.data, preferred]);
+  const databaseCapacity = health.data?.find((item) => item.provider === 'database-capacity');
   const readinessStatus = focused?.some((item) => item.status === 'stale')
     ? 'stale'
     : focused?.some((item) => item.status === 'unavailable' || item.status === 'not_configured')
@@ -746,6 +792,7 @@ function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string;
   return (
     <>
       <PageHeader eyebrow={eyebrow} title={title} detail={detail} actions={<button type="button" className="button button-subtle" onClick={() => health.refetch()} data-testid={`button-refresh-${kind}`}><RefreshCw className={cx('h-4 w-4', health.isFetching && 'animate-spin')} /> Refresh</button>} />
+      {kind === 'data-health' && <DatabaseCapacityNotice item={databaseCapacity} />}
       <div className="readiness-header"><div className="readiness-header-icon"><Database className="h-5 w-5" /></div><div><p className="eyebrow text-accent">OPERATING PRINCIPLE</p><h2 className="text-lg font-semibold text-ink">Show the capture state. Never imply a signal.</h2><p className="mt-1 text-sm text-muted-foreground">This surface is ready for live data and stays honest while the provider is not configured.</p><p className="mt-2 text-xs font-medium text-accent">Scheduler timezone: America/New_York (DST-aware). Odds are seven scheduled weekly slots, not continuous polling.</p></div></div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <Panel eyebrow="Provider monitor" title="Data health" action={health.data && <span className="section-meta">{health.data.length} providers</span>}>{health.isLoading ? <div className="space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : health.isError ? <ErrorPanel /> : focused?.length ? <div className="space-y-3">{focused.map((item) => <FreshnessCard item={item} key={item.provider} />)}</div> : <EmptyPanel title="No provider record matches this surface" detail="Once the backend exposes a provider health record, it will be listed here with its last and next update." icon={Database} />}</Panel>

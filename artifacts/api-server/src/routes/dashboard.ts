@@ -26,7 +26,11 @@ import { requireAdmin } from "../middlewares/admin";
 import { getModelArtifactImmutabilityStatus } from "../lib/phase61-release";
 import { getUsageAnalyticsRetentionHealth } from "../lib/usage-analytics-retention";
 import { logger } from "../lib/logger";
-import { withDatabaseQueryCancellation } from "../lib/db";
+import {
+  getCancelledDatabaseQueryCount,
+  getDatabasePoolCapacity,
+  withDatabaseQueryCancellation,
+} from "../lib/db";
 
 type DataHealthDependencies = {
   getEspnHealth: typeof getEspnHealth;
@@ -163,6 +167,7 @@ export function createDataHealthHandler(
     const routeAbortTimer = setTimeout(() => routeAbort.abort(), timeoutMs);
     try {
       const now = new Date();
+      const cancelledQueriesAtStart = getCancelledDatabaseQueryCount();
       const bounded = <T>(
         label: string,
         operation: () => T | PromiseLike<T>,
@@ -403,6 +408,79 @@ export function createDataHealthHandler(
       gameDaysCheck,
       weatherCheck,
     ]);
+    const capacity = getDatabasePoolCapacity();
+    const cancelledQueriesDuringRoute = Math.max(
+      0,
+      capacity.cancelledQueries - cancelledQueriesAtStart,
+    );
+    const unavailableHealthChecks = [
+      ["ESPN schedule", scheduleResult.unavailable],
+      ["NFLverse", nflverseResult.unavailable],
+      ["ESPN availability", availabilityResult.unavailable],
+      ["Sleeper", sleeperResult.unavailable],
+      ["Sleeper identity mapping", sleeperIdentityResult.unavailable],
+      ["scheduled injury runs", scheduledInjuryRunsResult.unavailable],
+      ["scheduled NFLverse runs", scheduledNflverseRunsResult.unavailable],
+      ["scheduled weather runs", scheduledWeatherRunsResult.unavailable],
+      ["Odds API", oddsResult.unavailable],
+      ["scheduler", schedulerResult.unavailable],
+      ["pregame features", featuresResult.unavailable],
+      ["model artifact immutability", modelImmutabilityResult.unavailable],
+      ["Usage Lab retention", usageAnalyticsRetentionResult.unavailable],
+      ["ESPN game calendar", gameDaysResult.unavailable],
+      ["NWS weather", weatherResult.unavailable],
+    ]
+      .filter(([, unavailable]) => unavailable)
+      .map(([label]) => label);
+    const capacityDegraded =
+      capacity.capacityStatus === "degraded" ||
+      cancelledQueriesDuringRoute > 0;
+    const capacityStatus = capacityDegraded
+      ? "degraded"
+      : capacity.capacityStatus;
+    const capacityDetail =
+      capacityStatus === "degraded"
+        ? [
+            "Database capacity is degraded.",
+            cancelledQueriesDuringRoute > 0
+              ? `${cancelledQueriesDuringRoute} database health ${cancelledQueriesDuringRoute === 1 ? "query" : "queries"} canceled before completion.`
+              : capacity.waiting !== null && capacity.waiting > 0
+                ? `${capacity.waiting} database request${capacity.waiting === 1 ? "" : "s"} are waiting for a pool client.`
+                : "All observed database clients are busy.",
+            unavailableHealthChecks.length > 0
+              ? `Review the affected health checks: ${unavailableHealthChecks.join(", ")}.`
+              : "Review the health checks below for the affected provider.",
+          ].join(" ")
+        : capacityStatus === "unknown"
+          ? "Database pool metrics are unavailable; capacity cannot be assessed. Provider failures below are not attributed to database capacity."
+          : "Database pool capacity is within observed limits. Provider failures below are reported independently.";
+    const databaseCapacityHealth = {
+      provider: "database-capacity",
+      label: "Database capacity",
+      status:
+        capacityStatus === "unknown"
+          ? "unavailable"
+          : capacityStatus === "degraded"
+            ? "stale"
+            : "current",
+      detail: capacityDetail,
+      lastUpdated: now,
+      nextUpdate: null,
+      requestsToday: 0,
+      requestsThisMonth: 0,
+      remainingQuota: null,
+      metadata: {
+        capacityStatus,
+        metricsAvailable: capacity.metricsAvailable,
+        max: capacity.max,
+        total: capacity.total,
+        idle: capacity.idle,
+        active: capacity.active,
+        waiting: capacity.waiting,
+        cancelledQueries: cancelledQueriesDuringRoute,
+        affectedHealthChecks: unavailableHealthChecks,
+      },
+    };
     const schedule = scheduleResult.value;
     const nflverse = nflverseResult.value;
     const availability = availabilityResult.value;
@@ -884,6 +962,7 @@ export function createDataHealthHandler(
               : {}),
           },
         },
+        databaseCapacityHealth,
         ]),
       );
     } finally {

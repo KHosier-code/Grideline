@@ -15,9 +15,20 @@ type QueryClient = DatabaseClient & {
   cancel?: (client: DatabaseClient, query: unknown) => void;
 };
 
+export type DatabasePoolCapacity = {
+  metricsAvailable: boolean;
+  capacityStatus: "normal" | "degraded" | "unknown";
+  max: number | null;
+  total: number | null;
+  idle: number | null;
+  waiting: number | null;
+  active: number | null;
+  cancelledQueries: number;
+};
 const databaseAbortContext = new AsyncLocalStorage<AbortSignal>();
 const originalPoolQuery = pool.query.bind(pool) as (...args: any[]) => unknown;
 
+let cancelledDatabaseQueries = 0;
 export function createDatabaseAbortError(): Error {
   const error = new Error("Database query aborted");
   error.name = "AbortError";
@@ -137,6 +148,7 @@ export async function executeCancellableDatabaseQuery<T>(
       settled = true;
       cleanup();
 
+      cancelledDatabaseQueries += 1;
       const abortError = createDatabaseAbortError();
       const activeQuery =
         client._getActiveQuery?.() ?? client._queryQueue?.[0] ?? query;
@@ -215,3 +227,60 @@ const poolQueryWithCancellation = (
 };
 
 pool.query = poolQueryWithCancellation as typeof pool.query;
+
+/**
+ * Return safe, non-secret pool telemetry for the administrator health page.
+ * Pool internals are intentionally optional because alternate drivers and
+ * test doubles do not always expose node-postgres metrics.
+ */
+export function getDatabasePoolCapacity(
+  source: unknown = pool,
+): DatabasePoolCapacity {
+  const candidate = source as {
+    totalCount?: unknown;
+    idleCount?: unknown;
+    waitingCount?: unknown;
+    options?: { max?: unknown };
+  };
+  const max = safePoolCount(candidate?.options?.max);
+  const total = safePoolCount(candidate?.totalCount);
+  const idle = safePoolCount(candidate?.idleCount);
+  const waiting = safePoolCount(candidate?.waitingCount);
+  const active =
+    total !== null && idle !== null ? Math.max(0, total - idle) : null;
+  const metricsAvailable =
+    max !== null && total !== null && idle !== null && waiting !== null;
+  const atCapacity =
+    max !== null && total !== null && idle !== null
+      ? total >= max && idle === 0
+      : false;
+
+  return {
+    metricsAvailable,
+    capacityStatus:
+      !metricsAvailable
+        ? "unknown"
+        : waiting > 0 || atCapacity
+          ? "degraded"
+          : "normal",
+    max,
+    total,
+    idle,
+    waiting,
+    active,
+    cancelledQueries: cancelledDatabaseQueries,
+  };
+}
+
+function safePoolCount(value: unknown): number | null {
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= 0
+    ? value
+    : null;
+}
+
+export function getCancelledDatabaseQueryCount(): number {
+  return cancelledDatabaseQueries;
+}

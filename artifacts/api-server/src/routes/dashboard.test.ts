@@ -5,7 +5,10 @@ import { eq, sql } from "drizzle-orm";
 import dashboardRouter, { createDataHealthHandler } from "./dashboard";
 import { PREGAME_FEATURE_DEFINITION } from "../lib/features";
 import { requireAdmin } from "../middlewares/admin";
-import { executeCancellableDatabaseQuery } from "../lib/db";
+import {
+  executeCancellableDatabaseQuery,
+  getDatabasePoolCapacity,
+} from "../lib/db";
 
 // node:test runs files in parallel, but the retention health fixture replaces
 // a database singleton. Hold the same session lock as the worker tests for
@@ -260,6 +263,47 @@ test("protected data-health returns a bounded unavailable result when a provider
   assert.ok(odds, "the data-health response should include Odds API");
   assert.equal(odds.status, "unavailable");
   assert.match(odds.detail, /did not complete within the admin route budget/);
+});
+
+test("database pool capacity telemetry is safe when metrics are unavailable", () => {
+  const capacity = getDatabasePoolCapacity({});
+  assert.deepEqual(
+    capacity,
+    {
+      metricsAvailable: false,
+      capacityStatus: "unknown",
+      max: null,
+      total: null,
+      idle: null,
+      waiting: null,
+      active: null,
+      cancelledQueries: capacity.cancelledQueries,
+    },
+  );
+  assert.equal(typeof capacity.cancelledQueries, "number");
+});
+
+test("database pool capacity telemetry identifies queued work as degraded", () => {
+  const capacity = getDatabasePoolCapacity({
+    options: { max: 4 },
+    totalCount: 4,
+    idleCount: 0,
+    waitingCount: 2,
+  });
+
+  assert.equal(capacity.metricsAvailable, true);
+  assert.equal(capacity.capacityStatus, "degraded");
+  assert.equal(capacity.active, 4);
+});
+
+test("data-health includes a separate database capacity record", async () => {
+  const body = await readDataHealth();
+  const capacity = providerByName(body, "database-capacity");
+
+  assert.equal(capacity.label, "Database capacity");
+  assert.ok(["current", "stale", "unavailable"].includes(capacity.status));
+  assert.equal(typeof capacity.metadata.metricsAvailable, "boolean");
+  assert.ok(Array.isArray(capacity.metadata.affectedHealthChecks));
 });
 
 test("completed database health work is not cancelled after the response finishes", async () => {
