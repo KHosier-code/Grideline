@@ -358,6 +358,59 @@ test("timed-out database health work cancels and releases its client without a l
   assert.equal(releaseError?.name, "AbortError");
 });
 
+test("a timed-out PostgreSQL health query is cancelled, discarded, and followed by a usable connection", async () => {
+  const client = await pool.connect();
+  const cancellableClient = client as typeof client & {
+    cancel: (client: unknown, query: unknown) => void;
+  };
+  const originalRelease = cancellableClient.release.bind(cancellableClient);
+  const originalCancel = cancellableClient.cancel.bind(cancellableClient);
+  let releaseError: Error | undefined;
+  let cancellationCount = 0;
+
+  cancellableClient.release = (error?: Error) => {
+    releaseError = error;
+    originalRelease(error);
+  };
+  cancellableClient.cancel = (...args: Parameters<typeof cancellableClient.cancel>) => {
+    cancellationCount += 1;
+    return originalCancel(...args);
+  };
+
+  const controller = new AbortController();
+  const query = executeCancellableDatabaseQuery(
+    { connect: async () => client },
+    { text: "SELECT pg_sleep($1)" },
+    [60_000],
+    controller.signal,
+  );
+  const timeout = setTimeout(() => controller.abort(), 25);
+
+  try {
+    await assert.rejects(query, (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.name, "AbortError");
+      return true;
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  assert.equal(
+    cancellationCount,
+    1,
+    "the live PostgreSQL client should receive a cancellation request",
+  );
+  assert.equal(
+    releaseError?.name,
+    "AbortError",
+    "the active client should be discarded instead of returned to the pool",
+  );
+
+  const result = await pool.query("SELECT 1 AS connection_check");
+  assert.deepEqual(result.rows, [{ connection_check: 1 }]);
+});
+
 test("repeatedly timed-out database health checks cancel and release every client exactly once", async () => {
   const checkCount = 8;
   let queriesStarted = 0;
