@@ -96,6 +96,37 @@ export const depthChartSnapshotsTable = pgTable("depth_chart_snapshots", {
   ),
 ]);
 
+/**
+ * Append-only, human-verifiable depth evidence. This is intentionally separate
+ * from provider snapshots so a permitted manual verification can preserve its
+ * URL, observation/verification lineage, and explicit unavailable states.
+ */
+export const verifiedDepthEvidenceTable = pgTable("verified_depth_evidence", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  teamId: text("team_id").notNull(),
+  playerId: text("player_id"),
+  playerName: text("player_name"),
+  position: text("position"),
+  role: text("role"),
+  depthRank: integer("depth_rank"),
+  evidenceState: text("evidence_state").notNull().default("verified"),
+  availability: text("availability").notNull().default("unknown"),
+  injuryStatus: text("injury_status"),
+  confidence: integer("confidence"),
+  source: text("source").notNull(),
+  sourceUrl: text("source_url"),
+  observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull(),
+  verificationMethod: text("verification_method").notNull(),
+  provenance: jsonb("provenance").$type<Record<string, unknown>>().notNull().default({}),
+  sourceHash: text("source_hash").notNull(),
+  snapshotTimestamp: timestamp("snapshot_timestamp", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("verified_depth_evidence_team_observed_idx").on(table.teamId, table.observedAt, table.id),
+  index("verified_depth_evidence_player_idx").on(table.playerId, table.observedAt),
+  check("verified_depth_evidence_confidence_check", sql`${table.confidence} is null or (${table.confidence} >= 0 and ${table.confidence} <= 100)`),
+  check("verified_depth_evidence_state_check", sql`${table.evidenceState} in ('verified', 'unavailable', 'ambiguous')`),
+]);
 export const sportsbookOddsTable = pgTable("sportsbook_odds", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   gameId: text("game_id").notNull(),

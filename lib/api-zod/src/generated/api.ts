@@ -1289,8 +1289,6 @@ export const getConsumerGameResponseTwoMovementStreamsMax = 24;
 
 export const getConsumerGameResponseTwoContextTeamsItemInjuriesMax = 25;
 
-export const getConsumerGameResponseTwoContextTeamsItemDepthMax = 30;
-
 export const getConsumerGameResponseTwoContextTeamsMax = 2;
 
 export const getConsumerGameResponseTwoContextDriversMax = 4;
@@ -1519,9 +1517,9 @@ export const GetConsumerGameResponse = zod.object({
   "depth": zod.array(zod.object({
   "name": zod.string(),
   "position": zod.string(),
-  "unit": zod.enum(['offense', 'defense']),
+  "unit": zod.enum(['offense', 'defense', 'special_teams']),
   "depthRank": zod.number().int().nullable(),
-  "role": zod.enum(['published_starter', 'published_backup', 'projected_starter', 'uncertain']),
+  "role": zod.enum(['published_starter', 'published_backup', 'projected_starter', 'projected_backup', 'uncertain']),
   "sourceLabel": zod.enum(['Published depth', 'Projected from recent participation', 'Evidence uncertain']),
   "recentSnapShare": zod.number().nullable(),
   "injuryStatus": zod.string().nullable(),
@@ -1530,8 +1528,79 @@ export const GetConsumerGameResponse = zod.object({
   "evidenceSummary": zod.string().nullable(),
   "lineupSlot": zod.string().nullable(),
   "freshness": zod.enum(['fresh', 'stale', 'unavailable']),
-  "asOf": zod.coerce.date().nullable()
-})).max(getConsumerGameResponseTwoContextTeamsItemDepthMax)
+  "asOf": zod.coerce.date().nullable(),
+  "publishedStarter": zod.boolean().optional(),
+  "availability": zod.enum(['available', 'questionable', 'doubtful', 'out', 'unknown']).optional(),
+  "unavailableReason": zod.string().nullish(),
+  "provenance": zod.object({
+  "source": zod.string(),
+  "sourceUrl": zod.string().url().nullable(),
+  "observedAt": zod.coerce.date().nullable(),
+  "verifiedAt": zod.coerce.date().nullable(),
+  "verificationMethod": zod.string().nullable(),
+  "evidenceId": zod.string().nullable()
+}).optional()
+})),
+  "expectedLineup": zod.object({
+  "status": zod.enum(['available', 'partial', 'unavailable', 'ambiguous']),
+  "players": zod.array(zod.object({
+  "playerId": zod.string(),
+  "name": zod.string(),
+  "position": zod.string(),
+  "unit": zod.enum(['offense', 'defense', 'special_teams']),
+  "depthRank": zod.number().int().nullable(),
+  "projected": zod.boolean(),
+  "replacementForPlayerId": zod.string().nullable(),
+  "replacementForPlayerName": zod.string().nullable(),
+  "projectionReason": zod.string(),
+  "confidence": zod.number(),
+  "availability": zod.enum(['available', 'questionable', 'doubtful', 'out', 'unknown']),
+  "provenance": zod.object({
+  "source": zod.string(),
+  "sourceUrl": zod.string().url().nullable(),
+  "observedAt": zod.coerce.date().nullable(),
+  "verifiedAt": zod.coerce.date().nullable(),
+  "verificationMethod": zod.string().nullable(),
+  "evidenceId": zod.string().nullable()
+}).optional()
+})),
+  "unavailableReasons": zod.array(zod.string())
+}).optional(),
+  "starterAvailabilitySummary": zod.object({
+  "publishedStarters": zod.number().int(),
+  "available": zod.number().int(),
+  "questionable": zod.number().int(),
+  "doubtful": zod.number().int(),
+  "out": zod.number().int(),
+  "unknown": zod.number().int()
+}).and(zod.object({
+  "byUnit": zod.object({
+  "offense": zod.object({
+  "publishedStarters": zod.number().int(),
+  "available": zod.number().int(),
+  "questionable": zod.number().int(),
+  "doubtful": zod.number().int(),
+  "out": zod.number().int(),
+  "unknown": zod.number().int()
+}),
+  "defense": zod.object({
+  "publishedStarters": zod.number().int(),
+  "available": zod.number().int(),
+  "questionable": zod.number().int(),
+  "doubtful": zod.number().int(),
+  "out": zod.number().int(),
+  "unknown": zod.number().int()
+}),
+  "specialTeams": zod.object({
+  "publishedStarters": zod.number().int(),
+  "available": zod.number().int(),
+  "questionable": zod.number().int(),
+  "doubtful": zod.number().int(),
+  "out": zod.number().int(),
+  "unknown": zod.number().int()
+})
+})
+})).optional()
 })).max(getConsumerGameResponseTwoContextTeamsMax),
   "drivers": zod.array(zod.string()).max(getConsumerGameResponseTwoContextDriversMax),
   "projectedMatchups": zod.array(zod.object({
@@ -1822,5 +1891,3 @@ export const ListConsumerPlayerUsageGamesResponse = zod.object({
 })
 }))
 })
-
-

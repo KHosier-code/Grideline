@@ -95,7 +95,7 @@ test("injury authority and participation disagreements create confidence-reducin
       snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
     }],
   });
-  assert.equal(result.qbStarter.status, "conflict");
+  assert.equal(result.qbStarter.status, "available");
   assert.equal(result.qbStarter.player?.starter, false);
   assert.ok(result.conflicts.some((conflict) => conflict.type === "injury"));
   assert.ok(result.conflicts.some((conflict) => conflict.type === "participation"));
@@ -152,7 +152,7 @@ test("an old Out row cannot survive feed omission as current injury authority", 
 test("Sleeper availability is supplemental when ESPN is absent and ESPN wins conflicts", () => {
   const sleeperOut = sleeper({ sleeperStatus: "Inactive", sleeperInjuryStatus: "Out" });
   const withoutEspn = derive([sleeperOut]);
-  assert.equal(withoutEspn.qbStarter.status, "conflict");
+  assert.equal(withoutEspn.qbStarter.status, "available");
   assert.equal(withoutEspn.qbStarter.player?.starter, false);
   assert.equal(withoutEspn.qbStarter.player?.injuryState.source, "sleeper_supplemental");
 
@@ -296,4 +296,153 @@ test("matchup season leaves a missing position unavailable instead of using prio
   });
   assert.equal(result.depth.offense.some((row) => row.position === "RB"), false);
   assert.ok(result.unavailableReasons.includes("RB depth is unavailable."));
+});
+
+test("published starter remains published while evidence-backed replacement is projected separately", () => {
+  const result = derive([
+    sleeper({ playerId: "starter", playerName: "Starter", position: "RB", role: "RB", depthOrder: 1 }),
+    sleeper({ playerId: "backup", playerName: "Backup", position: "RB", role: "RB", depthOrder: 2, availability: "available" }),
+  ], {
+    injuries: [{
+      playerId: "starter", teamId: "team", position: "RB", gameStatus: "Out",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }],
+    snaps: [{
+      gameId: "prior", season: 2026, week: 2, playerId: "backup", playerName: "Backup",
+      position: "RB", teamId: "team", offensePct: 0.7, kickoffTime: "2026-09-10T00:00:00.000Z",
+      sourceUpdatedAt: "2026-09-11T00:00:00.000Z",
+    }],
+  });
+  const starter = result.depth.offense.find((row) => row.playerId === "starter");
+  assert.equal(starter?.publishedStarter, true);
+  assert.equal(starter?.availability, "out");
+  assert.equal(result.expectedLineup?.players.find((row) => row.playerId === "backup")?.projected, true);
+  assert.equal(result.expectedLineup?.players.find((row) => row.playerId === "backup")?.replacementForPlayerId, "starter");
+});
+
+test("a complete stale published lineup cannot become an available expected lineup", () => {
+  const cards = [
+    ["QB1", "QB"], ["RB1", "RB"], ["WR1", "WR"], ["WR2", "WR"], ["WR3", "WR"], ["TE1", "TE"],
+    ["LT1", "LT"], ["LG1", "LG"], ["C1", "C"], ["RG1", "RG"], ["RT1", "RT"],
+    ["DT1", "DT"], ["DT2", "DT"], ["LB1", "LB"], ["LB2", "LB"],
+    ["CB1", "CB"], ["CB2", "CB"], ["CB3_OR_SLOT", "CB"], ["FS1", "FS"], ["SS1", "SS"],
+    ["EDGE1", "EDGE"], ["EDGE2", "EDGE"], ["K1", "K"], ["P1", "P"], ["LS1", "LS"],
+  ] as const;
+  const result = derive(cards.map(([role, position], index) => ({
+    ...sleeper({
+      playerId: `stale-${index}`,
+      playerName: `Stale ${role}`,
+      position,
+      role,
+      capturedAt: "2026-08-01T10:00:00.000Z",
+      sourceUpdatedAt: "2026-08-01T10:00:00.000Z",
+    }),
+    source: "verified_published_depth",
+    classification: "official",
+    observedAt: "2026-08-01T10:00:00.000Z",
+    verifiedAt: "2026-08-01T10:05:00.000Z",
+    availability: "available",
+  })));
+
+  assert.equal(result.freshness, "stale");
+  assert.ok(result.depth.offense.concat(result.depth.defense, result.depth.specialTeams)
+    .every((player) => player.availability === "unknown"));
+  assert.equal(result.expectedLineup?.players.length, 0);
+  assert.equal(result.expectedLineup?.status, "ambiguous");
+  assert.ok(result.expectedLineup?.unavailableReasons.every((reason) =>
+    /stale|missing published evidence/.test(reason)));
+});
+
+test("a stale backup cannot be projected as the replacement for a current out starter", () => {
+  const result = derive([
+    sleeper({ playerId: "starter", position: "RB", role: "RB1", depthOrder: 1 }),
+    sleeper({
+      playerId: "stale-backup", position: "RB", role: "RB1", depthOrder: 2,
+      capturedAt: "2026-08-01T10:00:00.000Z", sourceUpdatedAt: "2026-08-01T10:00:00.000Z",
+      availability: "available",
+    }),
+  ], {
+    injuries: [{
+      playerId: "starter", teamId: "team", position: "RB", gameStatus: "Out",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }],
+  });
+
+  assert.equal(result.expectedLineup?.players.some((row) => row.playerId === "stale-backup"), false);
+  assert.equal(result.expectedLineup?.status, "ambiguous");
+  assert.ok(result.expectedLineup?.unavailableReasons.some((reason) => /replacement is unavailable/.test(reason)));
+});
+
+test("out starter without a supported replacement fails closed", () => {
+  const result = derive([
+    sleeper({ playerId: "starter", position: "RB", role: "RB", depthOrder: 1 }),
+  ], {
+    injuries: [{
+      playerId: "starter", teamId: "team", position: "RB", gameStatus: "Out",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }],
+  });
+  assert.equal(result.expectedLineup?.players.some((row) => row.projected), false);
+  assert.equal(result.expectedLineup?.status, "ambiguous");
+  assert.match(result.expectedLineup?.unavailableReasons[0] ?? "", /replacement is unavailable/);
+});
+
+test("verified injury status drives availability when the explicit availability field is unknown", () => {
+  const result = derive([{
+    ...sleeper({ playerId: "starter", position: "RB", role: "RB", depthOrder: 1 }),
+    source: "verified_published_depth",
+    classification: "official",
+    availability: "unknown",
+    injuryStatus: "Out",
+    observedAt: "2026-09-17T11:00:00.000Z",
+    verifiedAt: "2026-09-17T11:05:00.000Z",
+  }]);
+  const starter = result.depth.offense.find((row) => row.playerId === "starter");
+  assert.equal(starter?.publishedStarter, true);
+  assert.equal(starter?.availability, "out");
+  assert.equal(starter?.injuryState.injury, "Out");
+  assert.equal(result.expectedLineup?.status, "ambiguous");
+});
+
+test("newer ESPN injury evidence overrides older verified availability", () => {
+  const result = derive([{
+    ...sleeper({ playerId: "starter", position: "RB", role: "RB", depthOrder: 1 }),
+    source: "verified_published_depth",
+    classification: "official",
+    availability: "available",
+    injuryStatus: "Available",
+    observedAt: "2026-09-17T09:00:00.000Z",
+    verifiedAt: "2026-09-17T09:05:00.000Z",
+  }], {
+    injuries: [{
+      playerId: "starter", teamId: "team", position: "RB", injury: "Hamstring", gameStatus: "Out",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }],
+  });
+  const starter = result.depth.offense.find((row) => row.playerId === "starter");
+  assert.equal(starter?.publishedStarter, true);
+  assert.equal(starter?.availability, "out");
+  assert.equal(starter?.injuryState.source, "espn");
+  assert.equal(starter?.injuryState.injury, "Hamstring");
+  assert.equal(starter?.injuryState.asOf, "2026-09-17T11:00:00.000Z");
+  assert.equal(result.expectedLineup?.status, "ambiguous");
+});
+
+test("participation-only rank one remains a projected lineup entry, never a published starter", () => {
+  const result = derive([{
+    ...sleeper({ playerId: "inferred", position: "RB", role: "RB", depthOrder: 1 }),
+    mappingStatus: "participation_inference",
+    classification: "published_secondary",
+  }], {
+    snaps: [{
+      gameId: "prior", season: 2026, week: 2, playerId: "inferred", playerName: "Inferred Player",
+      position: "RB", teamId: "team", offensePct: 0.7, kickoffTime: "2026-09-10T00:00:00.000Z",
+      sourceUpdatedAt: "2026-09-11T00:00:00.000Z",
+    }],
+  });
+  const player = result.depth.offense.find((row) => row.playerId === "inferred");
+  assert.equal(player?.publishedStarter, false);
+  assert.equal(result.expectedLineup?.status, "partial");
+  assert.equal(result.expectedLineup?.players[0]?.projected, true);
+  assert.match(result.expectedLineup?.players[0]?.projectionReason ?? "", /not official/i);
 });

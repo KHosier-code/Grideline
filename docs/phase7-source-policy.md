@@ -14,6 +14,21 @@ historical nflverse depth charts. Inferred players are never labeled official.
 | nflverse | Historical depth, participation, and snap source under the [nflverse license](https://nflverse.nflverse.com/LICENSE-text.html). |
 | National Weather Service | U.S. stadium forecasts use keyless [api.weather.gov](https://www.weather.gov/documentation/services-web-api), with a descriptive User-Agent and bounded cached requests. |
 
+## Verified depth evidence
+
+Permitted official/licensed material and safe manual verification are retained
+in the append-only `verified_depth_evidence` table. Each observation carries
+its source URL (when available), observed and verified timestamps, verification
+method, source hash, confidence, availability, and provenance. A verification
+row may explicitly be `unavailable` or `ambiguous`; the loader never converts
+those states into a starter.
+
+The published depth track is immutable from the interpretation layer. Injury
+availability overlays the published player but does not rewrite their rank.
+An expected replacement is emitted separately and only when a mapped,
+cutoff-safe depth or participation signal supports it. Expected players are
+always labeled projected and are not official depth or direct coverage claims.
+
 Weather snapshots are immutable and are selected only when fetched no later
 than the context cutoff. Indoor games record an indoor designation and do not
 fabricate outdoor conditions. International or unsupported venues remain

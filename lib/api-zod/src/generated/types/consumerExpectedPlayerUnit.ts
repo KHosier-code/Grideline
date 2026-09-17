@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConsumerDepthPlayerUnit = typeof ConsumerDepthPlayerUnit[keyof typeof ConsumerDepthPlayerUnit];
+export type ConsumerExpectedPlayerUnit = typeof ConsumerExpectedPlayerUnit[keyof typeof ConsumerExpectedPlayerUnit];
 
 
-export const ConsumerDepthPlayerUnit = {
+export const ConsumerExpectedPlayerUnit = {
   offense: 'offense',
   defense: 'defense',
   special_teams: 'special_teams',

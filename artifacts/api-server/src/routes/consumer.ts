@@ -585,13 +585,33 @@ type SerializedContext = {
     asOf: string | null;
     depthFreshness: "current" | "stale" | "partial" | "unavailable";
     depth: Array<{
-      name: string; position: string; unit: "offense" | "defense"; depthRank: number | null;
-      role: "published_starter" | "published_backup" | "projected_starter" | "uncertain";
+      name: string; position: string; unit: "offense" | "defense" | "special_teams"; depthRank: number | null;
+      role: "published_starter" | "published_backup" | "projected_starter" | "projected_backup" | "uncertain";
       sourceLabel: "Published depth" | "Projected from recent participation" | "Evidence uncertain";
       recentSnapShare: number | null; injuryStatus: string | null; practiceStatus: string | null;
       starterConfidence: number | null; evidenceSummary: string | null; lineupSlot: string | null;
       freshness: "fresh" | "stale" | "unavailable"; asOf: string | null;
+       publishedStarter?: boolean; availability?: "available" | "questionable" | "doubtful" | "out" | "unknown";
+       unavailableReason?: string | null;
+       provenance?: { source: string; sourceUrl: string | null; observedAt: string | null; verifiedAt: string | null; verificationMethod: string | null; evidenceId: string | null };
     }>;
+     expectedLineup?: {
+       status: "available" | "partial" | "unavailable" | "ambiguous";
+       players: Array<{
+         playerId: string; name: string; position: string; unit: "offense" | "defense" | "special_teams";
+         depthRank: number | null; projected: boolean; replacementForPlayerId: string | null;
+         replacementForPlayerName: string | null; projectionReason: string; confidence: number;
+         availability: "available" | "questionable" | "doubtful" | "out" | "unknown";
+         provenance?: { source: string; sourceUrl: string | null; observedAt: string | null; verifiedAt: string | null; verificationMethod: string | null; evidenceId: string | null };
+       }>;
+       unavailableReasons: string[];
+     };
+      starterAvailabilitySummary?: {
+        publishedStarters: number; available: number; questionable: number; doubtful: number; out: number; unknown: number;
+        byUnit: Record<"offense" | "defense" | "specialTeams", {
+          publishedStarters: number; available: number; questionable: number; doubtful: number; out: number; unknown: number;
+        }>;
+      };
   }>;
   drivers: string[];
   projectedMatchups: [];
@@ -753,21 +773,23 @@ export function applyCurrentPersonnelToConsumerContext(
         ...team, depth: [], injuries: [], depthFreshness: "unavailable" as const,
         injuryReportStatus: "unavailable" as const, asOf: current.asOf,
       };
-      const players = [...source.depth.offense, ...source.depth.defense]
-        .filter((player) => player.starter || (player.rank ?? 99) <= 2)
-        .slice(0, 30);
+      const players = [...source.depth.offense, ...source.depth.defense, ...source.depth.specialTeams]
+        .filter((player) => player.publishedStarter || player.starter || (player.rank ?? 99) <= 2);
       const depth = players.map((player) => {
         const published = player.sourceClassification === "official" || player.sourceClassification === "published_secondary";
         const offense = ["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"]
           .includes(player.position ?? "");
+        const specialTeams = ["K", "P", "LS", "KR", "PR"].includes(player.position ?? "");
         const role = published
-          ? player.rank === 1 ? "published_starter" as const : "published_backup" as const
-          : player.rank === 1 ? "projected_starter" as const : "uncertain" as const;
+          ? player.publishedStarter ? "published_starter" as const : "published_backup" as const
+          : player.sourceClassification === "inferred"
+            ? player.rank === 1 ? "projected_starter" as const : "projected_backup" as const
+            : "uncertain" as const;
         const normalizedRole = player.role?.toUpperCase() ?? null;
         return {
           name: player.playerName ?? "Player name unavailable",
           position: player.position ?? "Unknown",
-          unit: offense ? "offense" as const : "defense" as const,
+          unit: offense ? "offense" as const : specialTeams ? "special_teams" as const : "defense" as const,
           depthRank: player.rank,
           role,
           sourceLabel: published ? "Published depth" as const
@@ -780,9 +802,13 @@ export function applyCurrentPersonnelToConsumerContext(
           evidenceSummary: player.explanation[0] ?? null,
           lineupSlot: player.position === "WR" && ["LWR", "RWR", "SWR"].includes(normalizedRole ?? "")
             ? normalizedRole : player.position,
-          freshness: source.freshness === "current" ? "fresh" as const
-            : source.freshness === "stale" ? "stale" as const : "unavailable" as const,
+          freshness: player.freshness === "current" ? "fresh" as const
+            : player.freshness === "stale" ? "stale" as const : "unavailable" as const,
           asOf: player.providerEvidence.map((evidence) => evidence.capturedAt).filter(Boolean).sort().at(-1) ?? null,
+           publishedStarter: player.publishedStarter,
+           availability: player.availability,
+           unavailableReason: player.unavailableReason,
+           provenance: player.provenance,
         };
       });
       const injuries = source.injuryReport.flatMap((injury) => {
@@ -802,6 +828,15 @@ export function applyCurrentPersonnelToConsumerContext(
         : injuries.some((player) =>
           !player.position || !player.injury || !player.gameStatus || !player.practiceStatus || !player.asOf)
           ? "partial" as const : "available" as const;
+      const publishedStarters = depth.filter((player) => player.publishedStarter);
+      const summarizeAvailability = (items: typeof publishedStarters) => ({
+        publishedStarters: items.length,
+        available: items.filter((player) => player.availability === "available").length,
+        questionable: items.filter((player) => player.availability === "questionable").length,
+        doubtful: items.filter((player) => player.availability === "doubtful").length,
+        out: items.filter((player) => player.availability === "out").length,
+        unknown: items.filter((player) => player.availability === "unknown").length,
+      });
       return {
         ...team,
         name: source.teamName ?? team.name,
@@ -813,6 +848,37 @@ export function applyCurrentPersonnelToConsumerContext(
         injuries,
         injuryEvidenceAvailable: injuries.length > 0,
         injuryReportStatus,
+         expectedLineup: {
+           status: source.expectedLineup?.status ?? "unavailable",
+           players: (source.expectedLineup?.players ?? []).map((player) => ({
+              playerId: player.playerId,
+             name: player.playerName ?? "Player name unavailable",
+             position: player.position ?? "Unknown",
+              unit: ["K", "P", "LS", "KR", "PR"].includes(player.position ?? "") ? "special_teams" as const
+                : ["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"].includes(player.position ?? "")
+                  ? "offense" as const : "defense" as const,
+             depthRank: player.rank,
+             projected: player.projected,
+             replacementForPlayerId: player.replacementForPlayerId,
+              replacementForPlayerName: source.expectedLineup?.players.find(
+                (candidate) => candidate.playerId === player.replacementForPlayerId,
+              )?.playerName ?? [...source.depth.offense, ...source.depth.defense, ...source.depth.specialTeams]
+                .find((candidate) => candidate.playerId === player.replacementForPlayerId)?.playerName ?? null,
+             projectionReason: player.projectionReason,
+             confidence: player.confidence,
+              availability: player.availability ?? "unknown",
+              provenance: player.provenance,
+           })),
+           unavailableReasons: source.expectedLineup?.unavailableReasons ?? ["Expected lineup evidence is unavailable."],
+         },
+         starterAvailabilitySummary: {
+           ...summarizeAvailability(publishedStarters),
+           byUnit: {
+             offense: summarizeAvailability(publishedStarters.filter((player) => player.unit === "offense")),
+             defense: summarizeAvailability(publishedStarters.filter((player) => player.unit === "defense")),
+             specialTeams: summarizeAvailability(publishedStarters.filter((player) => player.unit === "special_teams")),
+           },
+         },
       };
     }),
   };

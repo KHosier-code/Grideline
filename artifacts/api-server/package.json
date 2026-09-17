@@ -14,7 +14,7 @@
     "sportsdataio-depth-evaluation": "export NODE_ENV=development && pnpm run build && node --enable-source-maps ./dist/sportsdataio-depth-cli.mjs",
     "test:sportsdataio-depth": "pnpm run build && node --test ./dist/lib/sportsdataio-depth.test.mjs",
     "test:production-database-smoke": "pnpm run build && node --test ./dist/lib/production-database-smoke.test.mjs ./dist/lib/production-startup-alert.test.mjs",
-    "test:current-personnel": "pnpm run build && node --test ./dist/lib/current-personnel-derivation.test.mjs ./dist/lib/current-personnel.test.mjs",
+    "test:current-personnel": "pnpm run build && node --test ./dist/lib/current-personnel-derivation.test.mjs ./dist/lib/current-personnel.test.mjs ./dist/lib/verified-depth-import.test.mjs",
     "test:consumer-matchups": "pnpm run build && node --test ./dist/lib/consumer-matchups.test.mjs ./dist/routes/consumer.test.mjs",
     "pretypecheck": "if [ \"${WORKSPACE_LIBS_PREBUILT:-0}\" != \"1\" ]; then pnpm --dir ../.. run typecheck:libs; fi",
     "typecheck": "tsc -p tsconfig.json --noEmit"

@@ -40,6 +40,7 @@ import consumerRouter, {
   usageSeasonAtCutoff,
   verifyTeamRecords,
 } from "./consumer";
+import { deriveCurrentTeamDepth } from "../lib/current-personnel-derivation";
 
 const boardRow = (
   sportsbook: string,
@@ -555,7 +556,8 @@ test("live season-bound personnel replaces stale persisted Buffalo starters", ()
     }],
     recentSnapShare: null, recentGames: 0,
     injuryState: { injury: null, practiceStatus: null, gameStatus: null, asOf: null, source: null, sleeperStatus: null, sleeperInjuryStatus: null, sleeperPracticeParticipation: null },
-    confidence: 80, explanation: ["Current 2026 evidence."], conflicts: [],
+    confidence: 80, freshness: "current" as const, explanation: ["Current 2026 evidence."], conflicts: [],
+    publishedStarter: true, availability: "available" as const,
   });
   const team = {
     teamId: "home", teamName: "Buffalo Bills", abbreviation: "BUF", asOf: "2026-09-17T11:00:00.000Z",
@@ -563,6 +565,16 @@ test("live season-bound personnel replaces stale persisted Buffalo starters", ()
     depth: { offense: [player("James Cook", "RB", "RB"), player("Receiver One", "WR", "LWR"), player("Receiver Two", "WR", "RWR")], defense: [], specialTeams: [], unknown: [] },
     wrRoles: [], cbRoles: [], conflicts: [], positionalCoverage: {}, downstreamReady: false, unavailableReasons: [],
     injuryReport: [],
+    expectedLineup: {
+      status: "partial" as const,
+      players: [{
+        ...player("Expected Back", "RB", "RB2"),
+        playerId: "expected-back", unit: "running_back", rank: 2,
+        publishedStarter: false, projected: true, replacementForPlayerId: "James Cook",
+        projectionReason: "Projected replacement; not official.",
+      }],
+      unavailableReasons: ["Other roles unavailable."],
+    },
   };
   const result = applyCurrentPersonnelToConsumerContext(persisted, {
     asOf: team.asOf, teams: { home: team, away: null },
@@ -570,6 +582,15 @@ test("live season-bound personnel replaces stale persisted Buffalo starters", ()
   assert.equal(result.teams[0]?.depth.some((row) => row.name === "Devin Singletary"), false);
   assert.equal(result.teams[0]?.depth.find((row) => row.position === "RB")?.name, "James Cook");
   assert.deepEqual(result.teams[0]?.depth.filter((row) => row.position === "WR").map((row) => row.lineupSlot), ["LWR", "RWR"]);
+  assert.deepEqual(result.teams[0]?.starterAvailabilitySummary, {
+    publishedStarters: 3, available: 3, questionable: 0, doubtful: 0, out: 0, unknown: 0,
+    byUnit: {
+      offense: { publishedStarters: 3, available: 3, questionable: 0, doubtful: 0, out: 0, unknown: 0 },
+      defense: { publishedStarters: 0, available: 0, questionable: 0, doubtful: 0, out: 0, unknown: 0 },
+      specialTeams: { publishedStarters: 0, available: 0, questionable: 0, doubtful: 0, out: 0, unknown: 0 },
+    },
+  });
+  assert.equal(result.teams[0]?.expectedLineup?.players[0]?.unit, "offense");
 });
 
 test("live personnel is exposed when persisted model context is absent", () => {
@@ -584,7 +605,7 @@ test("live personnel is exposed when persisted model context is absent", () => {
         source: "sleeper", classification: "published_secondary" as const, rank: 1, capturedAt: "2026-09-17T10:00:00.000Z",
       }], recentSnapShare: null, recentGames: 0,
       injuryState: { injury: null, practiceStatus: null, gameStatus: null, asOf: null, source: null, sleeperStatus: null, sleeperInjuryStatus: null, sleeperPracticeParticipation: null },
-      confidence: 80, explanation: ["Current 2026 evidence."], conflicts: [],
+      confidence: 80, freshness: "current" as const, explanation: ["Current 2026 evidence."], conflicts: [],
     }], defense: [], specialTeams: [], unknown: [] },
     wrRoles: [], cbRoles: [], conflicts: [], positionalCoverage: {}, downstreamReady: false, unavailableReasons: [],
     injuryReport: [],
@@ -596,6 +617,49 @@ test("live personnel is exposed when persisted model context is absent", () => {
   assert.equal(result.teams.length, 2);
   assert.equal(result.teams[0]?.depth[0]?.name, "James Cook");
   assert.equal(result.message, null);
+});
+
+test("consumer depth preserves mixed per-player freshness instead of inheriting the newest team row", () => {
+  const current = deriveCurrentTeamDepth({
+    teamId: "home",
+    teamName: "Home Team",
+    abbreviation: "HOM",
+    cutoff: new Date("2026-09-17T12:00:00.000Z"),
+    publishedDepth: [
+      {
+        playerId: "fresh-qb", playerName: "Fresh QB", teamId: "home", sourceTeamId: "HOM",
+        position: "QB", role: "QB1", depthOrder: 1, source: "verified_published_depth",
+        classification: "official", capturedAt: "2026-09-17T10:00:00.000Z",
+        observedAt: "2026-09-17T10:00:00.000Z", verifiedAt: "2026-09-17T10:05:00.000Z",
+        availability: "available",
+      },
+      {
+        playerId: "stale-rb", playerName: "Stale RB", teamId: "home", sourceTeamId: "HOM",
+        position: "RB", role: "RB1", depthOrder: 3, source: "verified_published_depth",
+        classification: "official", capturedAt: "2026-08-01T10:00:00.000Z",
+        observedAt: "2026-08-01T10:00:00.000Z", verifiedAt: "2026-08-01T10:05:00.000Z",
+        availability: "available",
+      },
+      {
+        playerId: "projected-backup", playerName: "Projected Backup", teamId: "home", sourceTeamId: "HOM",
+        position: "WR", role: "WR", depthOrder: 2, source: "sleeper",
+        classification: "published_secondary", capturedAt: "2026-09-17T10:00:00.000Z",
+        sourceUpdatedAt: "2026-09-17T10:00:00.000Z", mappingStatus: "participation_inference",
+      },
+    ],
+    snaps: [],
+    historicalDepth: [],
+    injuries: [],
+  });
+  const result = applyCurrentPersonnelToConsumerContext(serializeContext(null, "home", "away"), {
+    asOf: current.asOf,
+    teams: { home: current, away: null },
+  });
+
+  assert.equal(result.teams[0]?.depth.find((player) => player.name === "Fresh QB")?.freshness, "fresh");
+  assert.equal(result.teams[0]?.depth.some((player) => player.name === "Stale RB"), false);
+  assert.equal(result.teams[0]?.depth.find((player) => player.name === "Projected Backup")?.role, "projected_backup");
+  assert.equal(result.teams[0]?.depthFreshness, "stale");
 });
 
 test("consumer performance is whitelisted and matches generated response contracts", () => {

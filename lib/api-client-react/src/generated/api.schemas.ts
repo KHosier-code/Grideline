@@ -681,6 +681,7 @@ export type ConsumerDepthPlayerUnit = typeof ConsumerDepthPlayerUnit[keyof typeo
 export const ConsumerDepthPlayerUnit = {
   offense: 'offense',
   defense: 'defense',
+  special_teams: 'special_teams',
 } as const;
 
 export type ConsumerDepthPlayerRole = typeof ConsumerDepthPlayerRole[keyof typeof ConsumerDepthPlayerRole];
@@ -690,6 +691,7 @@ export const ConsumerDepthPlayerRole = {
   published_starter: 'published_starter',
   published_backup: 'published_backup',
   projected_starter: 'projected_starter',
+  projected_backup: 'projected_backup',
   uncertain: 'uncertain',
 } as const;
 
@@ -710,6 +712,31 @@ export const ConsumerDepthPlayerFreshness = {
   stale: 'stale',
   unavailable: 'unavailable',
 } as const;
+
+export type ConsumerDepthPlayerAvailability = typeof ConsumerDepthPlayerAvailability[keyof typeof ConsumerDepthPlayerAvailability];
+
+
+export const ConsumerDepthPlayerAvailability = {
+  available: 'available',
+  questionable: 'questionable',
+  doubtful: 'doubtful',
+  out: 'out',
+  unknown: 'unknown',
+} as const;
+
+export interface ConsumerEvidenceProvenance {
+  source: string;
+  /** @nullable */
+  sourceUrl: string | null;
+  /** @nullable */
+  observedAt: string | null;
+  /** @nullable */
+  verifiedAt: string | null;
+  /** @nullable */
+  verificationMethod: string | null;
+  /** @nullable */
+  evidenceId: string | null;
+}
 
 export interface ConsumerDepthPlayer {
   name: string;
@@ -734,7 +761,85 @@ export interface ConsumerDepthPlayer {
   freshness: ConsumerDepthPlayerFreshness;
   /** @nullable */
   asOf: string | null;
+  publishedStarter?: boolean;
+  availability?: ConsumerDepthPlayerAvailability;
+  /** @nullable */
+  unavailableReason?: string | null;
+  provenance?: ConsumerEvidenceProvenance;
 }
+
+export type ConsumerExpectedLineupStatus = typeof ConsumerExpectedLineupStatus[keyof typeof ConsumerExpectedLineupStatus];
+
+
+export const ConsumerExpectedLineupStatus = {
+  available: 'available',
+  partial: 'partial',
+  unavailable: 'unavailable',
+  ambiguous: 'ambiguous',
+} as const;
+
+export type ConsumerExpectedPlayerUnit = typeof ConsumerExpectedPlayerUnit[keyof typeof ConsumerExpectedPlayerUnit];
+
+
+export const ConsumerExpectedPlayerUnit = {
+  offense: 'offense',
+  defense: 'defense',
+  special_teams: 'special_teams',
+} as const;
+
+export type ConsumerExpectedPlayerAvailability = typeof ConsumerExpectedPlayerAvailability[keyof typeof ConsumerExpectedPlayerAvailability];
+
+
+export const ConsumerExpectedPlayerAvailability = {
+  available: 'available',
+  questionable: 'questionable',
+  doubtful: 'doubtful',
+  out: 'out',
+  unknown: 'unknown',
+} as const;
+
+export interface ConsumerExpectedPlayer {
+  playerId: string;
+  name: string;
+  position: string;
+  unit: ConsumerExpectedPlayerUnit;
+  /** @nullable */
+  depthRank: number | null;
+  projected: boolean;
+  /** @nullable */
+  replacementForPlayerId: string | null;
+  /** @nullable */
+  replacementForPlayerName: string | null;
+  projectionReason: string;
+  confidence: number;
+  availability: ConsumerExpectedPlayerAvailability;
+  provenance?: ConsumerEvidenceProvenance;
+}
+
+export interface ConsumerExpectedLineup {
+  status: ConsumerExpectedLineupStatus;
+  players: ConsumerExpectedPlayer[];
+  unavailableReasons: string[];
+}
+
+export interface ConsumerStarterAvailabilityCount {
+  publishedStarters: number;
+  available: number;
+  questionable: number;
+  doubtful: number;
+  out: number;
+  unknown: number;
+}
+
+export type ConsumerStarterAvailabilitySummaryByUnit = {
+  offense: ConsumerStarterAvailabilityCount;
+  defense: ConsumerStarterAvailabilityCount;
+  specialTeams: ConsumerStarterAvailabilityCount;
+};
+
+export type ConsumerStarterAvailabilitySummary = ConsumerStarterAvailabilityCount & {
+  byUnit: ConsumerStarterAvailabilitySummaryByUnit;
+};
 
 export interface ConsumerContextTeam {
   side: ConsumerContextTeamSide;
@@ -758,8 +863,9 @@ export interface ConsumerContextTeam {
   /** @nullable */
   asOf: string | null;
   depthFreshness: ConsumerContextTeamDepthFreshness;
-  /** @maxItems 30 */
   depth: ConsumerDepthPlayer[];
+  expectedLineup?: ConsumerExpectedLineup;
+  starterAvailabilitySummary?: ConsumerStarterAvailabilitySummary;
 }
 
 export interface ConsumerProjectedMatchup {
@@ -2163,4 +2269,3 @@ export const GetConsumerPlayerUsageWindow = {
   last8: 'last8',
   season: 'season',
 } as const;
-
