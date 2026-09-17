@@ -1,5 +1,12 @@
 import { boolean, index, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
+/**
+ * Usage Lab events contain only allow-listed interaction dimensions and are
+ * retained for 30 days. This preserves enough history for the seven-day
+ * administrator report while bounding the privacy-safe first-party copy.
+ */
+export const USAGE_ANALYTICS_RETENTION_DAYS = 30;
+
 export const usageAnalyticsEventsTable = pgTable("usage_analytics_events", {
   id: serial("id").primaryKey(),
   eventName: text("event_name").notNull(),

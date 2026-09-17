@@ -39,6 +39,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/confidence-framework.test.ts"),
       path.resolve(artifactDir, "src/lib/confidence-persistence.test.ts"),
       path.resolve(artifactDir, "src/lib/scheduler.test.ts"),
+      path.resolve(artifactDir, "src/lib/usage-analytics-retention.test.ts"),
       path.resolve(artifactDir, "src/routes/authorization.test.ts"),
       path.resolve(artifactDir, "src/routes/consumer.test.ts"),
       path.resolve(artifactDir, "src/lib/consumer-matchups.test.ts"),
