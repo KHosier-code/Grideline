@@ -25,7 +25,7 @@ import {
   type Example,
 } from "./modeling";
 import { getPersonnelContextForGame } from "./personnel-context";
-import { personnelNumericFeatures } from "./personnel-context-derivation";
+import { personnelNumericFeatures, type PersonnelContext } from "./personnel-context-derivation";
 import { loadExamples } from "./modeling";
 
 export const PERSONNEL_COMPARISON_VERSION = "phase7-personnel-aware-2025-v1";
@@ -136,7 +136,7 @@ export function fitPersonnelChallenger(input: {
 export function pairedUncertainty(deltas: number[]) {
   if (deltas.length < 2) return { sampleSize: deltas.length, mean: deltas.length ? deltas[0] : null, low: null, high: null, status: "insufficient_sample" as const };
   const average = mean(deltas);
-  const variance = mean(deltas.map((value) => (value - average) ** 2));
+  const variance = deltas.reduce((sum, value) => sum + (value - average) ** 2, 0) / (deltas.length - 1);
   const standardError = Math.sqrt(variance / deltas.length);
   return {
     sampleSize: deltas.length,
@@ -181,17 +181,46 @@ function metrics(rows: PairedPrediction[], selector: (row: PairedPrediction) => 
   return { sampleSize: rows.length, mae: mean(errors), rmse: Math.sqrt(mean(errors.map((value) => value ** 2))) };
 }
 
-function edgeSummary(rows: PairedPrediction[], minimumEdge: number) {
+function settlementSummary(rows: PairedPrediction[], minimumEdge: number, selector: (row: PairedPrediction) => number) {
+  const settlements = rows.flatMap((row) => {
+    const choices = (row.marketQuotes ?? []).map((quote) => {
+      const prediction = selector(row);
+      const edge = row.family === "spread"
+        ? quote.side === "home" ? prediction + (quote.point ?? 0) : (quote.point ?? 0) - prediction
+        : quote.side === "over" ? prediction - (quote.point ?? 0) : (quote.point ?? 0) - prediction;
+      const settlement = row.family === "spread"
+        ? settleSpread(row.actual, quote.point, quote.side as "home" | "away")
+        : settleTotal(row.actual, quote.point, quote.side as "over" | "under");
+      return { edge, settlement };
+    });
+    if (!choices.length) return [];
+    const best = choices.reduce((current, choice) => choice.edge > current.edge ? choice : current);
+    return [applyMinimumEdgeSettlement(best.settlement, best.edge, minimumEdge)];
+  });
+  const wins = settlements.filter((value) => value === "win").length;
+  const losses = settlements.filter((value) => value === "loss").length;
+  const pushes = settlements.filter((value) => value === "push").length;
+  return {
+    wins,
+    losses,
+    pushes,
+    noBets: settlements.filter((value) => value === "no_bet").length,
+    winRate: wins + losses ? wins / (wins + losses) : null,
+  };
+}
+
+function edgeSummary(rows: PairedPrediction[], minimumEdge: number, selector: (row: PairedPrediction) => number) {
   return MARKET_EDGE_BUCKETS.map((bucket) => {
     const values = rows.flatMap((row) => {
       const choices = (row.marketQuotes ?? []).map((quote) => {
+        const prediction = selector(row);
         const edge = row.family === "spread"
-          ? quote.side === "home" ? row.challenger + (quote.point ?? 0) : (quote.point ?? 0) - row.challenger
-          : quote.side === "over" ? row.challenger - (quote.point ?? 0) : (quote.point ?? 0) - row.challenger;
+          ? quote.side === "home" ? prediction + (quote.point ?? 0) : (quote.point ?? 0) - prediction
+          : quote.side === "over" ? prediction - (quote.point ?? 0) : (quote.point ?? 0) - prediction;
         const settlement: Settlement = row.family === "spread"
           ? settleSpread(row.actual, quote.point, quote.side as "home" | "away")
           : settleTotal(row.actual, quote.point, quote.side as "over" | "under");
-        return { edge, settlement, error: Math.abs(row.challenger - row.actual) };
+        return { edge, settlement, error: Math.abs(prediction - row.actual) };
       });
       if (!choices.length) return [];
       const best = choices.reduce((current, choice) => choice.edge > current.edge ? choice : current);
@@ -203,31 +232,129 @@ function edgeSummary(rows: PairedPrediction[], minimumEdge: number) {
   });
 }
 
+function calibration(rows: PairedPrediction[], selector: (row: PairedPrediction) => number) {
+  return Array.from({ length: 10 }, (_, index) => {
+    const min = index / 10;
+    const values = rows.filter((row) => selector(row) >= min && (index === 9 ? selector(row) <= 1 : selector(row) < min + 0.1));
+    return {
+      bucket: `${index * 10}-${(index + 1) * 10}%`,
+      sampleSize: values.length,
+      averagePrediction: values.length ? mean(values.map(selector)) : null,
+      actualHomeWinRate: values.length ? mean(values.map((row) => row.actual)) : null,
+    };
+  });
+}
+
+function metricComparison(family: MarketFamily, baseline: Record<string, number | null | undefined>, challenger: Record<string, number | null | undefined>) {
+  const lowerIsBetter = family === "moneyline" ? ["logLoss", "brierScore"] : ["mae", "rmse"];
+  const names = family === "moneyline" ? ["accuracy", ...lowerIsBetter] : lowerIsBetter;
+  return Object.fromEntries(names.map((name) => {
+    const left = baseline[name];
+    const right = challenger[name];
+    const difference = typeof left === "number" && typeof right === "number" ? right - left : null;
+    const improvementPercent = difference === null || typeof left !== "number" || left === 0 ? null
+      : (lowerIsBetter.includes(name) ? -difference : difference) / Math.abs(left) * 100;
+    return [name, { baseline: left ?? null, challenger: right ?? null, difference, improvementPercent }];
+  }));
+}
+
+function marketBenchmark(rows: PairedPrediction[]) {
+  const family = rows[0]?.family;
+  const comparable = rows.flatMap((row) => {
+    if (family === "spread") {
+      const quote = row.marketQuotes?.find((item) => item.side === "home");
+      return quote?.point == null ? [] : [{ actual: row.actual, predicted: -quote.point }];
+    }
+    if (family === "totals") {
+      const quote = row.marketQuotes?.find((item) => item.side === "over");
+      return quote?.point == null ? [] : [{ actual: row.actual, predicted: quote.point }];
+    }
+    const home = row.marketQuotes?.find((item) => item.side === "home");
+    const away = row.marketQuotes?.find((item) => item.side === "away");
+    const implied = (price: number | null | undefined) => price == null ? null : price > 0 ? 100 / (price + 100) : -price / (-price + 100);
+    const homeRaw = implied(home?.price);
+    const awayRaw = implied(away?.price);
+    return homeRaw === null || awayRaw === null ? [] : [{ actual: row.actual, predicted: homeRaw / (homeRaw + awayRaw) }];
+  });
+  const synthetic = comparable.map((row, index) => ({
+    ...rows[index],
+    gameId: String(index),
+    actual: row.actual,
+    baseline: row.predicted,
+    challenger: row.predicted,
+  }));
+  return {
+    designation: "source-designated recorded; not verified closing",
+    ...metrics(synthetic, (row) => row.baseline),
+  };
+}
+
+function personnelAvailability(contexts: PersonnelContext[]) {
+  const teamRows = contexts.flatMap((context) => Object.values(context.teams));
+  const category = (available: number, total: number, limitations: string[], derivedZeroWithoutRows = 0) => ({
+    status: available ? "partially_available" : "unavailable",
+    availableObservations: available,
+    totalObservations: total,
+    availabilityRate: total ? available / total : null,
+    derivedZeroWithoutSourceRows: derivedZeroWithoutRows,
+    limitations,
+  });
+  const injuryRows = teamRows.filter((team) => team.injuryPlayers.length > 0);
+  const secondaryRows = teamRows.filter((team) => team.injuryPlayers.some((row) => row.unit === "secondary"));
+  return {
+    gameContexts: contexts.length,
+    distinction: "Source availability is counted from underlying pre-cutoff rows, not from derived numeric values. Under the unchanged feature contract, some empty injury-unit summaries derive to zero; those are disclosed separately and are not counted as source observations.",
+    categories: {
+      injury: category(injuryRows.length, teamRows.length,
+        ["Replacement quality is unavailable; injury impact is limited to pre-cutoff designations, participation, and starter likelihood.", "A derived zero with no underlying injury rows means no supported pre-cutoff injury impact was found; it does not prove a complete injury feed."],
+        teamRows.filter((team) => team.injuryPlayers.length === 0 && team.injuries.offense.impactScore === 0).length),
+      qbStarter: category(teamRows.filter((team) => team.qb.projectedStarter !== null).length, teamRows.length,
+        ["A projected starter may be inferred from prior participation when a published depth source is unavailable."]),
+      depth: category(teamRows.filter((team) => team.starters.length > 0).length, teamRows.length,
+        ["Historical depth and snap-count inference are fallbacks; they are not official depth charts."]),
+      offensiveLine: category(teamRows.filter((team) => team.olContinuity.olSnapContinuity !== null).length, teamRows.length,
+        ["Continuity is a recent-snap proxy; replacement quality and complete snap burden are unavailable."]),
+      secondaryCornerback: category(secondaryRows.length, teamRows.length,
+        ["Direct cornerback assignments and player-vs-player coverage are unavailable.", "Unit-level derived zeroes without an underlying secondary injury row are not counted as available evidence."],
+        teamRows.filter((team) => !team.injuryPlayers.some((row) => row.unit === "secondary") && team.injuries.secondary.impactScore === 0).length),
+      rosterTrade: category(0, teamRows.length,
+        ["No immutable point-in-time roster transaction or trade feed is included; no roster/trade value was imputed."]),
+    },
+  };
+}
+
 export function buildPersonnelComparisonReport(input: {
   baselineRunId: string;
   eligibleGameIds: string[];
   eligibleGameIdsByFamily?: Partial<Record<MarketFamily, string[]>>;
   minimumRecordedLineEdge: number;
   predictions: PairedPrediction[];
+  personnelContexts?: PersonnelContext[];
 }) {
+  const orderedPredictions = [...input.predictions].sort((left, right) =>
+    left.family.localeCompare(right.family)
+    || left.kickoffTime.getTime() - right.kickoffTime.getTime()
+    || left.gameId.localeCompare(right.gameId));
   const expected = new Set(input.eligibleGameIds);
-  for (const family of new Set(input.predictions.map((row) => row.family))) {
+  for (const family of new Set(orderedPredictions.map((row) => row.family))) {
     const expectedFamily = new Set(input.eligibleGameIdsByFamily?.[family] ?? input.eligibleGameIds);
-    const actualFamily = input.predictions.filter((row) => row.family === family).map((row) => row.gameId);
+    const actualFamily = orderedPredictions.filter((row) => row.family === family).map((row) => row.gameId);
     if (actualFamily.length !== expectedFamily.size || new Set(actualFamily).size !== actualFamily.length
       || [...expectedFamily].some((id) => !actualFamily.includes(id))) {
       throw new Error(`Personnel challenger ${family} predictions must use exactly one row per baseline game`);
     }
   }
-  assertPersonnelChronology(input.predictions.map((row) => ({
+  assertPersonnelChronology(orderedPredictions.map((row) => ({
     kickoffTime: row.kickoffTime,
     sourceCutoff: row.personnelSourceCutoff,
   })));
-  const families = [...new Set(input.predictions.map((row) => row.family))];
+  const families = (["spread", "moneyline", "totals"] as MarketFamily[])
+    .filter((family) => orderedPredictions.some((row) => row.family === family));
   const models = families.map((family) => {
-    const rows = input.predictions.filter((row) => row.family === family);
+    const rows = orderedPredictions.filter((row) => row.family === family);
     const baselineMetrics = metrics(rows, (row) => row.baseline);
     const challengerMetrics = metrics(rows, (row) => row.challenger);
+    const comparison = metricComparison(family, baselineMetrics, challengerMetrics);
     const clamp = (value: number) => Math.max(0.001, Math.min(0.999, value));
     const absoluteErrorDeltas = rows.map((row) =>
       Math.abs(row.challenger - row.actual) - Math.abs(row.baseline - row.actual));
@@ -243,12 +370,31 @@ export function buildPersonnelComparisonReport(input: {
         }
       : { mae: pairedUncertainty(absoluteErrorDeltas) };
     const weeks = [...new Set(rows.map((row) => row.week))].sort((a, b) => a - b);
+    const primaryMetric = family === "moneyline" ? "logLoss" : "mae";
+    const primary = (family === "moneyline" ? pairedDelta.logLoss : pairedDelta.mae)!;
+    const baselinePrimary = baselineMetrics[primaryMetric]!;
+    const materialDifference = typeof baselinePrimary === "number" ? Math.abs(baselinePrimary) * 0.01 : Infinity;
+    const verdict = primary.sampleSize >= 30 && primary.mean !== null && primary.high !== null && primary.high < -materialDifference
+      ? "CHALLENGER IMPROVES BASELINE"
+      : primary.sampleSize >= 30 && primary.mean !== null && primary.low !== null && primary.low > materialDifference
+        ? "CHALLENGER WORSE"
+        : "NO MATERIAL IMPROVEMENT";
     return {
       family,
       sampleSize: rows.length,
       baseline: baselineMetrics,
       challenger: challengerMetrics,
+      comparison,
       pairedDelta,
+      statisticalAssessment: {
+        method: "descriptive paired normal-approximation 95% interval; no multiple-comparison or threshold-selection claim",
+        primaryMetric,
+        minimumPairedGames: 30,
+        materialityThreshold: "1% of the baseline primary metric",
+        verdictRule: "Improve/worse only with at least 30 paired games and when the full paired 95% interval exceeds the 1% materiality threshold in one direction; otherwise no material improvement.",
+      },
+      recordedMarketBenchmark: marketBenchmark(rows),
+      verdict,
       weekly: weeks.map((week) => {
         const weekly = rows.filter((row) => row.week === week);
         return { week, baseline: metrics(weekly, (row) => row.baseline), challenger: metrics(weekly, (row) => row.challenger) };
@@ -257,12 +403,15 @@ export function buildPersonnelComparisonReport(input: {
         const cumulative = rows.filter((row) => row.week <= week);
         return { throughWeek: week, baseline: metrics(cumulative, (row) => row.baseline), challenger: metrics(cumulative, (row) => row.challenger) };
       }),
-      calibration: family === "moneyline" ? [0, 10, 20, 30, 40, 50, 60, 70, 80, 90].map((min) => {
-        const bucket = rows.filter((row) => row.challenger * 100 >= min && row.challenger * 100 < min + 10);
-        return { bucket: `${min}-${min + 10}%`, sampleSize: bucket.length, averagePrediction: bucket.length ? mean(bucket.map((row) => row.challenger)) : null, actualHomeWinRate: bucket.length ? mean(bucket.map((row) => row.actual)) : null };
-      }) : null,
+      calibration: family === "moneyline" ? {
+        baseline: calibration(rows, (row) => row.baseline),
+        challenger: calibration(rows, (row) => row.challenger),
+      } : null,
       market: family === "moneyline" ? null : {
-        edgeBuckets: edgeSummary(rows, input.minimumRecordedLineEdge),
+        baselineRecord: settlementSummary(rows, input.minimumRecordedLineEdge, (row) => row.baseline),
+        challengerRecord: settlementSummary(rows, input.minimumRecordedLineEdge, (row) => row.challenger),
+        baselineEdgeBuckets: edgeSummary(rows, input.minimumRecordedLineEdge, (row) => row.baseline),
+        challengerEdgeBuckets: edgeSummary(rows, input.minimumRecordedLineEdge, (row) => row.challenger),
         note: "Small edge buckets are descriptive only; no threshold is recommended.",
       },
     };
@@ -272,15 +421,22 @@ export function buildPersonnelComparisonReport(input: {
     baselineRunId: input.baselineRunId,
     gameSet: {
       eligibleGameCount: expected.size,
-      challengerGameCount: new Set(input.predictions.map((row) => row.gameId)).size,
+      challengerGameCount: new Set(orderedPredictions.map((row) => row.gameId)).size,
       exactMatch: true,
-      perFamily: Object.fromEntries([...new Set(input.predictions.map((row) => row.family))].map((family) => [
-        family, { baseline: (input.eligibleGameIdsByFamily?.[family] ?? input.eligibleGameIds).length, challenger: input.predictions.filter((row) => row.family === family).length },
+      perFamily: Object.fromEntries(families.map((family) => [
+        family, { baseline: (input.eligibleGameIdsByFamily?.[family] ?? input.eligibleGameIds).length, challenger: orderedPredictions.filter((row) => row.family === family).length },
       ])),
     },
     chronology: { trainingSeasons: [2021, 2022, 2023, 2024], testSeason: 2025, personnelCutoff: "strictly-before-kickoff", vectorFeatureNames: [...PERSONNEL_VECTOR_FEATURE_NAMES] },
+    personnelEvidence: personnelAvailability(input.personnelContexts ?? []),
     models,
     suitability: { status: "insufficient_for_threshold_recommendation", reason: "Paired uncertainty intervals are descriptive; small edge buckets and no pre-registered threshold prevent a betting recommendation." },
+    safeguards: {
+      tuningPerformed: false,
+      promotionPerformed: false,
+      productionModelChanged: false,
+      productionPredictionMutation: false,
+    },
     productionMutation: false,
     immutable: true,
   };
@@ -320,14 +476,27 @@ export async function run2025PersonnelComparison() {
     db.select().from(modelEvaluationPredictionsTable).where(eq(modelEvaluationPredictionsTable.evaluationRunId, baseline.runId)),
     loadExamples("pregame-v3"),
   ]);
-  const examples = loadedExamples.examples;
+  const examples = [...loadedExamples.examples].sort((left, right) =>
+    left.season - right.season
+    || left.kickoffTime.getTime() - right.kickoffTime.getTime()
+    || left.gameId.localeCompare(right.gameId));
   const eligible = [...new Set(events.flatMap((event) => event.matchedGameId ? [event.matchedGameId] : []))].sort();
   if (!eligible.length) throw new Error("Accepted market baseline has no eligible game IDs");
   const exampleById = new Map(examples.map((row) => [row.gameId, row]));
   const allRows = examples.filter((row) => row.season >= 2021 && row.season <= 2025);
+  const evaluationGames = allRows.map((row) => ({
+    gameId: row.gameId,
+    season: row.season,
+    week: row.week,
+    kickoffTime: row.kickoffTime,
+    homeTeamId: row.homeTeamId,
+    awayTeamId: row.awayTeamId,
+    finalHomeScore: row.actualHomeScore,
+    finalAwayScore: row.actualAwayScore,
+  }));
   const contexts = await bounded(allRows, 8, async (row) => {
     const cutoff = new Date(Math.max(row.homeFeatureSourceCutoff.getTime(), row.awayFeatureSourceCutoff.getTime()) + 1);
-    const context = await getPersonnelContextForGame(row.gameId, cutoff);
+    const context = await getPersonnelContextForGame(row.gameId, cutoff, evaluationGames);
     if (!context) throw new Error(`Personnel context unavailable for ${row.gameId} at its prediction cutoff`);
     const sourceCutoff = new Date(context.sourceCutoff);
     if (!(sourceCutoff < row.kickoffTime)) throw new Error(`Personnel chronology violation for ${row.gameId}`);
@@ -338,12 +507,12 @@ export async function run2025PersonnelComparison() {
     personnel: personnelNumericFeatures(item.context),
     sourceCutoff: item.sourceCutoff,
   }]));
-  const quoteByKey = new Map(quotes.map((quote) => [`${quote.matchedGameId}:${quote.family}:${quote.side}`, quote]));
   const predictions: PairedPrediction[] = [];
   const models: Record<string, unknown>[] = [];
   for (const family of Object.keys(CHALLENGER_CONFIG) as Array<keyof typeof CHALLENGER_CONFIG>) {
     const config = CHALLENGER_CONFIG[family];
-    const baselineRows = baselineEvidence.filter((row) => row.family === family && eligible.includes(row.gameId));
+    const baselineRows = baselineEvidence.filter((row) => row.family === family && eligible.includes(row.gameId))
+      .sort((left, right) => left.kickoffTime.getTime() - right.kickoffTime.getTime() || left.gameId.localeCompare(right.gameId));
     const gameIds = baselineRows.map((row) => row.gameId);
     if (new Set(gameIds).size !== gameIds.length) throw new Error(`Duplicate baseline ${family} evidence rows`);
     const trainingExamples = examples.filter((row) =>
@@ -369,8 +538,9 @@ export async function run2025PersonnelComparison() {
       const result = byId.get(item.gameId)!;
       const row = exampleById.get(item.gameId)!;
       const baselinePred = item.predictedValue;
-      const marketQuotes = family === "moneyline" ? undefined : quotes
+      const marketQuotes = quotes
         .filter((quote) => quote.matchedGameId === item.gameId && quote.family === family)
+        .sort((left, right) => left.side.localeCompare(right.side) || (left.point ?? 0) - (right.point ?? 0) || (left.price ?? 0) - (right.price ?? 0))
         .map((quote) => ({ ...quote, point: quote.point, price: quote.price }));
       predictions.push({
         gameId: item.gameId, week: item.week, family, kickoffTime: item.kickoffTime,
@@ -388,8 +558,9 @@ export async function run2025PersonnelComparison() {
     ])) as Partial<Record<MarketFamily, string[]>>,
     minimumRecordedLineEdge: Number((baseline.metadata as Record<string, unknown>)?.minimumRecordedLineEdge ?? 1),
     predictions,
+    personnelContexts: contexts.filter((item) => eligible.includes(item.row.gameId)).map((item) => item.context),
   });
-  return { ...report, models, evidenceRows: predictions.length, baselineEvidenceImmutable: true };
+  return { ...report, challengerArtifacts: models, evidenceRows: predictions.length, baselineEvidenceImmutable: true };
 }
 
 function enrichedFor(rows: any[], enriched: Map<string, any>) {

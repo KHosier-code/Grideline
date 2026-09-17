@@ -1,0 +1,2491 @@
+{
+  "comparisonVersion": "phase7-personnel-aware-2025-v1",
+  "baselineRunId": "phase6-1-2025-market-baseline-v4-bc87373a5d1a-f289a18f99c4",
+  "gameSet": {
+    "eligibleGameCount": 277,
+    "challengerGameCount": 277,
+    "exactMatch": true,
+    "perFamily": {
+      "spread": {
+        "baseline": 277,
+        "challenger": 277
+      },
+      "moneyline": {
+        "baseline": 277,
+        "challenger": 277
+      },
+      "totals": {
+        "baseline": 230,
+        "challenger": 230
+      }
+    }
+  },
+  "chronology": {
+    "trainingSeasons": [
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "testSeason": 2025,
+    "personnelCutoff": "strictly-before-kickoff",
+    "vectorFeatureNames": [
+      "personnel.data_confidence",
+      "personnel.home_starter_count_difference",
+      "personnel.home_personnel_completeness_difference",
+      "personnel.home_qb_certainty_difference",
+      "personnel.home_qb_recent_dropbacks_difference",
+      "personnel.home_qb_recent_epa_difference",
+      "personnel.home_qb_success_rate_difference",
+      "personnel.home_qb_interception_rate_difference",
+      "personnel.home_qb_sack_rate_difference",
+      "personnel.home_qb_continuity_difference",
+      "personnel.home_injury_offense_difference",
+      "personnel.home_injury_defense_difference",
+      "personnel.home_injury_ol_difference",
+      "personnel.home_ol_continuity_difference",
+      "personnel.home_rest_days_difference",
+      "personnel.home_short_week_difference"
+    ]
+  },
+  "personnelEvidence": {
+    "gameContexts": 277,
+    "distinction": "Source availability is counted from underlying pre-cutoff rows, not from derived numeric values. Under the unchanged feature contract, some empty injury-unit summaries derive to zero; those are disclosed separately and are not counted as source observations.",
+    "categories": {
+      "injury": {
+        "status": "unavailable",
+        "availableObservations": 0,
+        "totalObservations": 554,
+        "availabilityRate": 0,
+        "derivedZeroWithoutSourceRows": 554,
+        "limitations": [
+          "Replacement quality is unavailable; injury impact is limited to pre-cutoff designations, participation, and starter likelihood.",
+          "A derived zero with no underlying injury rows means no supported pre-cutoff injury impact was found; it does not prove a complete injury feed."
+        ]
+      },
+      "qbStarter": {
+        "status": "partially_available",
+        "availableObservations": 538,
+        "totalObservations": 554,
+        "availabilityRate": 0.9711191335740073,
+        "derivedZeroWithoutSourceRows": 0,
+        "limitations": [
+          "A projected starter may be inferred from prior participation when a published depth source is unavailable."
+        ]
+      },
+      "depth": {
+        "status": "partially_available",
+        "availableObservations": 538,
+        "totalObservations": 554,
+        "availabilityRate": 0.9711191335740073,
+        "derivedZeroWithoutSourceRows": 0,
+        "limitations": [
+          "Historical depth and snap-count inference are fallbacks; they are not official depth charts."
+        ]
+      },
+      "offensiveLine": {
+        "status": "unavailable",
+        "availableObservations": 0,
+        "totalObservations": 554,
+        "availabilityRate": 0,
+        "derivedZeroWithoutSourceRows": 0,
+        "limitations": [
+          "Continuity is a recent-snap proxy; replacement quality and complete snap burden are unavailable."
+        ]
+      },
+      "secondaryCornerback": {
+        "status": "unavailable",
+        "availableObservations": 0,
+        "totalObservations": 554,
+        "availabilityRate": 0,
+        "derivedZeroWithoutSourceRows": 554,
+        "limitations": [
+          "Direct cornerback assignments and player-vs-player coverage are unavailable.",
+          "Unit-level derived zeroes without an underlying secondary injury row are not counted as available evidence."
+        ]
+      },
+      "rosterTrade": {
+        "status": "unavailable",
+        "availableObservations": 0,
+        "totalObservations": 554,
+        "availabilityRate": 0,
+        "derivedZeroWithoutSourceRows": 0,
+        "limitations": [
+          "No immutable point-in-time roster transaction or trade feed is included; no roster/trade value was imputed."
+        ]
+      }
+    }
+  },
+  "models": [
+    {
+      "family": "spread",
+      "sampleSize": 277,
+      "baseline": {
+        "sampleSize": 277,
+        "mae": 10.267708651779436,
+        "rmse": 13.274101462983571
+      },
+      "challenger": {
+        "sampleSize": 277,
+        "mae": 10.262731081141151,
+        "rmse": 13.251575509636119
+      },
+      "comparison": {
+        "mae": {
+          "baseline": 10.267708651779436,
+          "challenger": 10.262731081141151,
+          "difference": -0.0049775706382853,
+          "improvementPercent": 0.048477910769533436
+        },
+        "rmse": {
+          "baseline": 13.274101462983571,
+          "challenger": 13.251575509636119,
+          "difference": -0.022525953347452443,
+          "improvementPercent": 0.16969851714836423
+        }
+      },
+      "pairedDelta": {
+        "mae": {
+          "sampleSize": 277,
+          "mean": -0.00497757063829298,
+          "low": -0.028329094198366316,
+          "high": 0.01837395292178036,
+          "status": "descriptive_95_percent_interval"
+        }
+      },
+      "statisticalAssessment": {
+        "method": "descriptive paired normal-approximation 95% interval; no multiple-comparison or threshold-selection claim",
+        "primaryMetric": "mae",
+        "minimumPairedGames": 30,
+        "materialityThreshold": "1% of the baseline primary metric",
+        "verdictRule": "Improve/worse only with at least 30 paired games and when the full paired 95% interval exceeds the 1% materiality threshold in one direction; otherwise no material improvement."
+      },
+      "recordedMarketBenchmark": {
+        "designation": "source-designated recorded; not verified closing",
+        "sampleSize": 277,
+        "mae": 9.660649819494585,
+        "rmse": 12.237717632466667
+      },
+      "verdict": "NO MATERIAL IMPROVEMENT",
+      "weekly": [
+        {
+          "week": 1,
+          "baseline": {
+            "sampleSize": 15,
+            "mae": 6.865068295319093,
+            "rmse": 9.3022276034751
+          },
+          "challenger": {
+            "sampleSize": 15,
+            "mae": 6.9719004431557305,
+            "rmse": 9.34448691850428
+          }
+        },
+        {
+          "week": 2,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 8.076398884015317,
+            "rmse": 10.230406350173674
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 8.084730732999862,
+            "rmse": 10.226156359564259
+          }
+        },
+        {
+          "week": 3,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 13.434228176465545,
+            "rmse": 17.49701746141483
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 13.423111493496153,
+            "rmse": 17.47626024663919
+          }
+        },
+        {
+          "week": 4,
+          "baseline": {
+            "sampleSize": 15,
+            "mae": 9.85897088757102,
+            "rmse": 12.138891874818492
+          },
+          "challenger": {
+            "sampleSize": 15,
+            "mae": 9.844319387401049,
+            "rmse": 12.13736029212367
+          }
+        },
+        {
+          "week": 5,
+          "baseline": {
+            "sampleSize": 13,
+            "mae": 11.569320600695189,
+            "rmse": 16.54038735644616
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "mae": 11.587559429946351,
+            "rmse": 16.538641464692578
+          }
+        },
+        {
+          "week": 6,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 7.399923316636104,
+            "rmse": 8.8768052395668
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 7.349228135889548,
+            "rmse": 8.80652916012713
+          }
+        },
+        {
+          "week": 7,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 11.531013743350035,
+            "rmse": 13.644794889281188
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 11.548217553652416,
+            "rmse": 13.645561846828992
+          }
+        },
+        {
+          "week": 8,
+          "baseline": {
+            "sampleSize": 13,
+            "mae": 15.937449777415136,
+            "rmse": 18.094725508673687
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "mae": 15.919922242268317,
+            "rmse": 18.05006120447616
+          }
+        },
+        {
+          "week": 9,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 9.946693162489705,
+            "rmse": 12.43195497617277
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 9.867867931259115,
+            "rmse": 12.32028669613895
+          }
+        },
+        {
+          "week": 10,
+          "baseline": {
+            "sampleSize": 13,
+            "mae": 9.876986881223106,
+            "rmse": 11.934200895829429
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "mae": 9.849322550275643,
+            "rmse": 11.895209454440398
+          }
+        },
+        {
+          "week": 11,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 8.721796277515471,
+            "rmse": 12.267624268271527
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 8.7261328985121,
+            "rmse": 12.295247807082998
+          }
+        },
+        {
+          "week": 12,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 7.21241824905495,
+            "rmse": 9.748779180305581
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 7.208490326145467,
+            "rmse": 9.779659601779933
+          }
+        },
+        {
+          "week": 13,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 9.774248940602334,
+            "rmse": 11.965786183170277
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 9.755819138768501,
+            "rmse": 11.928968111830638
+          }
+        },
+        {
+          "week": 14,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 13.196157785241313,
+            "rmse": 16.574451132183007
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 13.210069859184385,
+            "rmse": 16.589188292012825
+          }
+        },
+        {
+          "week": 15,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 11.46201165655999,
+            "rmse": 13.805290762101647
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 11.520078853891317,
+            "rmse": 13.844019728647183
+          }
+        },
+        {
+          "week": 16,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 11.704056884649155,
+            "rmse": 14.303889573880092
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 11.686558824453593,
+            "rmse": 14.292129940985184
+          }
+        },
+        {
+          "week": 17,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 10.630934332593327,
+            "rmse": 12.930110468387372
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 10.633485346225397,
+            "rmse": 12.924644429495917
+          }
+        },
+        {
+          "week": 18,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 10.147512189699585,
+            "rmse": 12.808805760840114
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 10.13712620139006,
+            "rmse": 12.795449972237837
+          }
+        },
+        {
+          "week": 19,
+          "baseline": {
+            "sampleSize": 6,
+            "mae": 7.621080136143629,
+            "rmse": 12.629631539366143
+          },
+          "challenger": {
+            "sampleSize": 6,
+            "mae": 7.604740096848751,
+            "rmse": 12.623825370399754
+          }
+        },
+        {
+          "week": 20,
+          "baseline": {
+            "sampleSize": 4,
+            "mae": 9.809694185928024,
+            "rmse": 15.85627390304122
+          },
+          "challenger": {
+            "sampleSize": 4,
+            "mae": 9.527537430624617,
+            "rmse": 15.145638142797234
+          }
+        },
+        {
+          "week": 21,
+          "baseline": {
+            "sampleSize": 2,
+            "mae": 3.279157177127579,
+            "rmse": 3.7817062222650133
+          },
+          "challenger": {
+            "sampleSize": 2,
+            "mae": 3.280751748590536,
+            "rmse": 3.7900227321694113
+          }
+        }
+      ],
+      "cumulative": [
+        {
+          "throughWeek": 1,
+          "baseline": {
+            "sampleSize": 15,
+            "mae": 6.865068295319093,
+            "rmse": 9.3022276034751
+          },
+          "challenger": {
+            "sampleSize": 15,
+            "mae": 6.9719004431557305,
+            "rmse": 9.34448691850428
+          }
+        },
+        {
+          "throughWeek": 2,
+          "baseline": {
+            "sampleSize": 31,
+            "mae": 7.490271179807467,
+            "rmse": 9.792279712886383
+          },
+          "challenger": {
+            "sampleSize": 31,
+            "mae": 7.546264463720444,
+            "rmse": 9.809442322111119
+          }
+        },
+        {
+          "throughWeek": 3,
+          "baseline": {
+            "sampleSize": 47,
+            "mae": 9.513745902074048,
+            "rmse": 12.940848176647137
+          },
+          "challenger": {
+            "sampleSize": 47,
+            "mae": 9.546893239814302,
+            "rmse": 12.93987295978921
+          }
+        },
+        {
+          "throughWeek": 4,
+          "baseline": {
+            "sampleSize": 62,
+            "mae": 9.597268075984609,
+            "rmse": 12.751452391145612
+          },
+          "challenger": {
+            "sampleSize": 62,
+            "mae": 9.618851178746581,
+            "rmse": 12.750349392455025
+          }
+        },
+        {
+          "throughWeek": 5,
+          "baseline": {
+            "sampleSize": 75,
+            "mae": 9.939090513601109,
+            "rmse": 13.484691934141809
+          },
+          "challenger": {
+            "sampleSize": 75,
+            "mae": 9.960093942287875,
+            "rmse": 13.483458506139778
+          }
+        },
+        {
+          "throughWeek": 6,
+          "baseline": {
+            "sampleSize": 89,
+            "mae": 9.53967095452796,
+            "rmse": 12.86967349819382
+          },
+          "challenger": {
+            "sampleSize": 89,
+            "mae": 9.549395950270158,
+            "rmse": 12.86098681204494
+          }
+        },
+        {
+          "throughWeek": 7,
+          "baseline": {
+            "sampleSize": 103,
+            "mae": 9.81033890640669,
+            "rmse": 12.977748740978104
+          },
+          "challenger": {
+            "sampleSize": 103,
+            "mae": 9.82108044005027,
+            "rmse": 12.970415325222417
+          }
+        },
+        {
+          "throughWeek": 8,
+          "baseline": {
+            "sampleSize": 116,
+            "mae": 10.496997883330051,
+            "rmse": 13.646999895010694
+          },
+          "challenger": {
+            "sampleSize": 116,
+            "mae": 10.504571331678154,
+            "rmse": 13.634174739295961
+          }
+        },
+        {
+          "throughWeek": 9,
+          "baseline": {
+            "sampleSize": 130,
+            "mae": 10.437734298008785,
+            "rmse": 13.52139597225511
+          },
+          "challenger": {
+            "sampleSize": 130,
+            "mae": 10.436003273171492,
+            "rmse": 13.498825052905367
+          }
+        },
+        {
+          "throughWeek": 10,
+          "baseline": {
+            "sampleSize": 143,
+            "mae": 10.386757260119179,
+            "rmse": 13.384885102937371
+          },
+          "challenger": {
+            "sampleSize": 143,
+            "mae": 10.382668661999142,
+            "rmse": 13.360997465671435
+          }
+        },
+        {
+          "throughWeek": 11,
+          "baseline": {
+            "sampleSize": 157,
+            "mae": 10.238289401797829,
+            "rmse": 13.289071898243161
+          },
+          "challenger": {
+            "sampleSize": 157,
+            "mae": 10.23495209710221,
+            "rmse": 13.269439022513044
+          }
+        },
+        {
+          "throughWeek": 12,
+          "baseline": {
+            "sampleSize": 171,
+            "mae": 9.99055726063759,
+            "rmse": 13.035411183587122
+          },
+          "challenger": {
+            "sampleSize": 171,
+            "mae": 9.987171601234405,
+            "rmse": 13.018931843835395
+          }
+        },
+        {
+          "throughWeek": 13,
+          "baseline": {
+            "sampleSize": 187,
+            "mae": 9.972049596891258,
+            "rmse": 12.947349814861308
+          },
+          "challenger": {
+            "sampleSize": 187,
+            "mae": 9.967376738135718,
+            "rmse": 12.929268035168274
+          }
+        },
+        {
+          "throughWeek": 14,
+          "baseline": {
+            "sampleSize": 201,
+            "mae": 10.196614346328573,
+            "rmse": 13.232236228387219
+          },
+          "challenger": {
+            "sampleSize": 201,
+            "mae": 10.193235960497315,
+            "rmse": 13.217065160840543
+          }
+        },
+        {
+          "throughWeek": 15,
+          "baseline": {
+            "sampleSize": 217,
+            "mae": 10.289915530493102,
+            "rmse": 13.275333844603443
+          },
+          "challenger": {
+            "sampleSize": 217,
+            "mae": 10.29106769457245,
+            "rmse": 13.264304203144464
+          }
+        },
+        {
+          "throughWeek": 16,
+          "baseline": {
+            "sampleSize": 233,
+            "mae": 10.387023949662613,
+            "rmse": 13.348498839561783
+          },
+          "challenger": {
+            "sampleSize": 233,
+            "mae": 10.386895411645835,
+            "rmse": 13.337417576417584
+          }
+        },
+        {
+          "throughWeek": 17,
+          "baseline": {
+            "sampleSize": 249,
+            "mae": 10.402696905995509,
+            "rmse": 13.322009488099834
+          },
+          "challenger": {
+            "sampleSize": 249,
+            "mae": 10.40274054800436,
+            "rmse": 13.311278819780172
+          }
+        },
+        {
+          "throughWeek": 18,
+          "baseline": {
+            "sampleSize": 265,
+            "mae": 10.387289526898396,
+            "rmse": 13.291585697493035
+          },
+          "challenger": {
+            "sampleSize": 265,
+            "mae": 10.38670345537859,
+            "rmse": 13.280702761943067
+          }
+        },
+        {
+          "throughWeek": 19,
+          "baseline": {
+            "sampleSize": 271,
+            "mae": 10.326045038542203,
+            "rmse": 13.277287142976219
+          },
+          "challenger": {
+            "sampleSize": 271,
+            "mae": 10.325110170687896,
+            "rmse": 13.266511434990226
+          }
+        },
+        {
+          "throughWeek": 20,
+          "baseline": {
+            "sampleSize": 275,
+            "mae": 10.318534480685996,
+            "rmse": 13.318379315685434
+          },
+          "challenger": {
+            "sampleSize": 275,
+            "mae": 10.31350911265061,
+            "rmse": 13.29574773738391
+          }
+        },
+        {
+          "throughWeek": 21,
+          "baseline": {
+            "sampleSize": 277,
+            "mae": 10.267708651779436,
+            "rmse": 13.274101462983571
+          },
+          "challenger": {
+            "sampleSize": 277,
+            "mae": 10.262731081141151,
+            "rmse": 13.251575509636119
+          }
+        }
+      ],
+      "calibration": null,
+      "market": {
+        "baselineRecord": {
+          "wins": 112,
+          "losses": 111,
+          "pushes": 1,
+          "noBets": 53,
+          "winRate": 0.5022421524663677
+        },
+        "challengerRecord": {
+          "wins": 114,
+          "losses": 112,
+          "pushes": 1,
+          "noBets": 50,
+          "winRate": 0.504424778761062
+        },
+        "baselineEdgeBuckets": [
+          {
+            "bucket": "<1",
+            "sampleSize": 53,
+            "gradedSampleSize": 0,
+            "wins": 0,
+            "losses": 0,
+            "winRate": null
+          },
+          {
+            "bucket": "1-1.99",
+            "sampleSize": 55,
+            "gradedSampleSize": 54,
+            "wins": 27,
+            "losses": 27,
+            "winRate": 0.5
+          },
+          {
+            "bucket": "2-2.99",
+            "sampleSize": 42,
+            "gradedSampleSize": 42,
+            "wins": 21,
+            "losses": 21,
+            "winRate": 0.5
+          },
+          {
+            "bucket": "3-4.99",
+            "sampleSize": 65,
+            "gradedSampleSize": 65,
+            "wins": 29,
+            "losses": 36,
+            "winRate": 0.4461538461538462
+          },
+          {
+            "bucket": "5+",
+            "sampleSize": 62,
+            "gradedSampleSize": 62,
+            "wins": 35,
+            "losses": 27,
+            "winRate": 0.5645161290322581
+          }
+        ],
+        "challengerEdgeBuckets": [
+          {
+            "bucket": "<1",
+            "sampleSize": 50,
+            "gradedSampleSize": 0,
+            "wins": 0,
+            "losses": 0,
+            "winRate": null
+          },
+          {
+            "bucket": "1-1.99",
+            "sampleSize": 61,
+            "gradedSampleSize": 60,
+            "wins": 30,
+            "losses": 30,
+            "winRate": 0.5
+          },
+          {
+            "bucket": "2-2.99",
+            "sampleSize": 35,
+            "gradedSampleSize": 35,
+            "wins": 17,
+            "losses": 18,
+            "winRate": 0.4857142857142857
+          },
+          {
+            "bucket": "3-4.99",
+            "sampleSize": 66,
+            "gradedSampleSize": 66,
+            "wins": 29,
+            "losses": 37,
+            "winRate": 0.4393939393939394
+          },
+          {
+            "bucket": "5+",
+            "sampleSize": 65,
+            "gradedSampleSize": 65,
+            "wins": 38,
+            "losses": 27,
+            "winRate": 0.5846153846153846
+          }
+        ],
+        "note": "Small edge buckets are descriptive only; no threshold is recommended."
+      }
+    },
+    {
+      "family": "moneyline",
+      "sampleSize": 277,
+      "baseline": {
+        "sampleSize": 277,
+        "accuracy": 0.6245487364620939,
+        "brierScore": 0.22228888249768036,
+        "logLoss": 0.6334879648011796
+      },
+      "challenger": {
+        "sampleSize": 277,
+        "accuracy": 0.6137184115523465,
+        "brierScore": 0.22284179482393304,
+        "logLoss": 0.6345066130235545
+      },
+      "comparison": {
+        "accuracy": {
+          "baseline": 0.6245487364620939,
+          "challenger": 0.6137184115523465,
+          "difference": -0.010830324909747335,
+          "improvementPercent": -1.7341040462427812
+        },
+        "logLoss": {
+          "baseline": 0.6334879648011796,
+          "challenger": 0.6345066130235545,
+          "difference": 0.0010186482223748516,
+          "improvementPercent": -0.16079993290710023
+        },
+        "brierScore": {
+          "baseline": 0.22228888249768036,
+          "challenger": 0.22284179482393304,
+          "difference": 0.0005529123262526803,
+          "improvementPercent": -0.24873593318750437
+        }
+      },
+      "pairedDelta": {
+        "brierScore": {
+          "sampleSize": 277,
+          "mean": 0.0005529123262528771,
+          "low": -0.0010632501285658099,
+          "high": 0.002169074781071564,
+          "status": "descriptive_95_percent_interval"
+        },
+        "logLoss": {
+          "sampleSize": 277,
+          "mean": 0.001018648222374395,
+          "low": -0.0023911084143920474,
+          "high": 0.004428404859140837,
+          "status": "descriptive_95_percent_interval"
+        }
+      },
+      "statisticalAssessment": {
+        "method": "descriptive paired normal-approximation 95% interval; no multiple-comparison or threshold-selection claim",
+        "primaryMetric": "logLoss",
+        "minimumPairedGames": 30,
+        "materialityThreshold": "1% of the baseline primary metric",
+        "verdictRule": "Improve/worse only with at least 30 paired games and when the full paired 95% interval exceeds the 1% materiality threshold in one direction; otherwise no material improvement."
+      },
+      "recordedMarketBenchmark": {
+        "designation": "source-designated recorded; not verified closing",
+        "sampleSize": 277,
+        "accuracy": 0.6714801444043321,
+        "brierScore": 0.20681192263359421,
+        "logLoss": 0.5979623221382667
+      },
+      "verdict": "NO MATERIAL IMPROVEMENT",
+      "weekly": [
+        {
+          "week": 1,
+          "baseline": {
+            "sampleSize": 15,
+            "accuracy": 0.6666666666666666,
+            "brierScore": 0.18552539552140715,
+            "logLoss": 0.5528504996712831
+          },
+          "challenger": {
+            "sampleSize": 15,
+            "accuracy": 0.5333333333333333,
+            "brierScore": 0.19962490644595604,
+            "logLoss": 0.5813040668320663
+          }
+        },
+        {
+          "week": 2,
+          "baseline": {
+            "sampleSize": 16,
+            "accuracy": 0.875,
+            "brierScore": 0.14220849151756945,
+            "logLoss": 0.46512426967162224
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "accuracy": 0.875,
+            "brierScore": 0.1418353305855722,
+            "logLoss": 0.46405134438785545
+          }
+        },
+        {
+          "week": 3,
+          "baseline": {
+            "sampleSize": 16,
+            "accuracy": 0.4375,
+            "brierScore": 0.27670313686052783,
+            "logLoss": 0.7486191761448688
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "accuracy": 0.4375,
+            "brierScore": 0.2753079579218812,
+            "logLoss": 0.7456960029856088
+          }
+        },
+        {
+          "week": 4,
+          "baseline": {
+            "sampleSize": 15,
+            "accuracy": 0.4666666666666667,
+            "brierScore": 0.2567535619330889,
+            "logLoss": 0.6991884095911246
+          },
+          "challenger": {
+            "sampleSize": 15,
+            "accuracy": 0.4666666666666667,
+            "brierScore": 0.2560345436410936,
+            "logLoss": 0.6975891886405411
+          }
+        },
+        {
+          "week": 5,
+          "baseline": {
+            "sampleSize": 13,
+            "accuracy": 0.5384615384615384,
+            "brierScore": 0.24187833383216187,
+            "logLoss": 0.675031690630873
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "accuracy": 0.5384615384615384,
+            "brierScore": 0.24141827954617578,
+            "logLoss": 0.6738068775891524
+          }
+        },
+        {
+          "week": 6,
+          "baseline": {
+            "sampleSize": 14,
+            "accuracy": 0.7142857142857143,
+            "brierScore": 0.19206502050824897,
+            "logLoss": 0.570558152339137
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "accuracy": 0.7142857142857143,
+            "brierScore": 0.18910464101412386,
+            "logLoss": 0.5640870447658376
+          }
+        },
+        {
+          "week": 7,
+          "baseline": {
+            "sampleSize": 14,
+            "accuracy": 0.6428571428571429,
+            "brierScore": 0.23204923639227484,
+            "logLoss": 0.6572448261327202
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "accuracy": 0.6428571428571429,
+            "brierScore": 0.23309633266803378,
+            "logLoss": 0.6592197635115523
+          }
+        },
+        {
+          "week": 8,
+          "baseline": {
+            "sampleSize": 13,
+            "accuracy": 0.6923076923076923,
+            "brierScore": 0.19110514714137367,
+            "logLoss": 0.5664352999820643
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "accuracy": 0.6153846153846154,
+            "brierScore": 0.19008768481494281,
+            "logLoss": 0.5641165813134501
+          }
+        },
+        {
+          "week": 9,
+          "baseline": {
+            "sampleSize": 14,
+            "accuracy": 0.5714285714285714,
+            "brierScore": 0.2656879128470577,
+            "logLoss": 0.7308283075051645
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "accuracy": 0.5714285714285714,
+            "brierScore": 0.261152259461796,
+            "logLoss": 0.7215250648032304
+          }
+        },
+        {
+          "week": 10,
+          "baseline": {
+            "sampleSize": 13,
+            "accuracy": 0.7692307692307693,
+            "brierScore": 0.20536666576679158,
+            "logLoss": 0.601110442925216
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "accuracy": 0.7692307692307693,
+            "brierScore": 0.20284959090039315,
+            "logLoss": 0.5957259303702457
+          }
+        },
+        {
+          "week": 11,
+          "baseline": {
+            "sampleSize": 14,
+            "accuracy": 0.7142857142857143,
+            "brierScore": 0.20706735885786462,
+            "logLoss": 0.6021040227863658
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "accuracy": 0.7142857142857143,
+            "brierScore": 0.2089053781833301,
+            "logLoss": 0.6058725151278471
+          }
+        },
+        {
+          "week": 12,
+          "baseline": {
+            "sampleSize": 14,
+            "accuracy": 0.6428571428571429,
+            "brierScore": 0.21865587944864084,
+            "logLoss": 0.6234220334744086
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "accuracy": 0.6428571428571429,
+            "brierScore": 0.2183101967147613,
+            "logLoss": 0.6228201104115759
+          }
+        },
+        {
+          "week": 13,
+          "baseline": {
+            "sampleSize": 16,
+            "accuracy": 0.5625,
+            "brierScore": 0.22555381367439079,
+            "logLoss": 0.6374625892828089
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "accuracy": 0.5625,
+            "brierScore": 0.22292417028605738,
+            "logLoss": 0.6313985390034402
+          }
+        },
+        {
+          "week": 14,
+          "baseline": {
+            "sampleSize": 14,
+            "accuracy": 0.5,
+            "brierScore": 0.23406735139888027,
+            "logLoss": 0.6559229887826079
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "accuracy": 0.5,
+            "brierScore": 0.23677034883885706,
+            "logLoss": 0.661892111145285
+          }
+        },
+        {
+          "week": 15,
+          "baseline": {
+            "sampleSize": 16,
+            "accuracy": 0.625,
+            "brierScore": 0.23691140605274152,
+            "logLoss": 0.6694868511450677
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "accuracy": 0.625,
+            "brierScore": 0.24273516446849286,
+            "logLoss": 0.6821778712519574
+          }
+        },
+        {
+          "week": 16,
+          "baseline": {
+            "sampleSize": 16,
+            "accuracy": 0.5625,
+            "brierScore": 0.24788834788563485,
+            "logLoss": 0.6855788237358558
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "accuracy": 0.5625,
+            "brierScore": 0.2478597896874421,
+            "logLoss": 0.6856166530999255
+          }
+        },
+        {
+          "week": 17,
+          "baseline": {
+            "sampleSize": 16,
+            "accuracy": 0.6875,
+            "brierScore": 0.23359757009059817,
+            "logLoss": 0.6610206325379624
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "accuracy": 0.6875,
+            "brierScore": 0.23474546990260337,
+            "logLoss": 0.6637193470848993
+          }
+        },
+        {
+          "week": 18,
+          "baseline": {
+            "sampleSize": 16,
+            "accuracy": 0.5,
+            "brierScore": 0.2183437605653225,
+            "logLoss": 0.6229487356334922
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "accuracy": 0.5,
+            "brierScore": 0.21823926246486375,
+            "logLoss": 0.6225693068578236
+          }
+        },
+        {
+          "week": 19,
+          "baseline": {
+            "sampleSize": 6,
+            "accuracy": 0.8333333333333334,
+            "brierScore": 0.1940777809495513,
+            "logLoss": 0.5706780968297144
+          },
+          "challenger": {
+            "sampleSize": 6,
+            "accuracy": 0.8333333333333334,
+            "brierScore": 0.19325713883772352,
+            "logLoss": 0.5689156748209263
+          }
+        },
+        {
+          "week": 20,
+          "baseline": {
+            "sampleSize": 4,
+            "accuracy": 0.75,
+            "brierScore": 0.19528553662651554,
+            "logLoss": 0.5806451816234844
+          },
+          "challenger": {
+            "sampleSize": 4,
+            "accuracy": 0.75,
+            "brierScore": 0.19521065693099107,
+            "logLoss": 0.57745512562561
+          }
+        },
+        {
+          "week": 21,
+          "baseline": {
+            "sampleSize": 2,
+            "accuracy": 0.5,
+            "brierScore": 0.25103614576113564,
+            "logLoss": 0.6952223914050117
+          },
+          "challenger": {
+            "sampleSize": 2,
+            "accuracy": 0.5,
+            "brierScore": 0.2520876071852721,
+            "logLoss": 0.6973393960008355
+          }
+        }
+      ],
+      "cumulative": [
+        {
+          "throughWeek": 1,
+          "baseline": {
+            "sampleSize": 15,
+            "accuracy": 0.6666666666666666,
+            "brierScore": 0.18552539552140715,
+            "logLoss": 0.5528504996712831
+          },
+          "challenger": {
+            "sampleSize": 15,
+            "accuracy": 0.5333333333333333,
+            "brierScore": 0.19962490644595604,
+            "logLoss": 0.5813040668320663
+          }
+        },
+        {
+          "throughWeek": 2,
+          "baseline": {
+            "sampleSize": 31,
+            "accuracy": 0.7741935483870968,
+            "brierScore": 0.16316828377749093,
+            "logLoss": 0.5075724454779098
+          },
+          "challenger": {
+            "sampleSize": 31,
+            "accuracy": 0.7096774193548387,
+            "brierScore": 0.16979802858253215,
+            "logLoss": 0.5207865326673122
+          }
+        },
+        {
+          "throughWeek": 3,
+          "baseline": {
+            "sampleSize": 47,
+            "accuracy": 0.6595744680851063,
+            "brierScore": 0.20181844652916311,
+            "logLoss": 0.5896309069815554
+          },
+          "challenger": {
+            "sampleSize": 47,
+            "accuracy": 0.6170212765957447,
+            "brierScore": 0.20571630240018288,
+            "logLoss": 0.5973514587331152
+          }
+        },
+        {
+          "throughWeek": 4,
+          "baseline": {
+            "sampleSize": 62,
+            "accuracy": 0.6129032258064516,
+            "brierScore": 0.2151092002559194,
+            "logLoss": 0.6161367543870964
+          },
+          "challenger": {
+            "sampleSize": 62,
+            "accuracy": 0.5806451612903226,
+            "brierScore": 0.21789007044233868,
+            "logLoss": 0.6216025224203957
+          }
+        },
+        {
+          "throughWeek": 5,
+          "baseline": {
+            "sampleSize": 75,
+            "accuracy": 0.6,
+            "brierScore": 0.21974918340913477,
+            "logLoss": 0.6263452100026843
+          },
+          "challenger": {
+            "sampleSize": 75,
+            "accuracy": 0.5733333333333334,
+            "brierScore": 0.2219682933536704,
+            "logLoss": 0.6306512773163134
+          }
+        },
+        {
+          "throughWeek": 6,
+          "baseline": {
+            "sampleSize": 89,
+            "accuracy": 0.6179775280898876,
+            "brierScore": 0.21539437126742236,
+            "logLoss": 0.6175697177859465
+          },
+          "challenger": {
+            "sampleSize": 89,
+            "accuracy": 0.5955056179775281,
+            "brierScore": 0.21679873006430356,
+            "logLoss": 0.6201804991623061
+          }
+        },
+        {
+          "throughWeek": 7,
+          "baseline": {
+            "sampleSize": 103,
+            "accuracy": 0.6213592233009708,
+            "brierScore": 0.21765813934264505,
+            "logLoss": 0.6229624509592941
+          },
+          "challenger": {
+            "sampleSize": 103,
+            "accuracy": 0.6019417475728155,
+            "brierScore": 0.21901393818519888,
+            "logLoss": 0.6254868069379318
+          }
+        },
+        {
+          "throughWeek": 8,
+          "baseline": {
+            "sampleSize": 116,
+            "accuracy": 0.6293103448275862,
+            "brierScore": 0.2146823729752612,
+            "logLoss": 0.6166275116256388
+          },
+          "challenger": {
+            "sampleSize": 116,
+            "accuracy": 0.603448275862069,
+            "brierScore": 0.21577220289370463,
+            "logLoss": 0.6186091092386365
+          }
+        },
+        {
+          "throughWeek": 9,
+          "baseline": {
+            "sampleSize": 130,
+            "accuracy": 0.6230769230769231,
+            "brierScore": 0.22017527726914699,
+            "logLoss": 0.6289260588742032
+          },
+          "challenger": {
+            "sampleSize": 130,
+            "accuracy": 0.6,
+            "brierScore": 0.2206592859087299,
+            "logLoss": 0.6296923659917467
+          }
+        },
+        {
+          "throughWeek": 10,
+          "baseline": {
+            "sampleSize": 143,
+            "accuracy": 0.6363636363636364,
+            "brierScore": 0.21882903985984198,
+            "logLoss": 0.6263973665152044
+          },
+          "challenger": {
+            "sampleSize": 143,
+            "accuracy": 0.6153846153846154,
+            "brierScore": 0.2190402227261538,
+            "logLoss": 0.6266045082079739
+          }
+        },
+        {
+          "throughWeek": 11,
+          "baseline": {
+            "sampleSize": 157,
+            "accuracy": 0.643312101910828,
+            "brierScore": 0.21778022754119422,
+            "logLoss": 0.6242310810871553
+          },
+          "challenger": {
+            "sampleSize": 157,
+            "accuracy": 0.6242038216560509,
+            "brierScore": 0.21813647862679367,
+            "logLoss": 0.6247557954492364
+          }
+        },
+        {
+          "throughWeek": 12,
+          "baseline": {
+            "sampleSize": 171,
+            "accuracy": 0.6432748538011696,
+            "brierScore": 0.21785191834063433,
+            "logLoss": 0.624164843270907
+          },
+          "challenger": {
+            "sampleSize": 171,
+            "accuracy": 0.6257309941520468,
+            "brierScore": 0.2181507011603115,
+            "logLoss": 0.6245973183116501
+          }
+        },
+        {
+          "throughWeek": 13,
+          "baseline": {
+            "sampleSize": 187,
+            "accuracy": 0.6363636363636364,
+            "brierScore": 0.2185109040376402,
+            "logLoss": 0.6253026183307488
+          },
+          "challenger": {
+            "sampleSize": 187,
+            "accuracy": 0.6203208556149733,
+            "brierScore": 0.21855912632615068,
+            "logLoss": 0.6251792409376856
+          }
+        },
+        {
+          "throughWeek": 14,
+          "baseline": {
+            "sampleSize": 201,
+            "accuracy": 0.6268656716417911,
+            "brierScore": 0.21959443768469178,
+            "logLoss": 0.6274353804517738
+          },
+          "challenger": {
+            "sampleSize": 201,
+            "accuracy": 0.6119402985074627,
+            "brierScore": 0.2198275696852447,
+            "logLoss": 0.6277363562755285
+          }
+        },
+        {
+          "throughWeek": 15,
+          "baseline": {
+            "sampleSize": 217,
+            "accuracy": 0.6267281105990783,
+            "brierScore": 0.22087126484546968,
+            "logLoss": 0.6305359497194823
+          },
+          "challenger": {
+            "sampleSize": 217,
+            "accuracy": 0.6129032258064516,
+            "brierScore": 0.22151660893193578,
+            "logLoss": 0.6317504771954495
+          }
+        },
+        {
+          "throughWeek": 16,
+          "baseline": {
+            "sampleSize": 233,
+            "accuracy": 0.6223175965665236,
+            "brierScore": 0.2227265151829918,
+            "logLoss": 0.6343157178922806
+          },
+          "challenger": {
+            "sampleSize": 233,
+            "accuracy": 0.6094420600858369,
+            "brierScore": 0.2233255827177216,
+            "logLoss": 0.6354494420644262
+          }
+        },
+        {
+          "throughWeek": 17,
+          "baseline": {
+            "sampleSize": 249,
+            "accuracy": 0.6265060240963856,
+            "brierScore": 0.2234250568638019,
+            "logLoss": 0.6360316963434086
+          },
+          "challenger": {
+            "sampleSize": 249,
+            "accuracy": 0.6144578313253012,
+            "brierScore": 0.22405939072960157,
+            "logLoss": 0.637265982146063
+          }
+        },
+        {
+          "throughWeek": 18,
+          "baseline": {
+            "sampleSize": 265,
+            "accuracy": 0.6188679245283019,
+            "brierScore": 0.22311826161559176,
+            "logLoss": 0.6352417817345077
+          },
+          "challenger": {
+            "sampleSize": 265,
+            "accuracy": 0.6075471698113207,
+            "brierScore": 0.22370798675890038,
+            "logLoss": 0.6363786357135657
+          }
+        },
+        {
+          "throughWeek": 19,
+          "baseline": {
+            "sampleSize": 271,
+            "accuracy": 0.6236162361623616,
+            "brierScore": 0.22247529894401888,
+            "logLoss": 0.6338123274561728
+          },
+          "challenger": {
+            "sampleSize": 271,
+            "accuracy": 0.6125461254612546,
+            "brierScore": 0.22303379824404038,
+            "logLoss": 0.6348849908229538
+          }
+        },
+        {
+          "throughWeek": 20,
+          "baseline": {
+            "sampleSize": 275,
+            "accuracy": 0.6254545454545455,
+            "brierScore": 0.22207981149212794,
+            "logLoss": 0.6330389871531518
+          },
+          "challenger": {
+            "sampleSize": 275,
+            "accuracy": 0.6145454545454545,
+            "brierScore": 0.22262909800675967,
+            "logLoss": 0.6340496473291742
+          }
+        },
+        {
+          "throughWeek": 21,
+          "baseline": {
+            "sampleSize": 277,
+            "accuracy": 0.6245487364620939,
+            "brierScore": 0.22228888249768036,
+            "logLoss": 0.6334879648011796
+          },
+          "challenger": {
+            "sampleSize": 277,
+            "accuracy": 0.6137184115523465,
+            "brierScore": 0.22284179482393304,
+            "logLoss": 0.6345066130235545
+          }
+        }
+      ],
+      "calibration": {
+        "baseline": [
+          {
+            "bucket": "0-10%",
+            "sampleSize": 0,
+            "averagePrediction": null,
+            "actualHomeWinRate": null
+          },
+          {
+            "bucket": "10-20%",
+            "sampleSize": 3,
+            "averagePrediction": 0.17400384258922497,
+            "actualHomeWinRate": 0
+          },
+          {
+            "bucket": "20-30%",
+            "sampleSize": 23,
+            "averagePrediction": 0.2597178307156971,
+            "actualHomeWinRate": 0.17391304347826086
+          },
+          {
+            "bucket": "30-40%",
+            "sampleSize": 43,
+            "averagePrediction": 0.35977343589786415,
+            "actualHomeWinRate": 0.46511627906976744
+          },
+          {
+            "bucket": "40-50%",
+            "sampleSize": 62,
+            "averagePrediction": 0.45105439809678494,
+            "actualHomeWinRate": 0.4032258064516129
+          },
+          {
+            "bucket": "50-60%",
+            "sampleSize": 59,
+            "averagePrediction": 0.5461923295237696,
+            "actualHomeWinRate": 0.5084745762711864
+          },
+          {
+            "bucket": "60-70%",
+            "sampleSize": 59,
+            "averagePrediction": 0.6461292264224545,
+            "actualHomeWinRate": 0.5932203389830508
+          },
+          {
+            "bucket": "70-80%",
+            "sampleSize": 22,
+            "averagePrediction": 0.7491904034747094,
+            "actualHomeWinRate": 0.9090909090909091
+          },
+          {
+            "bucket": "80-90%",
+            "sampleSize": 6,
+            "averagePrediction": 0.8359761421192274,
+            "actualHomeWinRate": 1
+          },
+          {
+            "bucket": "90-100%",
+            "sampleSize": 0,
+            "averagePrediction": null,
+            "actualHomeWinRate": null
+          }
+        ],
+        "challenger": [
+          {
+            "bucket": "0-10%",
+            "sampleSize": 0,
+            "averagePrediction": null,
+            "actualHomeWinRate": null
+          },
+          {
+            "bucket": "10-20%",
+            "sampleSize": 3,
+            "averagePrediction": 0.17056483717325063,
+            "actualHomeWinRate": 0
+          },
+          {
+            "bucket": "20-30%",
+            "sampleSize": 23,
+            "averagePrediction": 0.25757353299311675,
+            "actualHomeWinRate": 0.21739130434782608
+          },
+          {
+            "bucket": "30-40%",
+            "sampleSize": 44,
+            "averagePrediction": 0.3599988607184512,
+            "actualHomeWinRate": 0.4318181818181818
+          },
+          {
+            "bucket": "40-50%",
+            "sampleSize": 62,
+            "averagePrediction": 0.45105608644346146,
+            "actualHomeWinRate": 0.43548387096774194
+          },
+          {
+            "bucket": "50-60%",
+            "sampleSize": 59,
+            "averagePrediction": 0.5456555033469703,
+            "actualHomeWinRate": 0.5084745762711864
+          },
+          {
+            "bucket": "60-70%",
+            "sampleSize": 56,
+            "averagePrediction": 0.6483940118274968,
+            "actualHomeWinRate": 0.5535714285714286
+          },
+          {
+            "bucket": "70-80%",
+            "sampleSize": 23,
+            "averagePrediction": 0.747199217768413,
+            "actualHomeWinRate": 0.9565217391304348
+          },
+          {
+            "bucket": "80-90%",
+            "sampleSize": 7,
+            "averagePrediction": 0.8322851868391771,
+            "actualHomeWinRate": 0.8571428571428571
+          },
+          {
+            "bucket": "90-100%",
+            "sampleSize": 0,
+            "averagePrediction": null,
+            "actualHomeWinRate": null
+          }
+        ]
+      },
+      "market": null
+    },
+    {
+      "family": "totals",
+      "sampleSize": 230,
+      "baseline": {
+        "sampleSize": 230,
+        "mae": 10.945155216456653,
+        "rmse": 13.874126443492935
+      },
+      "challenger": {
+        "sampleSize": 230,
+        "mae": 10.945155216456653,
+        "rmse": 13.874126443492935
+      },
+      "comparison": {
+        "mae": {
+          "baseline": 10.945155216456653,
+          "challenger": 10.945155216456653,
+          "difference": 0,
+          "improvementPercent": 0
+        },
+        "rmse": {
+          "baseline": 13.874126443492935,
+          "challenger": 13.874126443492935,
+          "difference": 0,
+          "improvementPercent": 0
+        }
+      },
+      "pairedDelta": {
+        "mae": {
+          "sampleSize": 230,
+          "mean": 1.2357264969740873e-16,
+          "low": -2.4204703284835664e-17,
+          "high": 2.713500026796531e-16,
+          "status": "descriptive_95_percent_interval"
+        }
+      },
+      "statisticalAssessment": {
+        "method": "descriptive paired normal-approximation 95% interval; no multiple-comparison or threshold-selection claim",
+        "primaryMetric": "mae",
+        "minimumPairedGames": 30,
+        "materialityThreshold": "1% of the baseline primary metric",
+        "verdictRule": "Improve/worse only with at least 30 paired games and when the full paired 95% interval exceeds the 1% materiality threshold in one direction; otherwise no material improvement."
+      },
+      "recordedMarketBenchmark": {
+        "designation": "source-designated recorded; not verified closing",
+        "sampleSize": 230,
+        "mae": 10.126086956521739,
+        "rmse": 13.018966097999854
+      },
+      "verdict": "NO MATERIAL IMPROVEMENT",
+      "weekly": [
+        {
+          "week": 4,
+          "baseline": {
+            "sampleSize": 15,
+            "mae": 9.756503167955582,
+            "rmse": 12.733199018649513
+          },
+          "challenger": {
+            "sampleSize": 15,
+            "mae": 9.756503167955582,
+            "rmse": 12.733199018649513
+          }
+        },
+        {
+          "week": 5,
+          "baseline": {
+            "sampleSize": 13,
+            "mae": 9.112524135492702,
+            "rmse": 11.236739264317867
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "mae": 9.112524135492702,
+            "rmse": 11.236739264317867
+          }
+        },
+        {
+          "week": 6,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 8.43166346824968,
+            "rmse": 10.632752732545994
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 8.43166346824968,
+            "rmse": 10.632752732545994
+          }
+        },
+        {
+          "week": 7,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 11.735638173609802,
+            "rmse": 13.993437266937079
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 11.735638173609802,
+            "rmse": 13.993437266937079
+          }
+        },
+        {
+          "week": 8,
+          "baseline": {
+            "sampleSize": 13,
+            "mae": 10.212040393296197,
+            "rmse": 13.78028919723024
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "mae": 10.212040393296197,
+            "rmse": 13.78028919723024
+          }
+        },
+        {
+          "week": 9,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 10.411408273495327,
+            "rmse": 15.24920482380663
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 10.411408273495327,
+            "rmse": 15.24920482380663
+          }
+        },
+        {
+          "week": 10,
+          "baseline": {
+            "sampleSize": 13,
+            "mae": 14.302025049274942,
+            "rmse": 17.785285538184258
+          },
+          "challenger": {
+            "sampleSize": 13,
+            "mae": 14.302025049274942,
+            "rmse": 17.785285538184258
+          }
+        },
+        {
+          "week": 11,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 9.975760229500674,
+            "rmse": 13.055204470611331
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 9.975760229500674,
+            "rmse": 13.055204470611331
+          }
+        },
+        {
+          "week": 12,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 8.93211140244723,
+            "rmse": 10.355736866616892
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 8.93211140244723,
+            "rmse": 10.355736866616892
+          }
+        },
+        {
+          "week": 13,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 9.027273289587074,
+            "rmse": 10.454694521801422
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 9.027273289587075,
+            "rmse": 10.454694521801422
+          }
+        },
+        {
+          "week": 14,
+          "baseline": {
+            "sampleSize": 14,
+            "mae": 10.880246247760242,
+            "rmse": 14.294176338261225
+          },
+          "challenger": {
+            "sampleSize": 14,
+            "mae": 10.880246247760242,
+            "rmse": 14.294176338261225
+          }
+        },
+        {
+          "week": 15,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 14.593097247995008,
+            "rmse": 16.21012352484887
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 14.593097247995008,
+            "rmse": 16.21012352484887
+          }
+        },
+        {
+          "week": 16,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 10.047570603055973,
+            "rmse": 13.85158676228341
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 10.047570603055973,
+            "rmse": 13.85158676228341
+          }
+        },
+        {
+          "week": 17,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 12.222353175254216,
+            "rmse": 15.041614133238559
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 12.222353175254215,
+            "rmse": 15.041614133238559
+          }
+        },
+        {
+          "week": 18,
+          "baseline": {
+            "sampleSize": 16,
+            "mae": 12.85053438932944,
+            "rmse": 15.618946847806926
+          },
+          "challenger": {
+            "sampleSize": 16,
+            "mae": 12.85053438932944,
+            "rmse": 15.618946847806926
+          }
+        },
+        {
+          "week": 19,
+          "baseline": {
+            "sampleSize": 6,
+            "mae": 13.008980232871943,
+            "rmse": 15.619779837442229
+          },
+          "challenger": {
+            "sampleSize": 6,
+            "mae": 13.008980232871943,
+            "rmse": 15.619779837442229
+          }
+        },
+        {
+          "week": 20,
+          "baseline": {
+            "sampleSize": 4,
+            "mae": 7.500355978623894,
+            "rmse": 9.343832667386467
+          },
+          "challenger": {
+            "sampleSize": 4,
+            "mae": 7.500355978623894,
+            "rmse": 9.343832667386467
+          }
+        },
+        {
+          "week": 21,
+          "baseline": {
+            "sampleSize": 2,
+            "mae": 20.424167012355422,
+            "rmse": 21.5839566308913
+          },
+          "challenger": {
+            "sampleSize": 2,
+            "mae": 20.424167012355422,
+            "rmse": 21.5839566308913
+          }
+        }
+      ],
+      "cumulative": [
+        {
+          "throughWeek": 4,
+          "baseline": {
+            "sampleSize": 15,
+            "mae": 9.756503167955582,
+            "rmse": 12.733199018649513
+          },
+          "challenger": {
+            "sampleSize": 15,
+            "mae": 9.756503167955582,
+            "rmse": 12.733199018649513
+          }
+        },
+        {
+          "throughWeek": 5,
+          "baseline": {
+            "sampleSize": 28,
+            "mae": 9.457512902883533,
+            "rmse": 12.061525874143118
+          },
+          "challenger": {
+            "sampleSize": 28,
+            "mae": 9.457512902883533,
+            "rmse": 12.061525874143118
+          }
+        },
+        {
+          "throughWeek": 6,
+          "baseline": {
+            "sampleSize": 42,
+            "mae": 9.115563091338917,
+            "rmse": 11.604830079133892
+          },
+          "challenger": {
+            "sampleSize": 42,
+            "mae": 9.115563091338917,
+            "rmse": 11.604830079133892
+          }
+        },
+        {
+          "throughWeek": 7,
+          "baseline": {
+            "sampleSize": 56,
+            "mae": 9.770581861906638,
+            "rmse": 12.245739361512799
+          },
+          "challenger": {
+            "sampleSize": 56,
+            "mae": 9.770581861906638,
+            "rmse": 12.245739361512799
+          }
+        },
+        {
+          "throughWeek": 8,
+          "baseline": {
+            "sampleSize": 69,
+            "mae": 9.853755208400326,
+            "rmse": 12.549212248061988
+          },
+          "challenger": {
+            "sampleSize": 69,
+            "mae": 9.853755208400326,
+            "rmse": 12.549212248061988
+          }
+        },
+        {
+          "throughWeek": 9,
+          "baseline": {
+            "sampleSize": 83,
+            "mae": 9.947817171187433,
+            "rmse": 13.043875774751987
+          },
+          "challenger": {
+            "sampleSize": 83,
+            "mae": 9.947817171187433,
+            "rmse": 13.043875774751987
+          }
+        },
+        {
+          "throughWeek": 10,
+          "baseline": {
+            "sampleSize": 96,
+            "mae": 10.53744948801178,
+            "rmse": 13.781765075645142
+          },
+          "challenger": {
+            "sampleSize": 96,
+            "mae": 10.53744948801178,
+            "rmse": 13.781765075645142
+          }
+        },
+        {
+          "throughWeek": 11,
+          "baseline": {
+            "sampleSize": 110,
+            "mae": 10.465961764201275,
+            "rmse": 13.691435198825015
+          },
+          "challenger": {
+            "sampleSize": 110,
+            "mae": 10.465961764201275,
+            "rmse": 13.691435198825015
+          }
+        },
+        {
+          "throughWeek": 12,
+          "baseline": {
+            "sampleSize": 124,
+            "mae": 10.29278511045485,
+            "rmse": 13.356607571966386
+          },
+          "challenger": {
+            "sampleSize": 124,
+            "mae": 10.29278511045485,
+            "rmse": 13.356607571966386
+          }
+        },
+        {
+          "throughWeek": 13,
+          "baseline": {
+            "sampleSize": 140,
+            "mae": 10.14815518806996,
+            "rmse": 13.057641978061891
+          },
+          "challenger": {
+            "sampleSize": 140,
+            "mae": 10.14815518806996,
+            "rmse": 13.057641978061891
+          }
+        },
+        {
+          "throughWeek": 14,
+          "baseline": {
+            "sampleSize": 154,
+            "mae": 10.214708920769077,
+            "rmse": 13.17485075803603
+          },
+          "challenger": {
+            "sampleSize": 154,
+            "mae": 10.214708920769077,
+            "rmse": 13.17485075803603
+          }
+        },
+        {
+          "throughWeek": 15,
+          "baseline": {
+            "sampleSize": 170,
+            "mae": 10.626792528037399,
+            "rmse": 13.489669319524001
+          },
+          "challenger": {
+            "sampleSize": 170,
+            "mae": 10.626792528037399,
+            "rmse": 13.489669319524001
+          }
+        },
+        {
+          "throughWeek": 16,
+          "baseline": {
+            "sampleSize": 186,
+            "mae": 10.57696698610351,
+            "rmse": 13.521182826044022
+          },
+          "challenger": {
+            "sampleSize": 186,
+            "mae": 10.57696698610351,
+            "rmse": 13.521182826044022
+          }
+        },
+        {
+          "throughWeek": 17,
+          "baseline": {
+            "sampleSize": 202,
+            "mae": 10.707294605046144,
+            "rmse": 13.647791339206155
+          },
+          "challenger": {
+            "sampleSize": 202,
+            "mae": 10.707294605046144,
+            "rmse": 13.647791339206155
+          }
+        },
+        {
+          "throughWeek": 18,
+          "baseline": {
+            "sampleSize": 218,
+            "mae": 10.86459660756235,
+            "rmse": 13.802039158398587
+          },
+          "challenger": {
+            "sampleSize": 218,
+            "mae": 10.86459660756235,
+            "rmse": 13.802039158398587
+          }
+        },
+        {
+          "throughWeek": 19,
+          "baseline": {
+            "sampleSize": 224,
+            "mae": 10.922035454668857,
+            "rmse": 13.853837665799697
+          },
+          "challenger": {
+            "sampleSize": 224,
+            "mae": 10.922035454668857,
+            "rmse": 13.853837665799697
+          }
+        },
+        {
+          "throughWeek": 20,
+          "baseline": {
+            "sampleSize": 228,
+            "mae": 10.86200599017684,
+            "rmse": 13.787434541750816
+          },
+          "challenger": {
+            "sampleSize": 228,
+            "mae": 10.86200599017684,
+            "rmse": 13.787434541750816
+          }
+        },
+        {
+          "throughWeek": 21,
+          "baseline": {
+            "sampleSize": 230,
+            "mae": 10.945155216456653,
+            "rmse": 13.874126443492935
+          },
+          "challenger": {
+            "sampleSize": 230,
+            "mae": 10.945155216456653,
+            "rmse": 13.874126443492935
+          }
+        }
+      ],
+      "calibration": null,
+      "market": {
+        "baselineRecord": {
+          "wins": 84,
+          "losses": 98,
+          "pushes": 0,
+          "noBets": 48,
+          "winRate": 0.46153846153846156
+        },
+        "challengerRecord": {
+          "wins": 84,
+          "losses": 98,
+          "pushes": 0,
+          "noBets": 48,
+          "winRate": 0.46153846153846156
+        },
+        "baselineEdgeBuckets": [
+          {
+            "bucket": "<1",
+            "sampleSize": 48,
+            "gradedSampleSize": 0,
+            "wins": 0,
+            "losses": 0,
+            "winRate": null
+          },
+          {
+            "bucket": "1-1.99",
+            "sampleSize": 42,
+            "gradedSampleSize": 42,
+            "wins": 20,
+            "losses": 22,
+            "winRate": 0.47619047619047616
+          },
+          {
+            "bucket": "2-2.99",
+            "sampleSize": 20,
+            "gradedSampleSize": 20,
+            "wins": 8,
+            "losses": 12,
+            "winRate": 0.4
+          },
+          {
+            "bucket": "3-4.99",
+            "sampleSize": 58,
+            "gradedSampleSize": 58,
+            "wins": 26,
+            "losses": 32,
+            "winRate": 0.4482758620689655
+          },
+          {
+            "bucket": "5+",
+            "sampleSize": 62,
+            "gradedSampleSize": 62,
+            "wins": 30,
+            "losses": 32,
+            "winRate": 0.4838709677419355
+          }
+        ],
+        "challengerEdgeBuckets": [
+          {
+            "bucket": "<1",
+            "sampleSize": 48,
+            "gradedSampleSize": 0,
+            "wins": 0,
+            "losses": 0,
+            "winRate": null
+          },
+          {
+            "bucket": "1-1.99",
+            "sampleSize": 42,
+            "gradedSampleSize": 42,
+            "wins": 20,
+            "losses": 22,
+            "winRate": 0.47619047619047616
+          },
+          {
+            "bucket": "2-2.99",
+            "sampleSize": 20,
+            "gradedSampleSize": 20,
+            "wins": 8,
+            "losses": 12,
+            "winRate": 0.4
+          },
+          {
+            "bucket": "3-4.99",
+            "sampleSize": 58,
+            "gradedSampleSize": 58,
+            "wins": 26,
+            "losses": 32,
+            "winRate": 0.4482758620689655
+          },
+          {
+            "bucket": "5+",
+            "sampleSize": 62,
+            "gradedSampleSize": 62,
+            "wins": 30,
+            "losses": 32,
+            "winRate": 0.4838709677419355
+          }
+        ],
+        "note": "Small edge buckets are descriptive only; no threshold is recommended."
+      }
+    }
+  ],
+  "suitability": {
+    "status": "insufficient_for_threshold_recommendation",
+    "reason": "Paired uncertainty intervals are descriptive; small edge buckets and no pre-registered threshold prevent a betting recommendation."
+  },
+  "safeguards": {
+    "tuningPerformed": false,
+    "promotionPerformed": false,
+    "productionModelChanged": false,
+    "productionPredictionMutation": false
+  },
+  "productionMutation": false,
+  "immutable": true,
+  "challengerArtifacts": [
+    {
+      "family": "spread",
+      "modelVersion": "phase7-personnel-spread-f0b396c1dba33300",
+      "featureCount": 59,
+      "featureNames": [
+        "last_3.defensive_success_rate",
+        "last_3.epa_per_play",
+        "last_3.explosive_pass_rate",
+        "last_3.explosive_rush_rate",
+        "last_3.offensive_success_rate",
+        "last_3.red_zone_touchdown_rate",
+        "last_3.turnover_rate",
+        "last_3.yards_per_play",
+        "last_5.defensive_success_rate",
+        "last_5.epa_per_play",
+        "last_5.explosive_pass_rate",
+        "last_5.explosive_rush_rate",
+        "last_5.offensive_success_rate",
+        "last_5.red_zone_touchdown_rate",
+        "last_5.turnover_rate",
+        "last_5.yards_per_play",
+        "last_8.defensive_success_rate",
+        "last_8.epa_per_play",
+        "last_8.explosive_pass_rate",
+        "last_8.explosive_rush_rate",
+        "last_8.offensive_success_rate",
+        "last_8.red_zone_touchdown_rate",
+        "last_8.turnover_rate",
+        "last_8.yards_per_play",
+        "home_low_sample",
+        "away_low_sample",
+        "qb_confidence_difference",
+        "personnel.data_confidence",
+        "personnel.data_confidence.available",
+        "personnel.home_starter_count_difference",
+        "personnel.home_starter_count_difference.available",
+        "personnel.home_personnel_completeness_difference",
+        "personnel.home_personnel_completeness_difference.available",
+        "personnel.home_qb_certainty_difference",
+        "personnel.home_qb_certainty_difference.available",
+        "personnel.home_qb_recent_dropbacks_difference",
+        "personnel.home_qb_recent_dropbacks_difference.available",
+        "personnel.home_qb_recent_epa_difference",
+        "personnel.home_qb_recent_epa_difference.available",
+        "personnel.home_qb_success_rate_difference",
+        "personnel.home_qb_success_rate_difference.available",
+        "personnel.home_qb_interception_rate_difference",
+        "personnel.home_qb_interception_rate_difference.available",
+        "personnel.home_qb_sack_rate_difference",
+        "personnel.home_qb_sack_rate_difference.available",
+        "personnel.home_qb_continuity_difference",
+        "personnel.home_qb_continuity_difference.available",
+        "personnel.home_injury_offense_difference",
+        "personnel.home_injury_offense_difference.available",
+        "personnel.home_injury_defense_difference",
+        "personnel.home_injury_defense_difference.available",
+        "personnel.home_injury_ol_difference",
+        "personnel.home_injury_ol_difference.available",
+        "personnel.home_ol_continuity_difference",
+        "personnel.home_ol_continuity_difference.available",
+        "personnel.home_rest_days_difference",
+        "personnel.home_rest_days_difference.available",
+        "personnel.home_short_week_difference",
+        "personnel.home_short_week_difference.available"
+      ]
+    },
+    {
+      "family": "moneyline",
+      "modelVersion": "phase7-personnel-moneyline-79674770c1c18863",
+      "featureCount": 59,
+      "featureNames": [
+        "last_3.defensive_success_rate",
+        "last_3.epa_per_play",
+        "last_3.explosive_pass_rate",
+        "last_3.explosive_rush_rate",
+        "last_3.offensive_success_rate",
+        "last_3.red_zone_touchdown_rate",
+        "last_3.turnover_rate",
+        "last_3.yards_per_play",
+        "last_5.defensive_success_rate",
+        "last_5.epa_per_play",
+        "last_5.explosive_pass_rate",
+        "last_5.explosive_rush_rate",
+        "last_5.offensive_success_rate",
+        "last_5.red_zone_touchdown_rate",
+        "last_5.turnover_rate",
+        "last_5.yards_per_play",
+        "last_8.defensive_success_rate",
+        "last_8.epa_per_play",
+        "last_8.explosive_pass_rate",
+        "last_8.explosive_rush_rate",
+        "last_8.offensive_success_rate",
+        "last_8.red_zone_touchdown_rate",
+        "last_8.turnover_rate",
+        "last_8.yards_per_play",
+        "home_low_sample",
+        "away_low_sample",
+        "qb_confidence_difference",
+        "personnel.data_confidence",
+        "personnel.data_confidence.available",
+        "personnel.home_starter_count_difference",
+        "personnel.home_starter_count_difference.available",
+        "personnel.home_personnel_completeness_difference",
+        "personnel.home_personnel_completeness_difference.available",
+        "personnel.home_qb_certainty_difference",
+        "personnel.home_qb_certainty_difference.available",
+        "personnel.home_qb_recent_dropbacks_difference",
+        "personnel.home_qb_recent_dropbacks_difference.available",
+        "personnel.home_qb_recent_epa_difference",
+        "personnel.home_qb_recent_epa_difference.available",
+        "personnel.home_qb_success_rate_difference",
+        "personnel.home_qb_success_rate_difference.available",
+        "personnel.home_qb_interception_rate_difference",
+        "personnel.home_qb_interception_rate_difference.available",
+        "personnel.home_qb_sack_rate_difference",
+        "personnel.home_qb_sack_rate_difference.available",
+        "personnel.home_qb_continuity_difference",
+        "personnel.home_qb_continuity_difference.available",
+        "personnel.home_injury_offense_difference",
+        "personnel.home_injury_offense_difference.available",
+        "personnel.home_injury_defense_difference",
+        "personnel.home_injury_defense_difference.available",
+        "personnel.home_injury_ol_difference",
+        "personnel.home_injury_ol_difference.available",
+        "personnel.home_ol_continuity_difference",
+        "personnel.home_ol_continuity_difference.available",
+        "personnel.home_rest_days_difference",
+        "personnel.home_rest_days_difference.available",
+        "personnel.home_short_week_difference",
+        "personnel.home_short_week_difference.available"
+      ]
+    },
+    {
+      "family": "totals",
+      "modelVersion": "phase7-personnel-totals-75c10ddd98622b9e",
+      "featureCount": 59,
+      "featureNames": [
+        "last_3.defensive_success_rate",
+        "last_3.epa_per_play",
+        "last_3.explosive_pass_rate",
+        "last_3.explosive_rush_rate",
+        "last_3.offensive_success_rate",
+        "last_3.red_zone_touchdown_rate",
+        "last_3.turnover_rate",
+        "last_3.yards_per_play",
+        "last_5.defensive_success_rate",
+        "last_5.epa_per_play",
+        "last_5.explosive_pass_rate",
+        "last_5.explosive_rush_rate",
+        "last_5.offensive_success_rate",
+        "last_5.red_zone_touchdown_rate",
+        "last_5.turnover_rate",
+        "last_5.yards_per_play",
+        "last_8.defensive_success_rate",
+        "last_8.epa_per_play",
+        "last_8.explosive_pass_rate",
+        "last_8.explosive_rush_rate",
+        "last_8.offensive_success_rate",
+        "last_8.red_zone_touchdown_rate",
+        "last_8.turnover_rate",
+        "last_8.yards_per_play",
+        "home_low_sample",
+        "away_low_sample",
+        "qb_confidence_difference",
+        "personnel.data_confidence",
+        "personnel.data_confidence.available",
+        "personnel.home_starter_count_difference",
+        "personnel.home_starter_count_difference.available",
+        "personnel.home_personnel_completeness_difference",
+        "personnel.home_personnel_completeness_difference.available",
+        "personnel.home_qb_certainty_difference",
+        "personnel.home_qb_certainty_difference.available",
+        "personnel.home_qb_recent_dropbacks_difference",
+        "personnel.home_qb_recent_dropbacks_difference.available",
+        "personnel.home_qb_recent_epa_difference",
+        "personnel.home_qb_recent_epa_difference.available",
+        "personnel.home_qb_success_rate_difference",
+        "personnel.home_qb_success_rate_difference.available",
+        "personnel.home_qb_interception_rate_difference",
+        "personnel.home_qb_interception_rate_difference.available",
+        "personnel.home_qb_sack_rate_difference",
+        "personnel.home_qb_sack_rate_difference.available",
+        "personnel.home_qb_continuity_difference",
+        "personnel.home_qb_continuity_difference.available",
+        "personnel.home_injury_offense_difference",
+        "personnel.home_injury_offense_difference.available",
+        "personnel.home_injury_defense_difference",
+        "personnel.home_injury_defense_difference.available",
+        "personnel.home_injury_ol_difference",
+        "personnel.home_injury_ol_difference.available",
+        "personnel.home_ol_continuity_difference",
+        "personnel.home_ol_continuity_difference.available",
+        "personnel.home_rest_days_difference",
+        "personnel.home_rest_days_difference.available",
+        "personnel.home_short_week_difference",
+        "personnel.home_short_week_difference.available"
+      ]
+    }
+  ],
+  "evidenceRows": 784,
+  "baselineEvidenceImmutable": true
+}

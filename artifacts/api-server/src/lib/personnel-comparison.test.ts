@@ -4,8 +4,10 @@ import {
   assertPersonnelChronology,
   buildPersonnelComparisonReport,
   pairedUncertainty,
+  personnelComparisonFingerprint,
   personnelVector,
 } from "./personnel-comparison";
+import { renderPersonnelComparisonMarkdown } from "./personnel-comparison-markdown";
 
 test("personnel vectors are home-away differences and reject post-kickoff evidence", () => {
   const row = {
@@ -53,4 +55,59 @@ test("paired report keeps exact game set and exposes uncertainty without thresho
   );
   assert.match(report.suitability.reason, /no pre-registered threshold/);
   assert.equal(pairedUncertainty([1]).status, "insufficient_sample");
+  assert.equal(report.models[0]!.verdict, "NO MATERIAL IMPROVEMENT");
+  assert.equal(report.models[0]!.comparison.mae.difference, -1);
+  assert.equal(report.models[0]!.comparison.mae.improvementPercent, 50);
+  assert.deepEqual(report.models[0]!.market?.baselineRecord, { wins: 0, losses: 0, pushes: 0, noBets: 0, winRate: null });
+  assert.equal(report.safeguards.productionPredictionMutation, false);
+});
+
+test("family-specific pairing is exact and deterministic report content is complete", () => {
+  const date = new Date("2025-09-07T17:00:00Z");
+  const common = { week: 1, kickoffTime: date, personnelSourceCutoff: new Date("2025-09-07T16:00:00Z") };
+  const predictions = [
+    { ...common, gameId: "spread-a", family: "spread" as const, actual: 3, baseline: 1, challenger: 2, marketQuotes: [{ family: "spread", side: "home", point: -1, price: -110 }] },
+    { ...common, gameId: "ml-a", family: "moneyline" as const, actual: 1, baseline: 0.6, challenger: 0.7, marketQuotes: [{ family: "moneyline", side: "home", point: null, price: -150 }, { family: "moneyline", side: "away", point: null, price: 130 }] },
+    { ...common, gameId: "total-a", family: "totals" as const, actual: 44, baseline: 40, challenger: 42, marketQuotes: [{ family: "totals", side: "over", point: 41, price: -110 }] },
+  ];
+  const report = buildPersonnelComparisonReport({
+    baselineRunId: "baseline",
+    eligibleGameIds: predictions.map((row) => row.gameId),
+    eligibleGameIdsByFamily: { spread: ["spread-a"], moneyline: ["ml-a"], totals: ["total-a"] },
+    minimumRecordedLineEdge: 1,
+    predictions,
+  });
+  assert.deepEqual(report.models.map((model) => model.family), ["spread", "moneyline", "totals"]);
+  assert.equal(report.models.filter((model) => model.verdict).length, 3);
+  assert.ok(report.models.find((model) => model.family === "moneyline")?.calibration);
+  assert.ok(report.models.find((model) => model.family === "spread")?.market?.challengerEdgeBuckets);
+  assert.equal(report.personnelEvidence.categories.rosterTrade.status, "unavailable");
+  const fake = { ...report, evidenceRows: 3, baselineEvidenceImmutable: true };
+  const markdown = renderPersonnelComparisonMarkdown(fake);
+  assert.match(markdown, /Family verdicts/);
+  assert.match(markdown, /No tuning, promotion, production-model change/);
+  assert.equal(renderPersonnelComparisonMarkdown(fake), markdown);
+  const shuffledReport = buildPersonnelComparisonReport({
+    baselineRunId: "baseline",
+    eligibleGameIds: predictions.map((row) => row.gameId),
+    eligibleGameIdsByFamily: { spread: ["spread-a"], moneyline: ["ml-a"], totals: ["total-a"] },
+    minimumRecordedLineEdge: 1,
+    predictions: [...predictions].reverse(),
+  });
+  assert.equal(personnelComparisonFingerprint(report), personnelComparisonFingerprint(
+    buildPersonnelComparisonReport({
+      baselineRunId: "baseline",
+      eligibleGameIds: predictions.map((row) => row.gameId),
+      eligibleGameIdsByFamily: { spread: ["spread-a"], moneyline: ["ml-a"], totals: ["total-a"] },
+      minimumRecordedLineEdge: 1,
+      predictions,
+    }),
+  ));
+  assert.equal(personnelComparisonFingerprint(report), personnelComparisonFingerprint(shuffledReport));
+  assert.equal(renderPersonnelComparisonMarkdown({ ...report, evidenceRows: 3, baselineEvidenceImmutable: true }),
+    renderPersonnelComparisonMarkdown({ ...shuffledReport, evidenceRows: 3, baselineEvidenceImmutable: true }));
+  assert.throws(() => buildPersonnelComparisonReport({
+    baselineRunId: "baseline", eligibleGameIds: ["wrong"], eligibleGameIdsByFamily: { spread: ["wrong"] },
+    minimumRecordedLineEdge: 1, predictions: [predictions[0]],
+  }), /exactly one row/);
 });

@@ -20,6 +20,7 @@ import {
   type PersonnelContext,
   type PersonnelDepthRow,
   type PersonnelHistoricalDepthRow,
+  type PersonnelGame,
   type PersonnelInjuryRow,
   type PersonnelOddsRow,
   type PersonnelPriorGame,
@@ -31,7 +32,7 @@ import {
 
 export const PREGAME_PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context" as const;
 
-function contextGame(row: typeof gamesTable.$inferSelect) {
+function contextGame(row: PersonnelGame) {
   return {
     gameId: row.gameId,
     season: row.season,
@@ -42,8 +43,13 @@ function contextGame(row: typeof gamesTable.$inferSelect) {
   };
 }
 
-export async function getPersonnelContextForGame(gameId: string, now = new Date()): Promise<PersonnelContext | null> {
-  const [game] = await db.select().from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1);
+export async function getPersonnelContextForGame(
+  gameId: string,
+  now = new Date(),
+  evaluationGames: Array<PersonnelGame & { finalHomeScore?: number | null; finalAwayScore?: number | null }> = [],
+): Promise<PersonnelContext | null> {
+  const [persistedGame] = await db.select().from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1);
+  const game = persistedGame ?? evaluationGames.find((row) => row.gameId === gameId);
   if (!game) return null;
   const cutoff = new Date(Math.min(
     now.getTime(),
@@ -85,8 +91,9 @@ export async function getPersonnelContextForGame(gameId: string, now = new Date(
     sourceTeamId: row.teamId,
     teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
   }));
-  const gameById = new Map(priorGames.map((row) => [row.gameId, row]));
-  const prior: PersonnelPriorGame[] = priorGames
+  const allPriorGames = [...priorGames, ...evaluationGames.filter((row) => !priorGames.some((persisted) => persisted.gameId === row.gameId))];
+  const gameById = new Map(allPriorGames.map((row) => [row.gameId, row]));
+  const prior: PersonnelPriorGame[] = allPriorGames
     .filter((row) => row.gameId !== gameId && (row.homeTeamId === game.homeTeamId || row.awayTeamId === game.homeTeamId || row.homeTeamId === game.awayTeamId || row.awayTeamId === game.awayTeamId))
     .flatMap((row) => [
       {
@@ -118,7 +125,7 @@ export async function getPersonnelContextForGame(gameId: string, now = new Date(
       row.sourceUpdatedAt.getTime() <= cutoff.getTime()
       && (
         row.season < game.season
-        || Boolean(row.kickoffTime && row.kickoffTime.getTime() < cutoff.getTime())
+        || Boolean(row.kickoffTime && new Date(row.kickoffTime).getTime() < cutoff.getTime())
       ),
     );
   const snapsWithKickoff: PersonnelSnapRow[] = canonicalSnaps.map((row) => ({
