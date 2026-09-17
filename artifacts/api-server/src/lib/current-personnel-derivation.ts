@@ -28,14 +28,6 @@ export type CurrentDepthSource = {
   sleeperStatus?: string | null;
   sleeperInjuryStatus?: string | null;
   sleeperPracticeParticipation?: string | null;
-  sourceUrl?: string | null;
-  verificationMethod?: string | null;
-  observedAt?: DateLike | null;
-  verifiedAt?: DateLike | null;
-  evidenceId?: string | null;
-  availability?: string | null;
-  injuryStatus?: string | null;
-  provenance?: Record<string, unknown> | null;
   season?: number | null;
 };
 
@@ -72,26 +64,14 @@ export type InterpretedDepthPlayer = {
     practiceStatus: string | null;
     gameStatus: string | null;
     asOf: string | null;
-    source: "espn" | "verified_depth" | "sleeper_supplemental" | null;
+    source: "espn" | "sleeper_supplemental" | null;
     sleeperStatus: string | null;
     sleeperInjuryStatus: string | null;
     sleeperPracticeParticipation: string | null;
   };
   confidence: number;
-  freshness: "current" | "stale" | "unavailable";
   explanation: string[];
   conflicts: PersonnelConflict[];
-  publishedStarter?: boolean;
-  availability?: "available" | "questionable" | "doubtful" | "out" | "unknown";
-  unavailableReason?: string | null;
-  provenance?: {
-    source: string;
-    sourceUrl: string | null;
-    observedAt: string | null;
-    verifiedAt: string | null;
-    verificationMethod: string | null;
-    evidenceId: string | null;
-  };
 };
 
 export type QbStarterInterpretation = {
@@ -132,27 +112,12 @@ export type InterpretedTeamDepth = {
     asOf: string | null;
     source: "espn";
   }>;
-  expectedLineup?: {
-    status: "available" | "partial" | "unavailable" | "ambiguous";
-    players: Array<InterpretedDepthPlayer & {
-      projected: boolean;
-      replacementForPlayerId: string | null;
-      projectionReason: string;
-    }>;
-    unavailableReasons: string[];
-  };
 };
 
 const OFFENSE = new Set(["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"]);
 const DEFENSE = new Set(["DL", "DE", "DT", "NT", "EDGE", "LB", "ILB", "OLB", "MLB", "CB", "S", "FS", "SS", "DB"]);
 const SPECIAL_TEAMS = new Set(["K", "P", "LS", "KR", "PR"]);
 const REQUIRED = ["QB", "RB", "WR", "TE", "OT", "OG", "C", "EDGE", "DT", "LB", "CB", "S"];
-const REQUIRED_STARTER_ROLE_CARDS = [
-  "QB1", "RB1", "WR1", "WR2", "WR3", "TE1",
-  "LT1", "LG1", "C1", "RG1", "RT1",
-  "DT1", "DT2", "LB1", "LB2", "CB1", "CB2", "CB3_OR_SLOT",
-  "FS1", "SS1", "EDGE1", "EDGE2", "K1", "P1", "LS1",
-] as const;
 const CURRENT_INJURY_EVIDENCE_MS = 7 * 86_400_000;
 
 function timestamp(value: DateLike) {
@@ -187,23 +152,7 @@ function normalizedRole(value: string | null | undefined) {
   return role;
 }
 
-const VERIFIED_ROLE_CARD = /^(?:QB[12]|RB[12]|WR[123]|TE1|LT1|LG1|C1|RG1|RT1|DT[12]|LB[12]|CB[12]|CB3_OR_SLOT|FS1|SS1|EDGE[12]|K1|P1|LS1)$/;
-
-function exactVerifiedRole(row: Pick<CurrentDepthSource, "source" | "classification" | "role">) {
-  const role = normalizedRole(row.role);
-  return row.source === "verified_published_depth"
-    && row.classification === "official"
-    && role
-    && VERIFIED_ROLE_CARD.test(role)
-    ? role
-    : null;
-}
-
 function interpretedPosition(row: Pick<CurrentDepthSource, "position" | "role">) {
-  const exactRole = exactVerifiedRole(row as Pick<CurrentDepthSource, "source" | "classification" | "role">);
-  if (exactRole && /^(?:LT1|LG1|C1|RG1|RT1|FS1|SS1)$/.test(exactRole)) {
-    return exactRole.replace(/1$/, "");
-  }
   const position = normalizedSlot(row.position);
   const role = normalizedRole(row.role);
   if (role && ["LCB", "RCB"].includes(role) && ["CB", "S"].includes(position ?? "")) return "CB";
@@ -216,8 +165,6 @@ function interpretedPosition(row: Pick<CurrentDepthSource, "position" | "role">)
 }
 
 function depthSlot(row: Pick<CurrentDepthSource, "position" | "role">) {
-  const exactRole = exactVerifiedRole(row as Pick<CurrentDepthSource, "source" | "classification" | "role">);
-  if (exactRole) return exactRole;
   const position = interpretedPosition(row);
   const role = normalizedRole(row.role);
   if (position === "WR" && role && ["LWR", "RWR", "SWR", "WR"].includes(role)) return role;
@@ -225,14 +172,6 @@ function depthSlot(row: Pick<CurrentDepthSource, "position" | "role">) {
   if (position === "S" && role && ["FS", "SS", "S"].includes(role)) return role;
   if (position === "EDGE" && role && ["LDE", "RDE", "EDGE", "DE"].includes(role)) return role;
   return position ?? normalizedSlot(row.role) ?? "UNKNOWN";
-}
-
-function publishedRoleIsStarter(row: Pick<CurrentDepthSource, "role" | "depthOrder">) {
-  const role = normalizedRole(row.role);
-  if (role && VERIFIED_ROLE_CARD.test(role)) {
-    return role !== "QB2" && role !== "RB2" && row.depthOrder === 1;
-  }
-  return row.depthOrder === 1;
 }
 
 function isOffensiveLinePosition(value: string | null | undefined) {
@@ -287,15 +226,6 @@ function explicitlyAvailable(value: string | null | undefined) {
   return /active|available|full|healthy|probable/i.test(value ?? "");
 }
 
-function availabilityState(value: string | null | undefined): InterpretedDepthPlayer["availability"] {
-  if (!value) return "unknown";
-  if (/out|inactive|injured reserve|\bir\b|suspend|physically unable/i.test(value)) return "out";
-  if (/doubtful/i.test(value)) return "doubtful";
-  if (/questionable|limited|day.to.day/i.test(value)) return "questionable";
-  if (/active|available|full|healthy|probable/i.test(value)) return "available";
-  return "unknown";
-}
-
 export function deriveCurrentTeamDepth(input: {
   teamId: string;
   teamName?: string | null;
@@ -324,6 +254,7 @@ export function deriveCurrentTeamDepth(input: {
       || (row.season ?? evidenceSeason(row.capturedAt)) === input.season)
     .filter((row) => (timestamp(row.capturedAt) ?? Infinity) <= cutoffTime)
     .filter((row) => (timestamp(row.sourceUpdatedAt ?? row.capturedAt) ?? Infinity) <= cutoffTime);
+  const latestSourceAt = Math.max(-1, ...sourceRows.map((row) => timestamp(row.capturedAt) ?? -1));
   const latestByProviderPlayerSlot = new Map<string, CurrentDepthSource>();
   for (const row of sourceRows) {
     const key = `${row.source}:${row.playerId}:${depthSlot(row)}`;
@@ -471,25 +402,7 @@ export function deriveCurrentTeamDepth(input: {
         ?? null;
       const espnUnavailable = injuryUnavailable(injury?.gameStatus ?? injury?.practiceStatus);
       const sleeperUnavailable = injuryUnavailable(sleeperUnavailableValue);
-      const verifiedAvailabilityInput = row.availability && row.availability.toLowerCase() !== "unknown"
-        ? row.availability
-        : row.injuryStatus;
-      const verifiedAvailability = availabilityState(verifiedAvailabilityInput);
-      const hasConclusiveVerifiedAvailability = Boolean(
-        verifiedAvailabilityInput && verifiedAvailability !== "unknown",
-      );
-      const verifiedObservedAt = timestamp(row.observedAt ?? row.sourceUpdatedAt ?? row.capturedAt) ?? -1;
-      const injuryObservedAt = timestamp(injury?.sourceUpdatedAt ?? injury?.snapshotTimestamp) ?? -1;
-      const evidenceAt = timestamp(row.observedAt ?? row.sourceUpdatedAt ?? row.capturedAt);
-      const ageDays = evidenceAt === null ? Infinity : Math.max(0, cutoffTime - evidenceAt) / 86_400_000;
-      const freshness = evidenceAt === null ? "unavailable" as const
-        : ageDays <= 8 ? "current" as const : "stale" as const;
-      const verifiedAvailabilityWins = hasConclusiveVerifiedAvailability
-        && freshness === "current"
-        && (!injury || verifiedObservedAt >= injuryObservedAt);
-      const unavailable = verifiedAvailabilityWins
-        ? verifiedAvailability === "out"
-        : injury ? espnUnavailable : freshness === "current" && sleeperUnavailable;
+      const unavailable = injury ? espnUnavailable : sleeperUnavailable;
       const rowConflicts = conflicts.filter((conflict) => conflict.playerId === row.playerId || (conflict.playerId === null && conflict.position === position));
       if (row.depthOrder === 1 && topParticipation?.row.playerId !== row.playerId
         && (topParticipation?.evidence.share ?? 0) - (participation.share ?? 0) >= 0.25) {
@@ -511,15 +424,18 @@ export function deriveCurrentTeamDepth(input: {
         conflicts.push(conflict);
         rowConflicts.push(conflict);
       }
-      if (publishedRoleIsStarter(row) && unavailable) {
+      if (row.depthOrder === 1 && unavailable) {
         const conflict: PersonnelConflict = {
-          type: "injury", playerId: row.playerId, position, severity: "warning",
-          explanation: `${verifiedAvailabilityWins ? "Verified depth" : injury ? "ESPN" : "Sleeper supplemental"} availability marks a published starter out; published depth is preserved while expected lineup is evaluated separately.`,
+          type: "injury", playerId: row.playerId, position, severity: "blocking",
+          explanation: injury
+            ? `ESPN injury status (${injury.gameStatus ?? injury.practiceStatus}) contradicts starter availability.`
+            : `Sleeper supplemental availability (${sleeperUnavailableValue}) contradicts starter availability; no current ESPN row is available.`,
         };
         conflicts.push(conflict);
         rowConflicts.push(conflict);
       }
       const inferred = row.mappingStatus === "participation_inference" || row.mappingStatus === "historical_inference";
+      const ageDays = latestSourceAt < 0 ? Infinity : Math.max(0, cutoffTime - (timestamp(row.capturedAt) ?? 0)) / 86_400_000;
       const confidence = clamp(
         (row.classification === "official" ? 90 : inferred ? 48 : 72)
         + (row.mappingConfidence == null ? 0 : row.mappingConfidence * 12)
@@ -527,18 +443,6 @@ export function deriveCurrentTeamDepth(input: {
         - (ageDays > 8 ? 15 : 0)
         - rowConflicts.reduce((sum, conflict) => sum + (conflict.severity === "blocking" ? 22 : 10), 0),
       );
-      const availability = verifiedAvailabilityWins
-        ? verifiedAvailability
-        : availabilityState(injury?.gameStatus ?? injury?.practiceStatus
-          ?? (freshness === "current" ? sleeperUnavailableValue : null));
-      const availabilitySource = verifiedAvailabilityWins ? "verified_depth"
-        : injury ? "espn"
-          : sleeperAvailability && freshness === "current" ? "sleeper_supplemental" : null;
-      const availabilityAsOf = verifiedAvailabilityWins
-        ? row.observedAt ?? row.sourceUpdatedAt ?? row.capturedAt
-        : injury
-          ? injury.sourceUpdatedAt ?? injury.snapshotTimestamp
-          : freshness === "current" ? sleeperAvailability?.capturedAt ?? null : null;
       interpreted.push({
         playerId: row.playerId,
         playerName: clean(row.playerName),
@@ -547,7 +451,7 @@ export function deriveCurrentTeamDepth(input: {
         unit: personnelUnit(position),
         role: clean(row.role),
         rank: row.depthOrder,
-        starter: publishedRoleIsStarter(row)
+        starter: row.depthOrder === 1
           && (!officialFirst.length || row.classification === "official")
           && !unavailable,
         source: inferred ? row.mappingStatus! : row.source,
@@ -557,19 +461,16 @@ export function deriveCurrentTeamDepth(input: {
         recentSnapShare: participation.share,
         recentGames: participation.games,
         injuryState: {
-          injury: verifiedAvailabilityWins ? clean(row.injuryStatus) : clean(injury?.injury),
-          practiceStatus: verifiedAvailabilityWins ? null : clean(injury?.practiceStatus),
-          gameStatus: verifiedAvailabilityWins
-            ? clean(verifiedAvailabilityInput)
-            : clean(injury?.gameStatus ?? sleeperUnavailableValue),
-          asOf: asIso(availabilityAsOf),
-          source: availabilitySource,
+          injury: clean(injury?.injury),
+          practiceStatus: clean(injury?.practiceStatus),
+          gameStatus: clean(injury?.gameStatus),
+          asOf: asIso(injury?.snapshotTimestamp),
+          source: injury ? "espn" : sleeperAvailability ? "sleeper_supplemental" : null,
           sleeperStatus: clean(sleeperAvailability?.sleeperStatus),
           sleeperInjuryStatus: clean(sleeperAvailability?.sleeperInjuryStatus),
           sleeperPracticeParticipation: clean(sleeperAvailability?.sleeperPracticeParticipation),
         },
         confidence,
-        freshness,
         explanation: [
           inferred
             ? `${row.mappingStatus === "participation_inference" ? "Recent participation" : "Historical depth"} filled a missing published position.`
@@ -582,20 +483,6 @@ export function deriveCurrentTeamDepth(input: {
               : "No current ESPN or Sleeper availability evidence was available at the cutoff.",
         ],
         conflicts: rowConflicts,
-        publishedStarter: publishedRoleIsStarter(row) && !inferred
-          && (row.classification === "official" || row.classification === "published_secondary"),
-        availability,
-        unavailableReason: unavailable
-          ? `${verifiedAvailabilityWins ? "Verified depth" : injury ? "ESPN" : "Sleeper supplemental"} availability evidence marks this player unavailable.`
-          : null,
-        provenance: {
-          source: row.source,
-          sourceUrl: row.sourceUrl ?? null,
-          observedAt: asIso(row.observedAt ?? row.capturedAt),
-          verifiedAt: asIso(row.verifiedAt ?? row.capturedAt),
-          verificationMethod: row.verificationMethod ?? null,
-          evidenceId: row.evidenceId ?? null,
-        },
       });
     }
   }
@@ -611,8 +498,7 @@ export function deriveCurrentTeamDepth(input: {
     ? qbRows.filter((row) => row.gameId === latestQbGameId)
       .sort((a, b) => b.dropbacks - a.dropbacks || a.playerId.localeCompare(b.playerId))[0] ?? null
     : null;
-  const qbCandidates = interpreted.filter((row) =>
-    row.position === "QB" && row.rank === 1 && row.freshness === "current");
+  const qbCandidates = interpreted.filter((row) => row.position === "QB" && row.rank === 1);
   const qbPlayer = qbCandidates
     .sort((a, b) =>
       (b.sourceClassification === "official" ? 1 : 0) - (a.sourceClassification === "official" ? 1 : 0)
@@ -644,12 +530,9 @@ export function deriveCurrentTeamDepth(input: {
   };
   const positionalCoverage = Object.fromEntries(REQUIRED.map((position) => [
     position,
-    interpreted.some((row) => row.position === position && row.freshness === "current") ? 100 : 0,
+    interpreted.some((row) => row.position === position) ? 100 : 0,
   ]));
-  const teamFreshness: InterpretedTeamDepth["freshness"] = interpreted.length === 0 ? "unavailable"
-    : interpreted.some((player) => player.freshness === "stale") ? "stale"
-      : interpreted.some((player) => player.freshness === "unavailable") ? "unavailable"
-        : "current";
+  const ageDays = latestSourceAt < 0 ? Infinity : Math.max(0, cutoffTime - latestSourceAt) / 86_400_000;
   const playerNames = new Map<string, string | null>([
     ...Object.entries(input.playerNames ?? {}),
     ...sourceRows.map((row) => [row.playerId, clean(row.playerName)] as const),
@@ -665,95 +548,12 @@ export function deriveCurrentTeamDepth(input: {
       latestTeamInjuries.set(row.playerId, row);
     }
   }
-  const expectedPlayers: Array<InterpretedDepthPlayer & {
-    projected: boolean;
-    replacementForPlayerId: string | null;
-    projectionReason: string;
-  }> = [];
-  const expectedReasons: string[] = [];
-  const publishedStarters = interpreted.filter((item) => item.publishedStarter);
-  for (const player of publishedStarters) {
-    if (player.freshness !== "current") {
-      expectedReasons.push(`${normalizedRole(player.role) ?? player.position ?? "Position"} published depth evidence is ${player.freshness}; Gridline will not present the player as expected.`);
-      continue;
-    }
-    if (player.availability === "unknown") {
-      expectedReasons.push(`${player.position ?? "Position"} availability is unknown; Gridline will not present the player as expected.`);
-      continue;
-    }
-    if (player.availability !== "out") {
-      expectedPlayers.push({
-        ...player,
-        projected: false,
-        replacementForPlayerId: null,
-        projectionReason: "Published starter remains expected to play based on current availability evidence.",
-      });
-      continue;
-    }
-    const playerRole = normalizedRole(player.role);
-    const replacement = interpreted
-      .filter((candidate) => {
-        const candidateRole = normalizedRole(candidate.role);
-        const sameVacatedSlot = candidateRole === playerRole
-          || (playerRole === "QB1" && candidateRole === "QB2")
-          || (playerRole === "RB1" && candidateRole === "RB2");
-        return candidate.position === player.position
-        && candidate.playerId !== player.playerId
-        && !candidate.publishedStarter
-        && sameVacatedSlot
-        && (candidate.rank ?? 99) > (player.rank ?? 0)
-        && candidate.freshness === "current"
-        && candidate.availability !== "unknown"
-        && candidate.availability !== "out"
-        && (candidate.sourceClassification !== "inferred" || candidate.recentGames > 0);
-      })
-      .sort((left, right) => (left.rank ?? 99) - (right.rank ?? 99)
-        || right.confidence - left.confidence)[0];
-    if (!replacement) {
-      expectedReasons.push(`${player.position ?? "Position"} replacement is unavailable; no evidence-backed replacement was found.`);
-      continue;
-    }
-    expectedPlayers.push({
-      ...replacement,
-      projected: true,
-      replacementForPlayerId: player.playerId,
-      projectionReason: `Projected replacement for published starter ${player.playerName ?? player.playerId}; published depth is unchanged.`,
-    });
-  }
-  if (!publishedStarters.length) {
-    const inferredCandidates = interpreted.filter((player) =>
-      player.sourceClassification === "inferred"
-      && player.rank === 1
-      && player.freshness === "current"
-      && player.availability !== "out"
-      && player.recentGames > 0);
-    expectedPlayers.push(...inferredCandidates.map((player) => ({
-      ...player,
-      projected: true,
-      replacementForPlayerId: null,
-      projectionReason: "Projected from cutoff-safe participation evidence; no published depth is available and this is not official.",
-    })));
-    expectedReasons.push("Published starter depth is unavailable; any listed players are Gridline projections, not official depth.");
-  }
-  const publishedStarterRoles = new Set(publishedStarters
-    .filter((player) => player.freshness === "current")
-    .map((player) => normalizedRole(player.role)));
-  const missingStarterRoles = REQUIRED_STARTER_ROLE_CARDS.filter((role) => !publishedStarterRoles.has(role));
-  if (missingStarterRoles.length) {
-    expectedReasons.push(`Expected lineup is missing published evidence for: ${missingStarterRoles.join(", ")}.`);
-  }
-  const expectedStatus: NonNullable<InterpretedTeamDepth["expectedLineup"]>["status"] =
-    !expectedPlayers.length && !interpreted.length ? "unavailable" :
-      !expectedPlayers.length ? "ambiguous" :
-        !publishedStarters.length ? "partial" :
-      expectedReasons.length && expectedPlayers.length ? "partial" :
-        expectedReasons.length ? "ambiguous" : "available";
   return {
     teamId: input.teamId,
     teamName: input.teamName ?? null,
     abbreviation: input.abbreviation ?? null,
     asOf: cutoff.toISOString(),
-    freshness: teamFreshness,
+    freshness: latestSourceAt < 0 ? "unavailable" : ageDays <= 8 ? "current" : "stale",
     sourcePrecedence: [
       "verified permitted published depth",
       "Sleeper published secondary depth signal with mapped identity",
@@ -775,13 +575,10 @@ export function deriveCurrentTeamDepth(input: {
     downstreamReady: qbStarter.status === "available"
       && REQUIRED.every((position) => positionalCoverage[position] > 0)
       && !conflicts.some((conflict) => conflict.severity === "blocking")
-      && teamFreshness === "current",
+      && ageDays <= 8,
     unavailableReasons: [
-      ...(!interpreted.length ? ["No current mapped published depth snapshot is available."] : []),
-      ...(interpreted.some((player) => player.freshness === "stale")
-        ? ["At least one published depth row is stale."] : []),
-      ...(interpreted.some((player) => player.freshness === "unavailable")
-        ? ["At least one published depth row has no usable evidence timestamp."] : []),
+      ...(latestSourceAt < 0 ? ["No current mapped published depth snapshot is available."] : []),
+      ...(ageDays > 8 ? ["Latest published depth evidence is stale."] : []),
       ...(qbStarter.status !== "available" ? [qbStarter.unavailableReason ?? "QB starter evidence remains conflicted."] : []),
       ...REQUIRED.filter((position) => positionalCoverage[position] === 0).map((position) => `${position} depth is unavailable.`),
     ],
@@ -799,10 +596,5 @@ export function deriveCurrentTeamDepth(input: {
         asOf: asIso(injury.snapshotTimestamp),
         source: "espn" as const,
       })),
-    expectedLineup: {
-      status: expectedStatus,
-      players: expectedPlayers,
-      unavailableReasons: expectedReasons,
-    },
   };
 }

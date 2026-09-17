@@ -5,12 +5,10 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
-import type { ConsumerDepthPlayerAvailability } from './consumerDepthPlayerAvailability';
 import type { ConsumerDepthPlayerFreshness } from './consumerDepthPlayerFreshness';
 import type { ConsumerDepthPlayerRole } from './consumerDepthPlayerRole';
 import type { ConsumerDepthPlayerSourceLabel } from './consumerDepthPlayerSourceLabel';
 import type { ConsumerDepthPlayerUnit } from './consumerDepthPlayerUnit';
-import type { ConsumerEvidenceProvenance } from './consumerEvidenceProvenance';
 
 export interface ConsumerDepthPlayer {
   name: string;
@@ -35,9 +33,4 @@ export interface ConsumerDepthPlayer {
   freshness: ConsumerDepthPlayerFreshness;
   /** @nullable */
   asOf: Date | null;
-  publishedStarter?: boolean;
-  availability?: ConsumerDepthPlayerAvailability;
-  /** @nullable */
-  unavailableReason?: string | null;
-  provenance?: ConsumerEvidenceProvenance;
 }

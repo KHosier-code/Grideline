@@ -1147,18 +1147,17 @@ components:
         depthFreshness: { type: string, enum: [current, stale, partial, unavailable] }
         depth:
           type: array
+          maxItems: 30
           items: { $ref: "#/components/schemas/ConsumerDepthPlayer" }
-        expectedLineup: { $ref: "#/components/schemas/ConsumerExpectedLineup" }
-        starterAvailabilitySummary: { $ref: "#/components/schemas/ConsumerStarterAvailabilitySummary" }
     ConsumerDepthPlayer:
       type: object
       required: [name, position, unit, depthRank, role, sourceLabel, recentSnapShare, injuryStatus, practiceStatus, starterConfidence, evidenceSummary, lineupSlot, freshness, asOf]
       properties:
         name: { type: string }
         position: { type: string }
-        unit: { type: string, enum: [offense, defense, special_teams] }
+        unit: { type: string, enum: [offense, defense] }
         depthRank: { type: ["integer", "null"] }
-        role: { type: string, enum: [published_starter, published_backup, projected_starter, projected_backup, uncertain] }
+        role: { type: string, enum: [published_starter, published_backup, projected_starter, uncertain] }
         sourceLabel: { type: string, enum: [Published depth, Projected from recent participation, Evidence uncertain] }
         recentSnapShare: { type: ["number", "null"] }
         injuryStatus: { type: ["string", "null"] }
@@ -1168,68 +1167,6 @@ components:
         lineupSlot: { type: ["string", "null"] }
         freshness: { type: string, enum: [fresh, stale, unavailable] }
         asOf: { type: ["string", "null"], format: date-time }
-        publishedStarter: { type: boolean }
-        availability: { type: string, enum: [available, questionable, doubtful, out, unknown] }
-        unavailableReason: { type: ["string", "null"] }
-        provenance: { $ref: "#/components/schemas/ConsumerEvidenceProvenance" }
-    ConsumerEvidenceProvenance:
-      type: object
-      required: [source, sourceUrl, observedAt, verifiedAt, verificationMethod, evidenceId]
-      properties:
-        source: { type: string }
-        sourceUrl: { type: ["string", "null"], format: uri }
-        observedAt: { type: ["string", "null"], format: date-time }
-        verifiedAt: { type: ["string", "null"], format: date-time }
-        verificationMethod: { type: ["string", "null"] }
-        evidenceId: { type: ["string", "null"] }
-    ConsumerExpectedLineup:
-      type: object
-      required: [status, players, unavailableReasons]
-      properties:
-        status: { type: string, enum: [available, partial, unavailable, ambiguous] }
-        players:
-          type: array
-          items: { $ref: "#/components/schemas/ConsumerExpectedPlayer" }
-        unavailableReasons: { type: array, items: { type: string } }
-    ConsumerExpectedPlayer:
-      type: object
-      required: [playerId, name, position, unit, depthRank, projected, replacementForPlayerId, replacementForPlayerName, projectionReason, confidence, availability]
-      properties:
-        playerId: { type: string }
-        name: { type: string }
-        position: { type: string }
-        unit: { type: string, enum: [offense, defense, special_teams] }
-        depthRank: { type: ["integer", "null"] }
-        projected: { type: boolean }
-        replacementForPlayerId: { type: ["string", "null"] }
-        replacementForPlayerName: { type: ["string", "null"] }
-        projectionReason: { type: string }
-        confidence: { type: number }
-        availability: { type: string, enum: [available, questionable, doubtful, out, unknown] }
-        provenance: { $ref: "#/components/schemas/ConsumerEvidenceProvenance" }
-    ConsumerStarterAvailabilityCount:
-      type: object
-      required: [publishedStarters, available, questionable, doubtful, out, unknown]
-      properties:
-        publishedStarters: { type: integer }
-        available: { type: integer }
-        questionable: { type: integer }
-        doubtful: { type: integer }
-        out: { type: integer }
-        unknown: { type: integer }
-    ConsumerStarterAvailabilitySummary:
-      allOf:
-        - { $ref: "#/components/schemas/ConsumerStarterAvailabilityCount" }
-        - type: object
-          required: [byUnit]
-          properties:
-            byUnit:
-              type: object
-              required: [offense, defense, specialTeams]
-              properties:
-                offense: { $ref: "#/components/schemas/ConsumerStarterAvailabilityCount" }
-                defense: { $ref: "#/components/schemas/ConsumerStarterAvailabilityCount" }
-                specialTeams: { $ref: "#/components/schemas/ConsumerStarterAvailabilityCount" }
     ConsumerInjuryPlayer:
       type: object
       required: [name, position, injury, gameStatus, practiceStatus, asOf, sourceLabel]

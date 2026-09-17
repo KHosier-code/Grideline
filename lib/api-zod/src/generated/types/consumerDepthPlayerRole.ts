@@ -13,6 +13,5 @@ export const ConsumerDepthPlayerRole = {
   published_starter: 'published_starter',
   published_backup: 'published_backup',
   projected_starter: 'projected_starter',
-  projected_backup: 'projected_backup',
   uncertain: 'uncertain',
 } as const;

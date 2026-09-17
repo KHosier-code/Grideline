@@ -37,15 +37,11 @@ replace a pending or warning result with an assumption.
   do not use a development preview as the production URL.
 - [ ] Confirm `release_security_evidence` contains one row for the published
   build before the API and worker start. The row records the build identifier,
-   check timestamp, `SELECT 1` result, verify-full policy outcome, and pass-only
-   results for connectivity, TLS, canonical snapshot update/delete, and grade
-   update/delete. Review that every per-guard `*_passed` column is `true`;
-   `NULL` means the historical build predates per-guard evidence and is not a
-   pass. A
+  check timestamp, `SELECT 1` result, and verify-full policy outcome only. A
   missing/disabled production TLS mode, PostgreSQL TLS compatibility warning,
   connectivity error, or evidence-write failure blocks startup and creates no
-   success row. Evidence never contains a database URL, hostname, username,
-   credentials, synthetic probe values, or raw errors.
+  success row. Evidence never contains a database URL, hostname, username, or
+  credentials.
 - [ ] Confirm the production URL, HTTPS, health endpoint, API routing, static
   assets, and an authenticated read-only page load.
 - [ ] Confirm the UI displays data-health and model/prediction safety states;
@@ -72,48 +68,6 @@ replace a pending or warning result with an assumption.
   verify its connection is distinct from development.
 - [ ] Review the Publish schema diff and take the Replit backup/checkpoint
   before applying a schema change.
-- [ ] Custom PostgreSQL triggers are not part of the managed table-schema diff.
-  After Publish, use the production Database tool's SQL runner to apply the
-  exact reviewed statement batch in
-  `docs/production-immutability-trigger-install.md`. Do not execute any table,
-  column, index, foreign-key, or check-constraint DDL from the source
-  migrations; the managed Publish schema diff owns those objects.
-
-  | Migration | Trigger-protected records |
-  | --- | --- |
-  | `0011_personnel_provenance_and_weather_immutability.sql` | `weather_forecast_snapshots` |
-  | `0012_model_evaluation_predictions.sql` | `model_evaluation_predictions` |
-  | `0021_model_artifact_immutability.sql` | artifact-backed `model_training_runs` |
-  | `0022_sleeper_player_snapshots.sql` | `sleeper_player_snapshots` |
-  | `0023_sleeper_identity_mapping.sql` | identity mapping runs and mappings |
-  | `0024_sleeper_crosswalk_evidence.sql` | Sleeper crosswalk evidence |
-  | `0024_verified_player_identity.sql` | identity imports, NFLverse identities, and crosswalk revisions |
-  | `0024_market_baseline_evidence.sql` | market baseline runs, events, and quotes |
-  | `0028_confidence_framework.sql` | confidence methodologies and results |
-  | `0033_verified_depth_evidence.sql` | verified depth evidence |
-  | `0033_immutable_canonical_prediction.sql` | official prediction snapshots and grades |
-
-  Migration `0010_weather_forecast_snapshots.sql` contains the superseded first
-  definition of the same weather trigger; apply the reviewed `0011` definition,
-  not both. This manual trigger-only operation is supported through the
-  Database tool; do not add a production migration script, deployment build
-  hook, or startup DDL.
-- [ ] Do not bypass the production startup gate after Publish. Before either
-  process starts, it inserts synthetic canonical predictions, artifact-backed
-  training, evaluation, market-baseline, and weather evidence inside a
-  transaction; proves update and delete are rejected; and rolls the complete
-  probe transaction back. A missing or ineffective guard, an unexpected
-  database error, or inability to run the probes fails closed and leaves the
-  API and worker unavailable.
-- [ ] Confirm the successful published build has a
-  `release_security_evidence` row only after every immutable mutation probe
-  passes. Review `snapshot_update_guard_passed`,
-  `snapshot_delete_guard_passed`, `grade_update_guard_passed`, and
-  `grade_delete_guard_passed` individually; each must be `true`. These
-  pass-only columns cover the canonical guards, while `verify_full_passed`
-  covers the complete startup gate. A `NULL` pass-only value is historical
-  evidence, not a pass. The evidence row contains no probe data, raw errors,
-  or database metadata.
 - [ ] Do not point the development migration runner at production. Production
   schema changes are owned by Replit Publish and its review/backup flow; never
   use a deploy-time schema push or startup migration against production.
@@ -244,9 +198,6 @@ replace a pending or warning result with an assumption.
 - [ ] After kickoff, predictions are immutable: a late feed update must not
   create or alter an official prediction. A read-only report cannot simulate
   this mutation; wait for the real kickoff guard verification.
-- [ ] Treat the transactional production startup probes as the database guard
-  verification for every publish. The later real-game check verifies scheduler
-  and application chronology, not whether the database permits mutation.
 - [ ] Never imply a betting recommendation, confidence guarantee, or CLV when
   the legitimate pregame market line is unavailable.
 - [ ] Confirm the report's canonical snapshot is the latest valid evidence at

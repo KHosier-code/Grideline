@@ -36,7 +36,7 @@ type PersonnelTeam = {
   offenseInjuryImpact: number | null;
   defenseInjuryImpact: number | null;
   injuryEvidenceAvailable: boolean;
-  depth: Array<{ position: string; unit: "offense" | "defense" | "special_teams"; role: string; recentSnapShare: number | null }>;
+  depth: Array<{ position: string; unit: "offense" | "defense"; role: string; recentSnapShare: number | null }>;
 };
 
 const MIN_GAMES = 3;

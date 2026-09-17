@@ -9,9 +9,7 @@ import type { ConsumerContextTeamDepthFreshness } from './consumerContextTeamDep
 import type { ConsumerContextTeamInjuryReportStatus } from './consumerContextTeamInjuryReportStatus';
 import type { ConsumerContextTeamSide } from './consumerContextTeamSide';
 import type { ConsumerDepthPlayer } from './consumerDepthPlayer';
-import type { ConsumerExpectedLineup } from './consumerExpectedLineup';
 import type { ConsumerInjuryPlayer } from './consumerInjuryPlayer';
-import type { ConsumerStarterAvailabilitySummary } from './consumerStarterAvailabilitySummary';
 
 export interface ConsumerContextTeam {
   side: ConsumerContextTeamSide;
@@ -35,7 +33,6 @@ export interface ConsumerContextTeam {
   /** @nullable */
   asOf: Date | null;
   depthFreshness: ConsumerContextTeamDepthFreshness;
+  /** @maxItems 30 */
   depth: ConsumerDepthPlayer[];
-  expectedLineup?: ConsumerExpectedLineup;
-  starterAvailabilitySummary?: ConsumerStarterAvailabilitySummary;
 }

@@ -12,5 +12,4 @@ export type ConsumerDepthPlayerUnit = typeof ConsumerDepthPlayerUnit[keyof typeo
 export const ConsumerDepthPlayerUnit = {
   offense: 'offense',
   defense: 'defense',
-  special_teams: 'special_teams',
 } as const;

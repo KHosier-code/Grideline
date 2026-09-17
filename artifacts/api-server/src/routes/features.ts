@@ -11,13 +11,11 @@ import { getChallengerReadinessReport, getCurrentPersonnelCoverage } from "../li
 import { getLiveModelInputIntegrityAudit } from "../lib/live-predictions";
 import {
   getCurrentDepthValidationReport,
-  getDetBufPersonnelReport,
   getCurrentGamePersonnel,
   getCurrentQbEvidence,
   getCurrentTeamDepth,
   getCurrentWrCbEvidence,
 } from "../lib/current-personnel";
-import { importVerifiedDepthEvidence } from "../lib/verified-depth-import";
 
 const router: IRouter = Router();
 type PersonnelCoverageResult = Awaited<ReturnType<typeof getCurrentPersonnelCoverage>>;
@@ -151,19 +149,6 @@ router.get("/features/personnel/current/team/:teamId/wr-cb", requireAdmin, async
 
 router.get("/features/personnel/current/validation", requireAdmin, async (_req, res): Promise<void> => {
   res.json(await getCurrentDepthValidationReport());
-});
-
-router.get("/features/personnel/current/report/det-buf", requireAdmin, async (_req, res): Promise<void> => {
-  res.json(await getDetBufPersonnelReport());
-});
-
-router.post("/features/personnel/current/verified-depth/import", requireAdmin, async (req, res): Promise<void> => {
-  try {
-    const value = await importVerifiedDepthEvidence(req.body);
-    res.status(201).json(value);
-  } catch (error) {
-    res.status(400).json({ error: error instanceof Error ? error.message : "Invalid verified depth evidence." });
-  }
 });
 
 router.post("/features/pregame/build", requireAdmin, async (req, res): Promise<void> => {

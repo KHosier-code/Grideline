@@ -31,6 +31,3 @@
 - [Singleton integration-test isolation](singleton-integration-test-isolation.md) — PostgreSQL advisory locks serialize parallel test files that mutate shared singleton fixtures.
 - [Database health cancellation](database-health-cancellation.md) — route timeout races must cancel the driver query and discard its pool client, not only stop awaiting the result.
 - [Game completion semantics](game-completion-semantics.md) — scheduled ESPN rows may carry 0–0 score values; only final status proves a completed game.
-- [Historical release evidence](historical-release-evidence.md) — new pass-only guard columns stay null on old releases; never backfill unverified checks as passed.
-- [Locked evaluation universes](locked-evaluation-universes.md) — retain exact game IDs and source fingerprints; equal aggregate counts cannot prove comparable evidence after source drift.
-- [Shadow inference chronology](shadow-inference-chronology.md) — retries may persist deterministic cutoff evidence only when every mutable source row is itself cutoff-safe.
