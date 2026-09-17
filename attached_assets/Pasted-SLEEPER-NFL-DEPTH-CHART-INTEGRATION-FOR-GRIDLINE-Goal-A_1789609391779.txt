@@ -1,0 +1,294 @@
+SLEEPER NFL DEPTH-CHART INTEGRATION FOR GRIDLINE
+
+Goal:
+Add Sleeper as a secondary published source for current NFL player/depth-chart context.
+
+Do NOT change, retrain, refit, or promote any production model.
+Do NOT replace nflverse historical depth/participation logic.
+Do NOT let Sleeper directly alter Phase 6.1 model features unless explicitly approved later.
+
+This task is for:
+- current roster/player metadata
+- depth-chart ordering
+- starter-confidence support
+- injury/practice context
+- immutable daily snapshots
+- comparison against existing Gridline personnel logic
+
+SOURCE
+
+Use Sleeper’s public NFL players endpoint.
+
+Retrieve fields where available such as:
+
+- player_id
+- full_name / first_name / last_name
+- team
+- position
+- depth_chart_position
+- depth_chart_order
+- status
+- injury_status
+- practice_participation
+- fantasy_positions
+- age / years_exp if available
+- provider IDs if available
+
+Treat Sleeper as a SECONDARY PUBLISHED SOURCE, not an official NFL depth chart.
+
+SOURCE PRIORITY
+
+Use the following hierarchy for personnel interpretation:
+
+1. Explicitly permitted official published depth source, if available
+2. Sleeper current published depth signal
+3. nflverse historical depth charts / snaps / participation
+4. prior-game snap inference fallback
+
+Sleeper must never overwrite nflverse history.
+
+TASK 1 — DATA INGESTION
+
+Create a worker-owned Sleeper sync.
+
+Requirements:
+
+- fetch full NFL players dataset no more than once per day by default
+- configurable cadence
+- cache/reuse same fetch within cycle
+- no excessive polling
+- retries must be bounded
+- failure must not interrupt existing worker jobs
+- record sync status in Data Health
+
+Persist immutable snapshots.
+
+Suggested structure:
+
+sleeper_player_snapshots
+
+Include:
+
+- snapshot_id
+- captured_at
+- source_timestamp if available
+- sleeper_player_id
+- team
+- position
+- depth_chart_position
+- depth_chart_order
+- status
+- injury_status
+- practice_participation
+- player name
+- mapped Gridline player ID if matched
+- mapping confidence
+- raw source version/hash if useful
+
+Do not update prior snapshots in place.
+
+TASK 2 — PLAYER IDENTITY MAPPING
+
+Map Sleeper players to Gridline players safely.
+
+Use deterministic identifiers where possible:
+
+- GSIS ID
+- ESPN ID
+- Sportradar ID
+- other provider IDs
+
+If no provider ID match exists, use cautious normalized-name + team + position matching.
+
+Do not silently force ambiguous mappings.
+
+Record:
+
+- exact ID match
+- normalized-name match
+- ambiguous
+- unmatched
+
+Expose mapping coverage in Data Health.
+
+TASK 3 — DEPTH-CHART INTERPRETATION
+
+For each active team, derive current published depth context.
+
+Examples:
+
+QB:
+- depth_chart_order = 1 => probable published starter signal
+- order 2 => backup
+- order 3+ => reserve
+
+Apply equivalent ordering for RB, WR, TE, OL, DL, LB, DB, K/P when Sleeper provides usable values.
+
+Do not assume every player has valid depth_chart_order.
+
+If missing:
+- mark unavailable
+- fall back to existing nflverse / snap inference logic
+
+TASK 4 — QB CONFIDENCE ENHANCEMENT
+
+Use Sleeper only as supporting evidence for Gridline QB starter confidence.
+
+Do NOT add a new Phase 6.1 model feature unless separately approved.
+
+Update personnel-context logic so QB certainty may incorporate:
+
+- Sleeper depth_chart_order
+- Sleeper team/position
+- nflverse recent snaps
+- nflverse recent dropbacks
+- injury/practice status
+- continuity from prior games
+
+Example confidence behavior:
+
+- Sleeper QB depth order 1 + recent starter snaps => high confidence
+- Sleeper order 1 but no recent snaps / conflicting injury => moderate confidence
+- Sleeper missing + nflverse clear starter => inferred confidence
+- conflicting published/inferred signals => lower confidence with explicit reason
+
+Every QB-confidence value must include evidence and reason.
+
+Never default silently to 0.
+
+TASK 5 — CONFLICT HANDLING
+
+If Sleeper conflicts with existing Gridline inference:
+
+Do not overwrite silently.
+
+Record:
+
+- Sleeper signal
+- nflverse signal
+- selected starter
+- reason
+- confidence
+- conflict flag
+
+Examples:
+
+- Sleeper QB1 differs from recent 100% snap QB
+- Sleeper lists inactive/injured player as order 1
+- team changed but stale Sleeper team field remains
+
+Prefer cutoff-safe, corroborated evidence.
+
+TASK 6 — CURRENT DEPTH-CHART API
+
+Add an internal/admin endpoint to inspect current depth data by team.
+
+For each player show:
+
+- name
+- position
+- Sleeper depth order
+- Sleeper depth position
+- injury/practice status
+- Gridline mapped player
+- mapping confidence
+- nflverse recent snap share
+- Gridline inferred depth
+- final personnel interpretation
+- evidence reason
+
+Keep this ADMIN ONLY.
+
+Do not expose raw provider payloads to consumers.
+
+TASK 7 — DATA HEALTH
+
+Add Sleeper coverage metrics:
+
+- last successful fetch
+- fetch duration
+- player count
+- mapped player count
+- unmatched count
+- ambiguous count
+- teams with depth data
+- QB teams with depth order 1
+- RB/WR/TE coverage
+- stale snapshot age
+- sync failures
+
+Flag systematic source failure if:
+- fetch fails repeatedly
+- player count drops abnormally
+- QB coverage collapses
+- mappings degrade unexpectedly
+
+TASK 8 — IMMUTABILITY / CHRONOLOGY
+
+All Sleeper snapshots must be point-in-time evidence.
+
+Requirements:
+
+- append-only
+- immutable
+- captured_at required
+- no post-kickoff evidence may be used for a historical pregame evaluation
+- historical reconstruction must use the latest Sleeper snapshot strictly before kickoff
+- no future leakage
+
+Add chronology tests.
+
+TASK 9 — VALIDATION
+
+Compare Sleeper to existing Gridline personnel inference for all 32 teams.
+
+Produce a report showing:
+
+- QB starter agreement rate
+- QB depth-order availability
+- player mapping coverage
+- conflict count
+- unmatched player count
+- stale data count
+- RB1 / WR / TE depth coverage where available
+
+For at least 10 teams, show:
+
+- Sleeper QB1
+- Gridline inferred QB1
+- recent nflverse snap leader
+- injury status
+- final selected starter
+- confidence
+- reason
+
+TASK 10 — SAFETY
+
+Confirm:
+
+- Phase 6.1 models unchanged
+- no model retraining
+- no model promotion
+- no historical prediction overwrite
+- no consumer prediction change caused solely by adding Sleeper
+- Sleeper is advisory/personnel evidence only at this stage
+
+FINAL REPORT
+
+Return:
+
+1. Sleeper endpoint used
+2. Sync cadence
+3. Total players received
+4. Mapping coverage
+5. QB depth-chart coverage
+6. All-team depth coverage summary
+7. Conflict count
+8. QB starter agreement rate
+9. Example team comparisons
+10. Data Health additions
+11. Chronology/leakage test results
+12. Whether Sleeper is reliable enough to keep as a production secondary source
+13. Whether any future model-feature work is recommended
+
+Do not automatically make Sleeper a production model input.
