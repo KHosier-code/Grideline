@@ -274,6 +274,9 @@ export async function persist2025MarketBaseline(build: BaselineBuild) {
         matchContractVersion: MATCH_CONTRACT_VERSION,
         evaluationInputFingerprint: build.evaluationInputFingerprint,
         quoteCount: build.quotes.length, eventCount: build.sourceRows,
+         minimumRecordedLineEdge: MINIMUM_RECORDED_LINE_EDGE,
+         edgeBuckets: ["<1", "1-1.99", "2-2.99", "3-4.99", "5+"],
+         grading: "final scores only",
       },
     });
     await tx.insert(marketBaselineEventsTable).values(build.diagnostics.map((row) => ({
