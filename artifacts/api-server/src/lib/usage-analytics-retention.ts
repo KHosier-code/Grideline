@@ -11,6 +11,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = DAY_MS;
 const DELETE_BATCH_SIZE = 1_000;
 
+export const USAGE_ANALYTICS_RETENTION_REPEATED_FAILURE_THRESHOLD = 3;
 export type UsageAnalyticsRetentionStatus = "healthy" | "failed" | "pending";
 export type UsageAnalyticsRetentionCleanupState = "pending" | "on_time" | "overdue";
 export type UsageAnalyticsRetentionResult = {
@@ -28,15 +29,29 @@ export type UsageAnalyticsRetentionHealth = {
   status: UsageAnalyticsRetentionStatus;
   lastAttemptAt: Date | null;
   lastAttemptStatus: "success" | "failed" | null;
+  consecutiveFailures: number;
+  firstFailureAt: Date | null;
   lastSuccessfulAt: Date | null;
   lastSuccessfulDeletedEvents: number | null;
   lastSuccessfulBatches: number | null;
   lastSuccessfulCutoff: Date | null;
   latestError: string | null;
   latestErrorAt: Date | null;
+  alert: UsageAnalyticsRetentionAlert | null;
   workerOwned: true;
 };
 
+export type UsageAnalyticsRetentionAlert = {
+  code: "repeated_failures";
+  severity: "critical";
+  scope: "usage-analytics-retention";
+  title: "Usage Lab retention cleanup repeatedly failing";
+  detail: string;
+  consecutiveFailures: number;
+  firstFailureAt: Date | null;
+  latestFailureAt: Date | null;
+  latestError: string | null;
+};
 type UsageAnalyticsRetentionCleanup = () => Promise<UsageAnalyticsRetentionResult>;
 
 export function usageAnalyticsRetentionCutoff(now = new Date()): Date {
@@ -60,6 +75,28 @@ export function usageAnalyticsRetentionCleanupState(
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+export function createUsageAnalyticsRetentionAlert(input: {
+  consecutiveFailures: number;
+  firstFailureAt: Date | null;
+  latestFailureAt: Date | null;
+  latestError: string | null;
+}): UsageAnalyticsRetentionAlert | null {
+  if (input.consecutiveFailures < USAGE_ANALYTICS_RETENTION_REPEATED_FAILURE_THRESHOLD) {
+    return null;
+  }
+  return {
+    code: "repeated_failures",
+    severity: "critical",
+    scope: "usage-analytics-retention",
+    title: "Usage Lab retention cleanup repeatedly failing",
+    detail: `Usage Lab retention cleanup has failed ${input.consecutiveFailures} consecutive times. Storage may exceed the ${USAGE_ANALYTICS_RETENTION_DAYS}-day retention policy until the worker recovers.`,
+    consecutiveFailures: input.consecutiveFailures,
+    firstFailureAt: input.firstFailureAt,
+    latestFailureAt: input.latestFailureAt,
+    latestError: input.latestError,
+  };
 }
 /**
  * Delete expired rows in independent batches. PostgreSQL can interleave each
@@ -183,6 +220,8 @@ async function recordFailedRetentionCleanup(error: unknown, attemptedAt: Date) {
       id: 1,
       lastAttemptAt: attemptedAt,
       lastAttemptStatus: "failed",
+      consecutiveFailures: 1,
+      firstFailureAt: attemptedAt,
       latestError,
       latestErrorAt: attemptedAt,
     })
@@ -191,6 +230,8 @@ async function recordFailedRetentionCleanup(error: unknown, attemptedAt: Date) {
       set: {
         lastAttemptAt: attemptedAt,
         lastAttemptStatus: "failed",
+        consecutiveFailures: sql`${usageAnalyticsRetentionTable.consecutiveFailures} + 1`,
+        firstFailureAt: sql`COALESCE(${usageAnalyticsRetentionTable.firstFailureAt}, ${attemptedAt})`,
         latestError,
         latestErrorAt: attemptedAt,
       },
@@ -206,6 +247,7 @@ export async function getUsageAnalyticsRetentionHealth(): Promise<UsageAnalytics
   const lastAttemptStatus = record?.lastAttemptStatus === "success" || record?.lastAttemptStatus === "failed"
     ? record.lastAttemptStatus
     : null;
+  const consecutiveFailures = record?.consecutiveFailures ?? 0;
   const nextCleanupAt = usageAnalyticsRetentionNextCleanupAt(record?.lastAttemptAt ?? null);
 
   return {
@@ -220,12 +262,22 @@ export async function getUsageAnalyticsRetentionHealth(): Promise<UsageAnalytics
         : "pending",
     lastAttemptAt: record?.lastAttemptAt ?? null,
     lastAttemptStatus,
+    consecutiveFailures,
+    firstFailureAt: record?.firstFailureAt ?? null,
     lastSuccessfulAt: record?.lastSuccessfulAt ?? null,
     lastSuccessfulDeletedEvents: record?.lastSuccessfulDeletedEvents ?? null,
     lastSuccessfulBatches: record?.lastSuccessfulBatches ?? null,
     lastSuccessfulCutoff: record?.lastSuccessfulCutoff ?? null,
     latestError: record?.latestError ?? null,
     latestErrorAt: record?.latestErrorAt ?? null,
+    alert: lastAttemptStatus === "failed"
+      ? createUsageAnalyticsRetentionAlert({
+        consecutiveFailures,
+        firstFailureAt: record?.firstFailureAt ?? null,
+        latestFailureAt: record?.latestErrorAt ?? null,
+        latestError: record?.latestError ?? null,
+      })
+      : null,
     workerOwned: true,
   };
 }
@@ -237,6 +289,8 @@ async function recordSuccessfulRetentionCleanup(result: UsageAnalyticsRetentionR
       id: 1,
       lastAttemptAt: completedAt,
       lastAttemptStatus: "success",
+      consecutiveFailures: 0,
+      firstFailureAt: null,
       lastSuccessfulAt: completedAt,
       lastSuccessfulDeletedEvents: result.deletedEvents,
       lastSuccessfulBatches: result.batches,
@@ -247,6 +301,8 @@ async function recordSuccessfulRetentionCleanup(result: UsageAnalyticsRetentionR
       set: {
         lastAttemptAt: completedAt,
         lastAttemptStatus: "success",
+        consecutiveFailures: 0,
+        firstFailureAt: null,
         lastSuccessfulAt: completedAt,
         lastSuccessfulDeletedEvents: result.deletedEvents,
         lastSuccessfulBatches: result.batches,
