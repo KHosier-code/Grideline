@@ -1,0 +1,293 @@
+TASK — IMMEDIATE PRODUCTION ROLLBACK TO LAST HEALTHY PHASE 6.1 DEPLOYMENT
+
+Priority:
+CRITICAL
+
+Goal:
+Restore Gridline production service, Phase 6.1 predictions, odds ingestion, consumer access, and tonight's tracking by rolling back to the last known healthy production checkpoint before Task #168.
+
+Do NOT:
+- improvise new production trigger SQL
+- bypass the startup safety gate
+- modify Phase 6.1
+- promote challengers
+- rewrite historical evidence
+- rewrite sportsbook observations
+- manually backfill the outage
+- delete Task #168 development work
+
+--------------------------------------------------
+1. IDENTIFY THE LAST HEALTHY CHECKPOINT
+--------------------------------------------------
+
+Select the most recent production checkpoint that had:
+
+- healthy API startup
+- healthy worker startup
+- functioning consumer site
+- Phase 6.1 production predictions
+- adaptive odds ingestion
+- canonical tracking support
+- existing approved immutability protections
+- no Task #168 startup dependency
+
+Prefer the deployment immediately before:
+
+a108f70b-1aad-4bcc-b3d9-66ae0938a6a8
+
+Do not guess.
+
+Verify checkpoint health from deployment history/logs.
+
+Report the checkpoint/build identifier before rollback.
+
+--------------------------------------------------
+2. ROLLBACK
+--------------------------------------------------
+
+Use Replit's supported checkpoint rollback mechanism.
+
+Do not manually modify production database rows.
+
+Do not manually drop Task #168 tables.
+
+The objective is application/runtime recovery.
+
+If the database contains additive Task #168 tables from the failed publish, leave them in place unless the rollback system explicitly and safely handles them.
+
+The older application must not depend on them.
+
+--------------------------------------------------
+3. VERIFY PRODUCTION STARTUP
+--------------------------------------------------
+
+After rollback verify:
+
+API:
+HEALTHY
+
+Worker:
+HEALTHY
+
+Frontend:
+HEALTHY
+
+Startup safety gate:
+PASS
+
+Do not declare recovery until all required production services are running.
+
+--------------------------------------------------
+4. VERIFY CONSUMER SITE
+--------------------------------------------------
+
+Verify:
+
+https://gridelineanalytics.com
+
+loads successfully.
+
+Check:
+
+- Games
+- DET @ BUF Game Detail
+- normal authentication
+- no raw errors
+- no Admin exposure
+- no challenger output
+
+--------------------------------------------------
+5. VERIFY PHASE 6.1
+--------------------------------------------------
+
+Confirm tonight's DET @ BUF Phase 6.1 prediction path is available.
+
+Verify:
+
+- active spread model
+- active moneyline model
+- active totals model
+- exact 27-feature schema
+- 27/27 feature availability
+- zero missing required inputs
+- valid model artifact checksums
+- valid prediction snapshot
+
+Phase 6.1 must remain unchanged.
+
+--------------------------------------------------
+6. RESTORE ODDS INGESTION
+--------------------------------------------------
+
+Confirm adaptive odds ingestion resumes.
+
+Report:
+
+- worker lease
+- scheduler status
+- quota remaining
+- latest request status
+- latest DK timestamp
+- latest FD timestamp
+
+Because production was offline, perform ONE normal recovery sync if required.
+
+Do not fabricate or backfill the outage.
+
+The missing observation period must remain historically visible.
+
+--------------------------------------------------
+7. TONIGHT MARKET READINESS
+--------------------------------------------------
+
+For DET @ BUF verify fresh:
+
+DraftKings:
+- spread
+- price
+- total
+- total price(s)
+- moneyline
+
+FanDuel:
+- spread
+- price
+- total
+- total price(s)
+- moneyline
+
+Report observed_at timestamps and market age.
+
+--------------------------------------------------
+8. CANONICAL PHASE 6.1 CUTOFF
+--------------------------------------------------
+
+Tonight's existing canonical cutoff remains:
+
+6:45 PM Central
+2026-09-17 23:45 UTC
+
+Kickoff:
+7:15 PM Central
+
+Task #168 shadow models are NOT required tonight after rollback.
+
+At the canonical cutoff preserve the existing production Phase 6.1 evidence using the pre-Task-168 canonical workflow.
+
+Capture only evidence supported by the restored production architecture.
+
+Do not attempt to force four-family shadow retention.
+
+--------------------------------------------------
+9. EXACTLY-ONCE CANONICAL CHECK
+--------------------------------------------------
+
+Verify the existing Phase 6.1 canonical workflow creates exactly one valid cutoff record.
+
+Confirm:
+
+- correct game
+- correct cutoff
+- prediction
+- market evidence
+- timestamps
+- weather/personnel references where supported
+- no duplicate canonical snapshot
+
+--------------------------------------------------
+10. POSTGAME GRADING
+--------------------------------------------------
+
+Verify the restored production system can grade tonight after authoritative FINAL status.
+
+Track:
+
+- final score
+- spread result
+- total result
+- moneyline result
+- Phase 6.1 prediction error
+- price-supported return where already supported
+
+Do not include Task #168 challenger grading tonight.
+
+--------------------------------------------------
+11. PRESERVE TASK #168 DEVELOPMENT WORK
+--------------------------------------------------
+
+Do NOT delete or abandon Task #168.
+
+After production recovery, record the blocker:
+
+Task #168 requires production immutability support for:
+
+- reject_shadow_evidence_mutation
+- shadow_model_cutoffs_immutable
+- shadow_model_grades_immutable
+- evaluation_baseline_manifests_immutable
+
+These must be added to the reviewed production trigger runbook and validated BEFORE a future publish.
+
+Do not solve that as part of tonight's rollback.
+
+--------------------------------------------------
+12. FINAL REPORT
+--------------------------------------------------
+
+Return:
+
+Rolled back to:
+[checkpoint/build]
+
+API:
+HEALTHY / OFFLINE
+
+Worker:
+HEALTHY / OFFLINE
+
+Consumer site:
+HEALTHY / OFFLINE
+
+Startup gate:
+PASS / FAIL
+
+Phase 6.1:
+AVAILABLE / UNAVAILABLE
+
+Adaptive odds:
+HEALTHY / UNHEALTHY
+
+Odds quota remaining:
+[value]
+
+Latest DK evidence:
+[timestamp]
+
+Latest FD evidence:
+[timestamp]
+
+DET @ BUF canonical cutoff:
+READY / NOT READY
+
+Postgame grading:
+READY / NOT READY
+
+Task #168:
+DEFERRED — PRODUCTION TRIGGER RUNBOOK MUST BE UPDATED
+
+FINAL VERDICT:
+
+RESTORED — READY TO TRACK TONIGHT
+
+or
+
+NOT RESTORED
+
+Confirm:
+
+- Phase 6.1 unchanged
+- no challenger promoted
+- no startup guard bypassed
+- no historical evidence rewritten
+- no sportsbook history rewritten
+- outage observations were not fabricated
