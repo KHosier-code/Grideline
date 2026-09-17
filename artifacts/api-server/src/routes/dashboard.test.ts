@@ -55,7 +55,7 @@ assert.ok(protectedDataHealthHandler, "the data-health route should have a respo
 
 const now = new Date();
 
-const dataHealthHandler = createDataHealthHandler({
+const dataHealthOverrides = {
   getEspnHealth: () => ({
     lastSuccessfulRequest: null,
     requestsToday: 0,
@@ -69,7 +69,7 @@ const dataHealthHandler = createDataHealthHandler({
     runs: [],
   }),
   getNflverseHealth: async () => ({
-    status: "stale",
+    status: "stale" as const,
     detail: "Historical sync has not completed.",
     lastUpdated: null,
     requestsToday: 0,
@@ -116,7 +116,7 @@ const dataHealthHandler = createDataHealthHandler({
     cadenceHours: 24,
   }),
   getSleeperIdentityHealth: async () => ({
-    status: "unavailable",
+    status: "unavailable" as const,
     mappingVersion: null,
     latestAttemptMappingVersion: null,
     mappingRunId: null,
@@ -131,7 +131,7 @@ const dataHealthHandler = createDataHealthHandler({
   }),
   getRecentScheduledRuns: async () => [],
   getOddsApiHealth: async () => ({
-    status: "not_configured",
+    status: "not_configured" as const,
     detail: "Test fixture",
     lastUpdated: null,
     requestsToday: 0,
@@ -162,7 +162,7 @@ const dataHealthHandler = createDataHealthHandler({
     latestGeneratedAt: null,
   }),
   getModelArtifactImmutabilityStatus: async () => ({
-    status: "application_only",
+    status: "application_only" as const,
     mechanism: "application_append_only",
     applicationUpdateDeleteBlocked: true,
     productionFittingBlocked: true,
@@ -178,7 +178,8 @@ const dataHealthHandler = createDataHealthHandler({
     userAgentConfigured: false,
     lastRun: null,
   }),
-}) as unknown as DataHealthHandler;
+};
+const dataHealthHandler = createDataHealthHandler(dataHealthOverrides) as unknown as DataHealthHandler;
 
 type RetentionRow = typeof usageAnalyticsRetentionTable.$inferSelect;
 
@@ -198,9 +199,9 @@ async function replaceRetentionRow(row: RetentionRow | null): Promise<void> {
   }
 }
 
-async function readDataHealth(): Promise<unknown[]> {
+async function readDataHealth(handler = dataHealthHandler): Promise<unknown[]> {
   let responseBody: unknown;
-  await dataHealthHandler({}, {
+  await handler({}, {
     json(body) {
       responseBody = body;
       return body;
@@ -222,8 +223,77 @@ function usageRetentionProvider(body: unknown[]) {
   return provider;
 }
 
+function providerByName(body: unknown[], name: string) {
+  const provider = body.find(
+    (item): item is Record<string, any> =>
+      typeof item === "object"
+      && item !== null
+      && (item as Record<string, unknown>).provider === name,
+  );
+  assert.ok(provider, `the data-health response should include ${name}`);
+  return provider;
+}
+
 const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+
+test("protected data-health isolates a failed provider and keeps mixed provider states visible", async () => {
+  const handler = createDataHealthHandler({
+    ...dataHealthOverrides,
+    getScheduleHealth: async () => {
+      throw new Error("schedule database unavailable");
+    },
+    getNflverseHealth: async () => ({
+      status: "current",
+      detail: "Historical data is ready.",
+      lastUpdated: now.toISOString(),
+      requestsToday: 0,
+      requestsThisMonth: 0,
+      remainingQuota: "Test fixture",
+      metadata: {
+        seasonsLoaded: 2,
+        gamesLoaded: 10,
+        teamGameRows: 20,
+        playerGameRows: 30,
+        snapCountRows: 40,
+        historicalDepthRows: 50,
+        failures: [],
+      },
+    }),
+    getUsageAnalyticsRetentionHealth: async () => ({
+      retentionDays: 30,
+      cleanupIntervalHours: 24,
+      nextCleanupAt: new Date(now.getTime() + 60 * 60 * 1000),
+      cleanupState: "on_time",
+      status: "healthy",
+      lastAttemptAt: now,
+      lastAttemptStatus: "success",
+      consecutiveFailures: 0,
+      firstFailureAt: null,
+      lastSuccessfulAt: now,
+      lastSuccessfulDeletedEvents: 0,
+      lastSuccessfulBatches: 0,
+      lastSuccessfulCutoff: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      latestError: null,
+      latestErrorAt: null,
+      alert: null,
+      workerOwned: true,
+    }),
+  }) as unknown as DataHealthHandler;
+
+  const body = await readDataHealth(handler);
+  const espn = providerByName(body, "espn");
+  const nflverse = providerByName(body, "nflverse");
+  const odds = providerByName(body, "odds-api");
+  const retention = usageRetentionProvider(body);
+
+  assert.equal(espn.status, "unavailable", "a throwing schedule health check should become unavailable");
+  assert.equal(espn.metadata.healthCheck, "failed");
+  assert.equal(nflverse.status, "current", "healthy providers should retain their normal status");
+  assert.equal(odds.status, "not_configured", "a successful unavailable provider should remain distinguishable");
+  assert.equal(retention.status, "current", "Usage Lab retention should remain visible and healthy");
+  assert.equal(retention.metadata.workerOwned, true);
+});
 
 test("protected data-health reports persisted Usage Lab cleanup states without mutating retention state", async () => {
   const originalRow = await readRetentionRow();

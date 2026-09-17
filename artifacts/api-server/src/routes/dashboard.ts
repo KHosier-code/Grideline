@@ -13,7 +13,7 @@ import { getSleeperIdentityHealth, getSleeperIdentityReport } from "../lib/sleep
 import { getOddsApiHealth } from "../lib/odds";
 import { getScheduleHealth } from "../lib/schedule";
 import { getSchedulerHealth } from "../lib/scheduler";
-import { getPregameFeatureHealth } from "../lib/features";
+import { getPregameFeatureHealth, PREGAME_FEATURE_DEFINITION } from "../lib/features";
 import { getRecentScheduledRuns } from "../lib/sync-runs";
 import { nextFeedUpdate } from "../lib/feed-schedule";
 import { getFeedGameDays } from "../lib/feed-game-days";
@@ -59,6 +59,32 @@ const defaultDataHealthDependencies: DataHealthDependencies = {
   weatherHealth,
 };
 
+async function captureHealthCheck<T>(
+  failedProviders: Set<string>,
+  provider: string,
+  check: () => T | Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await check();
+  } catch {
+    failedProviders.add(provider);
+    return fallback;
+  }
+}
+
+function unavailableHealthProvider(provider: string, label: string) {
+  return {
+    provider,
+    label,
+    status: "unavailable" as const,
+    detail: "The provider health check failed; no reliable status is available.",
+    metadata: {
+      healthCheck: "failed",
+    },
+  };
+}
+
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", requireAdmin, async (req, res): Promise<void> => {
@@ -92,23 +118,215 @@ export function createDataHealthHandler(
 ) {
   const dependencies = { ...defaultDataHealthDependencies, ...overrides };
   return async (_req: Request, res: Response): Promise<void> => {
-  const espn = dependencies.getEspnHealth();
-  const schedule = await dependencies.getScheduleHealth();
-  const nflverse = await dependencies.getNflverseHealth();
-  const availability = await dependencies.getAvailabilityHealth();
-  const sleeper = await dependencies.getSleeperHealth();
-  const sleeperIdentity = await dependencies.getSleeperIdentityHealth();
+  const failedProviders = new Set<string>();
+  const espn = await captureHealthCheck(
+    failedProviders,
+    "espn",
+    () => dependencies.getEspnHealth(),
+    {
+      lastSuccessfulRequest: null,
+      requestsToday: 0,
+      requestsThisMonth: 0,
+    },
+  );
+  const schedule = await captureHealthCheck(
+    failedProviders,
+    "espn",
+    () => dependencies.getScheduleHealth(),
+    {
+      records: 0,
+      unfinished: 0,
+      lastUpdated: null,
+      latestRun: null,
+      runs: [],
+    },
+  );
+  const nflverse = await captureHealthCheck(
+    failedProviders,
+    "nflverse",
+    () => dependencies.getNflverseHealth(),
+    {
+      status: "stale" as const,
+      detail: "Historical sync health is unavailable.",
+      lastUpdated: null,
+      requestsToday: 0,
+      requestsThisMonth: 0,
+      remainingQuota: "Public dataset",
+      metadata: {
+        seasonsLoaded: 0,
+        gamesLoaded: 0,
+        teamGameRows: 0,
+        playerGameRows: 0,
+        snapCountRows: 0,
+        historicalDepthRows: 0,
+        failures: [],
+      },
+    },
+  );
+  const availability = await captureHealthCheck(
+    failedProviders,
+    "espn-injuries",
+    () => dependencies.getAvailabilityHealth(),
+    {
+      injury: {
+        records: 0,
+        lastUpdated: null,
+        failure: null,
+        failureAt: null,
+      },
+      depth: {
+        records: 0,
+        teams: 0,
+        lastUpdated: null,
+        failures: [],
+      },
+      runs: [],
+    },
+  );
+  if (failedProviders.has("espn-injuries")) failedProviders.add("espn-depth-charts");
+  const sleeper = await captureHealthCheck(
+    failedProviders,
+    "sleeper-players",
+    () => dependencies.getSleeperHealth(),
+    {
+      status: "unavailable" as const,
+      lastUpdated: null,
+      staleAgeMs: null,
+      snapshotCount: 0,
+      lastCapturedAt: null,
+      playerCount: 0,
+      teamCount: 0,
+      depthOrderCount: 0,
+      lastAttempted: new Date(0).toISOString(),
+      latestFailure: null,
+      recentFailureCount: 0,
+      latestMetadata: {},
+      cadenceHours: 24,
+    },
+  );
+  const sleeperIdentity = await captureHealthCheck(
+    failedProviders,
+    "sleeper-identity-mapping",
+    () => dependencies.getSleeperIdentityHealth(),
+    {
+      status: "unavailable" as const,
+      mappingVersion: null,
+      latestAttemptMappingVersion: null,
+      mappingRunId: null,
+      sourceSnapshotId: null,
+      lastUpdated: null,
+      lastAttempted: null,
+      staleAgeMs: null,
+      latestFailure: null,
+      recentFailureCount: 0,
+      durationMs: null,
+      metadata: {},
+    },
+  );
 
-  const [scheduledInjuryRuns, scheduledNflverseRuns, scheduledWeatherRuns] = await Promise.all([
-    dependencies.getRecentScheduledRuns("scheduled:injuries"),
-    dependencies.getRecentScheduledRuns("scheduled:nflverse"),
-    dependencies.getRecentScheduledRuns("scheduled:weather"),
-  ]);
-  const odds = await dependencies.getOddsApiHealth();
-  const scheduler = await dependencies.getSchedulerHealth();
-  const features = await dependencies.getPregameFeatureHealth();
-  const modelImmutability = await dependencies.getModelArtifactImmutabilityStatus();
-  const usageAnalyticsRetention = await dependencies.getUsageAnalyticsRetentionHealth();
+  const scheduledInjuryRuns = await captureHealthCheck(
+    failedProviders,
+    "espn-injuries",
+    () => dependencies.getRecentScheduledRuns("scheduled:injuries"),
+    [],
+  );
+  const scheduledNflverseRuns = await captureHealthCheck(
+    failedProviders,
+    "nflverse",
+    () => dependencies.getRecentScheduledRuns("scheduled:nflverse"),
+    [],
+  );
+  const scheduledWeatherRuns = await captureHealthCheck(
+    failedProviders,
+    "nws-weather",
+    () => dependencies.getRecentScheduledRuns("scheduled:weather"),
+    [],
+  );
+  const odds = await captureHealthCheck(
+    failedProviders,
+    "odds-api",
+    () => dependencies.getOddsApiHealth(),
+    {
+      status: "unavailable" as const,
+      detail: "The Odds API health is unavailable.",
+      lastUpdated: null,
+      requestsToday: 0,
+      requestsThisMonth: 0,
+      remainingQuota: null,
+      metadata: {},
+    },
+  );
+  const scheduler = await captureHealthCheck(
+    failedProviders,
+    "scheduler",
+    () => dependencies.getSchedulerHealth(),
+    {
+      status: "critical" as const,
+      checkedAt: new Date(0).toISOString(),
+      alerts: [],
+      activeInThisProcess: false,
+      processRole: "api" as const,
+      persistentWorkerExpected: true,
+      processStartedAt: null,
+      timezone: "UTC",
+      alwaysOnServiceRequired: true,
+      note: "Recurring synchronization health is unavailable.",
+      jobs: [],
+      runs: [],
+    },
+  );
+  const features = await captureHealthCheck(
+    failedProviders,
+    "pregame-features",
+    () => dependencies.getPregameFeatureHealth(),
+    {
+      featureVersion: "unknown",
+      definition: PREGAME_FEATURE_DEFINITION,
+      rows: 0,
+      games: 0,
+      lowSampleRows: 0,
+      latestGeneratedAt: null,
+    },
+  );
+  const modelImmutability = await captureHealthCheck(
+    failedProviders,
+    "model-artifact-immutability",
+    () => dependencies.getModelArtifactImmutabilityStatus(),
+    {
+      status: "application_only" as const,
+      mechanism: "application_append_only",
+      applicationUpdateDeleteBlocked: true,
+      productionFittingBlocked: true,
+      databaseTriggerActive: false,
+      databaseTriggerSupport: "unavailable_through_current_publish_path",
+      verification: "Health check unavailable.",
+      note: "Model artifact immutability health is unavailable.",
+    },
+  );
+  const usageAnalyticsRetention = await captureHealthCheck(
+    failedProviders,
+    "usage-analytics-retention",
+    () => dependencies.getUsageAnalyticsRetentionHealth(),
+    {
+      retentionDays: 30,
+      cleanupIntervalHours: 24,
+      nextCleanupAt: null,
+      cleanupState: "pending" as const,
+      status: "failed" as const,
+      lastAttemptAt: null,
+      lastAttemptStatus: null,
+      consecutiveFailures: 0,
+      firstFailureAt: null,
+      lastSuccessfulAt: null,
+      lastSuccessfulDeletedEvents: null,
+      lastSuccessfulBatches: null,
+      lastSuccessfulCutoff: null,
+      latestError: null,
+      latestErrorAt: null,
+      alert: null,
+      workerOwned: true as const,
+    },
+  );
   const schedulerJob = (provider: string) =>
     scheduler.jobs
       .filter((job) => job.provider === provider && job.enabled)
@@ -116,11 +334,38 @@ export function createDataHealthHandler(
   const scheduleJob = schedulerJob("espn-schedule");
   const oddsJob = schedulerJob("odds-api");
   const now = new Date();
-  const gameDays = await dependencies.getFeedGameDays(now);
-  const injuryNextUpdate = dependencies.nextFeedUpdate("injuries", now, scheduledInjuryRuns, gameDays)?.toISOString() ?? null;
-  const nflverseNextUpdate = dependencies.nextFeedUpdate("nflverse", now, scheduledNflverseRuns)?.toISOString() ?? null;
-  const weatherNextUpdate = dependencies.nextFeedUpdate("weather", now, scheduledWeatherRuns)?.toISOString() ?? null;
-  const weather = await dependencies.weatherHealth();
+  const gameDays = await captureHealthCheck(
+    failedProviders,
+    "espn-injuries",
+    () => dependencies.getFeedGameDays(now),
+    new Set<string>(),
+  );
+  const nextUpdate = (
+    provider: string,
+    feed: Parameters<typeof dependencies.nextFeedUpdate>[0],
+    runs: Parameters<typeof dependencies.nextFeedUpdate>[2],
+  ) => {
+    try {
+      return dependencies.nextFeedUpdate(feed, now, runs, gameDays)?.toISOString() ?? null;
+    } catch {
+      failedProviders.add(provider);
+      return null;
+    }
+  };
+  const injuryNextUpdate = nextUpdate("espn-injuries", "injuries", scheduledInjuryRuns);
+  const nflverseNextUpdate = nextUpdate("nflverse", "nflverse", scheduledNflverseRuns);
+  const weatherNextUpdate = nextUpdate("nws-weather", "weather", scheduledWeatherRuns);
+  const weather = await captureHealthCheck(
+    failedProviders,
+    "nws-weather",
+    () => dependencies.weatherHealth(),
+    {
+      source: "Weather provider health is unavailable.",
+      cost: "Unknown",
+      userAgentConfigured: false,
+      lastRun: null,
+    },
+  );
   const month = now.getUTCMonth() + 1;
   const latestFailedScheduledInjuryRun = scheduledInjuryRuns.find((run) => run.status === "failed");
   const nativeFailureAt = availability.injury.failureAt ? new Date(availability.injury.failureAt) : null;
@@ -156,8 +401,7 @@ export function createDataHealthHandler(
         : lastSuccessfulInjuryAt
           ? "The latest injury synchronization completed successfully with no reported injuries."
           : "The first injury synchronization is pending.";
-  res.json(
-    GetDataHealthResponse.parse([
+  const providers = [
       {
         provider: "model-artifact-immutability",
         label: "Model artifact immutability",
@@ -419,7 +663,15 @@ export function createDataHealthHandler(
           rawPayloadsExposed: false,
         },
       },
-    ]),
+    ];
+  res.json(
+    GetDataHealthResponse.parse(
+      providers.map((provider) =>
+        failedProviders.has(provider.provider)
+          ? unavailableHealthProvider(provider.provider, provider.label)
+          : provider,
+      ),
+    ),
   );
   };
 }
