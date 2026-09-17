@@ -179,7 +179,7 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
         schedule: "Every 24 hours; worker-owned",
         retryPolicy: "A failed cleanup is recorded and retried on the next daily tick.",
         lastUpdated: usageAnalyticsRetention.lastAttemptAt,
-        nextUpdate: null,
+        nextUpdate: usageAnalyticsRetention.nextCleanupAt,
         requestsToday: 0,
         requestsThisMonth: 0,
         remainingQuota: "Local database",

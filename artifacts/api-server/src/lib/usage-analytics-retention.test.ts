@@ -13,6 +13,7 @@ import {
   deleteExpiredUsageAnalyticsEvents,
   startUsageAnalyticsRetention,
   usageAnalyticsRetentionCutoff,
+  usageAnalyticsRetentionNextCleanupAt,
 } from "./usage-analytics-retention";
 
 test("keeps the Usage Lab report window inside the documented retention period", () => {
@@ -29,6 +30,22 @@ test("retention cutoff preserves the exact timestamp boundary", () => {
   const cutoff = usageAnalyticsRetentionCutoff(now);
   assert.equal(cutoff.getUTCMilliseconds(), 123);
   assert.equal(cutoff.getTime(), now.getTime() - 30 * 24 * 60 * 60 * 1000);
+});
+
+test("next cleanup is pending before the worker records its first attempt", () => {
+  assert.equal(usageAnalyticsRetentionNextCleanupAt(null), null);
+});
+
+test("next cleanup is derived from the last worker attempt and daily cadence", () => {
+  const lastAttemptAt = new Date("2026-09-17T12:00:00.123Z");
+  assert.equal(
+    usageAnalyticsRetentionNextCleanupAt(lastAttemptAt)?.toISOString(),
+    "2026-09-18T12:00:00.123Z",
+  );
+  assert.equal(
+    usageAnalyticsRetentionNextCleanupAt(lastAttemptAt, 60 * 60 * 1000)?.toISOString(),
+    "2026-09-17T13:00:00.123Z",
+  );
 });
 
 test("database cleanup removes only expired events and preserves the seven-day report window", async () => {

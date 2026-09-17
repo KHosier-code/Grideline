@@ -22,6 +22,7 @@ export type UsageAnalyticsRetentionResult = {
 export type UsageAnalyticsRetentionHealth = {
   retentionDays: number;
   cleanupIntervalHours: number;
+  nextCleanupAt: Date | null;
   status: UsageAnalyticsRetentionStatus;
   lastAttemptAt: Date | null;
   lastAttemptStatus: "success" | "failed" | null;
@@ -38,6 +39,13 @@ type UsageAnalyticsRetentionCleanup = () => Promise<UsageAnalyticsRetentionResul
 
 export function usageAnalyticsRetentionCutoff(now = new Date()): Date {
   return new Date(now.getTime() - USAGE_ANALYTICS_RETENTION_DAYS * DAY_MS);
+}
+
+export function usageAnalyticsRetentionNextCleanupAt(
+  lastAttemptAt: Date | null,
+  intervalMs = CLEANUP_INTERVAL_MS,
+): Date | null {
+  return lastAttemptAt ? new Date(lastAttemptAt.getTime() + intervalMs) : null;
 }
 
 function errorMessage(error: unknown) {
@@ -192,6 +200,7 @@ export async function getUsageAnalyticsRetentionHealth(): Promise<UsageAnalytics
   return {
     retentionDays: USAGE_ANALYTICS_RETENTION_DAYS,
     cleanupIntervalHours: CLEANUP_INTERVAL_MS / (60 * 60 * 1000),
+    nextCleanupAt: usageAnalyticsRetentionNextCleanupAt(record?.lastAttemptAt ?? null),
     status: lastAttemptStatus === "success"
       ? "healthy"
       : lastAttemptStatus === "failed"
