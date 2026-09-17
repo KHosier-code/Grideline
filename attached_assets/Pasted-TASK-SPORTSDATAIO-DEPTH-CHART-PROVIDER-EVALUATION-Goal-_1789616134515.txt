@@ -1,0 +1,262 @@
+TASK — SPORTSDATAIO DEPTH-CHART PROVIDER EVALUATION
+
+Goal:
+Evaluate SportsDataIO as a higher-quality current NFL depth-chart source for Gridline, especially for the positions where Sleeper/nflverse coverage is currently insufficient.
+
+This is an evaluation/integration task only.
+
+Do NOT:
+- retrain, refit, or promote any model
+- alter Phase 6.1 features or predictions
+- replace current production depth logic yet
+- rewrite historical depth evidence
+- expose paid-provider raw payloads to consumers
+- fabricate depth positions if the provider does not supply them
+
+CURRENT GRIDLINE GAPS
+
+Current authoritative depth readiness is blocked by:
+
+- CB1 coverage: 81.25%
+- CB2 coverage: 87.50%
+- EDGE starters: 89.06%
+- starting safeties: 48.44%
+- exact OL starter slots: insufficient
+- WR/QB/RB/TE coverage is already strong
+
+Primary question:
+
+“Would SportsDataIO materially improve current depth-chart quality enough to become the preferred published depth source for Gridline?”
+
+TASK 1 — ACCESS / ENDPOINT DISCOVERY
+
+Identify the SportsDataIO NFL depth-chart endpoint(s) available for the account/API key.
+
+Do not expose the API key.
+
+Report:
+- endpoint used
+- authentication method
+- rate-limit information
+- whether the account tier permits production use
+- whether commercial use would require a different license
+
+If the endpoint is not accessible under the current plan, stop before making unrelated changes and report the access limitation.
+
+TASK 2 — READ-ONLY INGESTION
+
+Fetch current NFL depth-chart data without changing production interpretation.
+
+Capture where available:
+
+- team
+- player
+- player ID
+- position
+- depth order
+- offensive/defensive/special-teams unit
+- injury/status fields if supplied
+- source timestamp/version if supplied
+
+Preserve the provider’s original position labels.
+
+TASK 3 — PROVIDER IDENTITY MAPPING
+
+Map SportsDataIO players to Gridline using strongest evidence first.
+
+Priority:
+
+1. direct provider ID crosswalk if available
+2. verified GSIS / ESPN / PFR crosswalk
+3. exact normalized name + team + compatible position
+4. otherwise ambiguous/unmatched
+
+Do not force ambiguous mappings.
+
+Track:
+- mapped
+- ambiguous
+- unmatched
+- collision count
+- mapping method
+- confidence
+
+TASK 4 — DEPTH COVERAGE AUDIT
+
+Measure coverage for all 32 teams.
+
+Report exact mapped/eligible counts for:
+
+OFFENSE
+- QB1/QB2
+- RB1/RB2
+- WR1/WR2/WR3
+- TE1
+- LT
+- LG
+- C
+- RG
+- RT
+
+DEFENSE
+- EDGE/DE starters
+- DT starters
+- LB starters
+- CB1
+- CB2
+- CB3/slot
+- FS
+- SS
+
+SPECIAL TEAMS
+- K
+- P where available
+
+TASK 5 — DIRECT COMPARISON AGAINST CURRENT GRIDLINE DEPTH
+
+For each role compare:
+
+- SportsDataIO published depth
+- Sleeper published depth
+- nflverse recent participation
+- ESPN injury status
+- current Gridline interpretation
+
+Focus especially on:
+
+- exact OL slots
+- CB1/CB2
+- safety starters
+- EDGE starters
+
+For every disagreement record:
+
+- provider values
+- selected current Gridline value
+- whether SportsDataIO appears to resolve the gap
+- whether evidence conflicts remain
+
+TASK 6 — 32-TEAM ROLE COMPLETENESS
+
+For all 32 teams report whether SportsDataIO provides:
+
+- complete offensive skill depth
+- complete offensive line starter slots
+- complete defensive secondary starters
+- EDGE starters
+- LB starters
+
+Return team-by-team missing-role counts.
+
+TASK 7 — IMPROVEMENT MEASUREMENT
+
+Compare current Gridline coverage versus SportsDataIO-backed candidate coverage.
+
+Report before/after for:
+
+- current-depth coverage
+- order-1/starter coverage
+- CB1
+- CB2
+- safety starters
+- EDGE starters
+- LT/LG/C/RG/RT
+
+Do not call something “improved” unless the mapped identity and role are actually verified.
+
+TASK 8 — SOURCE FRESHNESS
+
+Determine:
+
+- last-updated timestamp if available
+- how frequently depth charts change
+- whether injury-driven depth updates appear timely
+- whether Thursday/Sunday game-week refreshes would be appropriate
+
+Do not implement aggressive polling yet.
+
+TASK 9 — CONSUMER SUITABILITY
+
+Evaluate whether SportsDataIO is reliable enough to support visible consumer depth charts.
+
+Consumer-facing requirements:
+
+- role must be explicit
+- identity must be verified
+- current team must be verified
+- injury/out status must not conflict silently
+- no ambiguous starter should be shown as certain
+
+TASK 10 — SOURCE HIERARCHY RECOMMENDATION
+
+Evaluate this candidate hierarchy:
+
+1. SportsDataIO explicit published depth
+2. Sleeper published depth signal
+3. ESPN injury status
+4. nflverse recent snaps/participation
+5. conservative Gridline inference fallback
+
+Do not activate this hierarchy automatically.
+
+TASK 11 — WR-CB READINESS
+
+Recompute the WR-CB foundation using SportsDataIO candidate data.
+
+Report:
+
+- WR1/WR2/WR3 coverage
+- CB1 coverage
+- CB2 coverage
+- CB3/slot coverage
+- unresolved CB starter count
+- ambiguous CB starter count
+
+Do not create direct coverage assignments yet.
+
+TASK 12 — TESTS
+
+Add focused tests for:
+
+- SportsDataIO position normalization
+- exact OL slot preservation
+- CB1/CB2 role preservation
+- FS/SS preservation
+- EDGE/DE handling
+- provider-ID precedence
+- ambiguity fail-closed behavior
+- no overwrite of existing depth history
+- no Phase 6.1 changes
+- no consumer exposure before approval
+
+FINAL REPORT
+
+Return:
+
+1. Endpoint/access result
+2. Licensing/plan limitations
+3. Total players/depth rows received
+4. Player mapping coverage
+5. 32-team depth coverage
+6. OL starter-slot coverage
+7. CB1 coverage
+8. CB2 coverage
+9. safety coverage
+10. EDGE coverage
+11. conflicts versus Sleeper
+12. conflicts versus nflverse participation
+13. current Gridline coverage vs SportsDataIO candidate coverage
+14. WR-CB readiness with SportsDataIO
+15. source freshness assessment
+16. whether SportsDataIO materially improves the current depth layer
+17. whether production integration is recommended
+18. whether a publish is required
+19. confirmation Phase 6.1 was untouched
+
+Final verdict must be exactly one of:
+
+SPORTSDATAIO RECOMMENDED AS PRIMARY DEPTH SOURCE
+
+or
+
+SPORTSDATAIO NOT RECOMMENDED AS PRIMARY DEPTH SOURCE
