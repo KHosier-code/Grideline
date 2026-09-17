@@ -1101,6 +1101,8 @@ export const getConsumerGameResponseTwoContextDriversMax = 4;
 
 export const getConsumerGameResponseTwoContextProjectedMatchupsMax = 12;
 
+export const getConsumerGameResponseTwoKeyPlayersMax = 20;
+
 
 
 export const GetConsumerGameResponse = zod.object({
@@ -1295,6 +1297,32 @@ export const GetConsumerGameResponse = zod.object({
   "matchupMessage": zod.string().nullable(),
   "message": zod.string().nullable()
 }),
+  "keyPlayers": zod.array(zod.object({
+  "playerId": zod.string(),
+  "name": zod.string(),
+  "teamId": zod.string(),
+  "position": zod.string().nullable(),
+  "recentUsage": zod.object({
+  "snapShare": zod.number().nullable(),
+  "targets": zod.number().nullable(),
+  "targetShare": zod.number().nullable(),
+  "receptions": zod.number().nullable(),
+  "receivingYards": zod.number().nullable(),
+  "carries": zod.number().nullable(),
+  "rushingYards": zod.number().nullable(),
+  "totalTd": zod.number().nullable(),
+  "yardsPerTarget": zod.number().nullable(),
+  "yardsPerCarry": zod.number().nullable(),
+  "redZoneTouches": zod.number().nullable(),
+  "redZoneTargets": zod.number().nullable(),
+  "explosiveRate": zod.number().nullable()
+}),
+  "currentPersonnel": zod.object({
+  "depthRank": zod.number().int().nullable(),
+  "injuryStatus": zod.string().nullable(),
+  "source": zod.string()
+})
+})).max(getConsumerGameResponseTwoKeyPlayersMax),
   "analysis": zod.object({
   "drivers": zod.array(zod.string()),
   "availability": zod.object({
@@ -1430,3 +1458,63 @@ export const GetConsumerPropsAvailabilityResponse = zod.object({
   "message": zod.string(),
   "available": zod.literal(false)
 })
+
+
+/**
+ * @summary Read cutoff-safe player usage history
+ */
+export const getConsumerPlayerUsageQueryWindowDefault = `last5`;
+
+export const GetConsumerPlayerUsageQueryParams = zod.object({
+  "team": zod.coerce.string().optional(),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE']).optional(),
+  "game": zod.coerce.string().optional(),
+  "window": zod.enum(['last3', 'last5', 'last8', 'season']).default(getConsumerPlayerUsageQueryWindowDefault)
+})
+
+export const GetConsumerPlayerUsageResponse = zod.object({
+  "status": zod.enum(['available', 'partial', 'unavailable']),
+  "players": zod.array(zod.object({
+  "playerId": zod.string(),
+  "playerName": zod.string(),
+  "position": zod.string().nullable(),
+  "teamId": zod.string().nullable(),
+  "aggregate": zod.record(zod.string(), zod.object({
+  "value": zod.number().nullable(),
+  "available": zod.boolean(),
+  "reason": zod.string().nullable()
+})),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "seasonType": zod.string(),
+  "metrics": zod.record(zod.string(), zod.object({
+  "value": zod.number().nullable(),
+  "available": zod.boolean(),
+  "reason": zod.string().nullable()
+}))
+})),
+  "trend": zod.enum(['up', 'down', 'flat', 'unavailable']),
+  "metricAvailability": zod.record(zod.string(), zod.boolean()),
+  "sourceCoverage": zod.object({
+  "requestedGames": zod.number().int(),
+  "includedGames": zod.number().int(),
+  "partialReasons": zod.array(zod.string())
+})
+})),
+  "filters": zod.object({
+  "team": zod.string().nullable(),
+  "position": zod.string().nullable(),
+  "game": zod.string().nullable(),
+  "window": zod.enum(['last3', 'last5', 'last8', 'season'])
+}),
+  "metricAvailability": zod.record(zod.string(), zod.boolean()),
+  "sourceCoverage": zod.object({
+  "requestedGames": zod.number().int(),
+  "includedGames": zod.number().int(),
+  "partialReasons": zod.array(zod.string())
+})
+})
+
+

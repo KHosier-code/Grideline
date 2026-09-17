@@ -3,27 +3,38 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import express from "express";
 import {
   GetConsumerDashboardResponse,
   GetConsumerGameResponse,
   GetConsumerPerformanceResponse,
   GetConsumerPropsAvailabilityResponse,
   GetConsumerTrendsResponse,
+  GetConsumerPlayerUsageResponse,
   ListConsumerGamesResponse,
 } from "@workspace/api-zod";
-import {
+import consumerRouter, {
   MAX_CONSUMER_GAMES,
   MAX_CONSUMER_MOVEMENT_ROWS,
   MAX_CONSUMER_PERFORMANCE_ROWS,
   MAX_CONSUMER_SNAPSHOT_ROWS,
+  aggregatePlayerUsage,
   americanOddsImpliedProbability,
+  buildUsageSnapPlayerAliases,
+  buildUsageTeamMappings,
   buildConsumerMarketBoard,
+  compareUsageGameChronology,
   consumerFinalScore,
   consumerMarket,
+  deterministicSourceGameId,
+  eligibleUsageGames,
+  filterUsagePlayers,
   serializeContext,
   serializeMovement,
   serializePerformance,
   summarizeConsumerMarketBoards,
+  usageCompositeIdentity,
+  usageMatchupIdentity,
 } from "./consumer";
 
 const boardRow = (
@@ -115,6 +126,160 @@ test("market board summary reports partial, stale, absent, and sportsbook covera
   });
   assert.equal(summarizeConsumerMarketBoards([{ marketBoard: stale }]).status, "stale");
   assert.equal(summarizeConsumerMarketBoards([]).status, "absent");
+});
+
+test("database-backed player usage route returns production and crosswalk-resolved snap evidence", async (t) => {
+  const app = express();
+  app.use(consumerRouter);
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  t.after(() => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+
+  const response = await fetch(`${baseUrl}/consumer/player-usage?position=WR&window=last3`);
+  assert.equal(response.status, 200);
+  const payload = GetConsumerPlayerUsageResponse.parse(await response.json());
+  assert.ok(payload.players.length > 0, "latest persisted player-game season should be exposed");
+  assert.ok(payload.players.some((player) => player.aggregate.snapShare.available),
+    "GSIS player-game IDs should crosswalk to PFR snap IDs");
+  assert.ok(payload.sourceCoverage.requestedGames > 0);
+  assert.ok(!payload.sourceCoverage.partialReasons.includes("No completed games are available for the requested cutoff"),
+    "source-backed standalone history must not be mislabeled as having no completed games");
+
+  const team = payload.players[0]!.teamId;
+  assert.ok(team);
+  const filteredResponse = await fetch(`${baseUrl}/consumer/player-usage?team=${encodeURIComponent(team)}&position=WR&window=last3`);
+  assert.equal(filteredResponse.status, 200);
+  const filtered = GetConsumerPlayerUsageResponse.parse(await filteredResponse.json());
+  assert.ok(filtered.players.length > 0);
+  assert.ok(filtered.players.every((player) => player.teamId === team && player.position === "WR"));
+});
+
+test("player usage aggregation preserves sparse history and null denominators", () => {
+  const result = aggregatePlayerUsage([
+    { playerId: "p1", playerName: "Receiver", position: "WR", teamId: "T", gameId: "g1", season: 2025, week: 1, seasonType: "REG", targets: 4, receptions: 2, receivingYards: 30, carries: 0, rushingYards: 0, rushingTds: null, receivingTds: 1 },
+    { playerId: "p1", playerName: "Receiver", position: "WR", teamId: "T", gameId: "g2", season: 2025, week: 2, seasonType: "REG", targets: 0, receptions: 0, receivingYards: 0, carries: 0, rushingYards: 0, rushingTds: null, receivingTds: null },
+  ], [{ playerId: "p1", gameId: "g1", offensePct: 0.8 }], 3, "last3");
+  assert.equal(result[0]?.sourceCoverage.includedGames, 2);
+  assert.equal(result[0]?.aggregate.yardsPerTarget.value, 7.5);
+  assert.equal(result[0]?.aggregate.yardsPerCarry.value, null);
+  assert.equal(result[0]?.aggregate.yardsPerCarry.reason, "Carries denominator unavailable");
+  assert.equal(result[0]?.aggregate.redZoneTouches.available, false);
+  assert.equal(result[0]?.trend, "down");
+});
+
+test("usage windows retain only requested recent games and consumer positions", () => {
+  const rows = Array.from({ length: 8 }, (_, index) => ({
+    playerId: "p1", playerName: "Back", position: "RB", teamId: "T", gameId: `g${index}`,
+    season: 2025, week: index + 1, seasonType: "REG", targets: 1, receptions: 1,
+    receivingYards: 2, carries: 2, rushingYards: 8, rushingTds: 0, receivingTds: 0,
+  }));
+  const snaps = rows.map((row) => ({ playerId: row.playerId, gameId: row.gameId, offensePct: 0.5 }));
+  for (const [name, count] of [["last3", 3], ["last5", 5], ["last8", 8]] as const) {
+    assert.equal(aggregatePlayerUsage(rows, snaps, 8, name)[0]?.games.length, count);
+  }
+  assert.equal(filterUsagePlayers([{ teamId: "T", position: "K" }, { teamId: "T", position: "WR" }], "T").length, 1);
+  assert.equal(filterUsagePlayers([{ teamId: "T", position: "RB" }], "OTHER").length, 0);
+});
+
+test("usage team mapping joins ESPN schedule IDs to nflverse abbreviations and aliases", () => {
+  const mappings = buildUsageTeamMappings([
+    { teamId: "12", abbreviation: "KC" },
+    { teamId: "13", abbreviation: "LAR" },
+  ]);
+  assert.equal(mappings.canonical("KC"), "KC");
+  assert.equal(mappings.canonical("LA"), "LAR");
+  assert.equal(mappings.scheduleToAbbreviation.get("12"), "KC");
+  assert.equal(mappings.canonical("13"), "LAR");
+  const scheduleKey = `2026:1:${mappings.canonical("12")}:${mappings.canonical("13")}`;
+  const nflverseRowKey = `2026:1:${mappings.canonical("KC")}:${mappings.canonical("LA")}`;
+  assert.equal(nflverseRowKey, scheduleKey);
+});
+
+test("source game and snap identities resolve independently of persisted raw game IDs", () => {
+  const stat = { season: 2024, seasonType: "REG", week: 3, teamId: "KC", opponentTeamId: "BUF", playerId: "00-0012345" };
+  const sourceGame = deterministicSourceGameId(stat);
+  assert.equal(sourceGame, "source:2024:REG:3:KC:BUF");
+  assert.equal(usageCompositeIdentity(stat), "2024:REG:3:KC:BUF:00-0012345");
+  const resolvedGames = new Map([[usageMatchupIdentity(stat), sourceGame]]);
+  assert.equal(resolvedGames.get(usageMatchupIdentity({
+    season: 2024, week: 3, teamId: "KC", opponentTeamId: "BUF",
+  })), sourceGame);
+  assert.ok(compareUsageGameChronology({ seasonType: "REG", week: 18 }, { seasonType: "POST", week: 1 }) < 0);
+  const aliases = buildUsageSnapPlayerAliases([{ gsisId: stat.playerId, pfrId: "PlayPa00" }]);
+  const usage = aggregatePlayerUsage([{
+    ...stat, gameId: sourceGame, playerName: "Player", position: "WR",
+    targets: 2, receptions: 1, receivingYards: 12, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0,
+  }], [{ playerId: aliases.get("PlayPa00")!, gameId: sourceGame, offensePct: 0.71 }], 1, "season",
+  new Map([["KC", 1]]), new Map([["KC", [sourceGame]]]));
+  assert.equal(usage[0]?.aggregate.snapShare.value, 0.71);
+});
+
+test("aggregation keeps traded player histories separate by team", () => {
+  const rows = [
+    { playerId: "p1", playerName: "Traded", position: "WR", teamId: "KC", gameId: "g1", season: 2024, week: 1, seasonType: "REG", targets: 5, receptions: 5, receivingYards: 50, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0 },
+    { playerId: "p1", playerName: "Traded", position: "WR", teamId: "BUF", gameId: "g2", season: 2024, week: 2, seasonType: "REG", targets: 2, receptions: 1, receivingYards: 10, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0 },
+  ];
+  const usage = aggregatePlayerUsage(rows, [], 1, "season", new Map([["KC", 1], ["BUF", 1]]), new Map([["KC", ["g1"]], ["BUF", ["g2"]]]));
+  assert.equal(usage.length, 2);
+  assert.deepEqual(usage.map((player) => player.teamId).sort(), ["BUF", "KC"]);
+});
+
+test("short rolling windows compare sparse history with the bounded request", () => {
+  const rows = Array.from({ length: 3 }, (_, index) => ({
+    playerId: "p1", playerName: "Receiver", position: "WR", teamId: "T", gameId: `g${index}`,
+    season: 2025, week: index + 1, seasonType: "REG", targets: 1, receptions: 1,
+    receivingYards: 5, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0,
+  }));
+  const result = aggregatePlayerUsage(rows, [], 10, "last3", new Map([["T", 10]]))[0];
+  assert.equal(result?.sourceCoverage.requestedGames, 3);
+  assert.deepEqual(result?.sourceCoverage.partialReasons, []);
+});
+
+test("team-game windows do not backfill a missing latest player appearance", () => {
+  const rows = ["g1", "g2", "g3"].map((gameId, index) => ({
+    playerId: "p1", playerName: "Receiver", position: "WR", teamId: "T", gameId,
+    season: 2026, week: index + 1, seasonType: "REG", targets: 1, receptions: 1,
+    receivingYards: 5, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0,
+  }));
+  const result = aggregatePlayerUsage(
+    rows, [], 4, "last3",
+    new Map([["T", 4]]),
+    new Map([["T", ["g1", "g2", "g3", "g4"]]]),
+  )[0];
+  assert.deepEqual(result?.games.map((game) => game.gameId), ["g2", "g3"]);
+  assert.equal(result?.sourceCoverage.requestedGames, 3);
+  assert.equal(result?.sourceCoverage.includedGames, 2);
+  assert.deepEqual(result?.sourceCoverage.partialReasons, ["Some requested games have no persisted player-game record"]);
+});
+
+test("usage game cutoffs exclude future games and order by kickoff rather than week", () => {
+  const cutoff = new Date("2026-09-20T17:00:00Z");
+  const games = [
+    { gameId: "week-1-postponed", season: 2026, week: 1, kickoffTime: new Date("2026-09-20T20:00:00Z") },
+    { gameId: "week-3", season: 2026, week: 3, kickoffTime: new Date("2026-09-13T17:00:00Z") },
+    { gameId: "week-2", season: 2026, week: 2, kickoffTime: new Date("2026-09-06T17:00:00Z") },
+    { gameId: "selected", season: 2026, week: 4, kickoffTime: cutoff },
+    { gameId: "old-season", season: 2025, week: 1, kickoffTime: new Date("2025-09-13T17:00:00Z") },
+    { gameId: "unknown", season: 2026, week: 1, kickoffTime: null },
+  ];
+  assert.deepEqual(
+    eligibleUsageGames(games, 2026, cutoff, "selected").map((game) => game.gameId),
+    ["week-2", "week-3"],
+  );
+});
+
+test("player usage payload validates generated contract with explicit unsupported metrics", () => {
+  const payload = {
+    status: "partial",
+    players: [],
+    filters: { team: null, position: "WR", game: null, window: "last5" },
+    metricAvailability: { redZoneTouches: false, redZoneTargets: false, explosiveRate: false },
+    sourceCoverage: { requestedGames: 5, includedGames: 0, partialReasons: ["No completed games"] },
+  };
+  assert.equal(GetConsumerPlayerUsageResponse.safeParse(payload).success, true);
 });
 
 test("consumer scores appear only for completed games", () => {
@@ -383,6 +548,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
     },
     movement: serializeMovement([]),
     context: serializeContext(null, "home", "away"),
+    keyPlayers: [],
     analysis: {
       drivers: [],
       availability: {

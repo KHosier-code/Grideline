@@ -30,11 +30,13 @@ import type {
   ConsumerGames,
   ConsumerInvalidRequestResponse,
   ConsumerPerformance,
+  ConsumerPlayerUsage,
   ConsumerPropsAvailability,
   ConsumerTrends,
   DashboardSummary,
   DataHealth,
   Game,
+  GetConsumerPlayerUsageParams,
   GetPregameFeatureHealthParams,
   HealthStatus,
   ListConsumerGamesParams,
@@ -2313,6 +2315,90 @@ export function useGetConsumerPropsAvailability<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerPropsAvailabilityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerPlayerUsageUrl = (params?: GetConsumerPlayerUsageParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/player-usage?${stringifiedParams}` : `/api/consumer/player-usage`
+}
+
+/**
+ * @summary Read cutoff-safe player usage history
+ */
+export const getConsumerPlayerUsage = async (params?: GetConsumerPlayerUsageParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPlayerUsage> => {
+
+  return customFetch<ConsumerPlayerUsage>(getGetConsumerPlayerUsageUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerPlayerUsageQueryKey = (params?: GetConsumerPlayerUsageParams,) => {
+    return [
+    `/api/consumer/player-usage`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerPlayerUsageQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPlayerUsage>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(params?: GetConsumerPlayerUsageParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerUsage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPlayerUsageQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPlayerUsage>>> = ({ signal }) => getConsumerPlayerUsage(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerUsage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerPlayerUsageQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerPlayerUsage>>>
+export type GetConsumerPlayerUsageQueryError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read cutoff-safe player usage history
+ */
+
+export function useGetConsumerPlayerUsage<TData = Awaited<ReturnType<typeof getConsumerPlayerUsage>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerPlayerUsageParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerUsage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerPlayerUsageQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

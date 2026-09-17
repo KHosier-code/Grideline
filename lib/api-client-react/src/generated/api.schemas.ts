@@ -426,10 +426,59 @@ export interface ConsumerContext {
   message: string | null;
 }
 
+export type ConsumerKeyPlayerRecentUsage = {
+  /** @nullable */
+  snapShare: number | null;
+  /** @nullable */
+  targets: number | null;
+  /** @nullable */
+  targetShare: number | null;
+  /** @nullable */
+  receptions: number | null;
+  /** @nullable */
+  receivingYards: number | null;
+  /** @nullable */
+  carries: number | null;
+  /** @nullable */
+  rushingYards: number | null;
+  /** @nullable */
+  totalTd: number | null;
+  /** @nullable */
+  yardsPerTarget: number | null;
+  /** @nullable */
+  yardsPerCarry: number | null;
+  /** @nullable */
+  redZoneTouches: number | null;
+  /** @nullable */
+  redZoneTargets: number | null;
+  /** @nullable */
+  explosiveRate: number | null;
+};
+
+export type ConsumerKeyPlayerCurrentPersonnel = {
+  /** @nullable */
+  depthRank: number | null;
+  /** @nullable */
+  injuryStatus: string | null;
+  source: string;
+};
+
+export interface ConsumerKeyPlayer {
+  playerId: string;
+  name: string;
+  teamId: string;
+  /** @nullable */
+  position: string | null;
+  recentUsage: ConsumerKeyPlayerRecentUsage;
+  currentPersonnel: ConsumerKeyPlayerCurrentPersonnel;
+}
+
 export type ConsumerGameDetail = ConsumerGame & {
   weather: ConsumerWeather;
   movement: ConsumerMovement;
   context: ConsumerContext;
+  /** @maxItems 20 */
+  keyPlayers: ConsumerKeyPlayer[];
   analysis: ConsumerGameDetailAnalysis;
 };
 
@@ -524,6 +573,103 @@ export interface ConsumerPropsAvailability {
   status: 'unavailable';
   message: string;
   available: false;
+}
+
+export interface ConsumerUsageMetric {
+  /** @nullable */
+  value: number | null;
+  available: boolean;
+  /** @nullable */
+  reason: string | null;
+}
+
+export type ConsumerUsageGameMetrics = {[key: string]: ConsumerUsageMetric};
+
+export interface ConsumerUsageGame {
+  gameId: string;
+  season: number;
+  week: number;
+  seasonType: string;
+  metrics: ConsumerUsageGameMetrics;
+}
+
+export type ConsumerUsagePlayerAggregate = {[key: string]: ConsumerUsageMetric};
+
+export type ConsumerUsagePlayerTrend = typeof ConsumerUsagePlayerTrend[keyof typeof ConsumerUsagePlayerTrend];
+
+
+export const ConsumerUsagePlayerTrend = {
+  up: 'up',
+  down: 'down',
+  flat: 'flat',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerUsagePlayerMetricAvailability = {[key: string]: boolean};
+
+export type ConsumerUsagePlayerSourceCoverage = {
+  requestedGames: number;
+  includedGames: number;
+  partialReasons: string[];
+};
+
+export interface ConsumerUsagePlayer {
+  playerId: string;
+  playerName: string;
+  /** @nullable */
+  position: string | null;
+  /** @nullable */
+  teamId: string | null;
+  aggregate: ConsumerUsagePlayerAggregate;
+  games: ConsumerUsageGame[];
+  trend: ConsumerUsagePlayerTrend;
+  metricAvailability: ConsumerUsagePlayerMetricAvailability;
+  sourceCoverage: ConsumerUsagePlayerSourceCoverage;
+}
+
+export type ConsumerPlayerUsageStatus = typeof ConsumerPlayerUsageStatus[keyof typeof ConsumerPlayerUsageStatus];
+
+
+export const ConsumerPlayerUsageStatus = {
+  available: 'available',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerPlayerUsageFiltersWindow = typeof ConsumerPlayerUsageFiltersWindow[keyof typeof ConsumerPlayerUsageFiltersWindow];
+
+
+export const ConsumerPlayerUsageFiltersWindow = {
+  last3: 'last3',
+  last5: 'last5',
+  last8: 'last8',
+  season: 'season',
+} as const;
+
+export type ConsumerPlayerUsageFilters = {
+  /** @nullable */
+  team: string | null;
+  /** @nullable */
+  position: string | null;
+  /** @nullable */
+  game: string | null;
+  window: ConsumerPlayerUsageFiltersWindow;
+};
+
+export type ConsumerPlayerUsageMetricAvailability = {[key: string]: boolean};
+
+export type ConsumerPlayerUsageSourceCoverage = {
+  requestedGames: number;
+  includedGames: number;
+  partialReasons: string[];
+};
+
+export interface ConsumerPlayerUsage {
+  status: ConsumerPlayerUsageStatus;
+  players: ConsumerUsagePlayer[];
+  filters: ConsumerPlayerUsageFilters;
+  metricAvailability: ConsumerPlayerUsageMetricAvailability;
+  sourceCoverage: ConsumerPlayerUsageSourceCoverage;
 }
 
 export interface HealthStatus {
@@ -1423,6 +1569,7 @@ season?: number;
  */
 week?: number;
 };
+
 export type ListOddsAuditsParams = {
 /**
  * @minimum 1
@@ -1488,4 +1635,31 @@ season?: number;
  */
 week?: number;
 };
-// End of generated schemas.
+
+export type GetConsumerPlayerUsageParams = {
+team?: string;
+position?: GetConsumerPlayerUsagePosition;
+game?: string;
+window?: GetConsumerPlayerUsageWindow;
+};
+
+export type GetConsumerPlayerUsagePosition = typeof GetConsumerPlayerUsagePosition[keyof typeof GetConsumerPlayerUsagePosition];
+
+
+export const GetConsumerPlayerUsagePosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+} as const;
+
+export type GetConsumerPlayerUsageWindow = typeof GetConsumerPlayerUsageWindow[keyof typeof GetConsumerPlayerUsageWindow];
+
+
+export const GetConsumerPlayerUsageWindow = {
+  last3: 'last3',
+  last5: 'last5',
+  last8: 'last8',
+  season: 'season',
+} as const;
+

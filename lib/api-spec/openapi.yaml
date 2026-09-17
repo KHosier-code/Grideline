@@ -537,6 +537,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConsumerPropsAvailability"
+  /consumer/player-usage:
+    get:
+      operationId: getConsumerPlayerUsage
+      tags: [nfl]
+      summary: Read cutoff-safe player usage history
+      parameters:
+        - name: team
+          in: query
+          schema: { type: string }
+        - name: position
+          in: query
+          schema: { type: string, enum: [QB, RB, WR, TE] }
+        - name: game
+          in: query
+          schema: { type: string }
+        - name: window
+          in: query
+          schema: { type: string, enum: [last3, last5, last8, season], default: last5 }
+      responses:
+        "200":
+          description: Player usage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerPlayerUsage" }
+        "400": { $ref: "#/components/responses/ConsumerInvalidRequest" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -697,11 +723,15 @@ components:
       allOf:
         - $ref: "#/components/schemas/ConsumerGame"
         - type: object
-          required: [weather, movement, context, analysis]
+          required: [weather, movement, context, keyPlayers, analysis]
           properties:
             weather: { $ref: "#/components/schemas/ConsumerWeather" }
             movement: { $ref: "#/components/schemas/ConsumerMovement" }
             context: { $ref: "#/components/schemas/ConsumerContext" }
+            keyPlayers:
+              type: array
+              maxItems: 20
+              items: { $ref: "#/components/schemas/ConsumerKeyPlayer" }
             analysis:
               type: object
               required: [drivers, availability]
@@ -827,6 +857,38 @@ components:
           items: { $ref: "#/components/schemas/ConsumerProjectedMatchup" }
         matchupMessage: { type: ["string", "null"] }
         message: { type: ["string", "null"] }
+    ConsumerKeyPlayer:
+      type: object
+      required: [playerId, name, teamId, position, recentUsage, currentPersonnel]
+      properties:
+        playerId: { type: string }
+        name: { type: string }
+        teamId: { type: string }
+        position: { type: ["string", "null"] }
+        recentUsage:
+          type: object
+          required: [snapShare, targets, targetShare, receptions, receivingYards, carries, rushingYards, totalTd, yardsPerTarget, yardsPerCarry, redZoneTouches, redZoneTargets, explosiveRate]
+          properties:
+            snapShare: { type: ["number", "null"] }
+            targets: { type: ["number", "null"] }
+            targetShare: { type: ["number", "null"] }
+            receptions: { type: ["number", "null"] }
+            receivingYards: { type: ["number", "null"] }
+            carries: { type: ["number", "null"] }
+            rushingYards: { type: ["number", "null"] }
+            totalTd: { type: ["number", "null"] }
+            yardsPerTarget: { type: ["number", "null"] }
+            yardsPerCarry: { type: ["number", "null"] }
+            redZoneTouches: { type: ["number", "null"] }
+            redZoneTargets: { type: ["number", "null"] }
+            explosiveRate: { type: ["number", "null"] }
+        currentPersonnel:
+          type: object
+          required: [depthRank, injuryStatus, source]
+          properties:
+            depthRank: { type: ["integer", "null"] }
+            injuryStatus: { type: ["string", "null"] }
+            source: { type: string }
     ConsumerPerformanceFamily:
       type: object
       required: [predictions, mae, rmse, accuracy, brier, logLoss, avgClv]
@@ -899,6 +961,67 @@ components:
         status: { type: string, const: unavailable }
         message: { type: string }
         available: { type: boolean, const: false }
+    ConsumerUsageMetric:
+      type: object
+      required: [value, available, reason]
+      properties:
+        value: { type: ["number", "null"] }
+        available: { type: boolean }
+        reason: { type: ["string", "null"] }
+    ConsumerUsageGame:
+      type: object
+      required: [gameId, season, week, seasonType, metrics]
+      properties:
+        gameId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        seasonType: { type: string }
+        metrics:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/ConsumerUsageMetric" }
+    ConsumerUsagePlayer:
+      type: object
+      required: [playerId, playerName, position, teamId, aggregate, games, trend, metricAvailability, sourceCoverage]
+      properties:
+        playerId: { type: string }
+        playerName: { type: string }
+        position: { type: ["string", "null"] }
+        teamId: { type: ["string", "null"] }
+        aggregate:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/ConsumerUsageMetric" }
+        games: { type: array, items: { $ref: "#/components/schemas/ConsumerUsageGame" } }
+        trend: { type: string, enum: [up, down, flat, unavailable] }
+        metricAvailability: { type: object, additionalProperties: { type: boolean } }
+        sourceCoverage:
+          type: object
+          required: [requestedGames, includedGames, partialReasons]
+          properties:
+            requestedGames: { type: integer }
+            includedGames: { type: integer }
+            partialReasons: { type: array, items: { type: string } }
+    ConsumerPlayerUsage:
+      type: object
+      required: [status, players, filters, metricAvailability, sourceCoverage]
+      properties:
+        status: { type: string, enum: [available, partial, unavailable] }
+        players: { type: array, items: { $ref: "#/components/schemas/ConsumerUsagePlayer" } }
+        filters:
+          type: object
+          required: [team, position, game, window]
+          properties:
+            team: { type: ["string", "null"] }
+            position: { type: ["string", "null"] }
+            game: { type: ["string", "null"] }
+            window: { type: string, enum: [last3, last5, last8, season] }
+        metricAvailability: { type: object, additionalProperties: { type: boolean } }
+        sourceCoverage:
+          type: object
+          required: [requestedGames, includedGames, partialReasons]
+          properties:
+            requestedGames: { type: integer }
+            includedGames: { type: integer }
+            partialReasons: { type: array, items: { type: string } }
     HealthStatus:
       type: object
       properties:

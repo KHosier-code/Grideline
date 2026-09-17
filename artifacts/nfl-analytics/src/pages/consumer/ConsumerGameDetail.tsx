@@ -4,6 +4,7 @@ import { useLocation, useParams, Link } from 'wouter';
 import { getConsumerPersonnelContent } from '../../lib/consumer-personnel';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } from './consumer-ui';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
+import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { LineMovementExperience } from '../../components/LineMovementExperience';
 
 export default function ConsumerGameDetail() {
@@ -51,6 +52,7 @@ export default function ConsumerGameDetail() {
       </div>
     </section>
     <LineMovementExperience movement={game.movement} />
+    <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} />
     <ConsumerDepthChart context={game.context} />
   </div>;
 }

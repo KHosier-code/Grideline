@@ -20,3 +20,5 @@
 - [Sleeper identity chronology](sleeper-identity-chronology.md) — map reconstructed point-in-time Sleeper state and fingerprint the complete Gridline evidence set used by each immutable run.
 - [Current depth-mapping readiness](depth-mapping-readiness.md) — gate current canonical-team depth rows and starter roles, not broad historical coverage.
 - [Immutable evaluation run identity](immutable-evaluation-run-identity.md) — fingerprint all evaluation inputs and bind model evidence uniquely to each append-only run.
+- [Player usage windows](player-usage-windows.md) — define rolling usage by cutoff-safe team games, not player appearances; missing recent rows stay partial.
+- [Player usage source identities](player-usage-identities.md) — usage season, game, team, and player identities must be reconciled across independent persisted NFLverse datasets.

@@ -74,6 +74,7 @@ import ConsumerGameDetail from '@/pages/consumer/ConsumerGameDetail';
 import ConsumerPerformance from '@/pages/consumer/ConsumerPerformance';
 import ConsumerTrends from '@/pages/consumer/ConsumerTrends';
 import ConsumerProps from '@/pages/consumer/ConsumerProps';
+import ConsumerUsage from '@/pages/consumer/ConsumerUsage';
 import { useAdminStatus } from '@/hooks/use-admin-status';
 import './index.css';
 
@@ -399,6 +400,7 @@ function Shell({ children }: { children: ReactNode }) {
 const consumerNav = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/games', label: 'Games', icon: CalendarDays },
+  { href: '/usage', label: 'Usage Lab', icon: Activity },
   { href: '/performance', label: 'Performance', icon: BarChart3 },
   { href: '/trends', label: 'Trends', icon: TrendingUp },
   { href: '/props', label: 'Props', icon: LockKeyhole },
@@ -1973,6 +1975,7 @@ function Router() {
       <Route path="/admin/*" component={AdminRoutes} />
       <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
       <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
+      <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
       <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
       <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><ConsumerProps /></ConsumerShell></Route>
