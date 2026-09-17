@@ -1,0 +1,115 @@
+TASK — RERUN AND PRESERVE 2025 PERSONNEL-AWARE COMPARISON
+
+Goal:
+Execute the existing Task #68 comparison runner and permanently retain the numerical results.
+
+Do not change model logic.
+Do not change feature definitions.
+Do not tune thresholds based on the output.
+Do not promote anything.
+Do not alter Phase 6.1 production models or predictions.
+
+Use the already-implemented Task #68 framework.
+
+REQUIREMENTS
+
+1. Run the Phase 6.1 baseline vs personnel-aware challenger comparison.
+
+2. Use exactly the same eligible 2025 games for baseline and challenger within each market family.
+
+3. Preserve chronology:
+- challenger training uses only 2021–2024
+- personnel context reconstructed at each historical pregame cutoff
+- no post-kickoff information
+- no 2026 information
+
+4. Generate and retain:
+
+reports/gridline-2025-personnel-comparison.json
+
+and:
+
+reports/gridline-2025-personnel-comparison.md
+
+5. For each family report:
+
+SPREAD
+- eligible games
+- baseline MAE/RMSE
+- challenger MAE/RMSE
+- paired MAE difference
+- ATS W-L-P for baseline
+- ATS W-L-P for challenger
+- results by edge bucket
+
+MONEYLINE
+- eligible games
+- baseline accuracy
+- challenger accuracy
+- baseline log loss
+- challenger log loss
+- baseline Brier
+- challenger Brier
+- calibration comparison
+
+TOTALS
+- eligible games
+- baseline MAE/RMSE
+- challenger MAE/RMSE
+- paired MAE difference
+- O/U W-L-P for baseline
+- O/U W-L-P for challenger
+- results by edge bucket
+
+6. Compare both models against the retained recorded-market benchmark.
+
+7. For every metric show:
+- absolute baseline value
+- challenger value
+- raw difference
+- percentage improvement where mathematically appropriate
+
+8. Run paired statistical comparison where reasonable.
+
+Do not overstate significance.
+
+9. Report personnel feature contribution/availability:
+- injury context
+- QB/starter context
+- depth context
+- OL context
+- secondary/CB context
+- roster/trade context
+
+Clearly identify which personnel features were historically available versus unavailable.
+
+10. Preserve the report in the repository so the numerical result cannot disappear after merge.
+
+FINAL REPORT
+
+Return:
+
+1. Spread baseline vs challenger
+2. Moneyline baseline vs challenger
+3. Totals baseline vs challenger
+4. Recorded-market comparison
+5. ATS/O-U comparison
+6. Edge-bucket comparison
+7. Calibration comparison
+8. Statistical significance notes
+9. Personnel data-availability limitations
+10. Whether challenger materially improves Phase 6.1
+11. Whether any family appears worse
+12. Confirmation no tuning/promotion occurred
+
+Final verdict for each family:
+
+CHALLENGER IMPROVES BASELINE
+
+or
+
+NO MATERIAL IMPROVEMENT
+
+or
+
+CHALLENGER WORSE
