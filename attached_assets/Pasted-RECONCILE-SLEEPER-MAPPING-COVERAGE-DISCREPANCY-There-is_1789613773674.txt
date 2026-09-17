@@ -1,0 +1,224 @@
+RECONCILE SLEEPER MAPPING COVERAGE DISCREPANCY
+
+There is a material inconsistency between two completed Gridline identity-mapping reports.
+
+Earlier Task #62 reported:
+
+- Depth-order coverage: 93.24%
+- Depth-order-1 coverage: 97.98%
+- Depth-relevant collisions: 0
+- Verdict:
+  SLEEPER MAPPING SUITABLE FOR DEPTH LOGIC
+
+The newer C0 report reports:
+
+- Depth-order coverage: 70.67%
+- Depth-order-1 coverage: 74.82%
+- Depth-relevant collisions: 0
+- Verdict:
+  SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC
+
+Do not change any model, prediction, starter, QB-confidence, consumer UI, or production data.
+
+Goal:
+Determine exactly why these two coverage reports differ and establish one authoritative depth-mapping readiness definition.
+
+TASK 1 — REPRODUCE BOTH METRICS
+
+Recompute the exact metrics used by Task #62 and by the newer C0 task.
+
+For each report identify:
+
+- source capture timestamp
+- Sleeper snapshot version
+- parser version
+- mapping algorithm version
+- denominator definition
+- numerator definition
+- current-roster filter
+- depth-relevant filter
+- position filters
+- whether unmatched historical/inactive players were included
+- whether only current NFL team assignments were included
+- whether only supported positions were included
+- whether current-team normalization was applied
+- whether crosswalk-derived mappings were included
+- whether ambiguous mappings were excluded
+
+TASK 2 — SHOW THE DENOMINATORS
+
+For each metric, report the raw counts.
+
+Example:
+
+Task #62 depth-order:
+mapped / eligible = X / Y = 93.24%
+
+C0 depth-order:
+mapped / eligible = X / Y = 70.67%
+
+Task #62 depth-order-1:
+mapped / eligible = X / Y = 97.98%
+
+C0 depth-order-1:
+mapped / eligible = X / Y = 74.82%
+
+Do not report percentages without the exact numerator and denominator.
+
+TASK 3 — IDENTIFY THE DELTA
+
+List the player rows that are counted in one denominator but not the other.
+
+Group differences into categories such as:
+
+- inactive/historical Sleeper players
+- free agents
+- legacy team assignments
+- unsupported positions
+- stale depth rows
+- duplicate provider ownership
+- parser-version exclusions
+- ambiguous identity
+- invalid provider ID
+- current-roster filtering
+- team-change handling
+- position normalization differences
+
+Report counts for each category.
+
+TASK 4 — DEFINE THE CORRECT READINESS POPULATION
+
+For depth-chart readiness, establish the appropriate denominator.
+
+The readiness population should reflect players that Gridline actually needs for current depth-chart interpretation.
+
+Evaluate at least these cohorts separately:
+
+A. All Sleeper players with depth_chart_order
+
+B. Current-team players with depth_chart_order
+
+C. Current active/current-roster players with depth_chart_order
+
+D. Current depth-relevant players used by Gridline for:
+- QB
+- RB
+- WR
+- TE
+- OL
+- EDGE/DL
+- LB
+- CB
+- S
+
+E. Projected starter/depth-order-1 players
+
+F. QB1 specifically
+
+Do not use the broadest denominator automatically if it contains stale/historical/non-current players irrelevant to current depth charts.
+
+TASK 5 — POSITION COVERAGE
+
+For the authoritative current-depth cohort, report:
+
+- QB
+- RB
+- WR
+- TE
+- OL
+- EDGE/DE
+- DT
+- LB
+- CB
+- S
+- K
+- P
+
+For each:
+
+mapped / eligible / percentage
+
+Pay special attention to S coverage because the earlier report showed 0% in one version.
+
+TASK 6 — STARTER-CRITICAL COVERAGE
+
+Report exact current coverage for:
+
+- QB1
+- RB1
+- WR1
+- WR2
+- WR3
+- TE1
+- LT/LG/C/RG/RT
+- EDGE starters
+- LB starters
+- CB1
+- CB2
+- CB3/slot
+- starting safeties
+
+For each:
+- eligible count
+- mapped count
+- percentage
+- unresolved count
+
+TASK 7 — AUTHORITATIVE GATE
+
+Define one readiness gate going forward.
+
+The gate should focus on current depth-chart usability, not arbitrary coverage of retired/historical/free-agent Sleeper records.
+
+At minimum report:
+
+- current-depth mapping %
+- current depth-order-1 mapping %
+- QB1 mapping %
+- CB1/CB2 mapping %
+- WR1/WR2/WR3 mapping %
+- unresolved starter collisions
+- ambiguous starter identities
+
+Do not lower standards simply to pass.
+
+TASK 8 — DO NOT ALTER HISTORY
+
+Preserve both prior reports for audit.
+
+Do not rewrite the old metrics.
+
+Instead document why the methodology changed and which definition is authoritative going forward.
+
+FINAL REPORT
+
+Return:
+
+1. Task #62 numerator/denominator
+2. C0 numerator/denominator
+3. Exact reason for the discrepancy
+4. Player/category counts causing the difference
+5. Current-roster depth coverage
+6. Starter-critical coverage
+7. Position-by-position current coverage
+8. Recommended authoritative readiness definition
+9. Whether the earlier 93.24% / 97.98% numbers were valid under their original scope
+10. Whether the newer 70.67% / 74.82% numbers are valid under their scope
+11. Whether current personnel data is actually sufficient for consumer depth-chart logic
+12. Whether WR-CB matchup foundation is sufficient
+
+Final verdicts:
+
+CURRENT DEPTH LOGIC READY
+
+or
+
+CURRENT DEPTH LOGIC NOT READY
+
+and
+
+WR-CB FOUNDATION READY
+
+or
+
+WR-CB FOUNDATION NOT READY

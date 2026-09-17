@@ -18,3 +18,4 @@
 - [Production artifact release boundary](production-artifact-release-boundary.md) — verify production rows and triggers after Publish; development artifacts and custom triggers may not transfer.
 - [First-run scheduler semantics](first-run-scheduler-semantics.md) — introduce new recurring feeds as future normal occurrences; missed-job recovery intentionally skips catch-up work.
 - [Sleeper identity chronology](sleeper-identity-chronology.md) — map reconstructed point-in-time Sleeper state and fingerprint the complete Gridline evidence set used by each immutable run.
+- [Current depth-mapping readiness](depth-mapping-readiness.md) — gate current canonical-team depth rows and starter roles, not broad historical coverage.

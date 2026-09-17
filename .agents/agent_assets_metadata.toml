@@ -56,3 +56,31 @@ mtime_ms = 1789439914437
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/176185ac-3390-44c0-b66b-63868e7f6701/c46096cb-5ab2-4e87-ad5e-5060a3fccb0e"
 storage_version_token = "1789439939721038"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "1-e0u_iaMhmBnnqynnArT"
+uri = "file://reports/c0-v5-depth-mapping-delta.csv"
+type = "table"
+title = "C0 to v5 depth-mapping delta"
+description = "Exact changed depth-order player rows on the same Sleeper capture, including old/new IDs, statuses, methods, and unresolved reasons."
+logical_id = "948bc099-49a0-4a7c-9a13-b41256ee9ed8"
+content_hash = "sha256:af72b949e0866b7feb8cf5eac34e6f3d2a077ea11c622c502acffb2bbd3ca2cc"
+size = 40560
+mtime_ms = 1789614253577
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/948bc099-49a0-4a7c-9a13-b41256ee9ed8/f740f5b0-47ab-40c0-bab9-7cc3c3503fbd"
+storage_version_token = "1789614257270422"
+content_type = "text/csv"
+
+[[outputs]]
+id = "IiG5mswmjYVGOLJ0VwYs5"
+uri = "file://reports/sleeper-mapping-coverage-reconciliation-2026-09-16.md"
+type = "text"
+title = "Sleeper mapping coverage reconciliation"
+description = "Full audit of Task 62, C0, current-depth cohorts, position coverage, starter-critical readiness, and the authoritative gate."
+logical_id = "aa06da30-f0b5-4692-a6a2-a9504ac5b931"
+content_hash = "sha256:89e6e9055ae2535591d8d4ee44c13c7546eb8cecdb15a57a07f604b7f5e79811"
+size = 6802
+mtime_ms = 1789614299764
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/aa06da30-f0b5-4692-a6a2-a9504ac5b931/b5f53949-0539-434c-aab5-c4ce3e21f3a1"
+storage_version_token = "1789614314799389"
+content_type = "text/markdown"
