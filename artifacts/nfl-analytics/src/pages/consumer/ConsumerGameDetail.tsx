@@ -8,6 +8,7 @@ import { LineMovementExperience } from '../../components/LineMovementExperience'
 import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
 import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
+import { MarketConfidenceSummary } from '../../components/MarketConfidence';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -112,6 +113,7 @@ export default function ConsumerGameDetail() {
           detail={game.availability.prediction ?? 'A saved Gridline projection is not available for this matchup.'}
         />
       )}
+      <MarketConfidenceSummary value={game} />
     </section>
 
       <section className="premium-comparison-section" data-section="market-comparison" data-testid="premium-comparison" aria-labelledby="market-comparison-heading">

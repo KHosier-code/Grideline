@@ -91,6 +91,7 @@ export interface ConsumerMarketComparison {
   selectedQuote: ConsumerMarketQuote | null;
   firstObserved: ConsumerMarketQuote | null;
   current: ConsumerMarketQuote | null;
+  currentQuotes: ConsumerMarketQuote[];
   /** @nullable */
   modelTimestamp: string | null;
   /** @nullable */
@@ -116,6 +117,83 @@ export interface ConsumerMarketBoard {
      * @maxItems 3
      */
   comparisons: ConsumerMarketComparison[];
+}
+
+export type ConsumerConfidenceComponentKey = typeof ConsumerConfidenceComponentKey[keyof typeof ConsumerConfidenceComponentKey];
+
+
+export const ConsumerConfidenceComponentKey = {
+  data: 'data',
+  model: 'model',
+  marketEdge: 'marketEdge',
+} as const;
+
+export interface ConsumerConfidenceComponent {
+  key: ConsumerConfidenceComponentKey;
+  label: string;
+  /** @nullable */
+  score: number | null;
+  summary: string;
+}
+
+export type ConsumerConfidenceMarketsItemMarket = typeof ConsumerConfidenceMarketsItemMarket[keyof typeof ConsumerConfidenceMarketsItemMarket];
+
+
+export const ConsumerConfidenceMarketsItemMarket = {
+  spread: 'spread',
+  moneyline: 'moneyline',
+  total: 'total',
+} as const;
+
+export type ConsumerConfidenceMarketsItemLabel = typeof ConsumerConfidenceMarketsItemLabel[keyof typeof ConsumerConfidenceMarketsItemLabel];
+
+
+export const ConsumerConfidenceMarketsItemLabel = {
+  Low: 'Low',
+  Moderate: 'Moderate',
+  Strong: 'Strong',
+  Very_Strong: 'Very Strong',
+} as const;
+
+export type ConsumerConfidenceMarketsItemEvidence = { [key: string]: unknown };
+
+export type ConsumerConfidenceMarketsItem = {
+  market: ConsumerConfidenceMarketsItemMarket;
+  score: number;
+  label: ConsumerConfidenceMarketsItemLabel;
+  explanation: string;
+  components: ConsumerConfidenceComponent[];
+  evidence: ConsumerConfidenceMarketsItemEvidence;
+  downgradeReasons: string[];
+  calculatedAt: string;
+};
+
+export interface ConsumerConfidence {
+  /**
+     * @minItems 3
+     * @maxItems 3
+     */
+  markets: ConsumerConfidenceMarketsItem[];
+}
+
+export type ConfidenceAuditWeights = {[key: string]: number};
+
+export type ConfidenceAuditThresholds = {[key: string]: number};
+
+export type ConfidenceAuditNormalizationRules = {[key: string]: string};
+
+export type ConfidenceAuditHistoricalEvidence = { [key: string]: unknown };
+
+export type ConfidenceAuditResultsItem = { [key: string]: unknown };
+
+export interface ConfidenceAudit {
+  version: string;
+  checksum: string;
+  weights: ConfidenceAuditWeights;
+  thresholds: ConfidenceAuditThresholds;
+  normalizationRules: ConfidenceAuditNormalizationRules;
+  historicalEvidence: ConfidenceAuditHistoricalEvidence;
+  results: ConfidenceAuditResultsItem[];
 }
 
 export type ConsumerGameMatchup = {
@@ -192,6 +270,7 @@ export interface ConsumerGame {
   market: ConsumerGameMarket;
   marketBoard: ConsumerMarketBoard;
   dataConfidence: ConsumerGameDataConfidence;
+  confidence: ConsumerConfidence;
   availability: ConsumerGameAvailability;
 }
 
@@ -1659,6 +1738,26 @@ export type ConsumerInvalidRequestResponse = ConsumerError;
  * Consumer game unavailable
  */
 export type ConsumerGameNotFoundResponse = ConsumerError;
+
+export type AppendConfidenceEvidenceParams = {
+/**
+ * @minimum 2000
+ * @maximum 2100
+ */
+season?: number;
+/**
+ * @minimum 1
+ * @maximum 25
+ */
+week?: number;
+};
+
+export type AppendConfidenceEvidence200 = {
+  gamesEvaluated: number;
+  marketResultsCalculated: number;
+  marketResultsPersisted: number;
+  version: string;
+};
 
 export type ListGamesParams = {
 /**

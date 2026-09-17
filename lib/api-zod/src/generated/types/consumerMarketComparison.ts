@@ -24,6 +24,7 @@ export interface ConsumerMarketComparison {
   selectedQuote: ConsumerMarketQuote | null;
   firstObserved: ConsumerMarketQuote | null;
   current: ConsumerMarketQuote | null;
+  currentQuotes: ConsumerMarketQuote[];
   /** @nullable */
   modelTimestamp: Date | null;
   /** @nullable */

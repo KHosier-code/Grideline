@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './appendConfidenceEvidence200';
+export * from './appendConfidenceEvidenceParams';
 export * from './applicationWeatherImmutability';
 export * from './appSettings';
 export * from './appSettingsSportsbooksItem';
@@ -17,6 +19,19 @@ export * from './challengerReadinessThreshold';
 export * from './challengerReadinessWeeklyTrend';
 export * from './challengerSourceFailure';
 export * from './challengerSourceFailureFamily';
+export * from './confidenceAudit';
+export * from './confidenceAuditHistoricalEvidence';
+export * from './confidenceAuditNormalizationRules';
+export * from './confidenceAuditResultsItem';
+export * from './confidenceAuditThresholds';
+export * from './confidenceAuditWeights';
+export * from './consumerConfidence';
+export * from './consumerConfidenceComponent';
+export * from './consumerConfidenceComponentKey';
+export * from './consumerConfidenceMarketsItem';
+export * from './consumerConfidenceMarketsItemEvidence';
+export * from './consumerConfidenceMarketsItemLabel';
+export * from './consumerConfidenceMarketsItemMarket';
 export * from './consumerContext';
 export * from './consumerContextTeam';
 export * from './consumerContextTeamSide';

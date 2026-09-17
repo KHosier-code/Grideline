@@ -462,6 +462,34 @@ export const predictionSnapshotsTable = pgTable("prediction_snapshots", {
   `),
 ]);
 
+export const confidenceMethodologiesTable = pgTable("confidence_methodologies", {
+  confidenceVersion: text("confidence_version").primaryKey(),
+  weights: jsonb("weights").$type<Record<string, number>>().notNull(),
+  thresholds: jsonb("thresholds").$type<Record<string, number>>().notNull(),
+  normalizationRules: jsonb("normalization_rules").$type<Record<string, string>>().notNull(),
+  historicalEvidence: jsonb("historical_evidence").$type<Record<string, unknown>>().notNull().default({}),
+  checksum: text("checksum").notNull(),
+  calculatedAt: timestamp("calculated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const predictionConfidenceResultsTable = pgTable("prediction_confidence_results", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  snapshotKey: text("snapshot_key").notNull(),
+  confidenceVersion: text("confidence_version").notNull().references(() => confidenceMethodologiesTable.confidenceVersion),
+  evidenceFingerprint: text("evidence_fingerprint").notNull(),
+  market: text("market").notNull(),
+  score: integer("score").notNull(),
+  label: text("label").notNull(),
+  components: jsonb("components").$type<Record<string, unknown>>().notNull(),
+  evidence: jsonb("evidence").$type<Record<string, unknown>>().notNull(),
+  explanation: text("explanation").notNull(),
+  downgradeReasons: jsonb("downgrade_reasons").$type<string[]>().notNull().default([]),
+  calculatedAt: timestamp("calculated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("prediction_confidence_results_evidence_unique").on(table.snapshotKey, table.confidenceVersion, table.market, table.evidenceFingerprint),
+  index("prediction_confidence_results_snapshot_idx").on(table.snapshotKey, table.calculatedAt),
+]);
+
 export const predictionValidationFailuresTable = pgTable("prediction_validation_failures", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   gameId: text("game_id").notNull(),

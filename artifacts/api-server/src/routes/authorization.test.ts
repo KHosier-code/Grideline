@@ -55,6 +55,7 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     ["features.ts", '/features/personnel-context/challenger-readiness'],
     ["features.ts", '/features/personnel/current/team/:teamId'],
     ["features.ts", '/features/personnel/current/game/:gameId'],
+    ["confidence.ts", '/admin/confidence/audit'],
     ["features.ts", '/features/personnel/current/team/:teamId/qb'],
     ["features.ts", '/features/personnel/current/team/:teamId/wr-cb'],
     ["features.ts", '/features/personnel/current/validation'],

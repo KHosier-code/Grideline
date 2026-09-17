@@ -441,3 +441,28 @@ export function pricingAvailability(quotes: Array<Pick<HistoricalMarketQuote, "p
       : "The source supplies no sportsbook or observation timestamps; true CLV requires a provenance-matched earlier and closing pair.",
   } as const;
 }
+
+/** Historical confidence evidence is deliberately descriptive, never a close/CLV or profitability claim. */
+export function historicalConfidenceEvidence(rows: Array<{
+  market: "spread" | "moneyline" | "total";
+  score: number;
+  settlement?: Settlement;
+}>) {
+  return (["spread", "moneyline", "total"] as const).map((market) => {
+    const values = rows.filter((row) => row.market === market);
+    const supported = values.filter((row) => row.settlement && row.settlement !== "no_bet");
+    const wins = supported.filter((row) => row.settlement === "win").length;
+    const intervals = wilson(wins, supported.length);
+    return {
+      market,
+      status: supported.length >= 30 ? "measured_recorded_evidence" as const : "insufficient" as const,
+      buckets: MARKET_EDGE_BUCKETS.map((bucket) => {
+        const bucketRows = values.filter((row) => Math.abs(row.score) >= bucket.min && Math.abs(row.score) < bucket.max);
+        return { bucket: bucket.label, sampleSize: bucketRows.length };
+      }),
+      sampleSize: supported.length,
+      confidenceInterval95: intervals,
+      limitation: "Recorded-market evidence only; not verified closing lines, CLV, ROI, or profitability.",
+    };
+  });
+}

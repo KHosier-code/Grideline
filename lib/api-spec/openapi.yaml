@@ -17,6 +17,51 @@ tags:
   - name: settings
     description: User-operable model and sportsbook settings
 paths:
+  /admin/confidence/audit:
+    get:
+      operationId: getConfidenceAudit
+      tags: [dashboard]
+      summary: Inspect confidence methodology and calculated evidence
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Confidence audit
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConfidenceAudit" }
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
+  /admin/confidence/calculate:
+    post:
+      operationId: appendConfidenceEvidence
+      tags: [dashboard]
+      summary: Calculate and append confidence evidence for a season and week
+      security: [{ clerk: [] }]
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - name: week
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 25 }
+      responses:
+        "200":
+          description: Confidence calculation summary
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [gamesEvaluated, marketResultsCalculated, marketResultsPersisted, version]
+                properties:
+                  gamesEvaluated: { type: integer }
+                  marketResultsCalculated: { type: integer }
+                  marketResultsPersisted: { type: integer }
+                  version: { type: string }
+        "400": { description: Invalid season or week }
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
   /healthz:
     get:
       operationId: healthCheck
@@ -620,7 +665,7 @@ components:
         evidence: { $ref: "#/components/schemas/ConsumerMarketEvidence" }
     ConsumerMarketComparison:
       type: object
-      required: [market, label, state, modelValue, marketValue, difference, differenceUnit, selectedQuote, firstObserved, current, modelTimestamp, marketTimestamp]
+      required: [market, label, state, modelValue, marketValue, difference, differenceUnit, selectedQuote, currentQuotes, firstObserved, current, modelTimestamp, marketTimestamp]
       properties:
         market: { type: string, enum: [spread, total, moneyline] }
         label: { type: string }
@@ -632,6 +677,7 @@ components:
         selectedQuote: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         firstObserved: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         current: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        currentQuotes: { type: array, items: { $ref: "#/components/schemas/ConsumerMarketQuote" } }
         modelTimestamp: { type: ["string", "null"], format: date-time }
         marketTimestamp: { type: ["string", "null"], format: date-time }
     ConsumerMarketBoard:
@@ -646,9 +692,50 @@ components:
           minItems: 3
           maxItems: 3
           items: { $ref: "#/components/schemas/ConsumerMarketComparison" }
+    ConsumerConfidenceComponent:
+      type: object
+      required: [key, label, score, summary]
+      properties:
+        key: { type: string, enum: [data, model, marketEdge] }
+        label: { type: string }
+        score: { type: ["number", "null"] }
+        summary: { type: string }
+    ConsumerConfidence:
+      type: object
+      required: [markets]
+      properties:
+        markets:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items:
+            type: object
+            required: [market, score, label, explanation, components, evidence, downgradeReasons, calculatedAt]
+            properties:
+              market: { type: string, enum: [spread, moneyline, total] }
+              score: { type: number }
+              label: { type: string, enum: [Low, Moderate, Strong, Very Strong] }
+              explanation: { type: string }
+              components:
+                type: array
+                items: { $ref: "#/components/schemas/ConsumerConfidenceComponent" }
+              evidence: { type: object, additionalProperties: true }
+              downgradeReasons: { type: array, items: { type: string } }
+              calculatedAt: { type: string, format: date-time }
+    ConfidenceAudit:
+      type: object
+      required: [version, checksum, weights, thresholds, normalizationRules, historicalEvidence, results]
+      properties:
+        version: { type: string }
+        checksum: { type: string }
+        weights: { type: object, additionalProperties: { type: number } }
+        thresholds: { type: object, additionalProperties: { type: number } }
+        normalizationRules: { type: object, additionalProperties: { type: string } }
+        historicalEvidence: { type: object, additionalProperties: true }
+        results: { type: array, items: { type: object, additionalProperties: true } }
     ConsumerGame:
       type: object
-      required: [gameId, season, week, kickoffTime, gameStatus, venue, matchup, finalScore, prediction, market, marketBoard, dataConfidence, availability]
+      required: [gameId, season, week, kickoffTime, gameStatus, venue, matchup, finalScore, prediction, market, marketBoard, dataConfidence, confidence, availability]
       properties:
         gameId: { type: string }
         season: { type: integer }
@@ -688,6 +775,7 @@ components:
             label: { type: string, enum: [Updating, Limited, Moderate, Standard] }
             score: { type: ["number", "null"] }
             reason: { type: ["string", "null"] }
+        confidence: { $ref: "#/components/schemas/ConsumerConfidence" }
         availability:
           type: object
           required: [prediction, market]

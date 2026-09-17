@@ -9,6 +9,7 @@ import { useEffect, useId, useState } from 'react';
 import { Link } from 'wouter';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote } from './consumer-ui';
 import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
+import { MarketConfidenceSummary } from '../../components/MarketConfidence';
 
 function readPositiveInteger(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -69,8 +70,10 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
           </Link>
         </div>
       </div>
+      <MarketConfidenceSummary value={game} compact />
       {expanded && (
         <div className="tb-evidence" id={evidenceId}>
+          <MarketConfidenceSummary value={game} />
           <div className="evidence-summary">
             <strong>Comparison evidence</strong>
             <span>{game.dataConfidence.label} data confidence</span>

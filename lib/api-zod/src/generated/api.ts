@@ -9,6 +9,43 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Inspect confidence methodology and calculated evidence
+ */
+export const GetConfidenceAuditResponse = zod.object({
+  "version": zod.string(),
+  "checksum": zod.string(),
+  "weights": zod.record(zod.string(), zod.number()),
+  "thresholds": zod.record(zod.string(), zod.number()),
+  "normalizationRules": zod.record(zod.string(), zod.string()),
+  "historicalEvidence": zod.record(zod.string(), zod.unknown()),
+  "results": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+/**
+ * @summary Calculate and append confidence evidence for a season and week
+ */
+export const appendConfidenceEvidenceQuerySeasonMin = 2000;
+export const appendConfidenceEvidenceQuerySeasonMax = 2100;
+
+export const appendConfidenceEvidenceQueryWeekMax = 25;
+
+
+
+export const AppendConfidenceEvidenceQueryParams = zod.object({
+  "season": zod.coerce.number().int().min(appendConfidenceEvidenceQuerySeasonMin).max(appendConfidenceEvidenceQuerySeasonMax).optional(),
+  "week": zod.coerce.number().int().min(1).max(appendConfidenceEvidenceQueryWeekMax).optional()
+})
+
+export const AppendConfidenceEvidenceResponse = zod.object({
+  "gamesEvaluated": zod.number().int(),
+  "marketResultsCalculated": zod.number().int(),
+  "marketResultsPersisted": zod.number().int(),
+  "version": zod.string()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
@@ -828,6 +865,9 @@ export const UpdateSettingsResponse = zod.object({
 export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin = 3;
 export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax = 3;
 
+export const getConsumerDashboardResponseGamesItemConfidenceMarketsMin = 3;
+export const getConsumerDashboardResponseGamesItemConfidenceMarketsMax = 3;
+
 
 
 export const GetConsumerDashboardResponse = zod.object({
@@ -925,6 +965,13 @@ export const GetConsumerDashboardResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
+  "currentQuotes": zod.array(zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+})),
   "modelTimestamp": zod.coerce.date().nullable(),
   "marketTimestamp": zod.coerce.date().nullable()
 })).min(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin).max(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax)
@@ -933,6 +980,23 @@ export const GetConsumerDashboardResponse = zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
   "score": zod.number().nullable(),
   "reason": zod.string().nullable()
+}),
+  "confidence": zod.object({
+  "markets": zod.array(zod.object({
+  "market": zod.enum(['spread', 'moneyline', 'total']),
+  "score": zod.number(),
+  "label": zod.enum(['Low', 'Moderate', 'Strong', 'Very Strong']),
+  "explanation": zod.string(),
+  "components": zod.array(zod.object({
+  "key": zod.enum(['data', 'model', 'marketEdge']),
+  "label": zod.string(),
+  "score": zod.number().nullable(),
+  "summary": zod.string()
+})),
+  "evidence": zod.record(zod.string(), zod.unknown()),
+  "downgradeReasons": zod.array(zod.string()),
+  "calculatedAt": zod.coerce.date()
+})).min(getConsumerDashboardResponseGamesItemConfidenceMarketsMin).max(getConsumerDashboardResponseGamesItemConfidenceMarketsMax)
 }),
   "availability": zod.object({
   "prediction": zod.string().nullable(),
@@ -960,6 +1024,9 @@ export const ListConsumerGamesQueryParams = zod.object({
 
 export const listConsumerGamesResponseGamesItemMarketBoardComparisonsMin = 3;
 export const listConsumerGamesResponseGamesItemMarketBoardComparisonsMax = 3;
+
+export const listConsumerGamesResponseGamesItemConfidenceMarketsMin = 3;
+export const listConsumerGamesResponseGamesItemConfidenceMarketsMax = 3;
 
 
 
@@ -1064,6 +1131,13 @@ export const ListConsumerGamesResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
+  "currentQuotes": zod.array(zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+})),
   "modelTimestamp": zod.coerce.date().nullable(),
   "marketTimestamp": zod.coerce.date().nullable()
 })).min(listConsumerGamesResponseGamesItemMarketBoardComparisonsMin).max(listConsumerGamesResponseGamesItemMarketBoardComparisonsMax)
@@ -1072,6 +1146,23 @@ export const ListConsumerGamesResponse = zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
   "score": zod.number().nullable(),
   "reason": zod.string().nullable()
+}),
+  "confidence": zod.object({
+  "markets": zod.array(zod.object({
+  "market": zod.enum(['spread', 'moneyline', 'total']),
+  "score": zod.number(),
+  "label": zod.enum(['Low', 'Moderate', 'Strong', 'Very Strong']),
+  "explanation": zod.string(),
+  "components": zod.array(zod.object({
+  "key": zod.enum(['data', 'model', 'marketEdge']),
+  "label": zod.string(),
+  "score": zod.number().nullable(),
+  "summary": zod.string()
+})),
+  "evidence": zod.record(zod.string(), zod.unknown()),
+  "downgradeReasons": zod.array(zod.string()),
+  "calculatedAt": zod.coerce.date()
+})).min(listConsumerGamesResponseGamesItemConfidenceMarketsMin).max(listConsumerGamesResponseGamesItemConfidenceMarketsMax)
 }),
   "availability": zod.object({
   "prediction": zod.string().nullable(),
@@ -1090,6 +1181,9 @@ export const GetConsumerGameParams = zod.object({
 
 export const getConsumerGameResponseOneMarketBoardComparisonsMin = 3;
 export const getConsumerGameResponseOneMarketBoardComparisonsMax = 3;
+
+export const getConsumerGameResponseOneConfidenceMarketsMin = 3;
+export const getConsumerGameResponseOneConfidenceMarketsMax = 3;
 
 export const getConsumerGameResponseTwoMovementStreamsMax = 24;
 
@@ -1203,6 +1297,13 @@ export const GetConsumerGameResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
+  "currentQuotes": zod.array(zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+})),
   "modelTimestamp": zod.coerce.date().nullable(),
   "marketTimestamp": zod.coerce.date().nullable()
 })).min(getConsumerGameResponseOneMarketBoardComparisonsMin).max(getConsumerGameResponseOneMarketBoardComparisonsMax)
@@ -1211,6 +1312,23 @@ export const GetConsumerGameResponse = zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
   "score": zod.number().nullable(),
   "reason": zod.string().nullable()
+}),
+  "confidence": zod.object({
+  "markets": zod.array(zod.object({
+  "market": zod.enum(['spread', 'moneyline', 'total']),
+  "score": zod.number(),
+  "label": zod.enum(['Low', 'Moderate', 'Strong', 'Very Strong']),
+  "explanation": zod.string(),
+  "components": zod.array(zod.object({
+  "key": zod.enum(['data', 'model', 'marketEdge']),
+  "label": zod.string(),
+  "score": zod.number().nullable(),
+  "summary": zod.string()
+})),
+  "evidence": zod.record(zod.string(), zod.unknown()),
+  "downgradeReasons": zod.array(zod.string()),
+  "calculatedAt": zod.coerce.date()
+})).min(getConsumerGameResponseOneConfidenceMarketsMin).max(getConsumerGameResponseOneConfidenceMarketsMax)
 }),
   "availability": zod.object({
   "prediction": zod.string().nullable(),

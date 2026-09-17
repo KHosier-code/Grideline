@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerConfidence } from './consumerConfidence';
 import type { ConsumerGameAvailability } from './consumerGameAvailability';
 import type { ConsumerGameDataConfidence } from './consumerGameDataConfidence';
 import type { ConsumerGameFinalScore } from './consumerGameFinalScore';
@@ -30,5 +31,6 @@ export interface ConsumerGame {
   market: ConsumerGameMarket;
   marketBoard: ConsumerMarketBoard;
   dataConfidence: ConsumerGameDataConfidence;
+  confidence: ConsumerConfidence;
   availability: ConsumerGameAvailability;
 }

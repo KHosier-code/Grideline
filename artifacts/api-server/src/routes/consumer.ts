@@ -11,6 +11,7 @@ import {
   sportsbookOddsTable,
   teamsTable,
   weatherForecastSnapshotsTable,
+  modelTrainingRunsTable,
 } from "@workspace/db";
 import {
   gameSpecificSnapshot,
@@ -19,6 +20,17 @@ import {
 } from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
 import { buildConsumerMatchupBoard } from "../lib/consumer-matchups";
+import {
+  buildConsumerConfidence,
+  cutoffSafeRevisions,
+  normalizeModelConfidence,
+  projectionRevisionStability,
+  snapshotDataConfidence,
+  startersResolvedFromEvidence,
+} from "../lib/confidence-framework";
+import { verifyArtifactIntegrity } from "../lib/modeling";
+import retained2025Baseline from "../../../../reports/gridline-2025-market-baseline.json" with { type: "json" };
+import { persistConfidenceMethodology, persistConfidenceResults } from "../lib/confidence-persistence";
 
 const router: IRouter = Router();
 export const MAX_CONSUMER_GAMES = 100;
@@ -396,6 +408,7 @@ export function buildConsumerMarketBoard(
       difference,
       differenceUnit: spec.unit,
       selectedQuote: selected ? quoteFromMovement(selected, spec.market, home) : null,
+      currentQuotes: currentByBook.map((row) => quoteFromMovement(row, spec.market, home)),
       firstObserved: first ? quoteFromMovement(first, spec.market, home) : null,
       current: selected ? quoteFromMovement(selected, spec.market, home) : null,
       modelTimestamp: snapshot?.predictionTimestamp.toISOString() ?? null,
@@ -635,7 +648,7 @@ export function serializePerformance(performance: Awaited<ReturnType<typeof getP
   };
 }
 
-async function consumerGames(filters: ConsumerFilters = {}) {
+export async function consumerGames(filters: ConsumerFilters = {}, persistConfidence = false) {
   const conditions = [
     filters.season === undefined ? undefined : eq(gamesTable.season, filters.season),
     filters.week === undefined ? undefined : eq(gamesTable.week, filters.week),
@@ -649,7 +662,7 @@ async function consumerGames(filters: ConsumerFilters = {}) {
     .orderBy(asc(gamesTable.kickoffTime), asc(gamesTable.gameId))
     .limit(MAX_CONSUMER_GAMES);
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
-  const [teams, snapshots, marketRows] = await Promise.all([
+  const [teams, snapshots, marketRows, modelRuns, snapshotHistory] = await Promise.all([
     teamIds.length ? db.select().from(teamsTable).where(inArray(teamsTable.teamId, teamIds)) : [],
     getLatestValidPredictionSnapshots(games.map((game) => game.gameId), {
       preKickoffOnly: true,
@@ -671,9 +684,16 @@ async function consumerGames(filters: ConsumerFilters = {}) {
         inArray(sportsbookOddsTable.market, ["spread", "total", "moneyline"]),
       ))
       .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id)) : []) as Promise<Array<MovementRow & { gameId: string }>>,
+    db.select().from(modelTrainingRunsTable),
+    games.length ? db.select().from(predictionSnapshotsTable)
+      .where(and(inArray(predictionSnapshotsTable.gameId, games.map((game) => game.gameId)), lte(predictionSnapshotsTable.predictionTimestamp, new Date())))
+      .orderBy(asc(predictionSnapshotsTable.predictionTimestamp), asc(predictionSnapshotsTable.id)) : [],
   ]);
+  const verifiedArtifacts = new Map(modelRuns.filter((run) => verifyArtifactIntegrity(run).valid).map((run) => [run.modelVersion, true]));
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
-  return games.map((game) => {
+  let persistedConfidenceResults = 0;
+  if (persistConfidence) await persistConfidenceMethodology();
+  const results = await Promise.all(games.map(async (game) => {
     const snapshot = gameSpecificSnapshot(game.gameId, snapshots);
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
@@ -685,6 +705,132 @@ async function consumerGames(filters: ConsumerFilters = {}) {
       consumerHome,
       game.kickoffTime,
     );
+    const dataConfidence = confidence(snapshot);
+    const confidenceData = snapshot ? snapshotDataConfidence({
+      qbConfidence: snapshot.qbConfidence,
+      lowSample: snapshot.lowSample,
+      inputFeatureCount: snapshot.inputFeatureCount,
+      inputMissingFeatureCount: snapshot.inputMissingFeatureCount,
+    }) : { score: null, acceptable: false };
+    const reportModels = retained2025Baseline.models as Array<Record<string, unknown>>;
+    const revisions = cutoffSafeRevisions(
+      snapshotHistory.filter((row) => row.gameId === game.gameId),
+      snapshot?.predictionTimestamp,
+      game.kickoffTime,
+    );
+    const historicalFor = (market: "spread" | "moneyline" | "total", difference: number | null) => {
+      const family = market === "total" ? "totals" : market;
+      const model = reportModels.find((item) => item.family === family);
+      const marketEvidence = model?.market as Record<string, unknown> | undefined;
+      const buckets = Array.isArray(marketEvidence?.edgeBuckets)
+        ? marketEvidence.edgeBuckets as Array<Record<string, unknown>>
+        : [];
+      const magnitude = difference === null ? null : Math.abs(difference);
+      const bucketLabel = magnitude === null ? null
+        : magnitude < 1 ? "<1"
+          : magnitude < 2 ? "1-1.99"
+            : magnitude < 3 ? "2-2.99"
+              : magnitude < 5 ? "3-4.99" : "5+";
+      const bucket = buckets.find((item) => item.bucket === bucketLabel);
+      const gradedSampleSize = typeof bucket?.gradedSampleSize === "number" ? bucket.gradedSampleSize : 0;
+      return {
+        status: gradedSampleSize >= 30 ? "measured_recorded_evidence" : "insufficient",
+        source: "nflverse/nfldata games.csv",
+        designation: "source_designated_recorded",
+        bucket: bucketLabel,
+        sampleSize: typeof bucket?.sampleSize === "number" ? bucket.sampleSize : 0,
+        gradedSampleSize,
+        winRate: typeof bucket?.winRate === "number" ? bucket.winRate : null,
+        confidenceInterval95: bucket?.confidenceInterval95 ?? { low: null, high: null },
+        note: market === "moneyline"
+          ? "The retained baseline has recorded prices but no edge buckets for moneyline; evidence is insufficient."
+          : "Recorded-line comparison only; not a verified close, CLV, profitability result, or universal threshold.",
+      };
+    };
+    const comparisonFor = (market: "spread" | "moneyline" | "total") =>
+      marketBoard.comparisons.find((comparison) => comparison.market === market);
+    const retainedErrorScore = (market: "spread" | "moneyline" | "total") => {
+      const family = market === "total" ? "totals" : market;
+      const model = reportModels.find((item) => item.family === family);
+      const metrics = model?.metrics as Record<string, unknown> | undefined;
+      if (market === "moneyline") {
+        const brier = typeof metrics?.brierScore === "number" ? metrics.brierScore : null;
+        return brier === null ? null : Math.max(0, Math.min(100, (0.35 - brier) / 0.25 * 100));
+      }
+      return normalizeModelConfidence(typeof metrics?.mae === "number" ? metrics.mae : null);
+    };
+    const modelScores = Object.fromEntries((["spread", "moneyline", "total"] as const).map((confidenceMarket) => {
+      const stability = projectionRevisionStability(confidenceMarket, revisions);
+      const error = retainedErrorScore(confidenceMarket);
+      return [confidenceMarket, stability === null || error === null ? null : (stability + error) / 2];
+    }));
+    const calculatedConfidence = buildConsumerConfidence({
+      snapshot: snapshot ? {
+        snapshotKey: snapshot.snapshotKey,
+        predictionTimestamp: snapshot.predictionTimestamp,
+        qbConfidence: snapshot.qbConfidence,
+        inputFeatureCount: snapshot.inputFeatureCount,
+        inputMissingFeatureCount: snapshot.inputMissingFeatureCount,
+        lowSample: snapshot.lowSample,
+        spreadModelVersion: snapshot.spreadModelVersion,
+        moneylineModelVersion: snapshot.moneylineModelVersion,
+        totalsModelVersion: snapshot.totalsModelVersion,
+        verifiedArtifacts: {
+          spread: Boolean(snapshot.spreadModelVersion && verifiedArtifacts.get(snapshot.spreadModelVersion)),
+          moneyline: Boolean(snapshot.moneylineModelVersion && verifiedArtifacts.get(snapshot.moneylineModelVersion)),
+          total: Boolean(snapshot.totalsModelVersion && verifiedArtifacts.get(snapshot.totalsModelVersion)),
+        },
+      } : undefined,
+      dataConfidence: { score: confidenceData.score },
+      dataAcceptable: confidenceData.acceptable,
+      comparisons: marketBoard.comparisons.map((comparison) => ({
+        market: comparison.market === "total" ? "total" as const : comparison.market,
+        difference: comparison.difference,
+        state: comparison.state,
+        currentQuotes: comparison.currentQuotes,
+      })),
+      startersResolved: startersResolvedFromEvidence(snapshot?.inputSourceEvidence),
+      modelScores,
+      historical: {
+        spread: historicalFor("spread", comparisonFor("spread")?.difference ?? null),
+        moneyline: historicalFor("moneyline", comparisonFor("moneyline")?.difference ?? null),
+        total: historicalFor("total", comparisonFor("total")?.difference ?? null),
+      },
+    });
+    if (persistConfidence && snapshot) {
+      const auditInputs = Object.fromEntries((["spread", "moneyline", "total"] as const).map((confidenceMarket) => {
+        const comparison = comparisonFor(confidenceMarket);
+        const family = confidenceMarket === "total" ? "totals" : confidenceMarket;
+        const retainedModel = reportModels.find((item) => item.family === family);
+        return [confidenceMarket, {
+          snapshot: {
+            predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
+            lowSample: snapshot.lowSample,
+            qbConfidence: snapshot.qbConfidence,
+            inputFeatureCount: snapshot.inputFeatureCount,
+            inputMissingFeatureCount: snapshot.inputMissingFeatureCount,
+            modelVersion: confidenceMarket === "spread" ? snapshot.spreadModelVersion
+              : confidenceMarket === "moneyline" ? snapshot.moneylineModelVersion
+                : snapshot.totalsModelVersion,
+          },
+          quotes: comparison?.currentQuotes ?? [],
+          revisions: revisions.map((revision) => ({
+            predictionTimestamp: revision.predictionTimestamp.toISOString(),
+            projectedMargin: revision.projectedMargin,
+            projectedTotal: revision.projectedTotal,
+            homeWinProbability: revision.homeWinProbability,
+          })),
+          retainedBaseline: {
+            evaluationRunId: retained2025Baseline.evaluationRunId,
+            family,
+            metrics: retainedModel?.metrics ?? null,
+            historical: calculatedConfidence.markets.find((result) => result.market === confidenceMarket)?.evidence.historical ?? null,
+          },
+        }];
+      }));
+      const persisted = await persistConfidenceResults(snapshot.snapshotKey, calculatedConfidence.markets, auditInputs);
+      persistedConfidenceResults += persisted.inserted;
+    }
     return {
       gameId: game.gameId,
       season: game.season,
@@ -708,13 +854,15 @@ async function consumerGames(filters: ConsumerFilters = {}) {
       } : null,
       market,
       marketBoard,
-      dataConfidence: confidence(snapshot),
+      dataConfidence,
+      confidence: calculatedConfidence,
       availability: {
         prediction: snapshot ? null : "Prediction pending — incomplete model inputs",
         market: market.evidence.available ? null : "Sportsbook line updating",
       },
     };
-  });
+  }));
+  return Object.assign(results, { persistedConfidenceResults });
 }
 
 router.get("/consumer/dashboard", async (_req, res): Promise<void> => {

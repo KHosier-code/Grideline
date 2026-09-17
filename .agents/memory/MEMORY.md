@@ -24,3 +24,4 @@
 - [Player usage source identities](player-usage-identities.md) — usage season, game, team, and player identities must be reconciled across independent persisted NFLverse datasets.
 - [Personnel audit preflight](personnel-audit-preflight.md) — missing or derived-zero evidence warns; absent contexts or non-pregame chronology blocks before fitting.
 - [Large batch result assembly](large-batch-result-assembly.md) — append large database result sets iteratively; variadic array spreading can overflow the stack.
+- [Confidence evidence identity](confidence-evidence-identity.md) — confidence is market-specific and immutable only when version and complete calculation evidence identify each result.

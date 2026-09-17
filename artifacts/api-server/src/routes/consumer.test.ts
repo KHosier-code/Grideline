@@ -548,6 +548,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
         difference: null,
         differenceUnit: market === "moneyline" ? "probability_points" as const : "points" as const,
         selectedQuote: null,
+        currentQuotes: [],
         firstObserved: null,
         current: null,
         modelTimestamp: null,
@@ -555,6 +556,22 @@ test("generated contracts accept representative list, dashboard, detail, and una
       })),
     },
     dataConfidence: { label: "Updating" as const, score: null, reason: "Prediction data is being refreshed" },
+    confidence: {
+      markets: (["spread", "moneyline", "total"] as const).map((market) => ({
+        market,
+        score: 0,
+        label: "Low" as const,
+        explanation: "Low confidence; required evidence is unavailable.",
+        components: [
+          { key: "data" as const, label: "Data Confidence", score: null, summary: "Unavailable" },
+          { key: "model" as const, label: "Model Confidence", score: null, summary: "Unavailable" },
+          { key: "marketEdge" as const, label: "Market Edge Strength", score: null, summary: "Unavailable" },
+        ],
+        evidence: {},
+        downgradeReasons: ["Required evidence is unavailable"],
+        calculatedAt: "2026-09-17T12:00:00.000Z",
+      })),
+    },
     availability: { prediction: "Prediction pending — incomplete model inputs", market: "Sportsbook line updating" },
   };
   const detail = {
@@ -628,6 +645,8 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.match(source, /inArray\(sportsbookOddsTable\.sportsbook, \["DraftKings", "FanDuel"\]\)/);
   assert.match(source, /\.orderBy\(asc\(sportsbookOddsTable\.capturedAt\), asc\(sportsbookOddsTable\.id\)\)/);
   assert.match(source, /preKickoffOnly:\s*true/);
+  assert.match(source, /snapshotDataConfidence\(\{[\s\S]*lowSample:\s*snapshot\.lowSample[\s\S]*inputMissingFeatureCount/);
+  assert.match(source, /dataAcceptable:\s*confidenceData\.acceptable/);
   assert.match(source, /authoritativeGameKickoff:\s*true/);
   assert.match(source, /new Date\(game\.kickoffTime\)\.getTime\(\) - 1/);
   assert.match(source, /featureVersion,\s*PERSONNEL_CONTEXT_VERSION/);

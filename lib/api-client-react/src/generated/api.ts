@@ -22,7 +22,10 @@ import type {
 import type {
   AppSettings,
   AppSettingsUpdate,
+  AppendConfidenceEvidence200,
+  AppendConfidenceEvidenceParams,
   ChallengerReadinessReport,
+  ConfidenceAudit,
   ConsumerDashboard,
   ConsumerDataUnavailableResponse,
   ConsumerGameDetail,
@@ -87,6 +90,164 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetConfidenceAuditUrl = () => {
+
+
+
+
+  return `/api/admin/confidence/audit`
+}
+
+/**
+ * @summary Inspect confidence methodology and calculated evidence
+ */
+export const getConfidenceAudit = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConfidenceAudit> => {
+
+  return customFetch<ConfidenceAudit>(getGetConfidenceAuditUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfidenceAuditQueryKey = () => {
+    return [
+    `/api/admin/confidence/audit`
+    ] as const;
+    }
+
+
+export const getGetConfidenceAuditQueryOptions = <TData = Awaited<ReturnType<typeof getConfidenceAudit>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfidenceAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfidenceAuditQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfidenceAudit>>> = ({ signal }) => getConfidenceAudit({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfidenceAudit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfidenceAuditQueryResult = NonNullable<Awaited<ReturnType<typeof getConfidenceAudit>>>
+export type GetConfidenceAuditQueryError = ErrorType<void>
+
+
+/**
+ * @summary Inspect confidence methodology and calculated evidence
+ */
+
+export function useGetConfidenceAudit<TData = Awaited<ReturnType<typeof getConfidenceAudit>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfidenceAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfidenceAuditQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAppendConfidenceEvidenceUrl = (params?: AppendConfidenceEvidenceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/confidence/calculate?${stringifiedParams}` : `/api/admin/confidence/calculate`
+}
+
+/**
+ * @summary Calculate and append confidence evidence for a season and week
+ */
+export const appendConfidenceEvidence = async (params?: AppendConfidenceEvidenceParams, options?: Parameters<typeof customFetch>[1]): Promise<AppendConfidenceEvidence200> => {
+
+  return customFetch<AppendConfidenceEvidence200>(getAppendConfidenceEvidenceUrl(params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAppendConfidenceEvidenceMutationKey = () => ['appendConfidenceEvidence'] as const;
+
+export const getAppendConfidenceEvidenceMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof appendConfidenceEvidence>>, TError,AppendConfidenceEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof appendConfidenceEvidence>>, TError,AppendConfidenceEvidenceMutationVariables, TContext> => {
+
+const mutationKey = getAppendConfidenceEvidenceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof appendConfidenceEvidence>>, AppendConfidenceEvidenceMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  appendConfidenceEvidence(params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AppendConfidenceEvidenceMutationResult = NonNullable<Awaited<ReturnType<typeof appendConfidenceEvidence>>>
+
+    export type AppendConfidenceEvidenceMutationError = ErrorType<void>
+    export type AppendConfidenceEvidenceMutationVariables = {params?: AppendConfidenceEvidenceParams}
+
+    /**
+ * @summary Calculate and append confidence evidence for a season and week
+ */
+export const useAppendConfidenceEvidence = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof appendConfidenceEvidence>>, TError,AppendConfidenceEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof appendConfidenceEvidence>>,
+        TError,
+        AppendConfidenceEvidenceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAppendConfidenceEvidenceMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

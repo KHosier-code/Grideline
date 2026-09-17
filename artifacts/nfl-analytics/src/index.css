@@ -941,6 +941,51 @@
 
   .premium-projection-section { display: grid; gap: 16px; }
   .premium-confidence-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; background: hsl(var(--secondary)); padding: 6px 10px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; font-weight: 600; text-transform: uppercase; }
+
+  .market-confidence { display: grid; gap: 12px; margin-top: 18px; }
+  .market-confidence-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+  .market-confidence-heading span { display: inline-flex; align-items: center; gap: 6px; color: hsl(var(--foreground)); font-weight: 700; }
+  .market-confidence-heading svg { width: 14px; height: 14px; color: hsl(var(--accent)); }
+  .market-confidence-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .market-confidence-card { min-width: 0; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); overflow: hidden; }
+  .market-confidence-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; padding: 11px 12px; cursor: pointer; list-style: none; }
+  .market-confidence-summary::-webkit-details-marker { display: none; }
+  .confidence-market-name { font-family: var(--app-font-serif); font-size: 14px; font-weight: 700; }
+  .confidence-label { border-radius: 99px; padding: 4px 7px; font-family: var(--app-font-mono); font-size: 9px; font-weight: 700; text-transform: uppercase; }
+  .confidence-score { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; }
+  .confidence-chevron { width: 14px; height: 14px; color: hsl(var(--muted-foreground)); transition: transform .2s ease; }
+  .market-confidence-card[open] .confidence-chevron { transform: rotate(180deg); }
+  .confidence-low .confidence-label { background: hsl(0 72% 50% / .12); color: hsl(0 62% 38%); }
+  .confidence-moderate .confidence-label { background: hsl(38 80% 48% / .14); color: hsl(34 72% 34%); }
+  .confidence-strong .confidence-label, .confidence-very-strong .confidence-label { background: hsl(142 71% 45% / .13); color: hsl(142 71% 30%); }
+  .market-confidence-detail { display: grid; gap: 12px; padding: 0 12px 12px; border-top: 1px solid hsl(var(--border)); }
+  .confidence-explanation { margin: 12px 0 0; color: hsl(var(--foreground)); font-size: 12px; line-height: 1.45; }
+  .confidence-components { display: grid; gap: 7px; }
+  .confidence-component { display: grid; gap: 3px; padding: 8px; border-radius: 7px; background: hsl(var(--secondary) / .55); }
+  .confidence-component span { display: flex; justify-content: space-between; gap: 8px; font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }
+  .confidence-component b { color: hsl(var(--accent)); }
+  .confidence-component small { color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.35; }
+  .confidence-evidence { display: grid; gap: 6px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.35; }
+  .confidence-evidence span { display: grid; gap: 2px; }
+  .confidence-evidence b, .confidence-downgrades > b { color: hsl(var(--foreground)); font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }
+  .confidence-downgrades { padding: 8px; border-left: 2px solid hsl(38 80% 48%); color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.4; }
+  .confidence-downgrades ul { margin: 5px 0 0; padding-left: 16px; }
+  .market-confidence-compact { margin: 0 12px 10px; }
+  .market-confidence-compact .market-confidence-heading small { display: none; }
+  .market-confidence-compact .market-confidence-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .market-confidence-compact .market-confidence-summary { display: flex; flex-wrap: wrap; padding: 7px 8px; }
+  .market-confidence-compact .confidence-market-name { width: 100%; font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }
+  .market-confidence-compact .confidence-score { margin-left: auto; }
+  .market-confidence-compact .confidence-chevron { width: 12px; height: 12px; }
+  .market-confidence-compact .market-confidence-detail { padding-inline: 8px; }
+  .market-confidence-compact .confidence-explanation { font-size: 11px; }
+  .market-confidence-compact .confidence-components { display: none; }
+
+  @media (max-width: 720px) {
+    .market-confidence-grid, .market-confidence-compact .market-confidence-grid { grid-template-columns: 1fr; }
+    .market-confidence-compact .market-confidence-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .market-confidence-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
+  }
   .premium-final-result { display: flex; align-items: center; gap: 10px; width: fit-content; border-radius: 10px; background: hsl(142 71% 45% / .12); padding: 10px 13px; color: hsl(142 71% 25%); }
   .premium-final-result span { font-family: var(--app-font-mono); font-size: 16px; font-weight: 700; }
   .premium-final-result small { display: block; margin-bottom: 2px; font-size: 8px; letter-spacing: .08em; text-transform: uppercase; }
