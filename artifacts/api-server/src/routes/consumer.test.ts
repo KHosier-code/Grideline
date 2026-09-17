@@ -16,12 +16,106 @@ import {
   MAX_CONSUMER_MOVEMENT_ROWS,
   MAX_CONSUMER_PERFORMANCE_ROWS,
   MAX_CONSUMER_SNAPSHOT_ROWS,
+  americanOddsImpliedProbability,
+  buildConsumerMarketBoard,
   consumerFinalScore,
   consumerMarket,
   serializeContext,
   serializeMovement,
   serializePerformance,
+  summarizeConsumerMarketBoards,
 } from "./consumer";
+
+const boardRow = (
+  sportsbook: string,
+  market: string,
+  selection: string,
+  point: number | null,
+  price: number,
+  capturedAt: string,
+) => ({ sportsbook, market, selection, point, price, capturedAt: new Date(capturedAt) });
+
+test("American odds implied probability rejects invalid prices", () => {
+  assert.equal(americanOddsImpliedProbability(-150), 0.6);
+  assert.equal(americanOddsImpliedProbability(200), 1 / 3);
+  for (const invalid of [0, 99, -99, 100.5, Number.NaN, null]) {
+    assert.equal(americanOddsImpliedProbability(invalid), null);
+  }
+});
+
+test("market board deterministically selects best lines and orients model differences", () => {
+  const board = buildConsumerMarketBoard({
+    projectedMargin: 4,
+    projectedTotal: 47,
+    homeWinProbability: 0.6,
+    predictionTimestamp: new Date("2026-09-01T11:00:00Z"),
+  }, [
+    boardRow("DraftKings", "spread", "Home Team", -3, -110, "2026-09-01T12:00:00Z"),
+    boardRow("FanDuel", "spread", "Home Team", -3, -105, "2026-09-01T12:01:00Z"),
+    boardRow("DraftKings", "total", "Over", 45.5, -105, "2026-09-01T12:00:00Z"),
+    boardRow("FanDuel", "total", "Over", 46, 110, "2026-09-01T12:01:00Z"),
+    boardRow("DraftKings", "moneyline", "Home Team", null, -150, "2026-09-01T12:00:00Z"),
+    boardRow("FanDuel", "moneyline", "Home Team", null, -145, "2026-09-01T12:01:00Z"),
+  ], { teamId: "home", name: "Home Team", abbreviation: "HME" }, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
+
+  assert.equal(board.status, "available");
+  assert.equal(board.comparisons[0]?.selectedQuote?.sportsbook, "FanDuel");
+  assert.equal(board.comparisons[0]?.difference, 1);
+  assert.equal(board.comparisons[1]?.selectedQuote?.sportsbook, "DraftKings");
+  assert.equal(board.comparisons[1]?.difference, 1.5);
+  assert.equal(board.comparisons[2]?.selectedQuote?.sportsbook, "FanDuel");
+  assert.ok(Math.abs((board.comparisons[2]?.difference ?? 0) - 0.8163265306) < 0.000001);
+});
+
+test("market board consumes only pre-kickoff history and exposes first/current evidence", () => {
+  const board = buildConsumerMarketBoard({
+    projectedMargin: 3,
+    projectedTotal: 44,
+    homeWinProbability: 0.55,
+    predictionTimestamp: new Date("2026-09-01T10:00:00Z"),
+  }, [
+    boardRow("DraftKings", "spread", "Home Team", -2.5, -110, "2026-09-01T12:00:00Z"),
+    boardRow("DraftKings", "spread", "Home Team", -3, -105, "2026-09-01T13:00:00Z"),
+    boardRow("DraftKings", "spread", "Home Team", -1, 110, "2026-09-01T15:00:00Z"),
+  ], { teamId: "home", name: "Home Team", abbreviation: "HME" }, new Date("2026-09-01T14:00:00Z"), new Date("2026-09-01T16:00:00Z"));
+
+  const spread = board.comparisons[0];
+  assert.equal(board.status, "stale");
+  assert.equal(spread?.state, "stale");
+  assert.equal(spread?.firstObserved?.point, -2.5);
+  assert.equal(spread?.current?.point, -3);
+  assert.equal(spread?.marketTimestamp, "2026-09-01T13:00:00.000Z");
+  assert.equal(board.comparisons[1]?.state, "absent");
+  assert.equal(board.comparisons[1]?.marketValue, null);
+});
+
+test("market board summary reports partial, stale, absent, and sportsbook coverage", () => {
+  const home = { teamId: "home", name: "Home Team", abbreviation: "HME" };
+  const snapshot = {
+    projectedMargin: 3,
+    projectedTotal: 44,
+    homeWinProbability: 0.55,
+    predictionTimestamp: new Date("2026-09-01T10:00:00Z"),
+  };
+  const available = buildConsumerMarketBoard(snapshot, [
+    boardRow("DraftKings", "spread", "Home Team", -3, -110, "2026-09-01T12:00:00Z"),
+  ], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
+  const stale = buildConsumerMarketBoard(snapshot, [
+    boardRow("FanDuel", "total", "Over", 44, -110, "2026-09-01T11:00:00Z"),
+  ], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
+  const absent = buildConsumerMarketBoard(snapshot, [], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
+
+  assert.deepEqual(summarizeConsumerMarketBoards([
+    { marketBoard: available },
+    { marketBoard: stale },
+    { marketBoard: absent },
+  ]), {
+    status: "partial",
+    coverage: { games: 3, gamesWithComparison: 2, DraftKings: 1, FanDuel: 1 },
+  });
+  assert.equal(summarizeConsumerMarketBoards([{ marketBoard: stale }]).status, "stale");
+  assert.equal(summarizeConsumerMarketBoards([]).status, "absent");
+});
 
 test("consumer scores appear only for completed games", () => {
   assert.equal(consumerFinalScore({
@@ -249,6 +343,25 @@ test("generated contracts accept representative list, dashboard, detail, and una
       total: null,
       evidence: { available: false, capturedAt: null, message: "Sportsbook line updating" },
     },
+    marketBoard: {
+      status: "absent" as const,
+      staleAfterMinutes: 30,
+      selectionRule: "Best means the most favorable canonical line point, then the higher American price when points match; exact ties prefer DraftKings.",
+      comparisons: (["spread", "total", "moneyline"] as const).map((market) => ({
+        market,
+        label: market,
+        state: "absent" as const,
+        modelValue: null,
+        marketValue: null,
+        difference: null,
+        differenceUnit: market === "moneyline" ? "probability_points" as const : "points" as const,
+        selectedQuote: null,
+        firstObserved: null,
+        current: null,
+        modelTimestamp: null,
+        marketTimestamp: null,
+      })),
+    },
     dataConfidence: { label: "Updating" as const, score: null, reason: "Prediction data is being refreshed" },
     availability: { prediction: "Prediction pending — incomplete model inputs", market: "Sportsbook line updating" },
   };
@@ -283,6 +396,17 @@ test("generated contracts accept representative list, dashboard, detail, and una
   const routesDirectory = path.join(fileURLToPath(new URL("../../", import.meta.url)), "src/routes");
   const source = readFileSync(path.join(routesDirectory, "consumer.ts"), "utf8");
   const predictionSource = readFileSync(path.join(routesDirectory, "../lib/live-predictions.ts"), "utf8");
+  assert.equal(ListConsumerGamesResponse.safeParse({
+    status: "absent",
+    coverage: { games: 1, gamesWithComparison: 0, DraftKings: 0, FanDuel: 0 },
+    games: [game],
+  }).success, true);
+  assert.equal(GetConsumerDashboardResponse.safeParse({
+    status: "available",
+    games: [game],
+    note: "Persisted snapshots only",
+  }).success, true);
+  assert.equal(GetConsumerGameResponse.safeParse(detail).success, true);
   assert.equal(MAX_CONSUMER_GAMES, 100);
   assert.equal(MAX_CONSUMER_MOVEMENT_ROWS, 200);
   assert.equal(MAX_CONSUMER_SNAPSHOT_ROWS, 100);
@@ -315,4 +439,16 @@ test("consumer movement UI keeps honest terminology and responsive controls", ()
   assert.doesNotMatch(component, /\bopener\b|\bclosing line\b/i);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.movement-controls/);
   assert.match(css, /\.movement-chart \{[^}]*overflow: hidden/);
+});
+
+test("consumer market board keeps neutral language and 320px responsive controls", () => {
+  const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
+  const component = readFileSync(path.join(webRoot, "pages/consumer/ConsumerGames.tsx"), "utf8");
+  const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
+  assert.match(component, /Model difference/);
+  assert.match(component, /First observed by Gridline/);
+  assert.match(component, /aria-expanded/);
+  assert.doesNotMatch(component, /\bbet\b|\bpick\b|\bedge\b|recommendation|expected return/i);
+  assert.match(css, /@media \(max-width: 420px\)/);
+  assert.match(css, /\.btn-icon \{[^}]*width: 44px;[^}]*height: 44px/);
 });

@@ -20,6 +20,7 @@ export const MAX_CONSUMER_GAMES = 100;
 export const MAX_CONSUMER_MOVEMENT_ROWS = 200;
 export const MAX_CONSUMER_SNAPSHOT_ROWS = MAX_CONSUMER_GAMES;
 export const MAX_CONSUMER_PERFORMANCE_ROWS = 5_000;
+export const CONSUMER_MARKET_STALE_MINUTES = 30;
 const SUPPORTED_CONSUMER_BOOKS = new Set(["DraftKings", "FanDuel"]);
 const SUPPORTED_CONSUMER_MARKETS = new Set(["spread", "total", "moneyline"]);
 const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
@@ -49,6 +50,30 @@ function confidence(snapshot: typeof predictionSnapshotsTable.$inferSelect | und
 
 type ConsumerHomeTeam = { teamId: string; name: string; abbreviation: string };
 
+const normalizeSelection = (value: unknown) => typeof value === "string"
+  ? value.toLowerCase().replace(/[^a-z0-9]/g, "")
+  : "";
+
+function isHomeSelection(selection: unknown, home?: ConsumerHomeTeam) {
+  if (!home) return false;
+  const value = normalizeSelection(selection);
+  return [home.teamId, home.name, home.abbreviation].some((candidate) => {
+    const normalized = normalizeSelection(candidate);
+    return normalized.length > 2 && (value.includes(normalized) || normalized.includes(value));
+  });
+}
+
+function validAmericanOdds(value: unknown): value is number {
+  return typeof value === "number"
+    && Number.isInteger(value)
+    && (value <= -100 || value >= 100);
+}
+
+export function americanOddsImpliedProbability(value: unknown): number | null {
+  if (!validAmericanOdds(value)) return null;
+  return value < 0 ? Math.abs(value) / (Math.abs(value) + 100) : 100 / (value + 100);
+}
+
 export function consumerMarket(
   snapshot: typeof predictionSnapshotsTable.$inferSelect | undefined,
   home?: ConsumerHomeTeam,
@@ -56,20 +81,9 @@ export function consumerMarket(
   const markets = (snapshot?.marketSnapshot as Record<string, any> | undefined)?.markets;
   const quote = (name: "spread" | "moneyline" | "total") => {
     const quotes = Array.isArray(markets?.[name]?.quotes) ? markets[name].quotes : [];
-    const normalize = (value: unknown) => typeof value === "string"
-      ? value.toLowerCase().replace(/[^a-z0-9]/g, "")
-      : "";
-    const isHome = (selection: unknown) => {
-      if (!home) return false;
-      const value = normalize(selection);
-      return [home.teamId, home.name, home.abbreviation].some((candidate) => {
-        const normalized = normalize(candidate);
-        return normalized.length > 2 && (value.includes(normalized) || normalized.includes(value));
-      });
-    };
     const isCanonical = (value: Record<string, unknown>) => name === "total"
-      ? normalize(value.selection).includes("over")
-      : isHome(value.selection);
+      ? normalizeSelection(value.selection).includes("over")
+      : isHomeSelection(value.selection, home);
     const value = ["DraftKings", "FanDuel"]
       .flatMap((sportsbook) => quotes.filter((item: unknown) =>
         Boolean(item)
@@ -111,6 +125,113 @@ export function consumerMarket(
 
 type MovementRow = Pick<typeof sportsbookOddsTable.$inferSelect,
   "sportsbook" | "market" | "selection" | "point" | "price" | "capturedAt">;
+
+type BoardPrediction = Pick<typeof predictionSnapshotsTable.$inferSelect,
+  "projectedMargin" | "projectedTotal" | "homeWinProbability" | "predictionTimestamp">;
+
+const quoteFromMovement = (row: MovementRow, market: "spread" | "total" | "moneyline", home?: ConsumerHomeTeam) => ({
+  sportsbook: row.sportsbook,
+  selection: market === "total" ? "Over" : home?.abbreviation ?? "Home",
+  point: safeNumber(row.point),
+  price: row.price,
+  capturedAt: row.capturedAt.toISOString(),
+});
+
+export function buildConsumerMarketBoard(
+  snapshot: BoardPrediction | undefined,
+  rows: MovementRow[],
+  home: ConsumerHomeTeam | undefined,
+  kickoffTime: Date | null,
+  now = new Date(),
+) {
+  const cutoff = kickoffTime && kickoffTime.getTime() < now.getTime() ? kickoffTime : now;
+  const eligible = rows.filter((row) =>
+    SUPPORTED_CONSUMER_BOOKS.has(row.sportsbook)
+    && SUPPORTED_CONSUMER_MARKETS.has(row.market)
+    && row.capturedAt.getTime() <= cutoff.getTime());
+  const specs = [
+    { market: "spread" as const, label: "Home spread", modelValue: safeNumber(snapshot?.projectedMargin), unit: "points" as const },
+    { market: "total" as const, label: "Game total", modelValue: safeNumber(snapshot?.projectedTotal), unit: "points" as const },
+    { market: "moneyline" as const, label: "Home moneyline", modelValue: safeNumber(snapshot?.homeWinProbability), unit: "probability_points" as const },
+  ];
+  const comparisons = specs.map((spec) => {
+    const canonical = eligible.filter((row) =>
+      row.market === spec.market
+      && validAmericanOdds(row.price)
+      && (spec.market === "moneyline" || safeNumber(row.point) !== null)
+      && (spec.market === "total"
+        ? normalizeSelection(row.selection).includes("over")
+        : isHomeSelection(row.selection, home)));
+    const currentByBook = ["DraftKings", "FanDuel"].flatMap((sportsbook) => {
+      const stream = canonical.filter((row) => row.sportsbook === sportsbook);
+      return stream.length ? [stream[stream.length - 1]] : [];
+    });
+    const ranked = [...currentByBook].sort((left, right) => {
+      if (spec.market === "spread" && left.point !== right.point) return (right.point ?? -Infinity) - (left.point ?? -Infinity);
+      if (spec.market === "total" && left.point !== right.point) return (left.point ?? Infinity) - (right.point ?? Infinity);
+      if (left.price !== right.price) return right.price - left.price;
+      return left.sportsbook.localeCompare(right.sportsbook);
+    });
+    const selected = ranked[0];
+    const first = selected
+      ? canonical.find((row) => row.sportsbook === selected.sportsbook)
+      : undefined;
+    const marketValue = selected
+      ? spec.market === "moneyline" ? americanOddsImpliedProbability(selected.price) : safeNumber(selected.point)
+      : null;
+    const difference = spec.modelValue !== null && marketValue !== null
+      ? spec.market === "spread"
+        ? spec.modelValue + marketValue
+        : (spec.modelValue - marketValue) * (spec.market === "moneyline" ? 100 : 1)
+      : null;
+    const stale = Boolean(selected
+      && cutoff.getTime() - selected.capturedAt.getTime() > CONSUMER_MARKET_STALE_MINUTES * 60_000);
+    return {
+      market: spec.market,
+      label: spec.label,
+      state: selected ? stale ? "stale" as const : "available" as const : "absent" as const,
+      modelValue: spec.modelValue,
+      marketValue,
+      difference,
+      differenceUnit: spec.unit,
+      selectedQuote: selected ? quoteFromMovement(selected, spec.market, home) : null,
+      firstObserved: first ? quoteFromMovement(first, spec.market, home) : null,
+      current: selected ? quoteFromMovement(selected, spec.market, home) : null,
+      modelTimestamp: snapshot?.predictionTimestamp.toISOString() ?? null,
+      marketTimestamp: selected?.capturedAt.toISOString() ?? null,
+    };
+  });
+  const available = comparisons.filter((item) => item.state === "available").length;
+  const stale = comparisons.filter((item) => item.state === "stale").length;
+  return {
+    status: available === 3 ? "available" as const
+      : available > 0 ? "partial" as const
+      : stale > 0 ? "stale" as const
+      : "absent" as const,
+    staleAfterMinutes: CONSUMER_MARKET_STALE_MINUTES,
+    selectionRule: "Best means the most favorable canonical line point, then the higher American price when points match; exact ties prefer DraftKings.",
+    comparisons,
+  };
+}
+
+export function summarizeConsumerMarketBoards(games: Array<{ marketBoard: ReturnType<typeof buildConsumerMarketBoard> }>) {
+  const statuses = games.map((game) => game.marketBoard.status);
+  const coveredBy = (sportsbook: string) => games.filter((game) =>
+    game.marketBoard.comparisons.some((comparison) => comparison.selectedQuote?.sportsbook === sportsbook)).length;
+  return {
+    status: !games.length ? "absent" as const
+      : statuses.every((value) => value === "available") ? "available" as const
+      : statuses.some((value) => value === "available" || value === "partial") ? "partial" as const
+      : statuses.some((value) => value === "stale") ? "stale" as const
+      : "absent" as const,
+    coverage: {
+      games: games.length,
+      gamesWithComparison: games.filter((game) => game.marketBoard.status !== "absent").length,
+      DraftKings: coveredBy("DraftKings"),
+      FanDuel: coveredBy("FanDuel"),
+    },
+  };
+}
 
 export function serializeMovement(rows: MovementRow[], kickoffTime?: Date | null) {
   const supportedRows = rows.filter((row) =>
@@ -324,19 +445,42 @@ async function consumerGames(filters: ConsumerFilters = {}) {
     .orderBy(asc(gamesTable.kickoffTime), asc(gamesTable.gameId))
     .limit(MAX_CONSUMER_GAMES);
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
-  const [teams, snapshots] = await Promise.all([
+  const [teams, snapshots, marketRows] = await Promise.all([
     teamIds.length ? db.select().from(teamsTable).where(inArray(teamsTable.teamId, teamIds)) : [],
     getLatestValidPredictionSnapshots(games.map((game) => game.gameId), {
       preKickoffOnly: true,
       authoritativeGameKickoff: true,
       maxRows: MAX_CONSUMER_SNAPSHOT_ROWS,
     }),
+    (games.length ? db.select({
+      gameId: sportsbookOddsTable.gameId,
+      sportsbook: sportsbookOddsTable.sportsbook,
+      market: sportsbookOddsTable.market,
+      selection: sportsbookOddsTable.selection,
+      point: sportsbookOddsTable.point,
+      price: sportsbookOddsTable.price,
+      capturedAt: sportsbookOddsTable.capturedAt,
+    }).from(sportsbookOddsTable)
+      .where(and(
+        inArray(sportsbookOddsTable.gameId, games.map((game) => game.gameId)),
+        inArray(sportsbookOddsTable.sportsbook, ["DraftKings", "FanDuel"]),
+        inArray(sportsbookOddsTable.market, ["spread", "total", "moneyline"]),
+      ))
+      .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id)) : []) as Promise<Array<MovementRow & { gameId: string }>>,
   ]);
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
   return games.map((game) => {
     const snapshot = gameSpecificSnapshot(game.gameId, snapshots);
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
+    const consumerHome = home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined;
+    const market = consumerMarket(snapshot, consumerHome);
+    const marketBoard = buildConsumerMarketBoard(
+      snapshot,
+      marketRows.filter((row) => row.gameId === game.gameId),
+      consumerHome,
+      game.kickoffTime,
+    );
     return {
       gameId: game.gameId,
       season: game.season,
@@ -358,11 +502,12 @@ async function consumerGames(filters: ConsumerFilters = {}) {
         homeWinProbability: safeNumber(snapshot.homeWinProbability),
         awayWinProbability: safeNumber(snapshot.awayWinProbability),
       } : null,
-      market: consumerMarket(snapshot, home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined),
+      market,
+      marketBoard,
       dataConfidence: confidence(snapshot),
       availability: {
         prediction: snapshot ? null : "Prediction pending — incomplete model inputs",
-        market: consumerMarket(snapshot, home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined).evidence.available ? null : "Sportsbook line updating",
+        market: market.evidence.available ? null : "Sportsbook line updating",
       },
     };
   });
@@ -388,7 +533,11 @@ router.get("/consumer/games", async (req, res): Promise<void> => {
   }
   try {
     const games = await consumerGames({ season, week });
-    res.json({ status: games.length ? "available" : "unavailable", games });
+    const summary = summarizeConsumerMarketBoards(games);
+    res.json({
+      ...summary,
+      games,
+    });
   } catch (error) {
     req.log.error({ error }, "Consumer games read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });

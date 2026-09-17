@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ConsumerGame } from './consumerGame';
+import type { ConsumerGamesCoverage } from './consumerGamesCoverage';
 import type { ConsumerGamesStatus } from './consumerGamesStatus';
 
 export interface ConsumerGames {
   status: ConsumerGamesStatus;
+  coverage: ConsumerGamesCoverage;
   games: ConsumerGame[];
 }

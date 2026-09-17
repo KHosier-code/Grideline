@@ -592,9 +592,37 @@ components:
         moneyline: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         total: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         evidence: { $ref: "#/components/schemas/ConsumerMarketEvidence" }
+    ConsumerMarketComparison:
+      type: object
+      required: [market, label, state, modelValue, marketValue, difference, differenceUnit, selectedQuote, firstObserved, current, modelTimestamp, marketTimestamp]
+      properties:
+        market: { type: string, enum: [spread, total, moneyline] }
+        label: { type: string }
+        state: { type: string, enum: [available, stale, absent] }
+        modelValue: { type: ["number", "null"] }
+        marketValue: { type: ["number", "null"] }
+        difference: { type: ["number", "null"] }
+        differenceUnit: { type: string, enum: [points, probability_points] }
+        selectedQuote: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        firstObserved: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        current: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        modelTimestamp: { type: ["string", "null"], format: date-time }
+        marketTimestamp: { type: ["string", "null"], format: date-time }
+    ConsumerMarketBoard:
+      type: object
+      required: [status, staleAfterMinutes, selectionRule, comparisons]
+      properties:
+        status: { type: string, enum: [available, partial, stale, absent] }
+        staleAfterMinutes: { type: integer }
+        selectionRule: { type: string }
+        comparisons:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: { $ref: "#/components/schemas/ConsumerMarketComparison" }
     ConsumerGame:
       type: object
-      required: [gameId, season, week, kickoffTime, gameStatus, venue, matchup, finalScore, prediction, market, dataConfidence, availability]
+      required: [gameId, season, week, kickoffTime, gameStatus, venue, matchup, finalScore, prediction, market, marketBoard, dataConfidence, availability]
       properties:
         gameId: { type: string }
         season: { type: integer }
@@ -626,6 +654,7 @@ components:
             homeWinProbability: { type: ["number", "null"] }
             awayWinProbability: { type: ["number", "null"] }
         market: { $ref: "#/components/schemas/ConsumerGameMarket" }
+        marketBoard: { $ref: "#/components/schemas/ConsumerMarketBoard" }
         dataConfidence:
           type: object
           required: [label, score, reason]
@@ -641,9 +670,17 @@ components:
             market: { type: ["string", "null"] }
     ConsumerGames:
       type: object
-      required: [status, games]
+      required: [status, coverage, games]
       properties:
-        status: { type: string, enum: [available, unavailable] }
+        status: { type: string, enum: [available, partial, stale, absent] }
+        coverage:
+          type: object
+          required: [games, gamesWithComparison, DraftKings, FanDuel]
+          properties:
+            games: { type: integer }
+            gamesWithComparison: { type: integer }
+            DraftKings: { type: integer }
+            FanDuel: { type: integer }
         games:
           type: array
           items: { $ref: "#/components/schemas/ConsumerGame" }

@@ -825,6 +825,11 @@ export const UpdateSettingsResponse = zod.object({
  * Returns consumer-safe, persisted data only. It never starts data synchronization or model computation.
  * @summary Read the persisted consumer game dashboard
  */
+export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin = 3;
+export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax = 3;
+
+
+
 export const GetConsumerDashboardResponse = zod.object({
   "status": zod.enum(['available', 'unavailable']),
   "games": zod.array(zod.object({
@@ -887,6 +892,43 @@ export const GetConsumerDashboardResponse = zod.object({
   "message": zod.string().nullable()
 })
 }),
+  "marketBoard": zod.object({
+  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
+  "staleAfterMinutes": zod.number().int(),
+  "selectionRule": zod.string(),
+  "comparisons": zod.array(zod.object({
+  "market": zod.enum(['spread', 'total', 'moneyline']),
+  "label": zod.string(),
+  "state": zod.enum(['available', 'stale', 'absent']),
+  "modelValue": zod.number().nullable(),
+  "marketValue": zod.number().nullable(),
+  "difference": zod.number().nullable(),
+  "differenceUnit": zod.enum(['points', 'probability_points']),
+  "selectedQuote": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "firstObserved": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "current": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "modelTimestamp": zod.coerce.date().nullable(),
+  "marketTimestamp": zod.coerce.date().nullable()
+})).min(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin).max(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax)
+}),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
   "score": zod.number().nullable(),
@@ -916,8 +958,19 @@ export const ListConsumerGamesQueryParams = zod.object({
   "week": zod.coerce.number().int().min(1).max(listConsumerGamesQueryWeekMax).optional()
 })
 
+export const listConsumerGamesResponseGamesItemMarketBoardComparisonsMin = 3;
+export const listConsumerGamesResponseGamesItemMarketBoardComparisonsMax = 3;
+
+
+
 export const ListConsumerGamesResponse = zod.object({
-  "status": zod.enum(['available', 'unavailable']),
+  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
+  "coverage": zod.object({
+  "games": zod.number().int(),
+  "gamesWithComparison": zod.number().int(),
+  "DraftKings": zod.number().int(),
+  "FanDuel": zod.number().int()
+}),
   "games": zod.array(zod.object({
   "gameId": zod.string(),
   "season": zod.number().int(),
@@ -978,6 +1031,43 @@ export const ListConsumerGamesResponse = zod.object({
   "message": zod.string().nullable()
 })
 }),
+  "marketBoard": zod.object({
+  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
+  "staleAfterMinutes": zod.number().int(),
+  "selectionRule": zod.string(),
+  "comparisons": zod.array(zod.object({
+  "market": zod.enum(['spread', 'total', 'moneyline']),
+  "label": zod.string(),
+  "state": zod.enum(['available', 'stale', 'absent']),
+  "modelValue": zod.number().nullable(),
+  "marketValue": zod.number().nullable(),
+  "difference": zod.number().nullable(),
+  "differenceUnit": zod.enum(['points', 'probability_points']),
+  "selectedQuote": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "firstObserved": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "current": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "modelTimestamp": zod.coerce.date().nullable(),
+  "marketTimestamp": zod.coerce.date().nullable()
+})).min(listConsumerGamesResponseGamesItemMarketBoardComparisonsMin).max(listConsumerGamesResponseGamesItemMarketBoardComparisonsMax)
+}),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
   "score": zod.number().nullable(),
@@ -997,6 +1087,9 @@ export const ListConsumerGamesResponse = zod.object({
 export const GetConsumerGameParams = zod.object({
   "gameId": zod.coerce.string()
 })
+
+export const getConsumerGameResponseOneMarketBoardComparisonsMin = 3;
+export const getConsumerGameResponseOneMarketBoardComparisonsMax = 3;
 
 export const getConsumerGameResponseTwoMovementStreamsMax = 24;
 
@@ -1069,6 +1162,43 @@ export const GetConsumerGameResponse = zod.object({
   "capturedAt": zod.coerce.date().nullable(),
   "message": zod.string().nullable()
 })
+}),
+  "marketBoard": zod.object({
+  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
+  "staleAfterMinutes": zod.number().int(),
+  "selectionRule": zod.string(),
+  "comparisons": zod.array(zod.object({
+  "market": zod.enum(['spread', 'total', 'moneyline']),
+  "label": zod.string(),
+  "state": zod.enum(['available', 'stale', 'absent']),
+  "modelValue": zod.number().nullable(),
+  "marketValue": zod.number().nullable(),
+  "difference": zod.number().nullable(),
+  "differenceUnit": zod.enum(['points', 'probability_points']),
+  "selectedQuote": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "firstObserved": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "current": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "modelTimestamp": zod.coerce.date().nullable(),
+  "marketTimestamp": zod.coerce.date().nullable()
+})).min(getConsumerGameResponseOneMarketBoardComparisonsMin).max(getConsumerGameResponseOneMarketBoardComparisonsMax)
 }),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),

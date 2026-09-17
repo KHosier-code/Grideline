@@ -1,10 +1,132 @@
-import { getListConsumerGamesQueryKey, useListConsumerGames } from '@workspace/api-client-react';
-import { useEffect, useState } from 'react';
-import { ConsumerGameCard, ConsumerLoading, ConsumerMessage } from './consumer-ui';
+import {
+  getListConsumerGamesQueryKey,
+  useListConsumerGames,
+  type ConsumerGame,
+  type ConsumerMarketComparison,
+  type ConsumerMarketQuote,
+} from '@workspace/api-client-react';
+import { ChevronDown, ChevronRight, Clock3 } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
+import { Link } from 'wouter';
+import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote } from './consumer-ui';
 
 function readPositiveInteger(value: string | null, fallback: number) {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function formatComparisonValue(comparison: ConsumerMarketComparison, value: number | null) {
+  if (value === null) return '—';
+  if (comparison.market === 'moneyline') return `${(value * 100).toFixed(1)}%`;
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)}`;
+}
+
+function formatDifference(comparison: ConsumerMarketComparison) {
+  if (comparison.difference === null) return '—';
+  const suffix = comparison.differenceUnit === 'probability_points' ? ' pp' : ' pts';
+  return `${comparison.difference > 0 ? '+' : ''}${comparison.difference.toFixed(1)}${suffix}`;
+}
+
+function ComparisonCell({ comparison }: { comparison: ConsumerMarketComparison }) {
+  return (
+    <div className="tb-cell market-comparison-cell">
+      <div className="tc-quote-label">
+        <span>{comparison.label}</span>
+        <span className={`market-state market-state-${comparison.state}`}>
+          {comparison.state === 'absent' ? 'No market' : comparison.state}
+        </span>
+      </div>
+      <dl className="comparison-values">
+        <div><dt>Gridline</dt><dd>{formatComparisonValue(comparison, comparison.modelValue)}</dd></div>
+        <div><dt>Market</dt><dd>{formatComparisonValue(comparison, comparison.marketValue)}</dd></div>
+        <div><dt>Model difference</dt><dd>{formatDifference(comparison)}</dd></div>
+      </dl>
+      {comparison.selectedQuote && (
+        <p className="selected-book">
+          {comparison.selectedQuote.sportsbook} · {comparison.selectedQuote.price > 0 ? '+' : ''}
+          {comparison.selectedQuote.price}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function EvidenceQuote({
+  label,
+  quote,
+  market,
+}: {
+  label: string;
+  quote: ConsumerMarketQuote | null;
+  market: 'spread' | 'total' | 'moneyline';
+}) {
+  return (
+    <div className="quote-line">
+      <span className="quote-label">{label}</span>
+      <span className="quote-val">{quote ? formatQuote(quote, market) : 'No market'}</span>
+      <time className="quote-time" dateTime={quote?.capturedAt ?? undefined}>
+        {quote?.capturedAt ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(quote.capturedAt)) : '—'}
+      </time>
+    </div>
+  );
+}
+
+function GameRow({ game, season, week }: { game: ConsumerGame; season: number; week: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const evidenceId = useId();
+  const final = game.finalScore;
+  const prediction = game.prediction;
+
+  return (
+    <article className="tb-row">
+      <div className="tb-row-main">
+        <div className="tb-cell tc-matchup">
+          <div className="tc-time">
+            <span>{formatKickoff(game.kickoffTime)}</span>
+            <span className={`market-state market-state-${game.marketBoard.status}`}>{game.marketBoard.status}</span>
+          </div>
+          <div className="tc-team"><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span><b>{final ? final.away : prediction?.projectedAwayScore?.toFixed(1) ?? '—'}</b></div>
+          <div className="tc-team"><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span><b>{final ? final.home : prediction?.projectedHomeScore?.toFixed(1) ?? '—'}</b></div>
+        </div>
+        {game.marketBoard.comparisons.map((comparison) => <ComparisonCell key={comparison.market} comparison={comparison} />)}
+        <div className="tc-action">
+          <button
+            type="button"
+            className="btn-icon evidence-toggle"
+            aria-expanded={expanded}
+            aria-controls={evidenceId}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            <ChevronDown aria-hidden="true" className={expanded ? 'is-open' : ''} />
+            <span className="sr-only">{expanded ? 'Hide' : 'Show'} evidence for {game.matchup.away.abbreviation} at {game.matchup.home.abbreviation}</span>
+          </button>
+          <Link href={`/games/${game.gameId}?season=${season}&week=${week}`} className="btn-icon" aria-label={`Open ${game.matchup.away.abbreviation} at ${game.matchup.home.abbreviation} details`}>
+            <ChevronRight aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+      {expanded && (
+        <div className="tb-evidence" id={evidenceId}>
+          <div className="evidence-summary">
+            <strong>Comparison evidence</strong>
+            <span>{game.dataConfidence.label} data confidence</span>
+            <span>{game.marketBoard.selectionRule}</span>
+          </div>
+          {game.marketBoard.comparisons.map((comparison) => (
+            <section className="ev-block" key={comparison.market}>
+              <strong>{comparison.label}</strong>
+              <EvidenceQuote label="First observed by Gridline" quote={comparison.firstObserved} market={comparison.market} />
+              <EvidenceQuote label="Current" quote={comparison.current} market={comparison.market} />
+              <p className="timestamp-pair">
+                <span>Model timestamp: {comparison.modelTimestamp ? new Date(comparison.modelTimestamp).toLocaleString() : 'Unavailable'}</span>
+                <span>Market timestamp: {comparison.marketTimestamp ? new Date(comparison.marketTimestamp).toLocaleString() : 'Unavailable'}</span>
+              </p>
+            </section>
+          ))}
+        </div>
+      )}
+    </article>
+  );
 }
 
 export default function ConsumerGames() {
@@ -17,8 +139,33 @@ export default function ConsumerGames() {
   }, [season, week]);
   const params = { season, week };
   const query = useListConsumerGames(params, { query: { queryKey: getListConsumerGamesQueryKey(params), staleTime: 30_000 } });
-  return <div className="consumer-page">
-    <header className="consumer-page-header"><div><p className="consumer-eyebrow">Schedule</p><h1>Games & projections</h1><p>Choose a week to review persisted projections and available market context.</p></div><div className="consumer-filters"><label>Season<input aria-label="Season" type="number" min="2020" value={season} onChange={e => setSeason(Number(e.target.value))} /></label><label>Week<select aria-label="Week" value={week} onChange={e => setWeek(Number(e.target.value))}>{Array.from({ length: 22 }, (_, i) => <option key={i + 1} value={i + 1}>{i < 18 ? `Week ${i + 1}` : `Postseason ${i - 17}`}</option>)}</select></label></div></header>
-    {query.isLoading ? <ConsumerLoading /> : query.isError ? <ConsumerMessage error title="Games are temporarily unavailable" detail="We couldn’t load this schedule right now. Please try again shortly." /> : query.data?.games.length ? <div className="consumer-card-grid">{query.data.games.map(game => <ConsumerGameCard key={game.gameId} game={game} href={`/games/${game.gameId}?season=${season}&week=${week}`} />)}</div> : <ConsumerMessage title="No games found" detail="There are no available matchups for this season and week. Try another week." />}
-  </div>;
+
+  return (
+    <div className="terminal-page">
+      <header className="terminal-header">
+        <div><p className="consumer-eyebrow">Weekly comparison</p><h1 className="terminal-title">Gridline market board</h1><p className="terminal-desc">Persisted model projections compared with valid DraftKings and FanDuel evidence. Differences are informational.</p></div>
+        <div className="terminal-controls">
+          <label className="terminal-select">Season<input aria-label="Season" type="number" min="2020" value={season} onChange={(event) => setSeason(Number(event.target.value))} /></label>
+          <label className="terminal-select">Week<select aria-label="Week" value={week} onChange={(event) => setWeek(Number(event.target.value))}>{Array.from({ length: 22 }, (_, index) => <option key={index + 1} value={index + 1}>{index < 18 ? `Week ${index + 1}` : `Postseason ${index - 17}`}</option>)}</select></label>
+        </div>
+      </header>
+
+      {query.data && !query.isError && (
+        <section className="terminal-summary-bar" aria-label="Board coverage">
+          <div className="ts-stat"><span>Board status</span><strong className={`market-state market-state-${query.data.status}`}>{query.data.status}</strong></div>
+          <div className="ts-stat"><span>Games compared</span><strong>{query.data.coverage.gamesWithComparison} / {query.data.coverage.games}</strong></div>
+          <div className="ts-stat"><span>DraftKings coverage</span><strong>{query.data.coverage.DraftKings} games</strong></div>
+          <div className="ts-stat"><span>FanDuel coverage</span><strong>{query.data.coverage.FanDuel} games</strong></div>
+          <div className="ts-stat"><span>Evidence</span><strong><Clock3 aria-hidden="true" /> First / current</strong></div>
+        </section>
+      )}
+
+      {query.isLoading ? <ConsumerLoading label="Loading market board…" /> : query.isError ? <ConsumerMessage error title="Market board unavailable" detail="We couldn’t load this week right now. Please try again shortly." /> : query.data?.games.length ? (
+        <section className="terminal-board" aria-label="Weekly NFL market comparisons">
+          <div className="tb-header" aria-hidden="true"><div>Kickoff & matchup</div><div>Spread comparison</div><div>Total comparison</div><div>Moneyline comparison</div><div>Evidence</div></div>
+          {query.data.games.map((game) => <GameRow key={game.gameId} game={game} season={season} week={week} />)}
+        </section>
+      ) : <ConsumerMessage title="No games found" detail="There are no available matchups for this season and week. Try another week." />}
+    </div>
+  );
 }

@@ -51,6 +51,73 @@ export interface ConsumerGameMarket {
   evidence: ConsumerMarketEvidence;
 }
 
+export type ConsumerMarketComparisonMarket = typeof ConsumerMarketComparisonMarket[keyof typeof ConsumerMarketComparisonMarket];
+
+
+export const ConsumerMarketComparisonMarket = {
+  spread: 'spread',
+  total: 'total',
+  moneyline: 'moneyline',
+} as const;
+
+export type ConsumerMarketComparisonState = typeof ConsumerMarketComparisonState[keyof typeof ConsumerMarketComparisonState];
+
+
+export const ConsumerMarketComparisonState = {
+  available: 'available',
+  stale: 'stale',
+  absent: 'absent',
+} as const;
+
+export type ConsumerMarketComparisonDifferenceUnit = typeof ConsumerMarketComparisonDifferenceUnit[keyof typeof ConsumerMarketComparisonDifferenceUnit];
+
+
+export const ConsumerMarketComparisonDifferenceUnit = {
+  points: 'points',
+  probability_points: 'probability_points',
+} as const;
+
+export interface ConsumerMarketComparison {
+  market: ConsumerMarketComparisonMarket;
+  label: string;
+  state: ConsumerMarketComparisonState;
+  /** @nullable */
+  modelValue: number | null;
+  /** @nullable */
+  marketValue: number | null;
+  /** @nullable */
+  difference: number | null;
+  differenceUnit: ConsumerMarketComparisonDifferenceUnit;
+  selectedQuote: ConsumerMarketQuote | null;
+  firstObserved: ConsumerMarketQuote | null;
+  current: ConsumerMarketQuote | null;
+  /** @nullable */
+  modelTimestamp: string | null;
+  /** @nullable */
+  marketTimestamp: string | null;
+}
+
+export type ConsumerMarketBoardStatus = typeof ConsumerMarketBoardStatus[keyof typeof ConsumerMarketBoardStatus];
+
+
+export const ConsumerMarketBoardStatus = {
+  available: 'available',
+  partial: 'partial',
+  stale: 'stale',
+  absent: 'absent',
+} as const;
+
+export interface ConsumerMarketBoard {
+  status: ConsumerMarketBoardStatus;
+  staleAfterMinutes: number;
+  selectionRule: string;
+  /**
+     * @minItems 3
+     * @maxItems 3
+     */
+  comparisons: ConsumerMarketComparison[];
+}
+
 export type ConsumerGameMatchup = {
   home: ConsumerTeam;
   away: ConsumerTeam;
@@ -123,6 +190,7 @@ export interface ConsumerGame {
   /** @nullable */
   prediction: ConsumerGamePrediction;
   market: ConsumerGameMarket;
+  marketBoard: ConsumerMarketBoard;
   dataConfidence: ConsumerGameDataConfidence;
   availability: ConsumerGameAvailability;
 }
@@ -132,11 +200,21 @@ export type ConsumerGamesStatus = typeof ConsumerGamesStatus[keyof typeof Consum
 
 export const ConsumerGamesStatus = {
   available: 'available',
-  unavailable: 'unavailable',
+  partial: 'partial',
+  stale: 'stale',
+  absent: 'absent',
 } as const;
+
+export type ConsumerGamesCoverage = {
+  games: number;
+  gamesWithComparison: number;
+  DraftKings: number;
+  FanDuel: number;
+};
 
 export interface ConsumerGames {
   status: ConsumerGamesStatus;
+  coverage: ConsumerGamesCoverage;
   games: ConsumerGame[];
 }
 

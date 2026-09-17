@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConsumerGamesStatus = typeof ConsumerGamesStatus[keyof typeof ConsumerGamesStatus];
+export type ConsumerMarketBoardStatus = typeof ConsumerMarketBoardStatus[keyof typeof ConsumerMarketBoardStatus];
 
 
-export const ConsumerGamesStatus = {
+export const ConsumerMarketBoardStatus = {
   available: 'available',
   partial: 'partial',
   stale: 'stale',
