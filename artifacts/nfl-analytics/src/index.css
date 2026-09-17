@@ -495,6 +495,34 @@
   .consumer-props > svg { height: 44px; width: 44px; margin-bottom: 24px; color: hsl(var(--accent)); }
   .consumer-props p:last-child { max-width: 470px; color: hsl(var(--muted-foreground)); line-height: 1.7; }
   .depth-section { display: grid; gap: 18px; }
+  .movement-section { display: grid; gap: 18px; }
+  .movement-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .movement-tabs, .movement-books { display: flex; flex-wrap: wrap; gap: 6px; }
+  .movement-tabs { border-radius: 10px; background: hsl(var(--secondary)); padding: 4px; }
+  .movement-tabs button, .movement-books button { border: 1px solid transparent; border-radius: 7px; background: transparent; padding: 8px 11px; color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 700; cursor: pointer; }
+  .movement-tabs button.active { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 2px 8px hsl(222 34% 15% / .08); }
+  .movement-books button { border-color: hsl(var(--border)); background: hsl(var(--card)); }
+  .movement-books button.active { border-color: hsl(var(--accent)); color: hsl(var(--foreground)); box-shadow: inset 0 -2px 0 hsl(var(--accent)); }
+  .movement-partial { display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; background: hsl(38 80% 48% / .12); padding: 6px 9px; color: hsl(34 72% 34%); font-size: 10px; font-weight: 700; }
+  .movement-partial svg { height: 13px; width: 13px; }
+  .movement-notice, .movement-methodology { margin: 0; border-left: 3px solid hsl(var(--accent)); background: hsl(var(--card)); padding: 11px 14px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.6; }
+  .movement-chart { height: 340px; min-width: 0; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--card)); padding: 10px 6px 4px; }
+  .movement-streams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .movement-streams article { overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+  .movement-streams header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid hsl(var(--border)); padding: 13px 15px; }
+  .movement-streams header span, .movement-streams header small { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 8px; text-transform: uppercase; }
+  .movement-streams h3 { margin: 3px 0 0; font-family: var(--app-font-serif); font-size: 16px; }
+  .movement-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .movement-summary-value { min-width: 0; padding: 14px; }
+  .movement-summary-value + .movement-summary-value { border-left: 1px solid hsl(var(--border)); }
+  .movement-summary-value small, .movement-summary-value strong, .movement-summary-value time { display: block; }
+  .movement-summary-value small { min-height: 25px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 7px; line-height: 1.4; text-transform: uppercase; }
+  .movement-summary-value strong { margin-top: 5px; font-family: var(--app-font-mono); font-size: 14px; }
+  .movement-summary-value time { margin-top: 5px; color: hsl(var(--muted-foreground)); font-size: 8px; }
+  .movement-summary-value .movement-unavailable { color: hsl(var(--muted-foreground)); font-family: var(--app-font-sans); font-size: 10px; }
+  .movement-empty { display: flex; min-height: 220px; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed hsl(var(--border)); border-radius: 16px; background: hsl(var(--card)); padding: 28px; text-align: center; }
+  .movement-empty svg { height: 28px; width: 28px; margin-bottom: 12px; color: hsl(var(--accent)); }
+  .movement-empty p { margin: 6px 0 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
   .depth-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .depth-team { min-width: 0; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--card)); }
   .depth-team > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid hsl(var(--border)); padding: 16px 18px; background: hsl(var(--sidebar)); color: white; }
@@ -715,6 +743,17 @@
   .consumer-summary-grid { grid-template-columns: 1fr; }
   .consumer-summary-grid span + span { border-left: 0; border-top: 1px solid hsl(var(--border)); }
   .consumer-mobile-nav { grid-template-columns: repeat(2, 1fr); }
+  .movement-controls { align-items: stretch; flex-direction: column; }
+  .movement-tabs, .movement-books { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .movement-tabs button, .movement-books button { min-width: 0; padding-inline: 5px; }
+  .movement-chart { height: 290px; margin-inline: -8px; border-radius: 12px; }
+  .movement-streams { grid-template-columns: 1fr; }
+  .movement-summary-grid { grid-template-columns: 1fr; }
+  .movement-summary-value { display: grid; grid-template-columns: minmax(105px, 1fr) auto; align-items: center; gap: 4px 12px; }
+  .movement-summary-value + .movement-summary-value { border-left: 0; border-top: 1px solid hsl(var(--border)); }
+  .movement-summary-value small { min-height: 0; }
+  .movement-summary-value strong { margin: 0; text-align: right; }
+  .movement-summary-value time { grid-column: 2; margin: 0; text-align: right; }
 }
 
   .audit-head { display: grid; grid-template-columns: minmax(130px, 1fr) 100px 90px 140px 100px 100px 100px; padding: 12px 22px; color: hsl(var(--muted-foreground)); border-bottom: 1px solid hsl(var(--border)); font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }

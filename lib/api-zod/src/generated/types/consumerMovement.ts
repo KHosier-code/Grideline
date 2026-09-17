@@ -5,14 +5,14 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerMovementCompleteness } from './consumerMovementCompleteness';
 import type { ConsumerMovementItem } from './consumerMovementItem';
-import type { ConsumerMovementWindow } from './consumerMovementWindow';
 
 export interface ConsumerMovement {
   available: boolean;
   /** @maxItems 24 */
-  movements: ConsumerMovementItem[];
-  window: ConsumerMovementWindow;
+  streams: ConsumerMovementItem[];
+  completeness: ConsumerMovementCompleteness;
   /** @nullable */
   message: string | null;
 }

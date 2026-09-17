@@ -20,7 +20,8 @@ export const MAX_CONSUMER_GAMES = 100;
 export const MAX_CONSUMER_MOVEMENT_ROWS = 200;
 export const MAX_CONSUMER_SNAPSHOT_ROWS = MAX_CONSUMER_GAMES;
 export const MAX_CONSUMER_PERFORMANCE_ROWS = 5_000;
-const MAX_CONSUMER_MOVEMENTS = 24;
+const SUPPORTED_CONSUMER_BOOKS = new Set(["DraftKings", "FanDuel"]);
+const SUPPORTED_CONSUMER_MARKETS = new Set(["spread", "total", "moneyline"]);
 const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
 
 type ConsumerFilters = { season?: number; week?: number; gameId?: string };
@@ -111,54 +112,60 @@ export function consumerMarket(
 type MovementRow = Pick<typeof sportsbookOddsTable.$inferSelect,
   "sportsbook" | "market" | "selection" | "point" | "price" | "capturedAt">;
 
-export function serializeMovement(rows: MovementRow[]) {
-  const retainedRows = [...rows]
-    .sort((left, right) => right.capturedAt.getTime() - left.capturedAt.getTime())
-    .slice(0, MAX_CONSUMER_MOVEMENT_ROWS);
-  const ordered = retainedRows.sort((left, right) =>
+export function serializeMovement(rows: MovementRow[], kickoffTime?: Date | null) {
+  const supportedRows = rows.filter((row) =>
+    SUPPORTED_CONSUMER_BOOKS.has(row.sportsbook) && SUPPORTED_CONSUMER_MARKETS.has(row.market));
+  const allOrdered = [...supportedRows].sort((left, right) =>
     left.capturedAt.getTime() - right.capturedAt.getTime()
     || left.sportsbook.localeCompare(right.sportsbook)
     || left.market.localeCompare(right.market)
     || left.selection.localeCompare(right.selection));
+  const retainedRows = new Set(allOrdered.slice(-MAX_CONSUMER_MOVEMENT_ROWS));
   const streams = new Map<string, MovementRow[]>();
-  for (const row of ordered) {
+  for (const row of allOrdered) {
     const key = `${row.sportsbook}:${row.market}:${row.selection}`;
     streams.set(key, [...(streams.get(key) ?? []), row]);
   }
-  const movements = [...streams.values()]
-    .filter((stream) => stream.length > 1)
+  const quote = (row: MovementRow) => ({
+    point: safeNumber(row.point),
+    price: row.price,
+    capturedAt: row.capturedAt.toISOString(),
+  });
+  const serializedStreams = [...streams.values()]
     .map((stream) => {
       const first = stream[0];
       const current = stream[stream.length - 1];
+      const retained = stream.filter((row) => retainedRows.has(row));
+      const eligible = kickoffTime
+        ? stream.filter((row) => row.capturedAt.getTime() <= kickoffTime.getTime())
+        : [];
       return {
         sportsbook: current.sportsbook,
         market: current.market,
         selection: current.selection,
-        earliestRetained: {
-          point: safeNumber(first.point),
-          price: first.price,
-          capturedAt: first.capturedAt.toISOString(),
-        },
-        current: {
-          point: safeNumber(current.point),
-          price: current.price,
-          capturedAt: current.capturedAt.toISOString(),
-        },
-        pointChange: first.point === null || current.point === null ? null : current.point - first.point,
-        priceChange: current.price - first.price,
-        observationsInWindow: stream.length,
+        firstObserved: quote(first),
+        current: quote(current),
+        finalPreKickoff: eligible.length ? quote(eligible[eligible.length - 1]) : null,
+        observations: retained.map(quote),
       };
     })
-    .sort((left, right) => right.current.capturedAt.localeCompare(left.current.capturedAt))
-    .slice(0, MAX_CONSUMER_MOVEMENTS);
+    .sort((left, right) =>
+      left.market.localeCompare(right.market)
+      || left.sportsbook.localeCompare(right.sportsbook)
+      || left.selection.localeCompare(right.selection));
+  const returnedObservations = serializedStreams.reduce((count, stream) => count + stream.observations.length, 0);
+  const truncated = allOrdered.length > MAX_CONSUMER_MOVEMENT_ROWS;
   return {
-    available: movements.length > 0,
-    movements,
-    window: {
-      maximumRows: MAX_CONSUMER_MOVEMENT_ROWS,
-      truncated: rows.length > MAX_CONSUMER_MOVEMENT_ROWS,
+    available: serializedStreams.length > 0,
+    streams: serializedStreams,
+    completeness: {
+      status: truncated ? "truncated" as const : "complete" as const,
+      maximumObservations: MAX_CONSUMER_MOVEMENT_ROWS,
+      totalObservations: allOrdered.length,
+      returnedObservations,
+      omittedObservations: allOrdered.length - returnedObservations,
     },
-    message: movements.length ? null : "Line movement is not yet available",
+    message: serializedStreams.length ? null : "Line history is not yet available for DraftKings or FanDuel",
   };
 }
 
@@ -429,10 +436,10 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       }).from(sportsbookOddsTable)
         .where(and(
           eq(sportsbookOddsTable.gameId, game.gameId),
-          lte(sportsbookOddsTable.capturedAt, sourceCutoff),
+          inArray(sportsbookOddsTable.sportsbook, ["DraftKings", "FanDuel"]),
+          inArray(sportsbookOddsTable.market, ["spread", "total", "moneyline"]),
         ))
-        .orderBy(desc(sportsbookOddsTable.capturedAt), desc(sportsbookOddsTable.id))
-        .limit(MAX_CONSUMER_MOVEMENT_ROWS + 1),
+        .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id)),
     ]);
     const forecast = weather[0];
     const context = (contextRows[0]?.featureAudit as Record<string, unknown> | undefined)
@@ -443,7 +450,7 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       awayTeamId: gamesTable.awayTeamId,
     }).from(gamesTable).where(eq(gamesTable.gameId, game.gameId)).limit(1);
     const finalizedContext = serializeContext(context ?? null, gameRow?.homeTeamId ?? "", gameRow?.awayTeamId ?? "");
-    const movement = serializeMovement(movementRows);
+    const movement = serializeMovement(movementRows, kickoff);
     res.json({
       ...game,
       weather: forecast ? {

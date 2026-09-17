@@ -59,7 +59,7 @@ test("consumer market quotes use deterministic, explicitly labeled sides", () =>
   assert.deepEqual(market.total && { selection: market.total.selection, point: market.total.point, price: market.total.price }, { selection: "Over", point: 44.5, price: -112 });
 });
 
-test("consumer movement preserves legitimate A-B-A history without exposing row identifiers", () => {
+test("consumer movement preserves chronology, price-only changes, and legitimate A-B-A history", () => {
   const movement = serializeMovement([
     {
       sportsbook: "DraftKings",
@@ -85,21 +85,32 @@ test("consumer movement preserves legitimate A-B-A history without exposing row 
       price: -108,
       capturedAt: new Date("2026-09-01T14:00:00Z"),
     },
-  ]);
+  ], new Date("2026-09-01T13:30:00Z"));
 
   assert.equal(movement.available, true);
-  assert.equal(movement.movements[0]?.observationsInWindow, 3);
-  assert.equal(movement.movements[0]?.pointChange, 0);
-  assert.equal(movement.movements[0]?.priceChange, 2);
+  assert.deepEqual(movement.streams[0]?.observations.map(({ point, price }) => ({ point, price })), [
+    { point: -3, price: -110 },
+    { point: -2.5, price: -105 },
+    { point: -3, price: -108 },
+  ]);
+  assert.equal(movement.streams[0]?.firstObserved.capturedAt, "2026-09-01T12:00:00.000Z");
+  assert.equal(movement.streams[0]?.current.price, -108);
+  assert.equal(movement.streams[0]?.finalPreKickoff?.price, -105);
   assert.doesNotMatch(JSON.stringify(movement), /"id"|"observationKey"|"stateHash"/);
 });
 
 test("consumer movement and context use explicit unavailable states", () => {
   assert.deepEqual(serializeMovement([]), {
     available: false,
-    movements: [],
-    window: { maximumRows: 200, truncated: false },
-    message: "Line movement is not yet available",
+    streams: [],
+    completeness: {
+      status: "complete",
+      maximumObservations: 200,
+      totalObservations: 0,
+      returnedObservations: 0,
+      omittedObservations: 0,
+    },
+    message: "Line history is not yet available for DraftKings or FanDuel",
   });
   assert.deepEqual(serializeContext(null, "home-id", "away-id"), {
     available: false,
@@ -112,7 +123,7 @@ test("consumer movement and context use explicit unavailable states", () => {
   });
 });
 
-test("consumer movement reports truncation only when a sentinel row exists", () => {
+test("consumer movement reports truncation while retaining true summaries", () => {
   const rows = Array.from({ length: MAX_CONSUMER_MOVEMENT_ROWS + 1 }, (_, index) => ({
     sportsbook: "DraftKings",
     market: "spread",
@@ -122,8 +133,24 @@ test("consumer movement reports truncation only when a sentinel row exists", () 
     capturedAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
   }));
   const movement = serializeMovement(rows);
-  assert.equal(movement.window.truncated, true);
-  assert.equal(movement.movements[0]?.observationsInWindow, MAX_CONSUMER_MOVEMENT_ROWS);
+  assert.equal(movement.completeness.status, "truncated");
+  assert.equal(movement.completeness.omittedObservations, 1);
+  assert.equal(movement.streams[0]?.observations.length, MAX_CONSUMER_MOVEMENT_ROWS);
+  assert.equal(movement.streams[0]?.firstObserved.capturedAt, rows[0]?.capturedAt.toISOString());
+});
+
+test("consumer movement groups books and selections and excludes unsupported sources", () => {
+  const at = new Date("2026-09-01T12:00:00Z");
+  const movement = serializeMovement([
+    { sportsbook: "FanDuel", market: "total", selection: "Over", point: 44.5, price: -110, capturedAt: at },
+    { sportsbook: "DraftKings", market: "total", selection: "Under", point: 44.5, price: -105, capturedAt: at },
+    { sportsbook: "OtherBook", market: "total", selection: "Over", point: 45, price: -110, capturedAt: at },
+  ]);
+  assert.deepEqual(movement.streams.map(({ sportsbook, selection }) => ({ sportsbook, selection })), [
+    { sportsbook: "DraftKings", selection: "Under" },
+    { sportsbook: "FanDuel", selection: "Over" },
+  ]);
+  assert.equal(movement.streams[0]?.finalPreKickoff, null);
 });
 
 test("consumer context is concise and excludes raw personnel evidence", () => {
@@ -248,7 +275,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
       availability: {
         weather: "Weather not yet available",
         personnel: "Player information temporarily unavailable",
-        movement: "Line movement is not yet available",
+        movement: "Line history is not yet available for DraftKings or FanDuel",
       },
     },
   };
@@ -261,7 +288,8 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.equal(MAX_CONSUMER_SNAPSHOT_ROWS, 100);
   assert.equal(MAX_CONSUMER_PERFORMANCE_ROWS, 5_000);
   assert.match(source, /\.limit\(MAX_CONSUMER_GAMES\)/);
-  assert.match(source, /\.limit\(MAX_CONSUMER_MOVEMENT_ROWS \+ 1\)/);
+  assert.match(source, /inArray\(sportsbookOddsTable\.sportsbook, \["DraftKings", "FanDuel"\]\)/);
+  assert.match(source, /\.orderBy\(asc\(sportsbookOddsTable\.capturedAt\), asc\(sportsbookOddsTable\.id\)\)/);
   assert.match(source, /preKickoffOnly:\s*true/);
   assert.match(source, /authoritativeGameKickoff:\s*true/);
   assert.match(source, /maxRows:\s*MAX_CONSUMER_SNAPSHOT_ROWS/);
@@ -274,4 +302,17 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.match(predictionSource, /options\.maxRows === undefined \? await query : await query\.limit\(options\.maxRows\)/);
   assert.match(source, /\.limit\(1\)/);
   assert.doesNotMatch(source, /\b(generateLivePredictions|gradeCompletedPredictions|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);
+});
+
+test("consumer movement UI keeps honest terminology and responsive controls", () => {
+  const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
+  const component = readFileSync(path.join(webRoot, "components/LineMovementExperience.tsx"), "utf8");
+  const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
+  assert.match(component, /First observed by Gridline/);
+  assert.match(component, /Final pre-kickoff/);
+  assert.match(component, /Compare books/);
+  assert.match(component, /DraftKings.*FanDuel/s);
+  assert.doesNotMatch(component, /\bopener\b|\bclosing line\b/i);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.movement-controls/);
+  assert.match(css, /\.movement-chart \{[^}]*overflow: hidden/);
 });

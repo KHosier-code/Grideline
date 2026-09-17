@@ -5,16 +5,16 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerMovementItemMarket } from './consumerMovementItemMarket';
+import type { ConsumerMovementItemSportsbook } from './consumerMovementItemSportsbook';
 import type { ConsumerMovementQuote } from './consumerMovementQuote';
 
 export interface ConsumerMovementItem {
-  sportsbook: string;
-  market: string;
+  sportsbook: ConsumerMovementItemSportsbook;
+  market: ConsumerMovementItemMarket;
   selection: string;
-  earliestRetained: ConsumerMovementQuote;
+  firstObserved: ConsumerMovementQuote;
   current: ConsumerMovementQuote;
-  /** @nullable */
-  pointChange: number | null;
-  priceChange: number;
-  observationsInWindow: number;
+  finalPreKickoff: ConsumerMovementQuote | null;
+  observations: ConsumerMovementQuote[];
 }

@@ -4,6 +4,7 @@ import { useLocation, useParams, Link } from 'wouter';
 import { getConsumerPersonnelContent } from '../../lib/consumer-personnel';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } from './consumer-ui';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
+import { LineMovementExperience } from '../../components/LineMovementExperience';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -49,6 +50,7 @@ export default function ConsumerGameDetail() {
         <details><summary><ShieldCheck /> Analysis drivers</summary><div>{game.analysis.drivers.length ? <ul>{game.analysis.drivers.map(driver => <li key={driver}>{driver}</li>)}</ul> : <p>No verified analysis drivers are available for this matchup.</p>}</div></details>
       </div>
     </section>
+    <LineMovementExperience movement={game.movement} />
     <ConsumerDepthChart context={game.context} />
   </div>;
 }

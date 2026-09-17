@@ -194,6 +194,23 @@ export interface ConsumerWeather {
   message: string | null;
 }
 
+export type ConsumerMovementItemSportsbook = typeof ConsumerMovementItemSportsbook[keyof typeof ConsumerMovementItemSportsbook];
+
+
+export const ConsumerMovementItemSportsbook = {
+  DraftKings: 'DraftKings',
+  FanDuel: 'FanDuel',
+} as const;
+
+export type ConsumerMovementItemMarket = typeof ConsumerMovementItemMarket[keyof typeof ConsumerMovementItemMarket];
+
+
+export const ConsumerMovementItemMarket = {
+  spread: 'spread',
+  total: 'total',
+  moneyline: 'moneyline',
+} as const;
+
 export interface ConsumerMovementQuote {
   /** @nullable */
   point: number | null;
@@ -202,27 +219,36 @@ export interface ConsumerMovementQuote {
 }
 
 export interface ConsumerMovementItem {
-  sportsbook: string;
-  market: string;
+  sportsbook: ConsumerMovementItemSportsbook;
+  market: ConsumerMovementItemMarket;
   selection: string;
-  earliestRetained: ConsumerMovementQuote;
+  firstObserved: ConsumerMovementQuote;
   current: ConsumerMovementQuote;
-  /** @nullable */
-  pointChange: number | null;
-  priceChange: number;
-  observationsInWindow: number;
+  finalPreKickoff: ConsumerMovementQuote | null;
+  observations: ConsumerMovementQuote[];
 }
 
-export type ConsumerMovementWindow = {
-  maximumRows: 200;
-  truncated: boolean;
+export type ConsumerMovementCompletenessStatus = typeof ConsumerMovementCompletenessStatus[keyof typeof ConsumerMovementCompletenessStatus];
+
+
+export const ConsumerMovementCompletenessStatus = {
+  complete: 'complete',
+  truncated: 'truncated',
+} as const;
+
+export type ConsumerMovementCompleteness = {
+  status: ConsumerMovementCompletenessStatus;
+  maximumObservations: 200;
+  totalObservations: number;
+  returnedObservations: number;
+  omittedObservations: number;
 };
 
 export interface ConsumerMovement {
   available: boolean;
   /** @maxItems 24 */
-  movements: ConsumerMovementItem[];
-  window: ConsumerMovementWindow;
+  streams: ConsumerMovementItem[];
+  completeness: ConsumerMovementCompleteness;
   /** @nullable */
   message: string | null;
 }
@@ -1384,3 +1410,4 @@ season?: number;
  */
 week?: number;
 };
+// End of generated schemas.

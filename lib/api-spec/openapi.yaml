@@ -702,31 +702,38 @@ components:
         capturedAt: { type: string, format: date-time }
     ConsumerMovementItem:
       type: object
-      required: [sportsbook, market, selection, earliestRetained, current, pointChange, priceChange, observationsInWindow]
+      required: [sportsbook, market, selection, firstObserved, current, finalPreKickoff, observations]
       properties:
-        sportsbook: { type: string }
-        market: { type: string }
+        sportsbook: { type: string, enum: [DraftKings, FanDuel] }
+        market: { type: string, enum: [spread, total, moneyline] }
         selection: { type: string }
-        earliestRetained: { $ref: "#/components/schemas/ConsumerMovementQuote" }
+        firstObserved: { $ref: "#/components/schemas/ConsumerMovementQuote" }
         current: { $ref: "#/components/schemas/ConsumerMovementQuote" }
-        pointChange: { type: ["number", "null"] }
-        priceChange: { type: number }
-        observationsInWindow: { type: integer }
+        finalPreKickoff:
+          oneOf:
+            - $ref: "#/components/schemas/ConsumerMovementQuote"
+            - type: "null"
+        observations:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerMovementQuote" }
     ConsumerMovement:
       type: object
-      required: [available, movements, window, message]
+      required: [available, streams, completeness, message]
       properties:
         available: { type: boolean }
-        movements:
+        streams:
           type: array
           maxItems: 24
           items: { $ref: "#/components/schemas/ConsumerMovementItem" }
-        window:
+        completeness:
           type: object
-          required: [maximumRows, truncated]
+          required: [status, maximumObservations, totalObservations, returnedObservations, omittedObservations]
           properties:
-            maximumRows: { type: integer, const: 200 }
-            truncated: { type: boolean }
+            status: { type: string, enum: [complete, truncated] }
+            maximumObservations: { type: integer, const: 200 }
+            totalObservations: { type: integer }
+            returnedObservations: { type: integer }
+            omittedObservations: { type: integer }
         message: { type: ["string", "null"] }
     ConsumerContextTeam:
       type: object

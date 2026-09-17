@@ -998,7 +998,7 @@ export const GetConsumerGameParams = zod.object({
   "gameId": zod.coerce.string()
 })
 
-export const getConsumerGameResponseTwoMovementMovementsMax = 24;
+export const getConsumerGameResponseTwoMovementStreamsMax = 24;
 
 export const getConsumerGameResponseTwoContextTeamsItemDepthMax = 30;
 
@@ -1096,11 +1096,11 @@ export const GetConsumerGameResponse = zod.object({
 }),
   "movement": zod.object({
   "available": zod.boolean(),
-  "movements": zod.array(zod.object({
-  "sportsbook": zod.string(),
-  "market": zod.string(),
+  "streams": zod.array(zod.object({
+  "sportsbook": zod.enum(['DraftKings', 'FanDuel']),
+  "market": zod.enum(['spread', 'total', 'moneyline']),
   "selection": zod.string(),
-  "earliestRetained": zod.object({
+  "firstObserved": zod.object({
   "point": zod.number().nullable(),
   "price": zod.number(),
   "capturedAt": zod.coerce.date()
@@ -1110,13 +1110,23 @@ export const GetConsumerGameResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date()
 }),
-  "pointChange": zod.number().nullable(),
-  "priceChange": zod.number(),
-  "observationsInWindow": zod.number().int()
-})).max(getConsumerGameResponseTwoMovementMovementsMax),
-  "window": zod.object({
-  "maximumRows": zod.literal(200),
-  "truncated": zod.boolean()
+  "finalPreKickoff": zod.union([zod.object({
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date()
+}),zod.null()]),
+  "observations": zod.array(zod.object({
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date()
+}))
+})).max(getConsumerGameResponseTwoMovementStreamsMax),
+  "completeness": zod.object({
+  "status": zod.enum(['complete', 'truncated']),
+  "maximumObservations": zod.literal(200),
+  "totalObservations": zod.number().int(),
+  "returnedObservations": zod.number().int(),
+  "omittedObservations": zod.number().int()
 }),
   "message": zod.string().nullable()
 }),
