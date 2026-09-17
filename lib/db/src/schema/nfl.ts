@@ -180,6 +180,64 @@ export const oddsEventAuditsTable = pgTable("odds_event_audits", {
   index("odds_event_audits_outcome_idx").on(table.outcome),
 ]);
 
+/**
+ * Evaluation-only historical market evidence. These tables deliberately do
+ * not reference production predictions or sportsbook snapshots: an imported
+ * source can be audited and reused by challengers without entering inference.
+ */
+export const marketBaselineRunsTable = pgTable("market_baseline_runs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  runId: text("run_id").notNull(),
+  season: integer("season").notNull(),
+  source: text("source").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  sourceFiles: jsonb("source_files").$type<string[]>().notNull().default([]),
+  sourceFingerprints: jsonb("source_fingerprints").$type<Record<string, string>>().notNull().default({}),
+  status: text("status").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("market_baseline_runs_run_id_unique").on(table.runId),
+  index("market_baseline_runs_season_idx").on(table.season, table.createdAt),
+]);
+
+export const marketBaselineEventsTable = pgTable("market_baseline_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  runId: text("run_id").notNull(),
+  sourceGameId: text("source_game_id").notNull(),
+  altGameId: text("alt_game_id").notNull(),
+  outcome: text("outcome").notNull(),
+  reason: text("reason").notNull(),
+  candidateGameIds: jsonb("candidate_game_ids").$type<string[]>().notNull().default([]),
+  matchedGameId: text("matched_game_id"),
+  aliasUsed: boolean("alias_used").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("market_baseline_events_run_source_unique").on(table.runId, table.sourceGameId),
+  index("market_baseline_events_run_outcome_idx").on(table.runId, table.outcome),
+]);
+
+export const marketBaselineQuotesTable = pgTable("market_baseline_quotes", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  runId: text("run_id").notNull(),
+  sourceGameId: text("source_game_id").notNull(),
+  altGameId: text("alt_game_id").notNull(),
+  matchedGameId: text("matched_game_id"),
+  sourceFile: text("source_file").notNull(),
+  family: text("family").notNull(),
+  side: text("side").notNull(),
+  point: doublePrecision("point"),
+  price: integer("price"),
+  sourceDesignation: text("source_designation").notNull(),
+  sportsbook: text("sportsbook"),
+  observedAt: timestamp("observed_at", { withTimezone: true }),
+  sourceTimestamp: timestamp("source_timestamp", { withTimezone: true }),
+  sourceOutcome: doublePrecision("source_outcome"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("market_baseline_quotes_run_game_idx").on(table.runId, table.matchedGameId, table.family),
+]);
+
 export const predictionsTable = pgTable("predictions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   gameId: text("game_id").notNull(),

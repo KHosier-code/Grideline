@@ -8,6 +8,7 @@ import { PHASE61_RELEASE_MODEL_VERSIONS, getModelArtifactImmutabilityStatus, imp
 import { PromotionSafetyGateError, runPromotionSafetyGate, type PromotionSafetyGateResult } from "../lib/promotion-safety-gate";
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 import { getLifecycleVerificationReport } from "../lib/lifecycle-verification";
+import { get2025MarketBaselineReport, run2025MarketBaseline } from "../lib/market-baseline-run";
 
 const router: IRouter = Router();
 type TrainingRun = typeof modelTrainingRunsTable.$inferSelect;
@@ -232,6 +233,24 @@ router.get("/models/evaluations/report", requireAdmin, async (req, res): Promise
     }));
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Model evaluation report unavailable" });
+  }
+});
+
+router.post("/models/evaluations/2025-market-baseline", requireAdmin, async (_req, res): Promise<void> => {
+  try {
+    res.json(await run2025MarketBaseline());
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "2025 market baseline failed" });
+  }
+});
+
+router.get("/models/evaluations/2025-market-baseline", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    res.json(await get2025MarketBaselineReport(
+      typeof req.query.runId === "string" ? req.query.runId.trim() || undefined : undefined,
+    ));
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "2025 market baseline report unavailable" });
   }
 });
 

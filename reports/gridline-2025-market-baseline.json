@@ -1,0 +1,2462 @@
+{
+  "evaluationRunId": "phase6-1-2025-market-baseline-v4-bc87373a5d1a-f289a18f99c4",
+  "season": 2025,
+  "source": {
+    "name": "nflverse/nfldata",
+    "url": "https://github.com/nflverse/nfldata",
+    "file": "games.csv",
+    "fingerprintSha256": "bc87373a5d1a578ac07c71cb6a1e50a381d58fae393021b96853a4b8674ae8b8",
+    "designation": "source_designated_recorded",
+    "license": "Repository data is publicly distributed by nflverse; upstream data ownership remains with its respective owners.",
+    "closingStatus": "unavailable"
+  },
+  "coverage": {
+    "sourceEvents": 285,
+    "quotes": 1710,
+    "matchingOutcomes": {
+      "matched": 258,
+      "neutral_site": 8,
+      "alias": 19
+    }
+  },
+  "chronology": {
+    "trainingSeasons": [
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "testSeason": 2025,
+    "forwardSeasonsExcluded": [
+      2026
+    ],
+    "featureVersion": "pregame-v3"
+  },
+  "models": [
+    {
+      "modelVersion": "phase6-1-2025-baseline-v4-spread-a94128ebea95-bc87373a-f289a18f",
+      "artifactChecksum": "a94128ebea95345b8eb04c1ebaa37df1ca90f226bc5071891e9b7d63542e86a5",
+      "family": "spread",
+      "sampleSize": 277,
+      "metrics": {
+        "sampleSize": 277,
+        "mae": 10.267708651779436,
+        "rmse": 13.274101462983571
+      },
+      "phase6Reference": {
+        "reference": {
+          "sampleSize": 285,
+          "mae": 10.1982,
+          "rmse": 13.2414
+        },
+        "metricDeltas": {
+          "mae": 0.06950865177943655,
+          "rmse": 0.032701462983570906
+        },
+        "eligibilityDifference": {
+          "referenceSampleSize": 285,
+          "baselineSampleSize": 277,
+          "excludedNeutralSiteGames": 8,
+          "note": "The retained Phase 6 reference used the full evaluable corpus; this market baseline uses only matched non-neutral games."
+        }
+      },
+      "weekly": [
+        {
+          "week": 1,
+          "sampleSize": 15,
+          "mae": 6.865068295319092,
+          "rmse": 9.3022276034751
+        },
+        {
+          "week": 2,
+          "sampleSize": 16,
+          "mae": 8.076398884015317,
+          "rmse": 10.230406350173674
+        },
+        {
+          "week": 3,
+          "sampleSize": 16,
+          "mae": 13.434228176465545,
+          "rmse": 17.49701746141483
+        },
+        {
+          "week": 4,
+          "sampleSize": 15,
+          "mae": 9.85897088757102,
+          "rmse": 12.138891874818492
+        },
+        {
+          "week": 5,
+          "sampleSize": 13,
+          "mae": 11.569320600695185,
+          "rmse": 16.54038735644616
+        },
+        {
+          "week": 6,
+          "sampleSize": 14,
+          "mae": 7.399923316636105,
+          "rmse": 8.876805239566801
+        },
+        {
+          "week": 7,
+          "sampleSize": 14,
+          "mae": 11.531013743350039,
+          "rmse": 13.644794889281188
+        },
+        {
+          "week": 8,
+          "sampleSize": 13,
+          "mae": 15.937449777415136,
+          "rmse": 18.094725508673687
+        },
+        {
+          "week": 9,
+          "sampleSize": 14,
+          "mae": 9.946693162489705,
+          "rmse": 12.43195497617277
+        },
+        {
+          "week": 10,
+          "sampleSize": 13,
+          "mae": 9.876986881223106,
+          "rmse": 11.934200895829429
+        },
+        {
+          "week": 11,
+          "sampleSize": 14,
+          "mae": 8.721796277515471,
+          "rmse": 12.267624268271529
+        },
+        {
+          "week": 12,
+          "sampleSize": 14,
+          "mae": 7.21241824905495,
+          "rmse": 9.748779180305583
+        },
+        {
+          "week": 13,
+          "sampleSize": 16,
+          "mae": 9.774248940602334,
+          "rmse": 11.965786183170279
+        },
+        {
+          "week": 14,
+          "sampleSize": 14,
+          "mae": 13.196157785241313,
+          "rmse": 16.574451132183007
+        },
+        {
+          "week": 15,
+          "sampleSize": 16,
+          "mae": 11.46201165655999,
+          "rmse": 13.805290762101649
+        },
+        {
+          "week": 16,
+          "sampleSize": 16,
+          "mae": 11.704056884649157,
+          "rmse": 14.303889573880094
+        },
+        {
+          "week": 17,
+          "sampleSize": 16,
+          "mae": 10.630934332593327,
+          "rmse": 12.930110468387372
+        },
+        {
+          "week": 18,
+          "sampleSize": 16,
+          "mae": 10.147512189699585,
+          "rmse": 12.808805760840114
+        },
+        {
+          "week": 19,
+          "sampleSize": 6,
+          "mae": 7.621080136143629,
+          "rmse": 12.629631539366143
+        },
+        {
+          "week": 20,
+          "sampleSize": 4,
+          "mae": 9.80969418592802,
+          "rmse": 15.85627390304122
+        },
+        {
+          "week": 21,
+          "sampleSize": 2,
+          "mae": 3.279157177127579,
+          "rmse": 3.7817062222650133
+        }
+      ],
+      "cumulative": [
+        {
+          "throughWeek": 1,
+          "sampleSize": 15,
+          "mae": 6.865068295319092,
+          "rmse": 9.3022276034751
+        },
+        {
+          "throughWeek": 2,
+          "sampleSize": 31,
+          "mae": 7.490271179807466,
+          "rmse": 9.792279712886383
+        },
+        {
+          "throughWeek": 3,
+          "sampleSize": 47,
+          "mae": 9.513745902074048,
+          "rmse": 12.940848176647135
+        },
+        {
+          "throughWeek": 4,
+          "sampleSize": 62,
+          "mae": 9.597268075984607,
+          "rmse": 12.75145239114561
+        },
+        {
+          "throughWeek": 5,
+          "sampleSize": 75,
+          "mae": 9.939090513601107,
+          "rmse": 13.484691934141809
+        },
+        {
+          "throughWeek": 6,
+          "sampleSize": 89,
+          "mae": 9.539670954527958,
+          "rmse": 12.869673498193817
+        },
+        {
+          "throughWeek": 7,
+          "sampleSize": 103,
+          "mae": 9.810338906406688,
+          "rmse": 12.977748740978104
+        },
+        {
+          "throughWeek": 8,
+          "sampleSize": 116,
+          "mae": 10.49699788333005,
+          "rmse": 13.646999895010694
+        },
+        {
+          "throughWeek": 9,
+          "sampleSize": 130,
+          "mae": 10.437734298008783,
+          "rmse": 13.52139597225511
+        },
+        {
+          "throughWeek": 10,
+          "sampleSize": 143,
+          "mae": 10.386757260119177,
+          "rmse": 13.384885102937371
+        },
+        {
+          "throughWeek": 11,
+          "sampleSize": 157,
+          "mae": 10.238289401797827,
+          "rmse": 13.289071898243161
+        },
+        {
+          "throughWeek": 12,
+          "sampleSize": 171,
+          "mae": 9.990557260637589,
+          "rmse": 13.035411183587122
+        },
+        {
+          "throughWeek": 13,
+          "sampleSize": 187,
+          "mae": 9.972049596891257,
+          "rmse": 12.947349814861308
+        },
+        {
+          "throughWeek": 14,
+          "sampleSize": 201,
+          "mae": 10.196614346328573,
+          "rmse": 13.232236228387219
+        },
+        {
+          "throughWeek": 15,
+          "sampleSize": 217,
+          "mae": 10.289915530493102,
+          "rmse": 13.275333844603443
+        },
+        {
+          "throughWeek": 16,
+          "sampleSize": 233,
+          "mae": 10.387023949662613,
+          "rmse": 13.348498839561783
+        },
+        {
+          "throughWeek": 17,
+          "sampleSize": 249,
+          "mae": 10.402696905995509,
+          "rmse": 13.322009488099834
+        },
+        {
+          "throughWeek": 18,
+          "sampleSize": 265,
+          "mae": 10.387289526898396,
+          "rmse": 13.291585697493035
+        },
+        {
+          "throughWeek": 19,
+          "sampleSize": 271,
+          "mae": 10.326045038542203,
+          "rmse": 13.277287142976219
+        },
+        {
+          "throughWeek": 20,
+          "sampleSize": 275,
+          "mae": 10.318534480685996,
+          "rmse": 13.318379315685434
+        },
+        {
+          "throughWeek": 21,
+          "sampleSize": 277,
+          "mae": 10.267708651779436,
+          "rmse": 13.274101462983571
+        }
+      ],
+      "calibration": null,
+      "market": {
+        "status": "measured_against_recorded_line",
+        "sampleSize": 277,
+        "recordedMarketAccuracy": {
+          "status": "measured_from_recorded_line",
+          "sampleSize": 277,
+          "mae": 9.660649819494585,
+          "rmse": 12.237717632466667
+        },
+        "settlement": {
+          "wins": 112,
+          "losses": 111,
+          "pushes": 1,
+          "noBets": 53,
+          "winRate": 0.5022421524663677
+        },
+        "directions": {
+          "home": 129,
+          "away": 95,
+          "over": 0,
+          "under": 0,
+          "noBet": 53
+        },
+        "weekly": [
+          {
+            "week": 1,
+            "averageAbsoluteEdge": 2.290072208548724,
+            "directions": {
+              "home": 3,
+              "away": 8,
+              "over": 0,
+              "under": 0,
+              "noBet": 4
+            },
+            "wins": 5,
+            "losses": 6,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.45454545454545453
+          },
+          {
+            "week": 2,
+            "averageAbsoluteEdge": 2.6267699843118373,
+            "directions": {
+              "home": 6,
+              "away": 4,
+              "over": 0,
+              "under": 0,
+              "noBet": 6
+            },
+            "wins": 6,
+            "losses": 4,
+            "pushes": 0,
+            "noBets": 6,
+            "winRate": 0.6
+          },
+          {
+            "week": 3,
+            "averageAbsoluteEdge": 2.61224270161726,
+            "directions": {
+              "home": 3,
+              "away": 8,
+              "over": 0,
+              "under": 0,
+              "noBet": 5
+            },
+            "wins": 6,
+            "losses": 5,
+            "pushes": 0,
+            "noBets": 5,
+            "winRate": 0.5454545454545454
+          },
+          {
+            "week": 4,
+            "averageAbsoluteEdge": 3.161323386978314,
+            "directions": {
+              "home": 6,
+              "away": 5,
+              "over": 0,
+              "under": 0,
+              "noBet": 4
+            },
+            "wins": 5,
+            "losses": 6,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.45454545454545453
+          },
+          {
+            "week": 5,
+            "averageAbsoluteEdge": 3.250992730693158,
+            "directions": {
+              "home": 6,
+              "away": 4,
+              "over": 0,
+              "under": 0,
+              "noBet": 3
+            },
+            "wins": 6,
+            "losses": 4,
+            "pushes": 0,
+            "noBets": 3,
+            "winRate": 0.6
+          },
+          {
+            "week": 6,
+            "averageAbsoluteEdge": 3.293377232212592,
+            "directions": {
+              "home": 9,
+              "away": 3,
+              "over": 0,
+              "under": 0,
+              "noBet": 2
+            },
+            "wins": 8,
+            "losses": 4,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 0.6666666666666666
+          },
+          {
+            "week": 7,
+            "averageAbsoluteEdge": 2.773813791372053,
+            "directions": {
+              "home": 5,
+              "away": 5,
+              "over": 0,
+              "under": 0,
+              "noBet": 4
+            },
+            "wins": 4,
+            "losses": 6,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.4
+          },
+          {
+            "week": 8,
+            "averageAbsoluteEdge": 3.207862354714485,
+            "directions": {
+              "home": 4,
+              "away": 6,
+              "over": 0,
+              "under": 0,
+              "noBet": 3
+            },
+            "wins": 3,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 3,
+            "winRate": 0.3
+          },
+          {
+            "week": 9,
+            "averageAbsoluteEdge": 3.502515406439122,
+            "directions": {
+              "home": 10,
+              "away": 3,
+              "over": 0,
+              "under": 0,
+              "noBet": 1
+            },
+            "wins": 6,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 0.46153846153846156
+          },
+          {
+            "week": 10,
+            "averageAbsoluteEdge": 3.822564055799685,
+            "directions": {
+              "home": 10,
+              "away": 1,
+              "over": 0,
+              "under": 0,
+              "noBet": 2
+            },
+            "wins": 5,
+            "losses": 6,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 0.45454545454545453
+          },
+          {
+            "week": 11,
+            "averageAbsoluteEdge": 3.2713155166351107,
+            "directions": {
+              "home": 6,
+              "away": 7,
+              "over": 0,
+              "under": 0,
+              "noBet": 1
+            },
+            "wins": 9,
+            "losses": 4,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 0.6923076923076923
+          },
+          {
+            "week": 12,
+            "averageAbsoluteEdge": 3.9766865538369465,
+            "directions": {
+              "home": 6,
+              "away": 5,
+              "over": 0,
+              "under": 0,
+              "noBet": 3
+            },
+            "wins": 7,
+            "losses": 3,
+            "pushes": 1,
+            "noBets": 3,
+            "winRate": 0.7
+          },
+          {
+            "week": 13,
+            "averageAbsoluteEdge": 3.109872612348677,
+            "directions": {
+              "home": 9,
+              "away": 5,
+              "over": 0,
+              "under": 0,
+              "noBet": 2
+            },
+            "wins": 7,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 0.5
+          },
+          {
+            "week": 14,
+            "averageAbsoluteEdge": 2.496509339070666,
+            "directions": {
+              "home": 7,
+              "away": 5,
+              "over": 0,
+              "under": 0,
+              "noBet": 2
+            },
+            "wins": 5,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 0.4166666666666667
+          },
+          {
+            "week": 15,
+            "averageAbsoluteEdge": 3.694048068436584,
+            "directions": {
+              "home": 6,
+              "away": 7,
+              "over": 0,
+              "under": 0,
+              "noBet": 3
+            },
+            "wins": 4,
+            "losses": 9,
+            "pushes": 0,
+            "noBets": 3,
+            "winRate": 0.3076923076923077
+          },
+          {
+            "week": 16,
+            "averageAbsoluteEdge": 3.6784097959684754,
+            "directions": {
+              "home": 9,
+              "away": 5,
+              "over": 0,
+              "under": 0,
+              "noBet": 2
+            },
+            "wins": 7,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 0.5
+          },
+          {
+            "week": 17,
+            "averageAbsoluteEdge": 3.596279255416691,
+            "directions": {
+              "home": 10,
+              "away": 3,
+              "over": 0,
+              "under": 0,
+              "noBet": 3
+            },
+            "wins": 6,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 3,
+            "winRate": 0.46153846153846156
+          },
+          {
+            "week": 18,
+            "averageAbsoluteEdge": 4.305902664996026,
+            "directions": {
+              "home": 6,
+              "away": 9,
+              "over": 0,
+              "under": 0,
+              "noBet": 1
+            },
+            "wins": 6,
+            "losses": 9,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 0.4
+          },
+          {
+            "week": 19,
+            "averageAbsoluteEdge": 5.087143578770136,
+            "directions": {
+              "home": 4,
+              "away": 1,
+              "over": 0,
+              "under": 0,
+              "noBet": 1
+            },
+            "wins": 4,
+            "losses": 1,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 0.8
+          },
+          {
+            "week": 20,
+            "averageAbsoluteEdge": 2.81893585462477,
+            "directions": {
+              "home": 3,
+              "away": 1,
+              "over": 0,
+              "under": 0,
+              "noBet": 0
+            },
+            "wins": 2,
+            "losses": 2,
+            "pushes": 0,
+            "noBets": 0,
+            "winRate": 0.5
+          },
+          {
+            "week": 21,
+            "averageAbsoluteEdge": 2.8837277295858357,
+            "directions": {
+              "home": 1,
+              "away": 0,
+              "over": 0,
+              "under": 0,
+              "noBet": 1
+            },
+            "wins": 1,
+            "losses": 0,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 1
+          }
+        ],
+        "cumulative": [
+          {
+            "throughWeek": 1,
+            "averageAbsoluteEdge": 2.290072208548724,
+            "directions": {
+              "home": 3,
+              "away": 8,
+              "over": 0,
+              "under": 0,
+              "noBet": 4
+            },
+            "wins": 5,
+            "losses": 6,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.45454545454545453
+          },
+          {
+            "throughWeek": 2,
+            "averageAbsoluteEdge": 2.4638517057167824,
+            "directions": {
+              "home": 9,
+              "away": 12,
+              "over": 0,
+              "under": 0,
+              "noBet": 10
+            },
+            "wins": 11,
+            "losses": 10,
+            "pushes": 0,
+            "noBets": 10,
+            "winRate": 0.5238095238095238
+          },
+          {
+            "throughWeek": 3,
+            "averageAbsoluteEdge": 2.514367789427583,
+            "directions": {
+              "home": 12,
+              "away": 20,
+              "over": 0,
+              "under": 0,
+              "noBet": 15
+            },
+            "wins": 17,
+            "losses": 15,
+            "pushes": 0,
+            "noBets": 15,
+            "winRate": 0.53125
+          },
+          {
+            "throughWeek": 4,
+            "averageAbsoluteEdge": 2.6708893049640494,
+            "directions": {
+              "home": 18,
+              "away": 25,
+              "over": 0,
+              "under": 0,
+              "noBet": 19
+            },
+            "wins": 22,
+            "losses": 21,
+            "pushes": 0,
+            "noBets": 19,
+            "winRate": 0.5116279069767442
+          },
+          {
+            "throughWeek": 5,
+            "averageAbsoluteEdge": 2.771440565423762,
+            "directions": {
+              "home": 24,
+              "away": 29,
+              "over": 0,
+              "under": 0,
+              "noBet": 22
+            },
+            "wins": 28,
+            "losses": 25,
+            "pushes": 0,
+            "noBets": 22,
+            "winRate": 0.5283018867924528
+          },
+          {
+            "throughWeek": 6,
+            "averageAbsoluteEdge": 2.853542962446725,
+            "directions": {
+              "home": 33,
+              "away": 32,
+              "over": 0,
+              "under": 0,
+              "noBet": 24
+            },
+            "wins": 36,
+            "losses": 29,
+            "pushes": 0,
+            "noBets": 24,
+            "winRate": 0.5538461538461539
+          },
+          {
+            "throughWeek": 7,
+            "averageAbsoluteEdge": 2.8427059877375465,
+            "directions": {
+              "home": 38,
+              "away": 37,
+              "over": 0,
+              "under": 0,
+              "noBet": 28
+            },
+            "wins": 40,
+            "losses": 35,
+            "pushes": 0,
+            "noBets": 28,
+            "winRate": 0.5333333333333333
+          },
+          {
+            "throughWeek": 8,
+            "averageAbsoluteEdge": 2.883628684036686,
+            "directions": {
+              "home": 42,
+              "away": 43,
+              "over": 0,
+              "under": 0,
+              "noBet": 31
+            },
+            "wins": 43,
+            "losses": 42,
+            "pushes": 0,
+            "noBets": 31,
+            "winRate": 0.5058823529411764
+          },
+          {
+            "throughWeek": 9,
+            "averageAbsoluteEdge": 2.950278023372333,
+            "directions": {
+              "home": 52,
+              "away": 46,
+              "over": 0,
+              "under": 0,
+              "noBet": 32
+            },
+            "wins": 49,
+            "losses": 49,
+            "pushes": 0,
+            "noBets": 32,
+            "winRate": 0.5
+          },
+          {
+            "throughWeek": 10,
+            "averageAbsoluteEdge": 3.0295767535930014,
+            "directions": {
+              "home": 62,
+              "away": 47,
+              "over": 0,
+              "under": 0,
+              "noBet": 34
+            },
+            "wins": 54,
+            "losses": 55,
+            "pushes": 0,
+            "noBets": 34,
+            "winRate": 0.4954128440366973
+          },
+          {
+            "throughWeek": 11,
+            "averageAbsoluteEdge": 3.0511330764120426,
+            "directions": {
+              "home": 68,
+              "away": 54,
+              "over": 0,
+              "under": 0,
+              "noBet": 35
+            },
+            "wins": 63,
+            "losses": 59,
+            "pushes": 0,
+            "noBets": 35,
+            "winRate": 0.5163934426229508
+          },
+          {
+            "throughWeek": 12,
+            "averageAbsoluteEdge": 3.1269093845053098,
+            "directions": {
+              "home": 74,
+              "away": 59,
+              "over": 0,
+              "under": 0,
+              "noBet": 38
+            },
+            "wins": 70,
+            "losses": 62,
+            "pushes": 1,
+            "noBets": 38,
+            "winRate": 0.5303030303030303
+          },
+          {
+            "throughWeek": 13,
+            "averageAbsoluteEdge": 3.125451692769983,
+            "directions": {
+              "home": 83,
+              "away": 64,
+              "over": 0,
+              "under": 0,
+              "noBet": 40
+            },
+            "wins": 77,
+            "losses": 69,
+            "pushes": 1,
+            "noBets": 40,
+            "winRate": 0.5273972602739726
+          },
+          {
+            "throughWeek": 14,
+            "averageAbsoluteEdge": 3.0816447626615737,
+            "directions": {
+              "home": 90,
+              "away": 69,
+              "over": 0,
+              "under": 0,
+              "noBet": 42
+            },
+            "wins": 82,
+            "losses": 76,
+            "pushes": 1,
+            "noBets": 42,
+            "winRate": 0.5189873417721519
+          },
+          {
+            "throughWeek": 15,
+            "averageAbsoluteEdge": 3.126798923456045,
+            "directions": {
+              "home": 96,
+              "away": 76,
+              "over": 0,
+              "under": 0,
+              "noBet": 45
+            },
+            "wins": 86,
+            "losses": 85,
+            "pushes": 1,
+            "noBets": 45,
+            "winRate": 0.5029239766081871
+          },
+          {
+            "throughWeek": 16,
+            "averageAbsoluteEdge": 3.1646777816543232,
+            "directions": {
+              "home": 105,
+              "away": 81,
+              "over": 0,
+              "under": 0,
+              "noBet": 47
+            },
+            "wins": 93,
+            "losses": 92,
+            "pushes": 1,
+            "noBets": 47,
+            "winRate": 0.5027027027027027
+          },
+          {
+            "throughWeek": 17,
+            "averageAbsoluteEdge": 3.1924112096872457,
+            "directions": {
+              "home": 115,
+              "away": 84,
+              "over": 0,
+              "under": 0,
+              "noBet": 50
+            },
+            "wins": 99,
+            "losses": 99,
+            "pushes": 1,
+            "noBets": 50,
+            "winRate": 0.5
+          },
+          {
+            "throughWeek": 18,
+            "averageAbsoluteEdge": 3.2596408824606056,
+            "directions": {
+              "home": 121,
+              "away": 93,
+              "over": 0,
+              "under": 0,
+              "noBet": 51
+            },
+            "wins": 105,
+            "losses": 108,
+            "pushes": 1,
+            "noBets": 51,
+            "winRate": 0.49295774647887325
+          },
+          {
+            "throughWeek": 19,
+            "averageAbsoluteEdge": 3.300102196770042,
+            "directions": {
+              "home": 125,
+              "away": 94,
+              "over": 0,
+              "under": 0,
+              "noBet": 52
+            },
+            "wins": 109,
+            "losses": 109,
+            "pushes": 1,
+            "noBets": 52,
+            "winRate": 0.5
+          },
+          {
+            "throughWeek": 20,
+            "averageAbsoluteEdge": 3.293103413611565,
+            "directions": {
+              "home": 128,
+              "away": 95,
+              "over": 0,
+              "under": 0,
+              "noBet": 52
+            },
+            "wins": 111,
+            "losses": 111,
+            "pushes": 1,
+            "noBets": 52,
+            "winRate": 0.5
+          },
+          {
+            "throughWeek": 21,
+            "averageAbsoluteEdge": 3.2901476324994663,
+            "directions": {
+              "home": 129,
+              "away": 95,
+              "over": 0,
+              "under": 0,
+              "noBet": 53
+            },
+            "wins": 112,
+            "losses": 111,
+            "pushes": 1,
+            "noBets": 53,
+            "winRate": 0.5022421524663677
+          }
+        ],
+        "edgeBuckets": [
+          {
+            "bucket": "<1",
+            "sampleSize": 53,
+            "gradedSampleSize": 0,
+            "wins": 0,
+            "losses": 0,
+            "winRate": null,
+            "confidenceInterval95": {
+              "low": null,
+              "high": null
+            },
+            "meanAbsoluteError": 10.068518543347968
+          },
+          {
+            "bucket": "1-1.99",
+            "sampleSize": 55,
+            "gradedSampleSize": 54,
+            "wins": 27,
+            "losses": 27,
+            "winRate": 0.5,
+            "confidenceInterval95": {
+              "low": 0.3711458304022563,
+              "high": 0.6288541695977437
+            },
+            "meanAbsoluteError": 11.033538232564974
+          },
+          {
+            "bucket": "2-2.99",
+            "sampleSize": 42,
+            "gradedSampleSize": 42,
+            "wins": 21,
+            "losses": 21,
+            "winRate": 0.5,
+            "confidenceInterval95": {
+              "low": 0.3552598959637448,
+              "high": 0.6447401040362553
+            },
+            "meanAbsoluteError": 9.047318737626211
+          },
+          {
+            "bucket": "3-4.99",
+            "sampleSize": 65,
+            "gradedSampleSize": 65,
+            "wins": 29,
+            "losses": 36,
+            "winRate": 0.4461538461538462,
+            "confidenceInterval95": {
+              "low": 0.33169527476665517,
+              "high": 0.5666218132219604
+            },
+            "meanAbsoluteError": 9.047951536512604
+          },
+          {
+            "bucket": "5+",
+            "sampleSize": 62,
+            "gradedSampleSize": 62,
+            "wins": 35,
+            "losses": 27,
+            "winRate": 0.5645161290322581,
+            "confidenceInterval95": {
+              "low": 0.44092987972148767,
+              "high": 0.6805741109751094
+            },
+            "meanAbsoluteError": 11.864112485496277
+          }
+        ],
+        "priceAwareReturn": {
+          "status": "available",
+          "sampleSize": 224,
+          "units": -9.034573714038528,
+          "roi": -0.04033291836624343
+        }
+      }
+    },
+    {
+      "modelVersion": "phase6-1-2025-baseline-v4-moneyline-d54ab8f3d836-bc87373a-f289a18f",
+      "artifactChecksum": "d54ab8f3d8362ee3599f0c2ec9627b2896e9fb40158f98be028b5ff41eec9e28",
+      "family": "moneyline",
+      "sampleSize": 277,
+      "metrics": {
+        "sampleSize": 277,
+        "accuracy": 0.6245487364620939,
+        "brierScore": 0.22228888249768033,
+        "logLoss": 0.6334879648011796
+      },
+      "phase6Reference": {
+        "reference": {
+          "sampleSize": 285,
+          "accuracy": 0.617544,
+          "logLoss": 0.633853,
+          "brierScore": 0.222487
+        },
+        "metricDeltas": {
+          "accuracy": 0.007004736462093875,
+          "logLoss": -0.0003650351988203626,
+          "brierScore": -0.00019811750231965575
+        },
+        "eligibilityDifference": {
+          "referenceSampleSize": 285,
+          "baselineSampleSize": 277,
+          "excludedNeutralSiteGames": 8,
+          "note": "The retained Phase 6 reference used the full evaluable corpus; this market baseline uses only matched non-neutral games."
+        }
+      },
+      "weekly": [
+        {
+          "week": 1,
+          "sampleSize": 15,
+          "accuracy": 0.6666666666666666,
+          "brierScore": 0.1855253955214071,
+          "logLoss": 0.5528504996712831
+        },
+        {
+          "week": 2,
+          "sampleSize": 16,
+          "accuracy": 0.875,
+          "brierScore": 0.14220849151756945,
+          "logLoss": 0.46512426967162224
+        },
+        {
+          "week": 3,
+          "sampleSize": 16,
+          "accuracy": 0.4375,
+          "brierScore": 0.27670313686052783,
+          "logLoss": 0.7486191761448688
+        },
+        {
+          "week": 4,
+          "sampleSize": 15,
+          "accuracy": 0.4666666666666667,
+          "brierScore": 0.2567535619330889,
+          "logLoss": 0.6991884095911246
+        },
+        {
+          "week": 5,
+          "sampleSize": 13,
+          "accuracy": 0.5384615384615384,
+          "brierScore": 0.24187833383216187,
+          "logLoss": 0.6750316906308732
+        },
+        {
+          "week": 6,
+          "sampleSize": 14,
+          "accuracy": 0.7142857142857143,
+          "brierScore": 0.192065020508249,
+          "logLoss": 0.5705581523391369
+        },
+        {
+          "week": 7,
+          "sampleSize": 14,
+          "accuracy": 0.6428571428571429,
+          "brierScore": 0.23204923639227484,
+          "logLoss": 0.6572448261327202
+        },
+        {
+          "week": 8,
+          "sampleSize": 13,
+          "accuracy": 0.6923076923076923,
+          "brierScore": 0.19110514714137367,
+          "logLoss": 0.5664352999820643
+        },
+        {
+          "week": 9,
+          "sampleSize": 14,
+          "accuracy": 0.5714285714285714,
+          "brierScore": 0.2656879128470577,
+          "logLoss": 0.7308283075051646
+        },
+        {
+          "week": 10,
+          "sampleSize": 13,
+          "accuracy": 0.7692307692307693,
+          "brierScore": 0.2053666657667916,
+          "logLoss": 0.601110442925216
+        },
+        {
+          "week": 11,
+          "sampleSize": 14,
+          "accuracy": 0.7142857142857143,
+          "brierScore": 0.20706735885786462,
+          "logLoss": 0.6021040227863658
+        },
+        {
+          "week": 12,
+          "sampleSize": 14,
+          "accuracy": 0.6428571428571429,
+          "brierScore": 0.21865587944864084,
+          "logLoss": 0.6234220334744086
+        },
+        {
+          "week": 13,
+          "sampleSize": 16,
+          "accuracy": 0.5625,
+          "brierScore": 0.2255538136743908,
+          "logLoss": 0.637462589282809
+        },
+        {
+          "week": 14,
+          "sampleSize": 14,
+          "accuracy": 0.5,
+          "brierScore": 0.23406735139888024,
+          "logLoss": 0.6559229887826079
+        },
+        {
+          "week": 15,
+          "sampleSize": 16,
+          "accuracy": 0.625,
+          "brierScore": 0.23691140605274152,
+          "logLoss": 0.6694868511450678
+        },
+        {
+          "week": 16,
+          "sampleSize": 16,
+          "accuracy": 0.5625,
+          "brierScore": 0.24788834788563485,
+          "logLoss": 0.6855788237358558
+        },
+        {
+          "week": 17,
+          "sampleSize": 16,
+          "accuracy": 0.6875,
+          "brierScore": 0.23359757009059817,
+          "logLoss": 0.6610206325379625
+        },
+        {
+          "week": 18,
+          "sampleSize": 16,
+          "accuracy": 0.5,
+          "brierScore": 0.21834376056532248,
+          "logLoss": 0.6229487356334922
+        },
+        {
+          "week": 19,
+          "sampleSize": 6,
+          "accuracy": 0.8333333333333334,
+          "brierScore": 0.19407778094955128,
+          "logLoss": 0.5706780968297144
+        },
+        {
+          "week": 20,
+          "sampleSize": 4,
+          "accuracy": 0.75,
+          "brierScore": 0.19528553662651554,
+          "logLoss": 0.5806451816234844
+        },
+        {
+          "week": 21,
+          "sampleSize": 2,
+          "accuracy": 0.5,
+          "brierScore": 0.25103614576113564,
+          "logLoss": 0.6952223914050117
+        }
+      ],
+      "cumulative": [
+        {
+          "throughWeek": 1,
+          "sampleSize": 15,
+          "accuracy": 0.6666666666666666,
+          "brierScore": 0.1855253955214071,
+          "logLoss": 0.5528504996712831
+        },
+        {
+          "throughWeek": 2,
+          "sampleSize": 31,
+          "accuracy": 0.7741935483870968,
+          "brierScore": 0.1631682837774909,
+          "logLoss": 0.5075724454779097
+        },
+        {
+          "throughWeek": 3,
+          "sampleSize": 47,
+          "accuracy": 0.6595744680851063,
+          "brierScore": 0.20181844652916303,
+          "logLoss": 0.5896309069815555
+        },
+        {
+          "throughWeek": 4,
+          "sampleSize": 62,
+          "accuracy": 0.6129032258064516,
+          "brierScore": 0.21510920025591931,
+          "logLoss": 0.6161367543870965
+        },
+        {
+          "throughWeek": 5,
+          "sampleSize": 75,
+          "accuracy": 0.6,
+          "brierScore": 0.2197491834091347,
+          "logLoss": 0.6263452100026844
+        },
+        {
+          "throughWeek": 6,
+          "sampleSize": 89,
+          "accuracy": 0.6179775280898876,
+          "brierScore": 0.21539437126742234,
+          "logLoss": 0.6175697177859466
+        },
+        {
+          "throughWeek": 7,
+          "sampleSize": 103,
+          "accuracy": 0.6213592233009708,
+          "brierScore": 0.21765813934264502,
+          "logLoss": 0.6229624509592943
+        },
+        {
+          "throughWeek": 8,
+          "sampleSize": 116,
+          "accuracy": 0.6293103448275862,
+          "brierScore": 0.21468237297526116,
+          "logLoss": 0.6166275116256389
+        },
+        {
+          "throughWeek": 9,
+          "sampleSize": 130,
+          "accuracy": 0.6230769230769231,
+          "brierScore": 0.22017527726914696,
+          "logLoss": 0.6289260588742033
+        },
+        {
+          "throughWeek": 10,
+          "sampleSize": 143,
+          "accuracy": 0.6363636363636364,
+          "brierScore": 0.21882903985984195,
+          "logLoss": 0.6263973665152045
+        },
+        {
+          "throughWeek": 11,
+          "sampleSize": 157,
+          "accuracy": 0.643312101910828,
+          "brierScore": 0.21778022754119417,
+          "logLoss": 0.6242310810871554
+        },
+        {
+          "throughWeek": 12,
+          "sampleSize": 171,
+          "accuracy": 0.6432748538011696,
+          "brierScore": 0.21785191834063428,
+          "logLoss": 0.6241648432709072
+        },
+        {
+          "throughWeek": 13,
+          "sampleSize": 187,
+          "accuracy": 0.6363636363636364,
+          "brierScore": 0.21851090403764017,
+          "logLoss": 0.6253026183307488
+        },
+        {
+          "throughWeek": 14,
+          "sampleSize": 201,
+          "accuracy": 0.6268656716417911,
+          "brierScore": 0.21959443768469175,
+          "logLoss": 0.6274353804517739
+        },
+        {
+          "throughWeek": 15,
+          "sampleSize": 217,
+          "accuracy": 0.6267281105990783,
+          "brierScore": 0.22087126484546965,
+          "logLoss": 0.6305359497194823
+        },
+        {
+          "throughWeek": 16,
+          "sampleSize": 233,
+          "accuracy": 0.6223175965665236,
+          "brierScore": 0.22272651518299177,
+          "logLoss": 0.6343157178922806
+        },
+        {
+          "throughWeek": 17,
+          "sampleSize": 249,
+          "accuracy": 0.6265060240963856,
+          "brierScore": 0.22342505686380187,
+          "logLoss": 0.6360316963434086
+        },
+        {
+          "throughWeek": 18,
+          "sampleSize": 265,
+          "accuracy": 0.6188679245283019,
+          "brierScore": 0.22311826161559173,
+          "logLoss": 0.6352417817345077
+        },
+        {
+          "throughWeek": 19,
+          "sampleSize": 271,
+          "accuracy": 0.6236162361623616,
+          "brierScore": 0.22247529894401885,
+          "logLoss": 0.6338123274561728
+        },
+        {
+          "throughWeek": 20,
+          "sampleSize": 275,
+          "accuracy": 0.6254545454545455,
+          "brierScore": 0.2220798114921279,
+          "logLoss": 0.6330389871531518
+        },
+        {
+          "throughWeek": 21,
+          "sampleSize": 277,
+          "accuracy": 0.6245487364620939,
+          "brierScore": 0.22228888249768033,
+          "logLoss": 0.6334879648011796
+        }
+      ],
+      "calibration": [
+        {
+          "bucket": "0-10%",
+          "sampleSize": 0,
+          "averagePrediction": null,
+          "actualHomeWinRate": null
+        },
+        {
+          "bucket": "10-20%",
+          "sampleSize": 3,
+          "averagePrediction": 0.17400384258922497,
+          "actualHomeWinRate": 0
+        },
+        {
+          "bucket": "20-30%",
+          "sampleSize": 23,
+          "averagePrediction": 0.2597178307156971,
+          "actualHomeWinRate": 0.17391304347826086
+        },
+        {
+          "bucket": "30-40%",
+          "sampleSize": 43,
+          "averagePrediction": 0.35977343589786415,
+          "actualHomeWinRate": 0.46511627906976744
+        },
+        {
+          "bucket": "40-50%",
+          "sampleSize": 62,
+          "averagePrediction": 0.45105439809678494,
+          "actualHomeWinRate": 0.4032258064516129
+        },
+        {
+          "bucket": "50-60%",
+          "sampleSize": 59,
+          "averagePrediction": 0.5461923295237696,
+          "actualHomeWinRate": 0.5084745762711864
+        },
+        {
+          "bucket": "60-70%",
+          "sampleSize": 59,
+          "averagePrediction": 0.6461292264224547,
+          "actualHomeWinRate": 0.5932203389830508
+        },
+        {
+          "bucket": "70-80%",
+          "sampleSize": 22,
+          "averagePrediction": 0.7491904034747094,
+          "actualHomeWinRate": 0.9090909090909091
+        },
+        {
+          "bucket": "80-90%",
+          "sampleSize": 6,
+          "averagePrediction": 0.8359761421192274,
+          "actualHomeWinRate": 1
+        },
+        {
+          "bucket": "90-100%",
+          "sampleSize": 0,
+          "averagePrediction": null,
+          "actualHomeWinRate": null
+        }
+      ],
+      "market": {
+        "status": "recorded_price_baseline",
+        "recordedMarketAccuracy": {
+          "status": "measured_from_recorded_prices",
+          "sampleSize": 277,
+          "accuracy": 0.6714801444043321,
+          "brierScore": 0.20681192263359421,
+          "logLoss": 0.5979623221382667
+        },
+        "modelPriceAwareReturn": {
+          "status": "available",
+          "sampleSize": 277,
+          "units": -9.916211321954757,
+          "roi": -0.03579859683016157
+        },
+        "note": "Moneyline probability and returns use retained recorded prices; they are not closing-price or CLV claims."
+      }
+    },
+    {
+      "modelVersion": "phase6-1-2025-baseline-v4-totals-f40b3a2936b6-bc87373a-f289a18f",
+      "artifactChecksum": "f40b3a2936b6e858e99bb773bb6645a2fa0ce63a7a61555ab3c22f2c18c04815",
+      "family": "totals",
+      "sampleSize": 230,
+      "metrics": {
+        "sampleSize": 230,
+        "mae": 10.945155216456655,
+        "rmse": 13.874126443492935
+      },
+      "phase6Reference": {
+        "reference": {
+          "sampleSize": 237,
+          "mae": 10.8809,
+          "rmse": 13.8065
+        },
+        "metricDeltas": {
+          "mae": 0.06425521645665455,
+          "rmse": 0.06762644349293545
+        },
+        "eligibilityDifference": {
+          "referenceSampleSize": 237,
+          "baselineSampleSize": 230,
+          "excludedNeutralSiteGames": 8,
+          "note": "The retained Phase 6 reference used the full evaluable corpus; this market baseline uses only matched non-neutral games."
+        }
+      },
+      "weekly": [
+        {
+          "week": 4,
+          "sampleSize": 15,
+          "mae": 9.756503167955582,
+          "rmse": 12.733199018649511
+        },
+        {
+          "week": 5,
+          "sampleSize": 13,
+          "mae": 9.112524135492702,
+          "rmse": 11.236739264317867
+        },
+        {
+          "week": 6,
+          "sampleSize": 14,
+          "mae": 8.43166346824968,
+          "rmse": 10.632752732545992
+        },
+        {
+          "week": 7,
+          "sampleSize": 14,
+          "mae": 11.735638173609804,
+          "rmse": 13.993437266937077
+        },
+        {
+          "week": 8,
+          "sampleSize": 13,
+          "mae": 10.212040393296197,
+          "rmse": 13.78028919723024
+        },
+        {
+          "week": 9,
+          "sampleSize": 14,
+          "mae": 10.411408273495327,
+          "rmse": 15.24920482380663
+        },
+        {
+          "week": 10,
+          "sampleSize": 13,
+          "mae": 14.302025049274942,
+          "rmse": 17.785285538184258
+        },
+        {
+          "week": 11,
+          "sampleSize": 14,
+          "mae": 9.975760229500676,
+          "rmse": 13.055204470611331
+        },
+        {
+          "week": 12,
+          "sampleSize": 14,
+          "mae": 8.932111402447228,
+          "rmse": 10.355736866616892
+        },
+        {
+          "week": 13,
+          "sampleSize": 16,
+          "mae": 9.027273289587074,
+          "rmse": 10.454694521801422
+        },
+        {
+          "week": 14,
+          "sampleSize": 14,
+          "mae": 10.880246247760242,
+          "rmse": 14.294176338261225
+        },
+        {
+          "week": 15,
+          "sampleSize": 16,
+          "mae": 14.593097247995006,
+          "rmse": 16.21012352484887
+        },
+        {
+          "week": 16,
+          "sampleSize": 16,
+          "mae": 10.047570603055973,
+          "rmse": 13.85158676228341
+        },
+        {
+          "week": 17,
+          "sampleSize": 16,
+          "mae": 12.222353175254216,
+          "rmse": 15.041614133238559
+        },
+        {
+          "week": 18,
+          "sampleSize": 16,
+          "mae": 12.85053438932944,
+          "rmse": 15.618946847806924
+        },
+        {
+          "week": 19,
+          "sampleSize": 6,
+          "mae": 13.008980232871943,
+          "rmse": 15.619779837442229
+        },
+        {
+          "week": 20,
+          "sampleSize": 4,
+          "mae": 7.500355978623894,
+          "rmse": 9.343832667386467
+        },
+        {
+          "week": 21,
+          "sampleSize": 2,
+          "mae": 20.424167012355422,
+          "rmse": 21.5839566308913
+        }
+      ],
+      "cumulative": [
+        {
+          "throughWeek": 4,
+          "sampleSize": 15,
+          "mae": 9.756503167955582,
+          "rmse": 12.733199018649511
+        },
+        {
+          "throughWeek": 5,
+          "sampleSize": 28,
+          "mae": 9.457512902883533,
+          "rmse": 12.061525874143118
+        },
+        {
+          "throughWeek": 6,
+          "sampleSize": 42,
+          "mae": 9.115563091338917,
+          "rmse": 11.604830079133892
+        },
+        {
+          "throughWeek": 7,
+          "sampleSize": 56,
+          "mae": 9.77058186190664,
+          "rmse": 12.245739361512799
+        },
+        {
+          "throughWeek": 8,
+          "sampleSize": 69,
+          "mae": 9.85375520840033,
+          "rmse": 12.549212248061988
+        },
+        {
+          "throughWeek": 9,
+          "sampleSize": 83,
+          "mae": 9.947817171187435,
+          "rmse": 13.043875774751987
+        },
+        {
+          "throughWeek": 10,
+          "sampleSize": 96,
+          "mae": 10.537449488011783,
+          "rmse": 13.781765075645144
+        },
+        {
+          "throughWeek": 11,
+          "sampleSize": 110,
+          "mae": 10.465961764201277,
+          "rmse": 13.691435198825015
+        },
+        {
+          "throughWeek": 12,
+          "sampleSize": 124,
+          "mae": 10.292785110454851,
+          "rmse": 13.356607571966387
+        },
+        {
+          "throughWeek": 13,
+          "sampleSize": 140,
+          "mae": 10.14815518806996,
+          "rmse": 13.057641978061891
+        },
+        {
+          "throughWeek": 14,
+          "sampleSize": 154,
+          "mae": 10.214708920769077,
+          "rmse": 13.17485075803603
+        },
+        {
+          "throughWeek": 15,
+          "sampleSize": 170,
+          "mae": 10.626792528037399,
+          "rmse": 13.489669319524001
+        },
+        {
+          "throughWeek": 16,
+          "sampleSize": 186,
+          "mae": 10.57696698610351,
+          "rmse": 13.521182826044022
+        },
+        {
+          "throughWeek": 17,
+          "sampleSize": 202,
+          "mae": 10.707294605046146,
+          "rmse": 13.647791339206155
+        },
+        {
+          "throughWeek": 18,
+          "sampleSize": 218,
+          "mae": 10.864596607562351,
+          "rmse": 13.802039158398587
+        },
+        {
+          "throughWeek": 19,
+          "sampleSize": 224,
+          "mae": 10.922035454668858,
+          "rmse": 13.853837665799697
+        },
+        {
+          "throughWeek": 20,
+          "sampleSize": 228,
+          "mae": 10.862005990176842,
+          "rmse": 13.787434541750816
+        },
+        {
+          "throughWeek": 21,
+          "sampleSize": 230,
+          "mae": 10.945155216456655,
+          "rmse": 13.874126443492935
+        }
+      ],
+      "calibration": null,
+      "market": {
+        "status": "measured_against_recorded_line",
+        "sampleSize": 230,
+        "recordedMarketAccuracy": {
+          "status": "measured_from_recorded_line",
+          "sampleSize": 230,
+          "mae": 10.126086956521739,
+          "rmse": 13.018966097999854
+        },
+        "settlement": {
+          "wins": 84,
+          "losses": 98,
+          "pushes": 0,
+          "noBets": 48,
+          "winRate": 0.46153846153846156
+        },
+        "directions": {
+          "home": 0,
+          "away": 0,
+          "over": 90,
+          "under": 92,
+          "noBet": 48
+        },
+        "weekly": [
+          {
+            "week": 4,
+            "averageAbsoluteEdge": 2.1612688666089506,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 5,
+              "under": 6,
+              "noBet": 4
+            },
+            "wins": 3,
+            "losses": 8,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.2727272727272727
+          },
+          {
+            "week": 5,
+            "averageAbsoluteEdge": 2.5971977099644197,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 5,
+              "under": 4,
+              "noBet": 4
+            },
+            "wins": 4,
+            "losses": 5,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.4444444444444444
+          },
+          {
+            "week": 6,
+            "averageAbsoluteEdge": 2.9763341517731936,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 3,
+              "under": 7,
+              "noBet": 4
+            },
+            "wins": 6,
+            "losses": 4,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.6
+          },
+          {
+            "week": 7,
+            "averageAbsoluteEdge": 4.369867468249292,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 8,
+              "under": 4,
+              "noBet": 2
+            },
+            "wins": 7,
+            "losses": 5,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 0.5833333333333334
+          },
+          {
+            "week": 8,
+            "averageAbsoluteEdge": 2.706929214741173,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 4,
+              "under": 8,
+              "noBet": 1
+            },
+            "wins": 5,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 0.4166666666666667
+          },
+          {
+            "week": 9,
+            "averageAbsoluteEdge": 3.8994735166122445,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 3,
+              "under": 9,
+              "noBet": 2
+            },
+            "wins": 4,
+            "losses": 8,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 0.3333333333333333
+          },
+          {
+            "week": 10,
+            "averageAbsoluteEdge": 3.9377338188540985,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 4,
+              "under": 6,
+              "noBet": 3
+            },
+            "wins": 5,
+            "losses": 5,
+            "pushes": 0,
+            "noBets": 3,
+            "winRate": 0.5
+          },
+          {
+            "week": 11,
+            "averageAbsoluteEdge": 3.440313486038842,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 5,
+              "under": 7,
+              "noBet": 2
+            },
+            "wins": 7,
+            "losses": 5,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 0.5833333333333334
+          },
+          {
+            "week": 12,
+            "averageAbsoluteEdge": 3.7963658769636983,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 4,
+              "under": 7,
+              "noBet": 3
+            },
+            "wins": 6,
+            "losses": 5,
+            "pushes": 0,
+            "noBets": 3,
+            "winRate": 0.5454545454545454
+          },
+          {
+            "week": 13,
+            "averageAbsoluteEdge": 3.344070286482845,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 6,
+              "under": 4,
+              "noBet": 6
+            },
+            "wins": 3,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 6,
+            "winRate": 0.3
+          },
+          {
+            "week": 14,
+            "averageAbsoluteEdge": 4.255558140503461,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 8,
+              "under": 3,
+              "noBet": 3
+            },
+            "wins": 5,
+            "losses": 6,
+            "pushes": 0,
+            "noBets": 3,
+            "winRate": 0.45454545454545453
+          },
+          {
+            "week": 15,
+            "averageAbsoluteEdge": 3.6730930367189387,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 9,
+              "under": 4,
+              "noBet": 3
+            },
+            "wins": 5,
+            "losses": 8,
+            "pushes": 0,
+            "noBets": 3,
+            "winRate": 0.38461538461538464
+          },
+          {
+            "week": 16,
+            "averageAbsoluteEdge": 3.510591506946404,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 7,
+              "under": 8,
+              "noBet": 1
+            },
+            "wins": 6,
+            "losses": 9,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 0.4
+          },
+          {
+            "week": 17,
+            "averageAbsoluteEdge": 4.451252171787503,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 8,
+              "under": 7,
+              "noBet": 1
+            },
+            "wins": 8,
+            "losses": 7,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 0.5333333333333333
+          },
+          {
+            "week": 18,
+            "averageAbsoluteEdge": 4.36938903367877,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 9,
+              "under": 6,
+              "noBet": 1
+            },
+            "wins": 7,
+            "losses": 8,
+            "pushes": 0,
+            "noBets": 1,
+            "winRate": 0.4666666666666667
+          },
+          {
+            "week": 19,
+            "averageAbsoluteEdge": 2.374253461431786,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 1,
+              "under": 1,
+              "noBet": 4
+            },
+            "wins": 1,
+            "losses": 1,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.5
+          },
+          {
+            "week": 20,
+            "averageAbsoluteEdge": 2.6245643988609793,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 1,
+              "under": 1,
+              "noBet": 2
+            },
+            "wins": 2,
+            "losses": 0,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": 1
+          },
+          {
+            "week": 21,
+            "averageAbsoluteEdge": 0.9241670123554222,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 0,
+              "under": 0,
+              "noBet": 2
+            },
+            "wins": 0,
+            "losses": 0,
+            "pushes": 0,
+            "noBets": 2,
+            "winRate": null
+          }
+        ],
+        "cumulative": [
+          {
+            "throughWeek": 4,
+            "averageAbsoluteEdge": 2.1612688666089506,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 5,
+              "under": 6,
+              "noBet": 4
+            },
+            "wins": 3,
+            "losses": 8,
+            "pushes": 0,
+            "noBets": 4,
+            "winRate": 0.2727272727272727
+          },
+          {
+            "throughWeek": 5,
+            "averageAbsoluteEdge": 2.36366440102399,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 10,
+              "under": 10,
+              "noBet": 8
+            },
+            "wins": 7,
+            "losses": 13,
+            "pushes": 0,
+            "noBets": 8,
+            "winRate": 0.35
+          },
+          {
+            "throughWeek": 6,
+            "averageAbsoluteEdge": 2.567887651273724,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 13,
+              "under": 17,
+              "noBet": 12
+            },
+            "wins": 13,
+            "losses": 17,
+            "pushes": 0,
+            "noBets": 12,
+            "winRate": 0.43333333333333335
+          },
+          {
+            "throughWeek": 7,
+            "averageAbsoluteEdge": 3.0183826055176155,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 21,
+              "under": 21,
+              "noBet": 14
+            },
+            "wins": 20,
+            "losses": 22,
+            "pushes": 0,
+            "noBets": 14,
+            "winRate": 0.47619047619047616
+          },
+          {
+            "throughWeek": 8,
+            "averageAbsoluteEdge": 2.9597029811684306,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 25,
+              "under": 29,
+              "noBet": 15
+            },
+            "wins": 25,
+            "losses": 29,
+            "pushes": 0,
+            "noBets": 15,
+            "winRate": 0.46296296296296297
+          },
+          {
+            "throughWeek": 9,
+            "averageAbsoluteEdge": 3.1182184931710015,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 28,
+              "under": 38,
+              "noBet": 17
+            },
+            "wins": 29,
+            "losses": 37,
+            "pushes": 0,
+            "noBets": 17,
+            "winRate": 0.4393939393939394
+          },
+          {
+            "throughWeek": 10,
+            "averageAbsoluteEdge": 3.2291945268572544,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 32,
+              "under": 44,
+              "noBet": 20
+            },
+            "wins": 34,
+            "losses": 42,
+            "pushes": 0,
+            "noBets": 20,
+            "winRate": 0.4473684210526316
+          },
+          {
+            "throughWeek": 11,
+            "averageAbsoluteEdge": 3.2560642125712764,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 37,
+              "under": 51,
+              "noBet": 22
+            },
+            "wins": 41,
+            "losses": 47,
+            "pushes": 0,
+            "noBets": 22,
+            "winRate": 0.4659090909090909
+          },
+          {
+            "throughWeek": 12,
+            "averageAbsoluteEdge": 3.3170660133897765,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 41,
+              "under": 58,
+              "noBet": 25
+            },
+            "wins": 47,
+            "losses": 52,
+            "pushes": 0,
+            "noBets": 25,
+            "winRate": 0.47474747474747475
+          },
+          {
+            "throughWeek": 13,
+            "averageAbsoluteEdge": 3.3201522160289842,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 47,
+              "under": 62,
+              "noBet": 31
+            },
+            "wins": 50,
+            "losses": 59,
+            "pushes": 0,
+            "noBets": 31,
+            "winRate": 0.45871559633027525
+          },
+          {
+            "throughWeek": 14,
+            "averageAbsoluteEdge": 3.405189118253936,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 55,
+              "under": 65,
+              "noBet": 34
+            },
+            "wins": 55,
+            "losses": 65,
+            "pushes": 0,
+            "noBets": 34,
+            "winRate": 0.4583333333333333
+          },
+          {
+            "throughWeek": 15,
+            "averageAbsoluteEdge": 3.4304036046977004,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 64,
+              "under": 69,
+              "noBet": 37
+            },
+            "wins": 60,
+            "losses": 73,
+            "pushes": 0,
+            "noBets": 37,
+            "winRate": 0.45112781954887216
+          },
+          {
+            "throughWeek": 16,
+            "averageAbsoluteEdge": 3.437301488762106,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 71,
+              "under": 77,
+              "noBet": 38
+            },
+            "wins": 66,
+            "losses": 82,
+            "pushes": 0,
+            "noBets": 38,
+            "winRate": 0.44594594594594594
+          },
+          {
+            "throughWeek": 17,
+            "averageAbsoluteEdge": 3.5176144141502563,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 79,
+              "under": 84,
+              "noBet": 39
+            },
+            "wins": 74,
+            "losses": 89,
+            "pushes": 0,
+            "noBets": 39,
+            "winRate": 0.4539877300613497
+          },
+          {
+            "throughWeek": 18,
+            "averageAbsoluteEdge": 3.5801299825560196,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 88,
+              "under": 90,
+              "noBet": 40
+            },
+            "wins": 81,
+            "losses": 97,
+            "pushes": 0,
+            "noBets": 40,
+            "winRate": 0.4550561797752809
+          },
+          {
+            "throughWeek": 19,
+            "averageAbsoluteEdge": 3.547829718597334,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 89,
+              "under": 91,
+              "noBet": 44
+            },
+            "wins": 82,
+            "losses": 98,
+            "pushes": 0,
+            "noBets": 44,
+            "winRate": 0.45555555555555555
+          },
+          {
+            "throughWeek": 20,
+            "averageAbsoluteEdge": 3.531632081408977,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 90,
+              "under": 92,
+              "noBet": 46
+            },
+            "wins": 84,
+            "losses": 98,
+            "pushes": 0,
+            "noBets": 46,
+            "winRate": 0.46153846153846156
+          },
+          {
+            "throughWeek": 21,
+            "averageAbsoluteEdge": 3.5089584721128593,
+            "directions": {
+              "home": 0,
+              "away": 0,
+              "over": 90,
+              "under": 92,
+              "noBet": 48
+            },
+            "wins": 84,
+            "losses": 98,
+            "pushes": 0,
+            "noBets": 48,
+            "winRate": 0.46153846153846156
+          }
+        ],
+        "edgeBuckets": [
+          {
+            "bucket": "<1",
+            "sampleSize": 48,
+            "gradedSampleSize": 0,
+            "wins": 0,
+            "losses": 0,
+            "winRate": null,
+            "confidenceInterval95": {
+              "low": null,
+              "high": null
+            },
+            "meanAbsoluteError": 10.206092875797369
+          },
+          {
+            "bucket": "1-1.99",
+            "sampleSize": 42,
+            "gradedSampleSize": 42,
+            "wins": 20,
+            "losses": 22,
+            "winRate": 0.47619047619047616,
+            "confidenceInterval95": {
+              "low": 0.3335960123070547,
+              "high": 0.6227753586865502
+            },
+            "meanAbsoluteError": 11.056545244437807
+          },
+          {
+            "bucket": "2-2.99",
+            "sampleSize": 20,
+            "gradedSampleSize": 20,
+            "wins": 8,
+            "losses": 12,
+            "winRate": 0.4,
+            "confidenceInterval95": {
+              "low": 0.21880653237281708,
+              "high": 0.6134184992377468
+            },
+            "meanAbsoluteError": 9.652035873508556
+          },
+          {
+            "bucket": "3-4.99",
+            "sampleSize": 58,
+            "gradedSampleSize": 58,
+            "wins": 26,
+            "losses": 32,
+            "winRate": 0.4482758620689655,
+            "confidenceInterval95": {
+              "low": 0.3274985404778122,
+              "high": 0.5754791687415537
+            },
+            "meanAbsoluteError": 9.219823509222861
+          },
+          {
+            "bucket": "5+",
+            "sampleSize": 62,
+            "gradedSampleSize": 62,
+            "wins": 30,
+            "losses": 32,
+            "winRate": 0.4838709677419355,
+            "confidenceInterval95": {
+              "low": 0.3640985983824575,
+              "high": 0.6055254039433933
+            },
+            "meanAbsoluteError": 13.47303000766568
+          }
+        ],
+        "priceAwareReturn": {
+          "status": "available",
+          "sampleSize": 182,
+          "units": -21.344562152887164,
+          "roi": -0.11727781402685256
+        }
+      }
+    }
+  ],
+  "pricing": {
+    "priceAwareReturns": "available",
+    "trueClv": "unavailable",
+    "pricedQuotes": 1662,
+    "timestampedPricedQuotes": 0,
+    "reason": "The source supplies no sportsbook or observation timestamps; true CLV requires a provenance-matched earlier and closing pair."
+  },
+  "closingMarketBaseline": {
+    "status": "unavailable",
+    "reason": "The source does not designate its values as closing lines or prices."
+  },
+  "clv": {
+    "status": "unavailable",
+    "reason": "The retained source has no provenance-matched earlier and closing timestamps. Model-versus-recorded-line differences are not CLV."
+  },
+  "suitability": {
+    "status": "insufficient_for_threshold_recommendation",
+    "reason": "Edge-bucket samples are small, confidence intervals are wide, and no betting threshold was pre-registered. Results are descriptive only."
+  },
+  "productionMutation": false,
+  "reusableComparisonContract": {
+    "evaluationRunId": "phase6-1-2025-market-baseline-v4-bc87373a5d1a-f289a18f99c4",
+    "gameSet": "matched non-neutral 2025 games",
+    "edgeBuckets": [
+      "<1",
+      "1-1.99",
+      "2-2.99",
+      "3-4.99",
+      "5+"
+    ],
+    "minimumRecordedLineEdge": 1,
+    "grading": "final scores only"
+  }
+}
