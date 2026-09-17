@@ -28,11 +28,11 @@ export function formatQuote(quote: ConsumerMarketQuote | null, kind: 'spread' | 
 
 const score = (value?: number | null) => value === null || value === undefined ? '—' : value.toFixed(1);
 
-export function ConsumerGameCard({ game, compact = false }: { game: ConsumerGame; compact?: boolean }) {
+export function ConsumerGameCard({ game, compact = false, href = `/games/${game.gameId}` }: { game: ConsumerGame; compact?: boolean; href?: string }) {
   const final = game.finalScore;
   const prediction = game.prediction;
   return (
-    <Link href={`/games/${game.gameId}`} className="consumer-game-card">
+    <Link href={href} className="consumer-game-card">
       <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : game.dataConfidence.label}</span></div>
       <div className="consumer-matchup">
         <div><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(prediction?.projectedAwayScore)}</b>

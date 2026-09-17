@@ -1,11 +1,14 @@
 import { getGetConsumerGameQueryKey, useGetConsumerGame } from '@workspace/api-client-react';
 import { ChevronLeft, CloudRain, Gauge, ShieldCheck, Users } from 'lucide-react';
-import { useParams, Link } from 'wouter';
+import { useLocation, useParams, Link } from 'wouter';
 import { getConsumerPersonnelContent } from '../../lib/consumer-personnel';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } from './consumer-ui';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
+  const [location] = useLocation();
+  const detailSearch = location.includes('?') ? location.slice(location.indexOf('?')) : '';
+  const backHref = detailSearch ? `/games${detailSearch}` : '/games';
   const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 30_000 } });
   if (query.isLoading) return <ConsumerLoading label="Loading matchup details…" />;
   if (query.isError || !query.data) return <ConsumerMessage error title="This matchup is unavailable" detail="We couldn’t load this game right now. Return to Games and try again shortly." />;
@@ -20,7 +23,7 @@ export default function ConsumerGameDetail() {
   ].filter(Boolean) : [];
   const personnelContent = getConsumerPersonnelContent(game.context);
   return <div className="consumer-page consumer-detail">
-    <Link href="/games" className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
+    <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
     <section className="consumer-matchup-hero">
       <p>{formatKickoff(game.kickoffTime)}{game.venue ? ` · ${game.venue}` : ''}</p>
       <div className="consumer-teams">
