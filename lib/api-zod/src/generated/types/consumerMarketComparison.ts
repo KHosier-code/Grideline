@@ -29,4 +29,7 @@ export interface ConsumerMarketComparison {
   modelTimestamp: Date | null;
   /** @nullable */
   marketTimestamp: Date | null;
+  /** @nullable */
+  observationAgeMinutes: number | null;
+  freshnessLabel: string;
 }

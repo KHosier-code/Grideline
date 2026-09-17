@@ -8,9 +8,13 @@
 import type { ConsumerGame } from './consumerGame';
 import type { ConsumerGamesCoverage } from './consumerGamesCoverage';
 import type { ConsumerGamesStatus } from './consumerGamesStatus';
+import type { ConsumerRecordVerification } from './consumerRecordVerification';
+import type { ConsumerTeamRecord } from './consumerTeamRecord';
 
 export interface ConsumerGames {
   status: ConsumerGamesStatus;
   coverage: ConsumerGamesCoverage;
   games: ConsumerGame[];
+  teamRecords: ConsumerTeamRecord[];
+  recordVerification: ConsumerRecordVerification;
 }

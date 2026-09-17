@@ -35,6 +35,7 @@ export default function ConsumerGameDetail() {
       <div className="premium-hero-context">
         <div className="premium-hero-kickoff">
           {formatKickoff(game.kickoffTime)}
+            <span className={`market-state market-state-${game.gameState}`}> · {game.gameState}</span>
           {game.venue ? <span className="premium-venue"> · {game.venue}</span> : null}
         </div>
         <div className="premium-weather" data-testid="game-weather">

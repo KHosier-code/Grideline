@@ -12,6 +12,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -450,11 +451,15 @@ export const predictionSnapshotsTable = pgTable("prediction_snapshots", {
   vectorSchemaFingerprint: text("vector_schema_fingerprint"),
   inputSourceEvidence: jsonb("input_source_evidence").$type<Record<string, unknown>>(),
   officialFinalPrediction: boolean("official_final_prediction").notNull().default(false),
+  evaluationCutoffAt: timestamp("evaluation_cutoff_at", { withTimezone: true }),
   frozenAt: timestamp("frozen_at", { withTimezone: true }),
 }, (table) => [
   unique("prediction_snapshots_key_unique").on(table.snapshotKey),
   index("prediction_snapshots_game_idx").on(table.gameId, table.predictionTimestamp),
   index("prediction_snapshots_official_idx").on(table.officialFinalPrediction, table.kickoffTime),
+  uniqueIndex("prediction_snapshots_one_official_per_game")
+    .on(table.gameId)
+    .where(sql`${table.officialFinalPrediction} = true`),
   check("prediction_snapshots_input_counts_check", sql`
     ${table.inputFeatureCount} >= 0
     and ${table.inputMissingFeatureCount} >= 0
@@ -510,7 +515,7 @@ export const predictionValidationFailuresTable = pgTable("prediction_validation_
 
 export const predictionGradesTable = pgTable("prediction_grades", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  predictionId: integer("prediction_id").notNull(),
+  predictionId: integer("prediction_id").notNull().references(() => predictionSnapshotsTable.id),
   gradedAt: timestamp("graded_at", { withTimezone: true }).notNull().defaultNow(),
   actualHomeScore: integer("actual_home_score"),
   actualAwayScore: integer("actual_away_score"),
@@ -528,6 +533,10 @@ export const predictionGradesTable = pgTable("prediction_grades", {
 }, (table) => [
   unique("prediction_grades_prediction_unique").on(table.predictionId),
   index("prediction_grades_graded_at_idx").on(table.gradedAt),
+  check("prediction_grades_scores_nonnegative_check", sql`
+    (${table.actualHomeScore} is null or ${table.actualHomeScore} >= 0)
+    and (${table.actualAwayScore} is null or ${table.actualAwayScore} >= 0)
+  `),
 ]);
 
 export const weeklyLearningReportsTable = pgTable("weekly_learning_reports", {

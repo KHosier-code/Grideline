@@ -20,6 +20,8 @@ export const GetConfidenceAuditResponse = zod.object({
   "historicalEvidence": zod.record(zod.string(), zod.unknown()),
   "results": zod.array(zod.record(zod.string(), zod.unknown()))
 })
+
+
 /**
  * @summary Calculate and append confidence evidence for a season and week
  */
@@ -34,6 +36,7 @@ export const AppendConfidenceEvidenceQueryParams = zod.object({
   "season": zod.coerce.number().int().min(appendConfidenceEvidenceQuerySeasonMin).max(appendConfidenceEvidenceQuerySeasonMax).optional(),
   "week": zod.coerce.number().int().min(1).max(appendConfidenceEvidenceQueryWeekMax).optional()
 })
+
 export const AppendConfidenceEvidenceResponse = zod.object({
   "gamesEvaluated": zod.number().int(),
   "marketResultsCalculated": zod.number().int(),
@@ -952,6 +955,7 @@ export const GetConsumerDashboardResponse = zod.object({
   "week": zod.number().int(),
   "kickoffTime": zod.coerce.date().nullable(),
   "gameStatus": zod.string(),
+  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled']),
   "venue": zod.string().nullable(),
   "matchup": zod.object({
   "home": zod.object({
@@ -1047,7 +1051,9 @@ export const GetConsumerDashboardResponse = zod.object({
   "capturedAt": zod.coerce.date().nullable()
 })),
   "modelTimestamp": zod.coerce.date().nullable(),
-  "marketTimestamp": zod.coerce.date().nullable()
+  "marketTimestamp": zod.coerce.date().nullable(),
+  "observationAgeMinutes": zod.number().nullable(),
+  "freshnessLabel": zod.string()
 })).min(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin).max(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax)
 }),
   "dataConfidence": zod.object({
@@ -1118,6 +1124,7 @@ export const ListConsumerGamesResponse = zod.object({
   "week": zod.number().int(),
   "kickoffTime": zod.coerce.date().nullable(),
   "gameStatus": zod.string(),
+  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled']),
   "venue": zod.string().nullable(),
   "matchup": zod.object({
   "home": zod.object({
@@ -1213,7 +1220,9 @@ export const ListConsumerGamesResponse = zod.object({
   "capturedAt": zod.coerce.date().nullable()
 })),
   "modelTimestamp": zod.coerce.date().nullable(),
-  "marketTimestamp": zod.coerce.date().nullable()
+  "marketTimestamp": zod.coerce.date().nullable(),
+  "observationAgeMinutes": zod.number().nullable(),
+  "freshnessLabel": zod.string()
 })).min(listConsumerGamesResponseGamesItemMarketBoardComparisonsMin).max(listConsumerGamesResponseGamesItemMarketBoardComparisonsMax)
 }),
   "dataConfidence": zod.object({
@@ -1242,7 +1251,24 @@ export const ListConsumerGamesResponse = zod.object({
   "prediction": zod.string().nullable(),
   "market": zod.string().nullable()
 })
-}))
+})),
+  "teamRecords": zod.array(zod.object({
+  "teamId": zod.string(),
+  "abbreviation": zod.string(),
+  "teamName": zod.string(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "ties": zod.number().int(),
+  "games": zod.number().int()
+})),
+  "recordVerification": zod.object({
+  "expectedTeamCount": zod.number().int(),
+  "actualTeamCount": zod.number().int(),
+  "targetWeek": zod.number().int().nullable(),
+  "completedPriorGames": zod.number().int(),
+  "complete": zod.boolean(),
+  "discrepancies": zod.array(zod.string())
+})
 })
 
 
@@ -1286,6 +1312,7 @@ export const GetConsumerGameResponse = zod.object({
   "week": zod.number().int(),
   "kickoffTime": zod.coerce.date().nullable(),
   "gameStatus": zod.string(),
+  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled']),
   "venue": zod.string().nullable(),
   "matchup": zod.object({
   "home": zod.object({
@@ -1381,7 +1408,9 @@ export const GetConsumerGameResponse = zod.object({
   "capturedAt": zod.coerce.date().nullable()
 })),
   "modelTimestamp": zod.coerce.date().nullable(),
-  "marketTimestamp": zod.coerce.date().nullable()
+  "marketTimestamp": zod.coerce.date().nullable(),
+  "observationAgeMinutes": zod.number().nullable(),
+  "freshnessLabel": zod.string()
 })).min(getConsumerGameResponseOneMarketBoardComparisonsMin).max(getConsumerGameResponseOneMarketBoardComparisonsMax)
 }),
   "dataConfidence": zod.object({

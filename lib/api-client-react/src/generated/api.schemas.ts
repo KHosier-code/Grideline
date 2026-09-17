@@ -14,6 +14,7 @@ export const UsageAnalyticsEventInputEventName = {
   usage_row_toggled: 'usage_row_toggled',
   usage_filters_reset: 'usage_filters_reset',
 } as const;
+
 export type UsageAnalyticsEventInputFilter = typeof UsageAnalyticsEventInputFilter[keyof typeof UsageAnalyticsEventInputFilter];
 
 
@@ -23,6 +24,7 @@ export const UsageAnalyticsEventInputFilter = {
   window: 'window',
   game: 'game',
 } as const;
+
 export type UsageAnalyticsEventInputColumn = typeof UsageAnalyticsEventInputColumn[keyof typeof UsageAnalyticsEventInputColumn];
 
 
@@ -244,6 +246,9 @@ export interface ConsumerMarketComparison {
   modelTimestamp: string | null;
   /** @nullable */
   marketTimestamp: string | null;
+  /** @nullable */
+  observationAgeMinutes: number | null;
+  freshnessLabel: string;
 }
 
 export type ConsumerMarketBoardStatus = typeof ConsumerMarketBoardStatus[keyof typeof ConsumerMarketBoardStatus];
@@ -344,6 +349,18 @@ export interface ConfidenceAudit {
   results: ConfidenceAuditResultsItem[];
 }
 
+export type ConsumerGameGameState = typeof ConsumerGameGameState[keyof typeof ConsumerGameGameState];
+
+
+export const ConsumerGameGameState = {
+  scheduled: 'scheduled',
+  pregame: 'pregame',
+  live: 'live',
+  final: 'final',
+  postponed: 'postponed',
+  cancelled: 'cancelled',
+} as const;
+
 export type ConsumerGameMatchup = {
   home: ConsumerTeam;
   away: ConsumerTeam;
@@ -408,6 +425,7 @@ export interface ConsumerGame {
   /** @nullable */
   kickoffTime: string | null;
   gameStatus: string;
+  gameState: ConsumerGameGameState;
   /** @nullable */
   venue: string | null;
   matchup: ConsumerGameMatchup;
@@ -439,10 +457,32 @@ export type ConsumerGamesCoverage = {
   FanDuel: number;
 };
 
+export interface ConsumerTeamRecord {
+  teamId: string;
+  abbreviation: string;
+  teamName: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  games: number;
+}
+
+export interface ConsumerRecordVerification {
+  expectedTeamCount: number;
+  actualTeamCount: number;
+  /** @nullable */
+  targetWeek: number | null;
+  completedPriorGames: number;
+  complete: boolean;
+  discrepancies: string[];
+}
+
 export interface ConsumerGames {
   status: ConsumerGamesStatus;
   coverage: ConsumerGamesCoverage;
   games: ConsumerGame[];
+  teamRecords: ConsumerTeamRecord[];
+  recordVerification: ConsumerRecordVerification;
 }
 
 export type ConsumerPlayerUsageGameMatchup = {

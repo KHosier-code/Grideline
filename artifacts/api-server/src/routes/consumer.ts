@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lt, lte } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   db,
@@ -33,13 +33,16 @@ import retained2025Baseline from "../../../../reports/gridline-2025-market-basel
 import { persistConfidenceMethodology, persistConfidenceResults } from "../lib/confidence-persistence";
 import { getCurrentGamePersonnel } from "../lib/current-personnel";
 import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
+import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, interpretNflGameState, verifyTeamRecords } from "../lib/game-state";
+export { consumerFinalScore } from "../lib/game-state";
+export { verifyTeamRecords } from "../lib/game-state";
 
 const router: IRouter = Router();
 export const MAX_CONSUMER_GAMES = 100;
 export const MAX_CONSUMER_MOVEMENT_ROWS = 200;
 export const MAX_CONSUMER_SNAPSHOT_ROWS = MAX_CONSUMER_GAMES;
 export const MAX_CONSUMER_PERFORMANCE_ROWS = 5_000;
-export const CONSUMER_MARKET_STALE_MINUTES = 30;
+export const CONSUMER_MARKET_STALE_MINUTES = 15;
 const SUPPORTED_CONSUMER_BOOKS = new Set(["DraftKings", "FanDuel"]);
 const SUPPORTED_CONSUMER_MARKETS = new Set(["spread", "total", "moneyline"]);
 const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
@@ -260,14 +263,6 @@ export function safeNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-export function consumerFinalScore(game: Pick<typeof gamesTable.$inferSelect, "gameStatus" | "finalHomeScore" | "finalAwayScore">) {
-  const status = (game.gameStatus ?? "").toLowerCase();
-  const completed = status.includes("final") || status.includes("completed");
-  return completed && game.finalHomeScore !== null && game.finalAwayScore !== null
-    ? { home: game.finalHomeScore, away: game.finalAwayScore }
-    : null;
-}
-
 function confidence(snapshot: typeof predictionSnapshotsTable.$inferSelect | undefined) {
   if (!snapshot) return { label: "Updating", score: null, reason: "Prediction data is being refreshed" };
   if (snapshot.lowSample) return { label: "Limited", score: safeNumber(snapshot.qbConfidence), reason: "Limited historical sample" };
@@ -415,6 +410,9 @@ export function buildConsumerMarketBoard(
       : null;
     const stale = Boolean(selected
       && cutoff.getTime() - selected.capturedAt.getTime() > CONSUMER_MARKET_STALE_MINUTES * 60_000);
+    const observationAgeMinutes = selected
+      ? Math.max(0, (cutoff.getTime() - selected.capturedAt.getTime()) / 60_000)
+      : null;
     return {
       market: spec.market,
       label: spec.label,
@@ -429,6 +427,12 @@ export function buildConsumerMarketBoard(
       current: selected ? quoteFromMovement(selected, spec.market, home) : null,
       modelTimestamp: snapshot?.predictionTimestamp.toISOString() ?? null,
       marketTimestamp: selected?.capturedAt.toISOString() ?? null,
+      observationAgeMinutes,
+      freshnessLabel: selected
+        ? stale
+          ? `Stale — last observed ${selected.capturedAt.toISOString()}`
+          : `Updated ${Math.round(observationAgeMinutes ?? 0)} min ago`
+        : "No observation",
     };
   });
   const available = comparisons.filter((item) => item.state === "available").length;
@@ -871,6 +875,8 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
     .orderBy(asc(gamesTable.kickoffTime), asc(gamesTable.gameId))
     .limit(MAX_CONSUMER_GAMES);
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
+  const recordSeason = filters.season ?? games[0]?.season;
+  const recordWeek = filters.week ?? games[0]?.week;
   const [teams, snapshots, marketRows, modelRuns, snapshotHistory] = await Promise.all([
     teamIds.length ? db.select().from(teamsTable).where(inArray(teamsTable.teamId, teamIds)) : [],
     getLatestValidPredictionSnapshots(games.map((game) => game.gameId), {
@@ -899,6 +905,23 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       .where(and(inArray(predictionSnapshotsTable.gameId, games.map((game) => game.gameId)), lte(predictionSnapshotsTable.predictionTimestamp, asOf)))
       .orderBy(asc(predictionSnapshotsTable.predictionTimestamp), asc(predictionSnapshotsTable.id)) : [],
   ]);
+  const recordTeams = recordSeason === undefined ? [] : await db.select({
+    teamId: teamsTable.teamId,
+    abbreviation: teamsTable.abbreviation,
+    teamName: teamsTable.teamName,
+  }).from(teamsTable);
+  const recordGames = recordSeason === undefined ? [] : await db.select({
+    homeTeamId: gamesTable.homeTeamId,
+    awayTeamId: gamesTable.awayTeamId,
+    week: gamesTable.week,
+    gameStatus: gamesTable.gameStatus,
+    kickoffTime: gamesTable.kickoffTime,
+    finalHomeScore: gamesTable.finalHomeScore,
+    finalAwayScore: gamesTable.finalAwayScore,
+  }).from(gamesTable).where(and(
+    eq(gamesTable.season, recordSeason),
+    recordWeek === undefined ? undefined : lt(gamesTable.week, recordWeek),
+  ));
   const verifiedArtifacts = new Map(modelRuns.filter((run) => verifyArtifactIntegrity(run).valid).map((run) => [run.modelVersion, true]));
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
   let persistedConfidenceResults = 0;
@@ -1049,12 +1072,13 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       week: game.week,
       kickoffTime: game.kickoffTime?.toISOString() ?? null,
       gameStatus: game.gameStatus,
+      gameState: interpretNflGameState(game, asOf),
       venue: game.stadium,
       matchup: {
         home: { name: home?.teamName ?? "Team unavailable", abbreviation: home?.abbreviation ?? "—", logoUrl: home?.logoUrl ?? null },
         away: { name: away?.teamName ?? "Team unavailable", abbreviation: away?.abbreviation ?? "—", logoUrl: away?.logoUrl ?? null },
       },
-      finalScore: consumerFinalScore(game),
+      finalScore: consumerFinalScore(game, asOf),
       prediction: snapshot ? {
         modelLabel: "Gridline Production Model",
         projectedHomeScore: safeNumber(snapshot.projectedHomeScore),
@@ -1074,7 +1098,13 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       },
     };
   }));
-  return Object.assign(results, { persistedConfidenceResults });
+  const teamRecords = buildTeamRecords(recordTeams, recordGames, asOf);
+  const completedPriorGames = recordGames.filter((game) => authoritativeFinalRegularSeasonGame(game, asOf)).length;
+  return Object.assign(results, {
+    persistedConfidenceResults,
+    teamRecords,
+    recordVerification: verifyTeamRecords(teamRecords, { targetWeek: recordWeek, completedPriorGames }),
+  });
 }
 
 router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
@@ -1101,6 +1131,8 @@ router.get("/consumer/games", async (req, res): Promise<void> => {
     res.json({
       ...summary,
       games,
+      teamRecords: games.teamRecords,
+      recordVerification: games.recordVerification,
     });
   } catch (error) {
     req.log.error({ error }, "Consumer games read failed");

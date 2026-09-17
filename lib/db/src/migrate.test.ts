@@ -125,6 +125,22 @@ test("identity parser revisions preserve immutable imports without overwriting s
   );
 });
 
+test("canonical prediction migration enforces one immutable snapshot and grade", () => {
+  const migration = fs.readFileSync(
+    new URL("../migrations/0033_immutable_canonical_prediction.sql", import.meta.url),
+    "utf8",
+  );
+  const requirements = extractRequirements(migration);
+  assert.deepEqual([...requirements.triggers].sort(), [
+    "canonical_prediction_immutable",
+    "prediction_grade_immutable",
+  ]);
+  assert.match(migration, /prediction_snapshots_one_official_per_game/);
+  assert.match(migration, /FOREIGN KEY \(prediction_id\) REFERENCES prediction_snapshots\(id\)/);
+  assert.match(migration, /evaluation_cutoff_at timestamptz/);
+  assert.doesNotThrow(() => assertMigrationSafe(migration, "0033_immutable_canonical_prediction.sql"));
+});
+
 test("Sleeper crosswalk evidence is namespace-aware and append-only", () => {
   const migration = fs.readFileSync(
     new URL("../migrations/0024_sleeper_crosswalk_evidence.sql", import.meta.url),

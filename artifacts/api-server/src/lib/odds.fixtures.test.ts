@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  formatOddsApiTimestamp,
   compareOddsQuotes,
   classifyMatchedAuditReason,
   classifyMatchedEvent,
@@ -14,6 +15,13 @@ import {
   oddsQuoteIsBetter,
   parseOddsTimestamp,
 } from "./odds";
+
+test("Odds API commence filters omit fractional seconds rejected by the provider", () => {
+  assert.equal(
+    formatOddsApiTimestamp(new Date("2026-09-17T14:00:13.923Z")),
+    "2026-09-17T14:00:13Z",
+  );
+});
 import { getExposedScheduleWeeks } from "./schedule";
 
 test("normalizes common sportsbook team-name variants to one NFL identity", () => {

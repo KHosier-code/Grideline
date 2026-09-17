@@ -17,6 +17,7 @@ import {
   schedulerJobsTable,
   sportsbookOddsTable,
   weeklyLearningReportsTable,
+  teamsTable,
 } from "@workspace/db";
 import { asc, desc } from "drizzle-orm";
 
@@ -26,9 +27,12 @@ const formatIndex = process.argv.indexOf("--format");
 const format = formatArgument?.split("=")[1]
   ?? (formatIndex >= 0 ? process.argv[formatIndex + 1] : undefined)
   ?? (process.argv.includes("--markdown") ? "markdown" : "json");
+const awayArgument = process.argv.find((argument) => argument.startsWith("--away="))?.split("=")[1]?.toUpperCase();
+const homeArgument = process.argv.find((argument) => argument.startsWith("--home="))?.split("=")[1]?.toUpperCase();
 
 const terminalStatuses = ["final", "completed", "postponed", "canceled"];
 const families = ["spread", "moneyline", "totals"];
+const canonicalMarketMaxAgeMinutes = 15;
 type ReadinessStatus = "pass" | "warning" | "pending";
 type SyncRow = typeof dataSyncRunsTable.$inferSelect;
 type SchedulerRow = typeof schedulerJobsTable.$inferSelect;
@@ -47,6 +51,8 @@ type GameRow = {
   gameStatus: string;
   finalHomeScore: number | null;
   finalAwayScore: number | null;
+  homeTeamId?: string;
+  awayTeamId?: string;
 };
 type FeatureRow = {
   gameId: string;
@@ -89,7 +95,15 @@ type NflverseFileRow = {
   completedAt: Date | null;
   errorMessage: string | null;
 };
-type OddsQuoteRow = { capturedAt: Date };
+type OddsQuoteRow = {
+  gameId: string;
+  sportsbook: string;
+  market: string;
+  selection: string;
+  point: number | null;
+  price: number;
+  capturedAt: Date;
+};
 type OddsAuditRow = {
   requestId: number;
   auditedAt: Date;
@@ -120,11 +134,75 @@ type ReadinessReport = {
     pending: number;
     note: string;
   };
+  blockers: Array<{ check: string; status: ReadinessStatus; reason: string }>;
+  safetyConfirmations: Record<string, boolean>;
 };
 
 function isTerminal(status: string | null | undefined) {
   const value = String(status ?? "").toLowerCase();
   return terminalStatuses.some((part) => value.includes(part));
+}
+
+function normalizedGameState(game: Pick<GameRow, "gameStatus" | "kickoffTime">) {
+  const status = (game.gameStatus ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
+  if (status.includes("postpon")) return "postponed";
+  if (status.includes("cancel")) return "cancelled";
+  if (status.includes("final") || status.includes("completed") || status === "closed") return "final";
+  if (status.includes("progress") || status.includes("halftime") || status.includes("quarter")) return "live";
+  if (status.includes("scheduled") || status.includes("pre game") || status === "status unknown") {
+    return game.kickoffTime ? "pregame" : "scheduled";
+  }
+  return game.kickoffTime && game.kickoffTime <= now ? "live" : game.kickoffTime ? "pregame" : "scheduled";
+}
+
+function buildRecords(
+  teams: Array<{ teamId: string; abbreviation: string; teamName: string }>,
+  games: GameRow[],
+) {
+  const records = new Map(teams.map((team) => [team.teamId, { ...team, wins: 0, losses: 0, ties: 0, games: 0 }]));
+  for (const game of games) {
+    if (game.week < 1 || game.week > 18 || normalizedGameState(game) !== "final"
+      || game.finalHomeScore === null || game.finalAwayScore === null
+      || !Number.isInteger(game.finalHomeScore) || !Number.isInteger(game.finalAwayScore)) continue;
+    const home = records.get(game.homeTeamId ?? "");
+    const away = records.get(game.awayTeamId ?? "");
+    if (!home || !away) continue;
+    home.games += 1; away.games += 1;
+    if (game.finalHomeScore === game.finalAwayScore) { home.ties += 1; away.ties += 1; }
+    else if (game.finalHomeScore > game.finalAwayScore) { home.wins += 1; away.losses += 1; }
+    else { away.wins += 1; home.losses += 1; }
+  }
+  return [...records.values()].sort((a, b) => a.abbreviation.localeCompare(b.abbreviation));
+}
+
+function verifyRecords(
+  records: Array<{ abbreviation: string; wins: number; losses: number; ties: number; games: number }>,
+  targetWeek: number | null,
+  completedPriorGames: number,
+) {
+  const discrepancies = records
+    .filter((record) => record.games !== record.wins + record.losses + record.ties)
+    .map((record) => `${record.abbreviation}: record game total does not match W-L-T`);
+  if (records.length !== 32) discrepancies.push(`Expected 32 teams, found ${records.length}`);
+  // Tonight's Week 2 gate has an authoritative, schedule-independent
+  // expectation: Week 1 contains 16 completed games and every team enters 1-0,
+  // 0-1, or 0-0-1. Do not let a structurally valid all-zero league pass.
+  if (targetWeek === 2) {
+    if (completedPriorGames !== 16) {
+      discrepancies.push(`Expected 16 authoritative Week 1 games, found ${completedPriorGames}`);
+    }
+    for (const record of records) {
+      if (record.games !== 1) discrepancies.push(`${record.abbreviation}: expected 1 completed game entering Week 2, found ${record.games}`);
+    }
+  }
+  return {
+    expectedTeamCount: 32,
+    actualTeamCount: records.length,
+    targetWeek,
+    completedPriorGames,
+    complete: discrepancies.length === 0,
+    discrepancies,
+  };
 }
 
 function isUpcoming(game: Pick<GameRow, "kickoffTime" | "gameStatus">) {
@@ -326,6 +404,59 @@ function latestRunByStatus<T extends { status: string }>(rows: T[], status: stri
   return rows.find((run) => run.status === status) ?? null;
 }
 
+function quoteAge(capturedAt: Date | null | undefined) {
+  return capturedAt instanceof Date
+    ? { minutes: Math.max(0, (now.getTime() - capturedAt.getTime()) / 60_000), capturedAt: capturedAt.toISOString() }
+    : null;
+}
+
+function targetGame(
+  games: GameRow[],
+  teams: Array<{ teamId: string; abbreviation: string; teamName: string }>,
+) {
+  const byId = new Map(teams.map((team) => [team.teamId, team]));
+  const hasExplicitSelector = Boolean(homeArgument || awayArgument);
+  const candidates = games
+    .filter((game) => game.kickoffTime && (hasExplicitSelector || isUpcoming(game)))
+    .sort((left, right) => hasExplicitSelector
+      ? Math.abs(left.kickoffTime!.getTime() - now.getTime()) - Math.abs(right.kickoffTime!.getTime() - now.getTime())
+      : left.kickoffTime!.getTime() - right.kickoffTime!.getTime());
+  return candidates.find((game) => {
+    const home = byId.get(game.homeTeamId ?? "");
+    const away = byId.get(game.awayTeamId ?? "");
+    return (!homeArgument || home?.abbreviation.toUpperCase() === homeArgument)
+      && (!awayArgument || away?.abbreviation.toUpperCase() === awayArgument);
+  }) ?? null;
+}
+
+function targetMarketEvidence(gameId: string, kickoff: Date | null, rows: OddsQuoteRow[]) {
+  const kickoffTime = kickoff ? kickoff.getTime() : Infinity;
+  const canonicalCutoff = kickoff ? kickoffTime - 30 * 60_000 : Infinity;
+  const supported = rows
+    .filter((row) => row.gameId === gameId && ["DraftKings", "FanDuel"].includes(row.sportsbook)
+      && ["spread", "total", "moneyline"].includes(row.market)
+      && Number.isFinite(row.price)
+      && (row.market === "moneyline" || (row.point !== null && Number.isFinite(row.point))))
+    .sort((left, right) => left.capturedAt.getTime() - right.capturedAt.getTime());
+  const latest = (book: string, market: string, before = Infinity) => {
+    const eligible = supported.filter((row) => row.sportsbook === book && row.market === market && row.capturedAt.getTime() <= before);
+    return eligible.at(-1) ?? null;
+  };
+  const finalPreKickoff = (book: string, market: string) => {
+    const eligible = supported.filter((row) => row.sportsbook === book && row.market === market && row.capturedAt.getTime() < kickoffTime);
+    return eligible.at(-1) ?? null;
+  };
+  const markets = ["spread", "total", "moneyline"];
+  return {
+    current: Object.fromEntries(markets.flatMap((market) =>
+      ["DraftKings", "FanDuel"].map((book) => [`${book}:${market}`, latest(book, market)]))),
+    canonicalAtCutoff: Object.fromEntries(markets.flatMap((market) =>
+      ["DraftKings", "FanDuel"].map((book) => [`${book}:${market}`, latest(book, market, canonicalCutoff)]))),
+    finalPreKickoff: Object.fromEntries(markets.flatMap((market) =>
+      ["DraftKings", "FanDuel"].map((book) => [`${book}:${market}`, finalPreKickoff(book, market)]))),
+  };
+}
+
 function markdown(report: ReadinessReport) {
   const lines = [
     "# Gridline production-readiness report",
@@ -346,6 +477,10 @@ function markdown(report: ReadinessReport) {
       .join("; ");
     lines.push(`| ${item.number} | ${item.name} | **${String(item.status).toUpperCase()}** | ${evidence || item.note || "No evidence persisted"} |`);
   }
+  lines.push("", "## Blockers", "");
+  for (const blocker of report.blockers) lines.push(`- **${blocker.status.toUpperCase()}** ${blocker.check}: ${blocker.reason}`);
+  lines.push("", "## Safety confirmations", "");
+  for (const [key, value] of Object.entries(report.safetyConfirmations)) lines.push(`- ${key}: **${value ? "yes" : "no"}**`);
   lines.push("", "## Read-only report notes", "", "- `pending` means the real game-cycle event has not happened or no evidence exists; it is not a pass.", "- `warning` means evidence is stale, incomplete, failed, or not safe to call healthy.", "- No feed, prediction, promotion, freeze, grade, or database mutation is performed by this command.", "");
   return `${lines.join("\n")}\n`;
 }
@@ -367,6 +502,7 @@ async function buildReport() {
     oddsRequests,
     oddsQuotes,
     oddsAudits,
+    teams,
   ] = await Promise.all([
     db.select({
       gameId: gamesTable.gameId,
@@ -376,6 +512,8 @@ async function buildReport() {
       gameStatus: gamesTable.gameStatus,
       finalHomeScore: gamesTable.finalHomeScore,
       finalAwayScore: gamesTable.finalAwayScore,
+      homeTeamId: gamesTable.homeTeamId,
+      awayTeamId: gamesTable.awayTeamId,
     }).from(gamesTable).orderBy(asc(gamesTable.kickoffTime)),
     db.select().from(dataSyncRunsTable).orderBy(desc(dataSyncRunsTable.startedAt)),
     db.select().from(schedulerJobsTable).orderBy(asc(schedulerJobsTable.nextRunAt)),
@@ -433,7 +571,13 @@ async function buildReport() {
       errorMessage: oddsApiRequestsTable.errorMessage,
     }).from(oddsApiRequestsTable).orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)),
     db.select({
+      gameId: sportsbookOddsTable.gameId,
       capturedAt: sportsbookOddsTable.capturedAt,
+      sportsbook: sportsbookOddsTable.sportsbook,
+      market: sportsbookOddsTable.market,
+      selection: sportsbookOddsTable.selection,
+      point: sportsbookOddsTable.point,
+      price: sportsbookOddsTable.price,
     }).from(sportsbookOddsTable).orderBy(desc(sportsbookOddsTable.capturedAt), desc(sportsbookOddsTable.id)),
     db.select({
       requestId: oddsEventAuditsTable.requestId,
@@ -445,14 +589,40 @@ async function buildReport() {
       outcome: oddsEventAuditsTable.outcome,
       reason: oddsEventAuditsTable.reason,
     }).from(oddsEventAuditsTable).orderBy(desc(oddsEventAuditsTable.auditedAt), desc(oddsEventAuditsTable.id)),
+    db.select({
+      teamId: teamsTable.teamId,
+      abbreviation: teamsTable.abbreviation,
+      teamName: teamsTable.teamName,
+    }).from(teamsTable),
   ]);
 
   const upcoming = games.filter(isUpcoming);
+  const selectedGame = targetGame(games, teams);
+  const selectedState = selectedGame ? normalizedGameState(selectedGame) : null;
+  const enteringGames = selectedGame
+    ? games.filter((game) => game.season === selectedGame.season && game.week < selectedGame.week)
+    : [];
+  const records = buildRecords(teams, enteringGames);
+  const completedPriorGames = enteringGames.filter((game) =>
+    game.week >= 1 && game.week <= 18
+    && normalizedGameState(game) === "final"
+    && Number.isInteger(game.finalHomeScore)
+    && Number.isInteger(game.finalAwayScore)).length;
+  const recordVerification = verifyRecords(records, selectedGame?.week ?? null, completedPriorGames);
+  const selectedMarkets = selectedGame
+    ? targetMarketEvidence(selectedGame.gameId, selectedGame.kickoffTime, oddsQuotes)
+    : null;
   const completed = games.filter((game) => game.kickoffTime && game.kickoffTime <= now && isTerminal(game.gameStatus));
   const schedule = syncEvidence("espn-schedule", syncRuns, schedulerJobs, 36);
   const injuries = syncEvidence("espn-injuries", syncRuns, schedulerJobs, 96);
   const nflverse = syncEvidence("nflverse", syncRuns, schedulerJobs, 240, completed.length === 0);
   const odds = oddsEvidence(oddsRequests, oddsQuotes, oddsAudits, schedulerJobs, 6, upcoming.length === 0);
+  const adaptiveJob = schedulerJobs.find((job) => job.jobKey === "odds-adaptive");
+  const expectedRequestCost = 3;
+  const latestQuota = oddsRequests.find((request) => request.creditsRemaining !== null);
+  const quotaAffordable = latestQuota?.creditsRemaining === null || latestQuota?.creditsRemaining === undefined
+    ? null
+    : latestQuota.creditsRemaining >= expectedRequestCost;
 
   const upcomingFeatureCounts = upcoming.map((game) => ({
     gameId: game.gameId,
@@ -523,8 +693,63 @@ async function buildReport() {
   const latestRefit = latestRunByStatus(trainingRuns, "refit_candidate");
   const challengerStatus = latestChallenger || latestRefit ? "pass" : "pending";
 
+  const selectedSnapshot = selectedGame
+    ? snapshots.find((snapshot) => snapshot.gameId === selectedGame.gameId && snapshot.officialFinalPrediction) ?? null
+    : null;
+  const selectedCutoff = selectedGame?.kickoffTime
+    ? new Date(selectedGame.kickoffTime.getTime() - 30 * 60_000)
+    : null;
+  const cutoffEligibleSnapshot = selectedGame && selectedCutoff
+    ? snapshots.find((snapshot) =>
+      snapshot.gameId === selectedGame.gameId
+      && snapshot.predictionTimestamp <= selectedCutoff) ?? null
+    : null;
+  const selectedCanonicalMarkets = Object.values(selectedMarkets?.canonicalAtCutoff ?? {}).filter(
+    (quote): quote is OddsQuoteRow => {
+      if (!quote?.capturedAt) return false;
+      return quote.capturedAt.getTime() <= (selectedCutoff?.getTime() ?? -Infinity)
+        && (selectedCutoff!.getTime() - quote.capturedAt.getTime()) <= canonicalMarketMaxAgeMinutes * 60_000;
+    },
+  );
+  const canonicalMarketComplete = selectedCanonicalMarkets.length === 6;
+  const beforeKickoff = Boolean(selectedGame?.kickoffTime && now < selectedGame.kickoffTime);
+  const canonicalReady = beforeKickoff
+    ? Boolean(cutoffEligibleSnapshot && canonicalMarketComplete)
+    : Boolean(selectedSnapshot && selectedCutoff
+      && selectedSnapshot.predictionTimestamp <= selectedCutoff
+      && canonicalMarketComplete);
+  const selectedGrade = selectedSnapshot ? grades.find((grade) => grade.predictionId === selectedSnapshot.id) ?? null : null;
+  const selectedFinalEvidence = selectedGame
+    ? Object.values(selectedMarkets?.finalPreKickoff ?? {}).filter(Boolean).length
+    : 0;
+  const selectedCurrentQuotes = Object.values(selectedMarkets?.current ?? {}).filter(
+    (quote): quote is OddsQuoteRow => Boolean(quote),
+  );
+  const selectedMarketCount = selectedCurrentQuotes.length;
+  const requiredMarketStreams = ["spread", "total", "moneyline"].flatMap((market) =>
+    ["DraftKings", "FanDuel"].map((book) => `${book}:${market}`));
+  const missingMarketStreams = requiredMarketStreams.filter((key) => !selectedMarkets?.current[key]);
+  const allCurrentMarketsFresh = selectedMarketCount === requiredMarketStreams.length
+    && selectedCurrentQuotes.every((quote) => now.getTime() - quote.capturedAt.getTime() <= 15 * 60_000);
+
   const productionCycleSteps = [
-    step(1, "Upcoming NFL game exists", upcoming.length ? "pass" : "pending", {
+    step(1, "Target matchup and normalized game state", selectedGame ? "pass" : "pending", {
+      selector: awayArgument || homeArgument ? { away: awayArgument ?? null, home: homeArgument ?? null } : "nearest upcoming",
+      gameId: selectedGame?.gameId ?? null,
+      kickoff: iso(selectedGame?.kickoffTime),
+      state: selectedState,
+      matchup: selectedGame ? { awayTeamId: selectedGame.awayTeamId, homeTeamId: selectedGame.homeTeamId } : null,
+      upcomingGames: upcoming.length,
+    }, selectedGame ? undefined : "No matchup matched the requested selector."),
+    step(2, "Authoritative entering team records", recordVerification.complete ? "pass" : "warning", {
+      season: selectedGame?.season ?? null,
+      weeksIncluded: selectedGame ? `1-${selectedGame.week - 1}` : null,
+      records: records.map(({ teamId, abbreviation, teamName, wins, losses, ties, games }) =>
+        ({ teamId, abbreviation, teamName, wins, losses, ties, games })),
+      verification: recordVerification,
+      rule: "Final regular-season weeks 1-18 only; preseason, postseason, non-final, and score-shaped rows excluded.",
+    }),
+    step(3, "Upcoming NFL game exists", upcoming.length ? "pass" : "pending", {
       upcomingGames: upcoming.length,
       nextGame: upcoming[0] ? {
         gameId: upcoming[0].gameId,
@@ -533,9 +758,9 @@ async function buildReport() {
         week: upcoming[0].week,
       } : null,
     }, upcoming.length ? undefined : "No future unfinished game is persisted; a live cycle cannot be exercised."),
-    step(2, "Latest ESPN schedule sync", schedule.status, schedule),
-    step(3, "Latest ESPN injury sync", injuries.status, injuries),
-    step(4, "Latest NFLverse sync", nflverse.status, {
+    step(4, "Latest ESPN schedule sync", schedule.status, schedule),
+    step(5, "Latest ESPN injury sync", injuries.status, injuries),
+    step(6, "Latest NFLverse sync", nflverse.status, {
       ...nflverse,
       latestSourceFile: nflverseFiles[0] ? {
         dataset: nflverseFiles[0].dataset,
@@ -546,13 +771,36 @@ async function buildReport() {
         error: nflverseFiles[0].errorMessage,
       } : null,
     }, completed.length === 0 ? "No completed game window exists; NFLverse refresh is correctly not claimed as complete." : undefined),
-    step(5, "Latest sportsbook odds sync", odds.status, odds),
-    step(6, "Pregame features exist for upcoming games", featureStatus, {
+    step(7, "Adaptive sportsbook worker and quota safety", odds.status === "pass" && Boolean(adaptiveJob) && quotaAffordable === true ? "pass" : "warning", {
+      ...odds,
+      job: adaptiveJob ? {
+        jobKey: adaptiveJob.jobKey, enabled: adaptiveJob.enabled, nextRunAt: iso(adaptiveJob.nextRunAt),
+        lockOwner: adaptiveJob.lockOwner, lockUntil: iso(adaptiveJob.lockUntil), cadence: adaptiveJob.cadence,
+        lastStatus: adaptiveJob.lastStatus, lastError: adaptiveJob.lastError,
+      } : null,
+      expectedRequestCost,
+      quotaAffordable,
+      skipStatuses: oddsRequests.filter((request) => request.status === "skipped").slice(0, 5).map((request) => request.errorMessage),
+    }),
+    step(8, "Target matchup market truth", selectedGame
+      ? (allCurrentMarketsFresh ? "pass" : "warning")
+      : "pending", {
+      kickoff: iso(selectedGame?.kickoffTime),
+      current: selectedMarkets?.current ?? null,
+      canonicalAtCutoff: selectedMarkets?.canonicalAtCutoff ?? null,
+      finalPreKickoff: selectedMarkets?.finalPreKickoff ?? null,
+      freshnessBoundaryMinutes: 15,
+      requiredMarketStreams,
+      availableMarketStreams: selectedMarketCount,
+      missingMarketStreams,
+      quoteAges: Object.fromEntries(Object.entries(selectedMarkets?.current ?? {}).map(([key, quote]) => [key, quoteAge(quote?.capturedAt)])),
+    }),
+    step(9, "Pregame features exist for upcoming games", featureStatus, {
       upcomingGames: upcoming.length,
       gamesWithTwoTeamRows: featureReady.length,
       featureRows: upcomingFeatureCounts,
     }),
-    step(7, "Active Phase 6 production promotions", phase6Status, {
+    step(10, "Active Phase 6 production promotions", phase6Status, {
       requiredFamilies: families,
       activeProductionPromotions: currentPromotions.map((promotion) => ({
         family: promotion.family,
@@ -562,26 +810,48 @@ async function buildReport() {
         promotedBy: promotion.promotedBy,
       })),
     }, phase6Status !== "pass" ? "All three families must have explicit phase6-refit production promotions; no automatic promotion is inferred." : undefined),
-    step(8, "Current prediction snapshots", snapshotStatus, {
+    step(11, "Current prediction snapshots", snapshotStatus, {
       upcomingGames: upcoming.length,
       gamesWithPreKickoffSnapshots: snapshotReady.length,
       games: upcomingSnapshotCounts,
     }),
-    step(9, "Official freezes due/completed", freezeStatus, {
+    step(12, "Canonical 30-minute cutoff snapshot", canonicalReady ? "pass" : selectedGame ? "warning" : "pending", {
+      gameId: selectedGame?.gameId ?? null,
+      cutoff: iso(selectedCutoff),
+      ready: canonicalReady,
+      lifecycle: beforeKickoff ? "cutoff-eligible pregame evidence" : "immutable post-kickoff freeze",
+      marketRecencyBoundaryMinutes: canonicalMarketMaxAgeMinutes,
+      cutoffEligibleSnapshotId: cutoffEligibleSnapshot?.id ?? null,
+      canonicalMarketComplete,
+      canonicalMarketObservations: selectedCanonicalMarkets.length,
+      snapshotId: selectedSnapshot?.id ?? null,
+      completedAt: iso(selectedSnapshot?.frozenAt),
+    }),
+    step(13, "Official freezes due/completed", freezeStatus, {
       pastKickoffSnapshots: pastKickoffSnapshots.length,
       freezesDue: freezeDue.length,
       freezesCompleted: freezeCompleted.length,
       dueGameIds: [...new Set(freezeDue.map((snapshot) => snapshot.gameId))],
       completedGameIds: [...new Set(freezeCompleted.map((snapshot) => snapshot.gameId))],
     }, freezeDue.length ? "Past-kickoff snapshots remain unfrozen; this read-only report intentionally does not freeze them." : undefined),
-    step(10, "Post-kickoff prediction mutation safety", safetyStatus, {
+    step(14, "Post-kickoff prediction mutation safety", safetyStatus, {
       postKickoffSnapshotWrites: postKickoffWrites.length,
       checkedSnapshots: snapshots.length,
       postKickoffGameIds: [...new Set(postKickoffWrites.map((snapshot) => snapshot.gameId))],
     }, !pastKickoffSnapshots.length
       ? "No snapshot has reached kickoff to exercise the post-kickoff guard; pending is more honest than pass."
       : undefined),
-    step(11, "Final results ingested and prediction grades", resultGradeStatus, {
+    step(15, "Final pre-kickoff evidence and grading", selectedGame && selectedState === "final"
+      ? selectedFinalEvidence === requiredMarketStreams.length && selectedGrade ? "pass" : "warning"
+      : "pending", {
+      gameId: selectedGame?.gameId ?? null,
+      state: selectedState,
+      finalPreKickoffObservations: selectedFinalEvidence,
+      gradeId: selectedGrade?.id ?? null,
+      gradeAt: iso(selectedGrade?.gradedAt),
+      authoritativeFinalRequired: true,
+    }),
+    step(16, "Final results ingested and prediction grades", resultGradeStatus, {
       completedGames: completed.length,
       completedGamesWithFinalScores: scoredCompleted.length,
       officialSnapshotsForCompletedGames: completedSnapshots.length,
@@ -589,12 +859,12 @@ async function buildReport() {
       grades: grades.length,
       latestGradeAt: iso(grades[0]?.gradedAt),
     }),
-    step(12, "CLV eligibility", clvStatus, {
+    step(17, "CLV eligibility", clvStatus, {
       grades: grades.length,
       measuredClvGrades: clvEligible.length,
       eligiblePredictionIds: clvEligible.slice(0, 20).map((grade) => grade.predictionId),
     }, grades.length === 0 ? "CLV waits for a completed, graded prediction with a legitimate pre-prediction market line." : undefined),
-    step(13, "Reports and performance readiness", performanceStatus, {
+    step(18, "Reports and performance readiness", performanceStatus, {
       completedGames: completed.length,
       latestCompletedGame: latestCompleted ? { season: latestCompleted.season, week: latestCompleted.week, gameId: latestCompleted.gameId } : null,
       latestWeeklyReport: weeklyReports[0] ? {
@@ -604,7 +874,7 @@ async function buildReport() {
       } : null,
       grades: grades.length,
     }),
-    step(14, "Latest challenger/refit runs", challengerStatus, {
+    step(19, "Latest challenger/refit runs", challengerStatus, {
       latestChallenger: latestChallenger ? {
         modelVersion: latestChallenger.modelVersion,
         family: latestChallenger.family,
@@ -624,6 +894,13 @@ async function buildReport() {
 
   const hasWarnings = productionCycleSteps.some((item) => item.status === "warning");
   const hasPending = productionCycleSteps.some((item) => item.status === "pending");
+  const blockers = productionCycleSteps
+    .filter((item) => item.status !== "pass")
+    .map((item) => ({
+      check: item.name,
+      status: item.status,
+      reason: item.note ?? `Evidence is ${item.status}; inspect the attached evidence before release.`,
+    }));
   return {
     generatedAt: now.toISOString(),
     databaseTarget: "development (DATABASE_URL; read-only SELECT queries)",
@@ -635,6 +912,15 @@ async function buildReport() {
       warning: productionCycleSteps.filter((item) => item.status === "warning").length,
       pending: productionCycleSteps.filter((item) => item.status === "pending").length,
       note: "FULLY UNATTENDED READY requires a separate production deployment, secret, authorization, worker, quota, backup, and real-time game verification.",
+    },
+    blockers,
+    safetyConfirmations: {
+      readOnlyQueriesOnly: true,
+      noFeedOrPredictionMutation: true,
+      authoritativeRegularSeasonRecordsOnly: true,
+      marketEvidenceStrictlyBeforeKickoffForFinal: true,
+      canonicalCutoffIsThirtyMinutes: true,
+      postKickoffPredictionWritesDetected: postKickoffWrites.length > 0,
     },
   };
 }

@@ -32,6 +32,7 @@ import {
 } from "./modeling";
 import { PREGAME_FEATURE_VERSION } from "./features";
 import { getPersonnelContextForGame } from "./personnel-context";
+import { interpretNflGameState } from "./game-state";
 
 type ProductionModel = {
   family: Family;
@@ -51,6 +52,9 @@ type ProductionModel = {
   artifactChecksum: string | null;
   artifactMetadata: Record<string, unknown> | null;
 };
+
+export const CANONICAL_EVALUATION_CUTOFF_MINUTES = 30;
+export const CANONICAL_MARKET_MAX_AGE_MINUTES = 15;
 
 type Quote = {
   sportsbook: string;
@@ -97,7 +101,7 @@ function serializeQuote(quote: Quote, point: number | null = quote.point) {
   };
 }
 
-async function latestQuotes(gameId: string, capturedAt: Date) {
+async function latestQuotes(gameId: string, capturedAt: Date, strictlyBefore = false) {
   const rows = await db
     .select({
       sportsbook: sportsbookOddsTable.sportsbook,
@@ -108,7 +112,12 @@ async function latestQuotes(gameId: string, capturedAt: Date) {
       capturedAt: sportsbookOddsTable.capturedAt,
     })
     .from(sportsbookOddsTable)
-    .where(and(eq(sportsbookOddsTable.gameId, gameId), lte(sportsbookOddsTable.capturedAt, capturedAt)))
+    .where(and(
+      eq(sportsbookOddsTable.gameId, gameId),
+      strictlyBefore
+        ? sql`${sportsbookOddsTable.capturedAt} < ${capturedAt}`
+        : lte(sportsbookOddsTable.capturedAt, capturedAt),
+    ))
     .orderBy(desc(sportsbookOddsTable.capturedAt), desc(sportsbookOddsTable.id));
   const latest = new Map<string, Quote>();
   for (const row of rows) {
@@ -118,8 +127,13 @@ async function latestQuotes(gameId: string, capturedAt: Date) {
   return [...latest.values()];
 }
 
-async function marketData(gameId: string, capturedAt: Date, home: { teamId: string; name: string; abbreviation: string }) {
-  const quotes = await latestQuotes(gameId, capturedAt);
+async function marketData(
+  gameId: string,
+  capturedAt: Date,
+  home: { teamId: string; name: string; abbreviation: string },
+  strictlyBefore = false,
+) {
+  const quotes = await latestQuotes(gameId, capturedAt, strictlyBefore);
   const markets: Record<string, unknown> = {};
   for (const market of ["spread", "moneyline", "total"]) {
     const marketQuotes = quotes.filter((quote) => quote.market === market);
@@ -1035,30 +1049,128 @@ export async function getLiveModelInputIntegrityAudit(now = new Date()) {
   };
 }
 
-export async function freezeOfficialFinalPredictions(now = new Date()) {
+export async function freezeOfficialFinalPredictions(
+  now = new Date(),
+  options: { gameId?: string; cutoffOverride?: Date } = {},
+) {
   const candidates = await db.select().from(predictionSnapshotsTable).where(and(
     eq(predictionSnapshotsTable.officialFinalPrediction, false),
+    ...(options.gameId ? [eq(predictionSnapshotsTable.gameId, options.gameId)] : []),
     sql`${predictionSnapshotsTable.kickoffTime} is not null`,
-    lte(predictionSnapshotsTable.kickoffTime, now),
+    ...(options.gameId ? [] : [lte(predictionSnapshotsTable.kickoffTime, new Date(now.getTime() + CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000))]),
     sql`${predictionSnapshotsTable.predictionTimestamp} < ${predictionSnapshotsTable.kickoffTime}`,
   )).orderBy(asc(predictionSnapshotsTable.gameId), desc(predictionSnapshotsTable.predictionTimestamp));
-  const latest = new Map<string, typeof candidates[number]>();
+  const latest = new Map<string, {
+    candidate: typeof candidates[number];
+    canonicalMarket: Awaited<ReturnType<typeof marketData>>;
+  }>();
+  let missingMarketEvidence = 0;
   for (const candidate of candidates) {
-    if (isEligiblePredictionSnapshot(candidate) && !latest.has(candidate.gameId)) {
-      latest.set(candidate.gameId, candidate);
+    const cutoff = options.cutoffOverride ?? (candidate.kickoffTime
+      ? new Date(candidate.kickoffTime.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000)
+      : null);
+    if (
+      cutoff
+      && cutoff <= now
+      && isEligiblePredictionSnapshot(candidate)
+      && !latest.has(candidate.gameId)
+    ) {
+      const [game] = await db.select().from(gamesTable).where(eq(gamesTable.gameId, candidate.gameId)).limit(1);
+      const [home] = game
+        ? await db.select().from(teamsTable).where(eq(teamsTable.teamId, game.homeTeamId)).limit(1)
+        : [];
+      if (!game || !home) continue;
+      // The model snapshot is selected independently from the market stream.
+      // Re-read the latest six book/market observations at-or-before the
+      // immutable cutoff instead of trusting the market embedded at prediction
+      // time. This is the canonical evaluation occurrence.
+      const canonicalMarket = await marketData(candidate.gameId, cutoff, {
+        teamId: home.teamId,
+        name: home.teamName,
+        abbreviation: home.abbreviation,
+      }, false);
+      if (!canonicalSnapshotReady(candidate.predictionTimestamp, cutoff, canonicalMarket)) {
+        missingMarketEvidence += 1;
+        continue;
+      }
+      latest.set(candidate.gameId, { candidate, canonicalMarket });
     }
   }
-  for (const candidate of latest.values()) {
+  for (const { candidate, canonicalMarket } of latest.values()) {
     await db.update(predictionSnapshotsTable).set({
+      marketSnapshot: canonicalMarket,
+      marketComparison: comparisonData(
+        canonicalMarket,
+        candidate.projectedMargin,
+        candidate.projectedTotal,
+        candidate.homeWinProbability,
+      ),
       officialFinalPrediction: true,
+      evaluationCutoffAt: options.cutoffOverride
+        ?? new Date(candidate.kickoffTime!.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000),
       frozenAt: now,
-    }).where(eq(predictionSnapshotsTable.id, candidate.id));
+    }).where(and(
+      eq(predictionSnapshotsTable.id, candidate.id),
+      eq(predictionSnapshotsTable.officialFinalPrediction, false),
+    ));
   }
-  return { status: "success", frozen: latest.size };
+  return {
+    status: "success",
+    frozen: latest.size,
+    pendingMarketEvidence: missingMarketEvidence,
+    canonicalCutoffMinutes: CANONICAL_EVALUATION_CUTOFF_MINUTES,
+    canonicalCutoffAt: options.cutoffOverride?.toISOString()
+      ?? ([...latest.values()][0]?.candidate.kickoffTime
+        ? new Date([...latest.values()][0]!.candidate.kickoffTime!.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000).toISOString()
+        : null),
+  };
+}
+
+/**
+ * Canonical evaluation requires both supported books for every supported
+ * market. The cutoff occurrence independently selects the latest persisted
+ * observations and writes them onto the one immutable official snapshot.
+ */
+export function hasCompleteCanonicalMarketEvidence(
+  snapshot: Record<string, unknown>,
+  cutoff: Date,
+) {
+  const markets = snapshot.markets;
+  if (!markets || typeof markets !== "object") return false;
+  for (const market of ["spread", "moneyline", "total"]) {
+    const row = (markets as Record<string, unknown>)[market];
+    if (!row || typeof row !== "object") return false;
+    for (const book of ["draftKings", "fanDuel"]) {
+      const quote = (row as Record<string, unknown>)[book];
+      if (!quote || typeof quote !== "object") return false;
+      const value = quote as Record<string, unknown>;
+      if (typeof value.price !== "number" || !Number.isFinite(value.price)
+        || typeof value.capturedAt !== "string") return false;
+      const captured = new Date(value.capturedAt);
+      if (!Number.isFinite(captured.getTime()) || captured > cutoff
+        || cutoff.getTime() - captured.getTime() > CANONICAL_MARKET_MAX_AGE_MINUTES * 60_000) return false;
+      if (market !== "moneyline" && (typeof value.point !== "number" || !Number.isFinite(value.point))) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Shared cutoff gate: an old model row alone is never canonical. The model
+ * timestamp and every retained DK/FD market observation must be at or before
+ * the same fixed cutoff.
+ */
+export function canonicalSnapshotReady(
+  predictionTimestamp: Date,
+  cutoff: Date,
+  marketSnapshot: Record<string, unknown>,
+) {
+  return predictionTimestamp <= cutoff
+    && hasCompleteCanonicalMarketEvidence(marketSnapshot, cutoff);
 }
 
 function resultForLine(actual: number, line: number | null, direction: "spread" | "total") {
-  if (line === null) return { status: "unavailable" };
+  if (line === null || !Number.isFinite(line)) return { status: "unavailable" };
   const value = direction === "spread" ? actual + line : actual - line;
   return { status: value > 0 ? "win" : value < 0 ? "loss" : "push", value };
 }
@@ -1076,11 +1188,17 @@ async function gradeSnapshot(snapshot: typeof predictionSnapshotsTable.$inferSel
       modelHomeProbability: snapshot.homeWinProbability,
     } : { status: "unavailable" },
   };
-  const closingMarkets = await marketData(game.gameId, game.kickoffTime ?? new Date(), {
-    teamId: game.homeTeamId,
-    name: game.homeTeamId,
-    abbreviation: game.homeTeamId,
-  });
+  const [home] = await db.select({
+    teamId: teamsTable.teamId,
+    name: teamsTable.teamName,
+    abbreviation: teamsTable.abbreviation,
+  }).from(teamsTable).where(eq(teamsTable.teamId, game.homeTeamId)).limit(1);
+  const closingMarkets = await marketData(
+    game.gameId,
+    game.kickoffTime ?? new Date(),
+    home ?? { teamId: game.homeTeamId, name: game.homeTeamId, abbreviation: game.homeTeamId },
+    true,
+  );
   const closingComparison = comparisonData(
     closingMarkets,
     snapshot.projectedMargin,
@@ -1088,10 +1206,12 @@ async function gradeSnapshot(snapshot: typeof predictionSnapshotsTable.$inferSel
     snapshot.homeWinProbability,
   ) as Record<string, any>;
   const clv = {
-    spreadPoints: comparison.spread?.marketLine !== null && closingComparison.spread?.marketLine !== null
+    spreadPoints: typeof comparison.spread?.marketLine === "number" && Number.isFinite(comparison.spread.marketLine)
+      && typeof closingComparison.spread?.marketLine === "number" && Number.isFinite(closingComparison.spread.marketLine)
       ? comparison.spread.marketLine - closingComparison.spread.marketLine : null,
-    totalPoints: comparison.totals?.marketTotal !== null && closingComparison.totals?.marketTotal !== null
-      ? closingComparison.totals.marketLine - comparison.totals.marketLine : null,
+    totalPoints: typeof comparison.totals?.marketTotal === "number" && Number.isFinite(comparison.totals.marketTotal)
+      && typeof closingComparison.totals?.marketTotal === "number" && Number.isFinite(closingComparison.totals.marketTotal)
+      ? closingComparison.totals.marketTotal - comparison.totals.marketTotal : null,
     status: comparison.spread?.marketAvailable || comparison.totals?.marketAvailable ? "measured" : "unavailable",
   };
   const marginError = snapshot.projectedMargin === null ? null : snapshot.projectedMargin - actualMargin;
@@ -1125,7 +1245,6 @@ async function gradeSnapshot(snapshot: typeof predictionSnapshotsTable.$inferSel
 }
 
 export async function gradeCompletedPredictions(now = new Date()) {
-  await freezeOfficialFinalPredictions(now);
   const predictions = (await db.select().from(predictionSnapshotsTable).where(eq(predictionSnapshotsTable.officialFinalPrediction, true)))
     .filter(isEligiblePredictionSnapshot);
   if (!predictions.length) return { status: "success", graded: 0 };
@@ -1138,10 +1257,16 @@ export async function gradeCompletedPredictions(now = new Date()) {
     if (gradedIds.has(prediction.id)) continue;
     const game = games.find((candidate) => candidate.gameId === prediction.gameId);
     if (!game) continue;
+    const authoritativeFinal = interpretNflGameState(game, now) === "final"
+      && game.finalHomeScore !== null && game.finalAwayScore !== null
+      && Boolean(game.kickoffTime && game.kickoffTime <= now);
+    if (!authoritativeFinal) continue;
     const grade = await gradeSnapshot(prediction, game);
     if (!grade) continue;
-    await db.insert(predictionGradesTable).values({ predictionId: prediction.id, ...grade }).onConflictDoNothing({ target: predictionGradesTable.predictionId });
-    graded += 1;
+    const inserted = await db.insert(predictionGradesTable).values({ predictionId: prediction.id, ...grade })
+      .onConflictDoNothing({ target: predictionGradesTable.predictionId })
+      .returning({ id: predictionGradesTable.id });
+    if (inserted.length) graded += 1;
   }
   return { status: "success", graded };
 }

@@ -48,7 +48,7 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
         <div className="tb-cell tc-matchup">
           <div className="tc-time">
             <span>{formatKickoff(game.kickoffTime)}</span>
-            <span className={`market-state market-state-${game.marketBoard.status}`}>{game.marketBoard.status}</span>
+            <span className={`market-state market-state-${game.gameState}`}>{game.gameState}</span>
           </div>
           <div className="tc-team"><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span><b>{final ? final.away : prediction?.projectedAwayScore?.toFixed(1) ?? '—'}</b></div>
           <div className="tc-team"><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span><b>{final ? final.home : prediction?.projectedHomeScore?.toFixed(1) ?? '—'}</b></div>
@@ -126,6 +126,20 @@ export default function ConsumerGames() {
           <div className="ts-stat"><span>Evidence</span><strong><Clock3 aria-hidden="true" /> First / current</strong></div>
         </section>
       )}
+      {query.data?.teamRecords?.length ? (
+        <section className="terminal-summary-bar" aria-label="Team records">
+          <div className="ts-stat"><span>Records</span><strong>{query.data.recordVerification.complete ? 'Verified' : 'Check data'}</strong></div>
+          {!query.data.recordVerification.complete && (
+            <div className="ts-stat ts-stat-warning" role="status">
+              <span>Record evidence</span>
+              <strong>{query.data.recordVerification.discrepancies[0] ?? 'Authoritative results incomplete'}</strong>
+            </div>
+          )}
+          {query.data.teamRecords.map((record) => (
+            <div className="ts-stat" key={record.teamId}><span>{record.abbreviation}</span><strong>{record.games ? `${record.wins}-${record.losses}${record.ties ? `-${record.ties}` : ''}` : 'No verified record'}</strong></div>
+          ))}
+        </section>
+      ) : null}
 
       {query.isLoading ? <ConsumerLoading label="Loading market board…" /> : query.isError ? <ConsumerMessage error title="Market board unavailable" detail="We couldn’t load this week right now. Please try again shortly." /> : query.data?.games.length ? (
         <section className="terminal-board" aria-label="Weekly NFL market comparisons">

@@ -798,7 +798,7 @@ components:
         evidence: { $ref: "#/components/schemas/ConsumerMarketEvidence" }
     ConsumerMarketComparison:
       type: object
-      required: [market, label, state, modelValue, marketValue, difference, differenceUnit, selectedQuote, currentQuotes, firstObserved, current, modelTimestamp, marketTimestamp]
+      required: [market, label, state, modelValue, marketValue, difference, differenceUnit, selectedQuote, currentQuotes, firstObserved, current, modelTimestamp, marketTimestamp, observationAgeMinutes, freshnessLabel]
       properties:
         market: { type: string, enum: [spread, total, moneyline] }
         label: { type: string }
@@ -813,6 +813,8 @@ components:
         currentQuotes: { type: array, items: { $ref: "#/components/schemas/ConsumerMarketQuote" } }
         modelTimestamp: { type: ["string", "null"], format: date-time }
         marketTimestamp: { type: ["string", "null"], format: date-time }
+        observationAgeMinutes: { type: ["number", "null"] }
+        freshnessLabel: { type: string }
     ConsumerMarketBoard:
       type: object
       required: [status, staleAfterMinutes, selectionRule, comparisons]
@@ -868,13 +870,14 @@ components:
         results: { type: array, items: { type: object, additionalProperties: true } }
     ConsumerGame:
       type: object
-      required: [gameId, season, week, kickoffTime, gameStatus, venue, matchup, finalScore, prediction, market, marketBoard, dataConfidence, confidence, availability]
+      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, market, marketBoard, dataConfidence, confidence, availability]
       properties:
         gameId: { type: string }
         season: { type: integer }
         week: { type: integer }
         kickoffTime: { type: ["string", "null"], format: date-time }
         gameStatus: { type: string }
+        gameState: { type: string, enum: [scheduled, pregame, live, final, postponed, cancelled] }
         venue: { type: ["string", "null"] }
         matchup:
           type: object
@@ -917,7 +920,7 @@ components:
             market: { type: ["string", "null"] }
     ConsumerGames:
       type: object
-      required: [status, coverage, games]
+      required: [status, coverage, games, teamRecords, recordVerification]
       properties:
         status: { type: string, enum: [available, partial, stale, absent] }
         coverage:
@@ -931,6 +934,31 @@ components:
         games:
           type: array
           items: { $ref: "#/components/schemas/ConsumerGame" }
+        teamRecords:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerTeamRecord" }
+        recordVerification: { $ref: "#/components/schemas/ConsumerRecordVerification" }
+    ConsumerTeamRecord:
+      type: object
+      required: [teamId, abbreviation, teamName, wins, losses, ties, games]
+      properties:
+        teamId: { type: string }
+        abbreviation: { type: string }
+        teamName: { type: string }
+        wins: { type: integer }
+        losses: { type: integer }
+        ties: { type: integer }
+        games: { type: integer }
+    ConsumerRecordVerification:
+      type: object
+      required: [expectedTeamCount, actualTeamCount, targetWeek, completedPriorGames, complete, discrepancies]
+      properties:
+        expectedTeamCount: { type: integer }
+        actualTeamCount: { type: integer }
+        targetWeek: { type: ["integer", "null"] }
+        completedPriorGames: { type: integer }
+        complete: { type: boolean }
+        discrepancies: { type: array, items: { type: string } }
     ConsumerPlayerUsageGame:
       type: object
       required: [gameId, season, week, kickoffTime, matchup]

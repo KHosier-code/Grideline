@@ -9,6 +9,7 @@ import type { ConsumerConfidence } from './consumerConfidence';
 import type { ConsumerGameAvailability } from './consumerGameAvailability';
 import type { ConsumerGameDataConfidence } from './consumerGameDataConfidence';
 import type { ConsumerGameFinalScore } from './consumerGameFinalScore';
+import type { ConsumerGameGameState } from './consumerGameGameState';
 import type { ConsumerGameMarket } from './consumerGameMarket';
 import type { ConsumerGameMatchup } from './consumerGameMatchup';
 import type { ConsumerGamePrediction } from './consumerGamePrediction';
@@ -21,6 +22,7 @@ export interface ConsumerGame {
   /** @nullable */
   kickoffTime: Date | null;
   gameStatus: string;
+  gameState: ConsumerGameGameState;
   /** @nullable */
   venue: string | null;
   matchup: ConsumerGameMatchup;

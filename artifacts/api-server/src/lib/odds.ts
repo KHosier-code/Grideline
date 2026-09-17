@@ -16,6 +16,7 @@ export const SUPPORTED_MARKETS = ["spread", "moneyline", "total"] as const;
 // conservative even for an eventIds-filtered request: narrowing events does
 // not reduce the market/region allowance cost.
 export const ODDS_EXPECTED_REQUEST_COST = SUPPORTED_MARKETS.length;
+export const ODDS_STALE_AFTER_MINUTES = 15;
 
 export type SupportedSportsbook = (typeof SUPPORTED_SPORTSBOOKS)[number];
 export type SupportedMarket = (typeof SUPPORTED_MARKETS)[number];
@@ -366,6 +367,15 @@ export function parseOddsTimestamp(value: unknown): Date | null {
 }
 
 const asDate = parseOddsTimestamp;
+
+/**
+ * The Odds API documents commence-time filters in whole-second ISO 8601 form
+ * and rejects fractional seconds with HTTP 422. Keep this separate from stored
+ * capture timestamps, which retain their full precision.
+ */
+export function formatOddsApiTimestamp(value: Date): string {
+  return value.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
 
 function asFiniteNumber(value: unknown): number | null {
   if (typeof value !== "number" && typeof value !== "string") return null;
@@ -977,6 +987,59 @@ export type OddsCaptureOptions = {
   intentKey?: string;
 };
 
+/**
+ * The worker uses this policy before it schedules a paid request.  Keeping it
+ * pure makes the quota boundary auditable and prevents a UI or API process
+ * from inventing a more aggressive cadence.
+ */
+export function oddsCaptureIntervalMinutes(hoursUntilKickoff: number): number {
+  // More than six hours out is handled by the existing weekly slots.  This
+  // interval is only the adaptive game-window cadence; returning a sentinel
+  // here prevents callers from accidentally turning the normal cadence into
+  // an hourly paid feed.
+  if (!Number.isFinite(hoursUntilKickoff) || hoursUntilKickoff > 6) return 0;
+  if (hoursUntilKickoff > 1) return 12;
+  return 5;
+}
+
+export function oddsCaptureRequestCount(hoursUntilKickoff: number): number {
+  if (!Number.isFinite(hoursUntilKickoff) || hoursUntilKickoff <= 0) return 0;
+  let remainingMinutes = hoursUntilKickoff * 60;
+  let count = 0;
+  while (remainingMinutes > 0) {
+    const interval = remainingMinutes > 60 ? 12 : 5;
+    remainingMinutes -= interval;
+    count += 1;
+  }
+  return count;
+}
+
+export function oddsCaptureQuotaDecision(
+  creditsRemaining: number | null,
+  expectedCost = ODDS_EXPECTED_REQUEST_COST,
+  requiredRequestCount = 1,
+) {
+  const requiredCredits = expectedCost * Math.max(1, Math.ceil(requiredRequestCount));
+  const isSingleRequest = requiredRequestCount <= 1;
+  // A baseline request may establish the provider's counters. Intensified
+  // game-window cadence, however, is admitted only from a known remaining
+  // balance that can fund the complete plan through kickoff.
+  const safe = creditsRemaining === null
+    ? isSingleRequest
+    : creditsRemaining >= requiredCredits;
+  return {
+    safe,
+    expectedCost,
+    ...(isSingleRequest ? {} : { requiredRequestCount, requiredCredits }),
+    creditsRemaining,
+    reason: safe ? null : creditsRemaining === null
+      ? `Odds API remaining credits are unknown; ${requiredCredits} known credits are required before intensified capture.`
+      : isSingleRequest
+      ? `Insufficient Odds API credits (${creditsRemaining} remaining; ${expectedCost} required).`
+      : `Insufficient Odds API credits (${creditsRemaining} remaining; ${requiredCredits} required for ${requiredRequestCount} requests).`,
+  };
+}
+
 async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCaptureResult> {
   const requestedAt = new Date();
   const intentKey = options.intentKey ??
@@ -1058,7 +1121,7 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
     oddsFormat: "american",
     dateFormat: "iso",
     bookmakers: "draftkings,fanduel",
-    commenceTimeFrom: requestedAt.toISOString(),
+    commenceTimeFrom: formatOddsApiTimestamp(requestedAt),
   });
   if (upcomingGames.length === 1) {
     const providerEventId = await findProviderEventId(upcomingGames[0].gameId);

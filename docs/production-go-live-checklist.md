@@ -6,6 +6,8 @@ private production. Run the reproducible, read-only evidence report first:
 ```sh
 pnpm --filter @workspace/scripts report:production-readiness
 pnpm --filter @workspace/scripts report:production-readiness -- --format=markdown
+# Optional: target a specific matchup; otherwise the nearest upcoming game is used.
+pnpm --filter @workspace/scripts report:production-readiness -- --away=DET --home=BUF --format=markdown
 ```
 
 The report queries the development database with `SELECT` statements only. It
@@ -16,8 +18,12 @@ replace a pending or warning result with an assumption.
 
 ## Release gate
 
-- [ ] Review the report's 14 production-cycle checks and attach its JSON and
+- [ ] Review the report's 19 production-cycle checks and attach its JSON and
   Markdown output to the release record.
+- [ ] Confirm the report names the target kickoff and normalized state, authoritative
+  entering records (all 32 teams and discrepancies), current DK/FD quote ages,
+  adaptive worker lease/cadence/skip state, quota affordability, prediction and
+  canonical 30-minute cutoff evidence, final-pre-kickoff evidence, and grading state.
 - [ ] Resolve every warning and document every pending real-time step.
 - [ ] Obtain an administrator approval for the deployment, model state,
   database checkpoint, and rollback plan.
@@ -128,6 +134,11 @@ replace a pending or warning result with an assumption.
 - [ ] Confirm provider errors, unmatched events, post-kickoff observations, and
   duplicate observations are visible in Data Health. Never hide quota
   exhaustion behind an empty odds result.
+- [ ] Review the readiness report's expected request cost (three configured
+  markets), remaining quota, and explicit affordability decision before enabling
+  any higher-frequency cadence.
+- [ ] Treat any `NOT READY` verdict, stale quote beyond 15 minutes, missing
+  adaptive job lease, or unaffordable next request as a release blocker.
 
 ## Data Health
 
@@ -189,6 +200,10 @@ replace a pending or warning result with an assumption.
   this mutation; wait for the real kickoff guard verification.
 - [ ] Never imply a betting recommendation, confidence guarantee, or CLV when
   the legitimate pregame market line is unavailable.
+- [ ] Confirm the report's canonical snapshot is the latest valid evidence at
+  or before the immutable 30-minute cutoff, not a favorable later timestamp.
+- [ ] After kickoff, verify Final pre-kickoff observations are strictly before
+  kickoff and remain distinct from a sportsbook closing line.
 
 ## Backup and recovery
 
@@ -223,3 +238,12 @@ production mutations:
 
 Until these events have occurred and their persisted evidence is reviewed,
 the correct state is **pending**, not **pass**.
+
+## Readiness report interpretation
+
+The report is read-only and never refreshes feeds, generates predictions, freezes
+snapshots, grades games, or repairs rows. Omit `--away`/`--home` to select the
+nearest upcoming game, or pass both abbreviations to target a matchup. `READY`
+is strict: it requires no warnings or pending checks; otherwise the verdict is
+`NOT READY` and the report's blockers must be resolved or explicitly accepted by
+an administrator.

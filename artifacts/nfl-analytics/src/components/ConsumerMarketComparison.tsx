@@ -32,6 +32,7 @@ export function ConsumerMarketComparisonCell({ comparison, className = '' }: { c
           {comparison.selectedQuote.price}
         </p>
       )}
+      <p className="consumer-note">{comparison.freshnessLabel}</p>
     </div>
   );
 }

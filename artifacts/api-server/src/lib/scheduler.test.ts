@@ -6,6 +6,8 @@ import {
   ODDS_WEEKLY_SLOTS,
   classifySchedulerAlerts,
   confidenceCaptureOccurrences,
+  canonicalPredictionOccurrence,
+  adaptiveOddsJobReconciliation,
   nextWeeklyOccurrence,
   groupSundayKickoffWindows,
   shouldRecoverMissedOccurrence,
@@ -15,7 +17,14 @@ import {
 } from "./scheduler";
 import { shouldInsertLatestState } from "./availability";
 import { shouldRefreshNflverseSource } from "./nflverse";
-import { calculatePaidRequestCredits, ODDS_EXPECTED_REQUEST_COST } from "./odds";
+import {
+  calculatePaidRequestCredits,
+  ODDS_EXPECTED_REQUEST_COST,
+  oddsCaptureIntervalMinutes,
+  oddsCaptureRequestCount,
+  oddsCaptureQuotaDecision,
+  isPreKickoffCapture,
+} from "./odds";
 
 test("football wall-clock conversion follows DST", () => {
   const summer = zonedTimeToUtc(
@@ -84,6 +93,90 @@ test("odds cadence has exactly seven weekly slots", () => {
   );
 });
 
+test("adaptive odds cadence tightens only as kickoff approaches", () => {
+  assert.equal(oddsCaptureIntervalMinutes(12), 0);
+  assert.equal(oddsCaptureIntervalMinutes(6), 12);
+  assert.equal(oddsCaptureIntervalMinutes(1), 5);
+  assert.equal(oddsCaptureIntervalMinutes(0.25), 5);
+});
+
+test("adaptive odds quota budgets every remaining game-window capture", () => {
+  assert.equal(oddsCaptureRequestCount(0), 0);
+  assert.equal(oddsCaptureRequestCount(1), 12);
+  assert.equal(oddsCaptureRequestCount(6), 37);
+  assert.deepEqual(oddsCaptureQuotaDecision(29, ODDS_EXPECTED_REQUEST_COST, 37), {
+    safe: false,
+    expectedCost: ODDS_EXPECTED_REQUEST_COST,
+    requiredRequestCount: 37,
+    requiredCredits: ODDS_EXPECTED_REQUEST_COST * 37,
+    creditsRemaining: 29,
+    reason: `Insufficient Odds API credits (29 remaining; ${ODDS_EXPECTED_REQUEST_COST * 37} required for 37 requests).`,
+  });
+  assert.deepEqual(oddsCaptureQuotaDecision(null, ODDS_EXPECTED_REQUEST_COST, 12), {
+    safe: false,
+    expectedCost: ODDS_EXPECTED_REQUEST_COST,
+    requiredRequestCount: 12,
+    requiredCredits: 36,
+    creditsRemaining: null,
+    reason: "Odds API remaining credits are unknown; 36 known credits are required before intensified capture.",
+  });
+});
+
+test("adaptive job persistence reactivates null schedules and follows kickoff changes", () => {
+  const now = new Date("2026-09-17T17:00:00.000Z");
+  const next = new Date("2026-09-17T18:15:00.000Z");
+  const dormant = {
+    enabled: false,
+    nextRunAt: null,
+    lockUntil: null,
+    cadence: "adaptive: hourly >6h",
+  };
+  assert.deepEqual(adaptiveOddsJobReconciliation(dormant, next, now), {
+    enabled: true,
+    nextRunAt: next,
+    cadence: "adaptive: established weekly cadence >6h; 12m 6-1h; 5m final hour when quota-safe",
+  });
+  const obsolete = { ...dormant, enabled: true, nextRunAt: new Date("2026-09-19T14:00:00.000Z") };
+  assert.equal(adaptiveOddsJobReconciliation(obsolete, next, now)?.nextRunAt, next);
+});
+
+test("adaptive job persistence does not move an active lease", () => {
+  const now = new Date("2026-09-17T23:30:00.000Z");
+  assert.equal(adaptiveOddsJobReconciliation({
+    enabled: true,
+    nextRunAt: new Date("2026-09-17T23:35:00.000Z"),
+    lockUntil: new Date("2026-09-17T23:31:00.000Z"),
+    cadence: "adaptive: established weekly cadence >6h; 12m 6-1h; 5m final hour when quota-safe",
+  }, new Date("2026-09-17T23:35:00.000Z"), now), null);
+});
+
+test("adaptive job persistence keeps a due final-hour occurrence claimable on restart", () => {
+  const now = new Date("2026-09-17T23:40:30.000Z");
+  const due = new Date("2026-09-17T23:40:00.000Z");
+  assert.equal(adaptiveOddsJobReconciliation({
+    enabled: true,
+    nextRunAt: due,
+    lockUntil: null,
+    cadence: "adaptive: established weekly cadence >6h; 12m 6-1h; 5m final hour when quota-safe",
+  }, new Date("2026-09-17T23:45:30.000Z"), now), null);
+});
+
+test("paid odds admission exposes quota blocks without spending credits", () => {
+  assert.deepEqual(oddsCaptureQuotaDecision(ODDS_EXPECTED_REQUEST_COST - 1), {
+    safe: false,
+    expectedCost: ODDS_EXPECTED_REQUEST_COST,
+    creditsRemaining: ODDS_EXPECTED_REQUEST_COST - 1,
+    reason: `Insufficient Odds API credits (${ODDS_EXPECTED_REQUEST_COST - 1} remaining; ${ODDS_EXPECTED_REQUEST_COST} required).`,
+  });
+  assert.equal(oddsCaptureQuotaDecision(null).safe, true);
+});
+
+test("final pre-kickoff evidence excludes observations at kickoff", () => {
+  const kickoff = new Date("2026-09-20T17:00:00Z");
+  assert.equal(isPreKickoffCapture(new Date("2026-09-20T16:59:59Z"), kickoff), true);
+  assert.equal(isPreKickoffCapture(kickoff, kickoff), false);
+});
+
 test("injury cadence includes all free-feed windows and kickoff-relative Monday", () => {
   assert.deepEqual(
     INJURY_WEEKLY_SLOTS.map((slot) => slot.jobKey),
@@ -127,6 +220,13 @@ test("confidence captures use documented kickoff-relative windows", () => {
       { jobKey: "confidence-75m-game-1", scheduledFor: "2026-09-20T15:45:00.000Z" },
     ],
   );
+});
+
+test("canonical prediction occurrence is exactly 30 minutes before kickoff", () => {
+  const occurrence = canonicalPredictionOccurrence("game-1", new Date("2026-09-20T17:00:00.000Z"));
+  assert.equal(occurrence.jobKey, "prediction-canonical-game-1");
+  assert.equal(occurrence.cutoffMinutes, 30);
+  assert.equal(occurrence.scheduledFor.toISOString(), "2026-09-20T16:30:00.000Z");
 });
 
 test("normal due confidence jobs remain claimable while earlier kickoff flexes retire stale slots", () => {

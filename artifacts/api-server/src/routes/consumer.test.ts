@@ -38,6 +38,7 @@ import consumerRouter, {
   usageCompositeIdentity,
   usageMatchupIdentity,
   usageSeasonAtCutoff,
+  verifyTeamRecords,
 } from "./consumer";
 
 const boardRow = (
@@ -316,6 +317,16 @@ test("consumer scores appear only for completed games", () => {
     finalHomeScore: 27,
     finalAwayScore: 20,
   }), { home: 27, away: 20 });
+});
+
+test("consumer record verification never labels 32 all-zero records verified", () => {
+  const records = Array.from({ length: 32 }, (_, index) => ({
+    teamId: String(index), abbreviation: `T${index}`, teamName: `Team ${index}`,
+    wins: 0, losses: 0, ties: 0, games: 0,
+  }));
+  const verification = verifyTeamRecords(records, { targetWeek: 2, completedPriorGames: 0 });
+  assert.equal(verification.complete, false);
+  assert.ok(verification.discrepancies.length > 0);
 });
 
 test("consumer market quotes use deterministic, explicitly labeled sides", () => {
@@ -630,6 +641,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
     week: 1,
     kickoffTime: "2026-09-20T17:00:00.000Z",
     gameStatus: "STATUS_SCHEDULED",
+    gameState: "pregame" as const,
     venue: null,
     matchup: {
       home: { name: "Home", abbreviation: "HME", logoUrl: null },
@@ -645,7 +657,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
     },
     marketBoard: {
       status: "absent" as const,
-      staleAfterMinutes: 30,
+      staleAfterMinutes: 15,
       selectionRule: "Best means the most favorable canonical line point, then the higher American price when points match; exact ties prefer DraftKings.",
       comparisons: (["spread", "total", "moneyline"] as const).map((market) => ({
         market,
@@ -661,6 +673,8 @@ test("generated contracts accept representative list, dashboard, detail, and una
         current: null,
         modelTimestamp: null,
         marketTimestamp: null,
+        observationAgeMinutes: null,
+        freshnessLabel: "Sportsbook line updating",
       })),
     },
     dataConfidence: { label: "Updating" as const, score: null, reason: "Prediction data is being refreshed" },
@@ -738,6 +752,15 @@ test("generated contracts accept representative list, dashboard, detail, and una
     status: "absent",
     coverage: { games: 1, gamesWithComparison: 0, DraftKings: 0, FanDuel: 0 },
     games: [game],
+    teamRecords: [],
+    recordVerification: {
+      expectedTeamCount: 32,
+      actualTeamCount: 0,
+      targetWeek: 1,
+      completedPriorGames: 0,
+      complete: false,
+      discrepancies: ["Expected 32 teams, found 0"],
+    },
   }).success, true);
   assert.equal(GetConsumerDashboardResponse.safeParse({
     status: "available",
