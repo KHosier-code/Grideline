@@ -83,8 +83,7 @@ function ConfidenceCard({ confidence, compact = false }: { confidence: MarketCon
       <summary className="market-confidence-summary">
         <span className="confidence-market-name">{marketLabels[confidence.market]}</span>
         <span className="confidence-label">{confidence.label}</span>
-        <span className="confidence-score">{Math.round(confidence.score)}/100</span>
-        <span className="sr-only">Why this confidence?</span>
+        <span className="sr-only">Why this evidence strength?</span>
         <ChevronDown aria-hidden="true" className="confidence-chevron" />
       </summary>
       <div className="market-confidence-detail" id={detailId}>
@@ -92,7 +91,7 @@ function ConfidenceCard({ confidence, compact = false }: { confidence: MarketCon
         <div className="confidence-components" aria-label={`${marketLabels[confidence.market]} confidence components`}>
           {confidence.components.slice(0, 3).map((component) => (
             <div className="confidence-component" key={component.key}>
-              <span><strong>{component.label}</strong><b>{component.score === null ? 'Unavailable' : `${Math.round(component.score)}/100`}</b></span>
+              <span><strong>{component.label}</strong><b>{component.score === null ? 'Unavailable' : 'Measured'}</b></span>
               <small>{component.summary}</small>
             </div>
           ))}
@@ -121,8 +120,8 @@ export function MarketConfidenceSummary({ value, compact = false }: { value: unk
   return (
     <section className={`market-confidence ${compact ? 'market-confidence-compact' : ''}`} data-testid="market-confidence">
       <div className="market-confidence-heading">
-        <span><CircleHelp aria-hidden="true" /> Confidence by market</span>
-        {!compact && <small>Evidence-based, not a certainty claim</small>}
+        <span><CircleHelp aria-hidden="true" /> Research strength by market</span>
+        {!compact && <small>Input, model, and market evidence — not prediction probability</small>}
       </div>
       <div className="market-confidence-grid">
         {confidences.map((confidence) => <ConfidenceCard key={confidence.market} confidence={confidence} compact={compact} />)}

@@ -1,6 +1,14 @@
 import type { ConsumerGame, ConsumerMarketQuote } from '@workspace/api-client-react';
 import { AlertTriangle, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
+import { useState } from 'react';
+
+export function TeamMark({ name, abbreviation, logoUrl }: { name: string; abbreviation: string; logoUrl: string | null }) {
+  const [failed, setFailed] = useState(false);
+  return logoUrl && !failed
+    ? <img className="consumer-team-logo consumer-team-logo-large" src={logoUrl} alt={`${name} logo`} onError={() => setFailed(true)} />
+    : <span className="consumer-team-logo-fallback consumer-team-logo-large" aria-label={`${name} logo unavailable`}>{abbreviation.slice(0, 3)}</span>;
+}
 
 export function ConsumerLoading({ label = 'Loading the latest view…' }: { label?: string }) {
   return <div className="consumer-state"><Loader2 className="h-6 w-6 animate-spin" /><p>{label}</p></div>;
@@ -33,7 +41,7 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
   const prediction = game.prediction;
   return (
     <Link href={href} className="consumer-game-card">
-      <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : game.dataConfidence.label}</span></div>
+      <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : `${game.dataConfidence.label} input quality`}</span></div>
       <div className="consumer-matchup">
         <div><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(prediction?.projectedAwayScore)}</b>
         <div><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span></div><b>{final ? final.home : score(prediction?.projectedHomeScore)}</b>
@@ -42,7 +50,7 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
         <span><small>Projection</small>{prediction ? `${score(prediction.projectedMargin)} margin` : game.availability.prediction ?? 'Updating'}</span>
         <span><small>Market spread</small>{formatQuote(game.market.spread, 'spread')}</span>
       </div>}
-      <div className="consumer-game-card-foot"><span>{game.dataConfidence.reason ?? `${game.dataConfidence.label} data confidence`}</span><ChevronRight className="h-4 w-4" /></div>
+      <div className="consumer-game-card-foot"><span>{game.dataConfidence.reason ?? `${game.dataConfidence.label} input quality`}</span><ChevronRight className="h-4 w-4" /></div>
     </Link>
   );
 }

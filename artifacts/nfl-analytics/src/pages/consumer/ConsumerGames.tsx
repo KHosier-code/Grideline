@@ -3,13 +3,19 @@ import {
   useListConsumerGames,
   type ConsumerGame,
   type ConsumerMarketQuote,
+  type ConsumerTeamRecord,
 } from '@workspace/api-client-react';
 import { ChevronDown, ChevronRight, Clock3 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { Link } from 'wouter';
-import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote } from './consumer-ui';
+import { ConsumerLoading, ConsumerMessage, TeamMark, formatKickoff, formatQuote } from './consumer-ui';
 import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
 import { MarketConfidenceSummary } from '../../components/MarketConfidence';
+
+function formatRecord(record?: ConsumerTeamRecord) {
+  if (!record?.games) return 'Record unavailable';
+  return `${record.wins}-${record.losses}${record.ties ? `-${record.ties}` : ''}`;
+}
 
 function readPositiveInteger(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -36,7 +42,7 @@ function EvidenceQuote({
   );
 }
 
-function GameRow({ game, season, week }: { game: ConsumerGame; season: number; week: number }) {
+function GameRow({ game, season, week, records }: { game: ConsumerGame; season: number; week: number; records: Map<string, ConsumerTeamRecord> }) {
   const [expanded, setExpanded] = useState(false);
   const evidenceId = useId();
   const final = game.finalScore;
@@ -50,8 +56,16 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
             <span>{formatKickoff(game.kickoffTime)}</span>
             <span className={`market-state market-state-${game.gameState}`}>{game.gameState}</span>
           </div>
-          <div className="tc-team"><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span><b>{final ? final.away : prediction?.projectedAwayScore?.toFixed(1) ?? '—'}</b></div>
-          <div className="tc-team"><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span><b>{final ? final.home : prediction?.projectedHomeScore?.toFixed(1) ?? '—'}</b></div>
+          <div className="tc-team">
+            <TeamMark {...game.matchup.away} />
+            <span className="tc-team-identity"><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name} · {formatRecord(records.get(game.matchup.away.abbreviation))}</span></span>
+            <b>{final ? final.away : prediction?.projectedAwayScore?.toFixed(1) ?? '—'}</b>
+          </div>
+          <div className="tc-team">
+            <TeamMark {...game.matchup.home} />
+            <span className="tc-team-identity"><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name} · {formatRecord(records.get(game.matchup.home.abbreviation))}</span></span>
+            <b>{final ? final.home : prediction?.projectedHomeScore?.toFixed(1) ?? '—'}</b>
+          </div>
         </div>
         {game.marketBoard.comparisons.map((comparison) => <ConsumerMarketComparisonCell className="tb-cell" key={comparison.market} comparison={comparison} />)}
         <div className="tc-action">
@@ -76,7 +90,8 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
           <MarketConfidenceSummary value={game} />
           <div className="evidence-summary">
             <strong>Comparison evidence</strong>
-            <span>{game.dataConfidence.label} data confidence</span>
+            <span>{game.dataConfidence.label} input quality</span>
+            <span>{prediction ? 'Production model view' : 'Model view unavailable'}</span>
             <span>{game.marketBoard.selectionRule}</span>
           </div>
           {game.marketBoard.comparisons.map((comparison) => (
@@ -106,6 +121,7 @@ export default function ConsumerGames() {
   }, [season, week]);
   const params = { season, week };
   const query = useListConsumerGames(params, { query: { queryKey: getListConsumerGamesQueryKey(params), staleTime: 30_000 } });
+  const records = new Map(query.data?.teamRecords.map((record) => [record.abbreviation, record]) ?? []);
 
   return (
     <div className="terminal-page">
@@ -126,25 +142,17 @@ export default function ConsumerGames() {
           <div className="ts-stat"><span>Evidence</span><strong><Clock3 aria-hidden="true" /> First / current</strong></div>
         </section>
       )}
-      {query.data?.teamRecords?.length ? (
-        <section className="terminal-summary-bar" aria-label="Team records">
-          <div className="ts-stat"><span>Records</span><strong>{query.data.recordVerification.complete ? 'Verified' : 'Check data'}</strong></div>
-          {!query.data.recordVerification.complete && (
-            <div className="ts-stat ts-stat-warning" role="status">
-              <span>Record evidence</span>
-              <strong>{query.data.recordVerification.discrepancies[0] ?? 'Authoritative results incomplete'}</strong>
-            </div>
-          )}
-          {query.data.teamRecords.map((record) => (
-            <div className="ts-stat" key={record.teamId}><span>{record.abbreviation}</span><strong>{record.games ? `${record.wins}-${record.losses}${record.ties ? `-${record.ties}` : ''}` : 'No verified record'}</strong></div>
-          ))}
-        </section>
-      ) : null}
+      {query.data && !query.data.recordVerification.complete && (
+        <div className="record-evidence-warning" role="status">
+          <strong>Record evidence incomplete</strong>
+          <span>{query.data.recordVerification.discrepancies[0] ?? 'Authoritative final regular-season results are incomplete.'}</span>
+        </div>
+      )}
 
       {query.isLoading ? <ConsumerLoading label="Loading market board…" /> : query.isError ? <ConsumerMessage error title="Market board unavailable" detail="We couldn’t load this week right now. Please try again shortly." /> : query.data?.games.length ? (
         <section className="terminal-board" aria-label="Weekly NFL market comparisons">
           <div className="tb-header" aria-hidden="true"><div>Kickoff & matchup</div><div>Spread comparison</div><div>Total comparison</div><div>Moneyline comparison</div><div>Evidence</div></div>
-          {query.data.games.map((game) => <GameRow key={game.gameId} game={game} season={season} week={week} />)}
+          {query.data.games.map((game) => <GameRow key={game.gameId} game={game} season={season} week={week} records={records} />)}
         </section>
       ) : <ConsumerMessage title="No games found" detail="There are no available matchups for this season and week. Try another week." />}
     </div>

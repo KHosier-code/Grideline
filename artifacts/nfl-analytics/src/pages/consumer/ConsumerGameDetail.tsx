@@ -1,7 +1,7 @@
 import { getGetConsumerGameQueryKey, useGetConsumerGame } from '@workspace/api-client-react';
 import { ChevronLeft, CloudRain, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useLocation, useParams, Link } from 'wouter';
-import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } from './consumer-ui';
+import { ConsumerLoading, ConsumerMessage, TeamMark, formatKickoff, formatQuote, metric } from './consumer-ui';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { LineMovementExperience } from '../../components/LineMovementExperience';
@@ -20,6 +20,11 @@ export default function ConsumerGameDetail() {
   if (query.isError || !query.data) return <ConsumerMessage error title="This matchup is unavailable" detail="We couldn’t load this game right now. Return to Games and try again shortly." />;
   const game = query.data;
   const prediction = game.prediction;
+  const comparison = (market: 'spread' | 'moneyline' | 'total') =>
+    game.marketBoard.comparisons.find((item) => item.market === market);
+  const spread = comparison('spread');
+  const moneyline = comparison('moneyline');
+  const total = comparison('total');
   const weather = game.weather as { summary?: unknown; temperature?: unknown; sustainedWind?: unknown; precipitationProbability?: unknown } | null;
   const weatherParts = weather ? [
     typeof weather.summary === 'string' ? weather.summary : null,
@@ -46,11 +51,13 @@ export default function ConsumerGameDetail() {
 
       <div className="premium-teams">
         <div className="premium-team premium-away">
+          <TeamMark {...game.matchup.away} />
           <span className="premium-team-abbr">{game.matchup.away.abbreviation}</span>
           <span className="premium-team-name">{game.matchup.away.name}</span>
         </div>
         <div className="premium-vs">VS</div>
         <div className="premium-team premium-home">
+          <TeamMark {...game.matchup.home} />
           <span className="premium-team-abbr">{game.matchup.home.abbreviation}</span>
           <span className="premium-team-name">{game.matchup.home.name}</span>
         </div>
@@ -61,18 +68,23 @@ export default function ConsumerGameDetail() {
         <div className="premium-market-quotes">
           <div className="premium-market-quote">
             <small>Spread</small>
-            <span>{formatQuote(game.market.spread, 'spread')}</span>
+             <span>{formatQuote(spread?.current ?? null, 'spread')}</span>
           </div>
           <div className="premium-market-quote">
             <small>Moneyline</small>
-            <span>{formatQuote(game.market.moneyline, 'moneyline')}</span>
+             <span>{formatQuote(moneyline?.current ?? null, 'moneyline')}</span>
           </div>
           <div className="premium-market-quote">
             <small>Total</small>
-            <span>{formatQuote(game.market.total, 'total')}</span>
+             <span>{formatQuote(total?.current ?? null, 'total')}</span>
           </div>
         </div>
-        {game.availability.market && <p className="premium-market-note">{game.availability.market}</p>}
+        <p className={`premium-market-note market-state market-state-${game.marketBoard.status}`}>
+          {game.marketBoard.status === 'available' ? 'Current observations'
+            : game.marketBoard.status === 'partial' ? 'Some markets unavailable'
+              : game.marketBoard.status === 'stale' ? 'Last observations are stale'
+                : 'Market observations unavailable'}
+        </p>
       </div>
     </section>
 
@@ -84,7 +96,7 @@ export default function ConsumerGameDetail() {
         </div>
         {prediction ? (
           <span className="premium-confidence-badge">
-            <ShieldCheck className="h-4 w-4" /> {game.dataConfidence.label} confidence
+            <ShieldCheck className="h-4 w-4" /> {game.dataConfidence.label} input quality
           </span>
         ) : null}
       </div>
