@@ -27,6 +27,8 @@ async function buildAll() {
       path.resolve(artifactDir, "src/production.ts"),
       path.resolve(artifactDir, "src/lib/sleeper.test.ts"),
       path.resolve(artifactDir, "src/lib/sleeper-identity-mapping.test.ts"),
+      path.resolve(artifactDir, "src/lib/current-personnel-derivation.test.ts"),
+      path.resolve(artifactDir, "src/lib/current-personnel.test.ts"),
       path.resolve(artifactDir, "src/lib/production-database-smoke.test.ts"),
       path.resolve(artifactDir, "src/lib/production-startup-alert.test.ts"),
     ],

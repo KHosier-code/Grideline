@@ -9,6 +9,13 @@ import {
 import { requireAdmin } from "../middlewares/admin";
 import { getChallengerReadinessReport, getCurrentPersonnelCoverage } from "../lib/personnel-coverage";
 import { getLiveModelInputIntegrityAudit } from "../lib/live-predictions";
+import {
+  getCurrentDepthValidationReport,
+  getCurrentGamePersonnel,
+  getCurrentQbEvidence,
+  getCurrentTeamDepth,
+  getCurrentWrCbEvidence,
+} from "../lib/current-personnel";
 
 const router: IRouter = Router();
 type PersonnelCoverageResult = Awaited<ReturnType<typeof getCurrentPersonnelCoverage>>;
@@ -98,6 +105,50 @@ router.get("/features/personnel-context/challenger-readiness", requireAdmin, asy
   const value = await challengerReadinessRequest;
   challengerReadinessCache = { expiresAt: Date.now() + 5 * 60_000, value };
   res.json(value);
+});
+
+function routeParam(value: string | string[]) {
+  return Array.isArray(value) ? value[0]! : value;
+}
+
+router.get("/features/personnel/current/team/:teamId", requireAdmin, async (req, res): Promise<void> => {
+  const value = await getCurrentTeamDepth(routeParam(req.params.teamId));
+  if (!value) {
+    res.status(404).json({ error: "Team not found", code: "TEAM_NOT_FOUND" });
+    return;
+  }
+  res.json(value);
+});
+
+router.get("/features/personnel/current/game/:gameId", requireAdmin, async (req, res): Promise<void> => {
+  const value = await getCurrentGamePersonnel(routeParam(req.params.gameId));
+  if (!value) {
+    res.status(404).json({ error: "Game not found", code: "GAME_NOT_FOUND" });
+    return;
+  }
+  res.json(value);
+});
+
+router.get("/features/personnel/current/team/:teamId/qb", requireAdmin, async (req, res): Promise<void> => {
+  const value = await getCurrentQbEvidence(routeParam(req.params.teamId));
+  if (!value) {
+    res.status(404).json({ error: "Team not found", code: "TEAM_NOT_FOUND" });
+    return;
+  }
+  res.json(value);
+});
+
+router.get("/features/personnel/current/team/:teamId/wr-cb", requireAdmin, async (req, res): Promise<void> => {
+  const value = await getCurrentWrCbEvidence(routeParam(req.params.teamId));
+  if (!value) {
+    res.status(404).json({ error: "Team not found", code: "TEAM_NOT_FOUND" });
+    return;
+  }
+  res.json(value);
+});
+
+router.get("/features/personnel/current/validation", requireAdmin, async (_req, res): Promise<void> => {
+  res.json(await getCurrentDepthValidationReport());
 });
 
 router.post("/features/pregame/build", requireAdmin, async (req, res): Promise<void> => {
