@@ -28,6 +28,7 @@ import consumerRouter, {
   consumerMarket,
   deterministicSourceGameId,
   eligibleUsageGames,
+  eligibleUsageRows,
   filterUsagePlayers,
   serializeContext,
   serializeMovement,
@@ -35,6 +36,7 @@ import consumerRouter, {
   summarizeConsumerMarketBoards,
   usageCompositeIdentity,
   usageMatchupIdentity,
+  usageSeasonAtCutoff,
 } from "./consumer";
 
 const boardRow = (
@@ -128,7 +130,7 @@ test("market board summary reports partial, stale, absent, and sportsbook covera
   assert.equal(summarizeConsumerMarketBoards([]).status, "absent");
 });
 
-test("database-backed player usage route returns production and crosswalk-resolved snap evidence", async (t) => {
+test("database-backed player usage route isolates the applicable season and supports validated filters", async (t) => {
   const app = express();
   app.use(consumerRouter);
   const server = app.listen(0, "127.0.0.1");
@@ -141,19 +143,15 @@ test("database-backed player usage route returns production and crosswalk-resolv
   const response = await fetch(`${baseUrl}/consumer/player-usage?position=WR&window=last3`);
   assert.equal(response.status, 200);
   const payload = GetConsumerPlayerUsageResponse.parse(await response.json());
-  assert.ok(payload.players.length > 0, "latest persisted player-game season should be exposed");
-  assert.ok(payload.players.some((player) => player.aggregate.snapShare.available),
-    "GSIS player-game IDs should crosswalk to PFR snap IDs");
-  assert.ok(payload.sourceCoverage.requestedGames > 0);
-  assert.ok(!payload.sourceCoverage.partialReasons.includes("No completed games are available for the requested cutoff"),
-    "source-backed standalone history must not be mislabeled as having no completed games");
+  assert.equal(payload.season, usageSeasonAtCutoff(new Date()));
+  assert.ok(payload.availableTeams.length >= 32);
+  assert.ok(payload.players.every((player) => player.games.every((game) => game.season === payload.season)),
+    "prior-season player identities must not leak into the default result");
 
-  const team = payload.players[0]!.teamId;
-  assert.ok(team);
+  const team = payload.availableTeams[0]!.abbreviation;
   const filteredResponse = await fetch(`${baseUrl}/consumer/player-usage?team=${encodeURIComponent(team)}&position=WR&window=last3`);
   assert.equal(filteredResponse.status, 200);
   const filtered = GetConsumerPlayerUsageResponse.parse(await filteredResponse.json());
-  assert.ok(filtered.players.length > 0);
   assert.ok(filtered.players.every((player) => player.teamId === team && player.position === "WR"));
 });
 
@@ -271,10 +269,34 @@ test("usage game cutoffs exclude future games and order by kickoff rather than w
   );
 });
 
+test("usage eligibility excludes stale seasons and rows outside completed games", () => {
+  const rows = [
+    { season: 2025, gameId: "old", playerId: "stale" },
+    { season: 2026, gameId: "completed", playerId: "current" },
+    { season: 2026, gameId: "future", playerId: "future" },
+  ];
+  assert.deepEqual(
+    eligibleUsageRows(rows, 2026, new Set(["completed"]), false).map((row) => row.playerId),
+    ["current"],
+  );
+  assert.deepEqual(
+    eligibleUsageRows(rows, 2026, new Set(), true).map((row) => row.playerId),
+    ["current", "future"],
+  );
+});
+
+test("default usage season follows the NFL season at the cutoff", () => {
+  assert.equal(usageSeasonAtCutoff(new Date("2026-09-17T12:00:00Z")), 2026);
+  assert.equal(usageSeasonAtCutoff(new Date("2027-01-20T12:00:00Z")), 2026);
+  assert.equal(usageSeasonAtCutoff(new Date("2027-03-01T12:00:00Z")), 2027);
+});
+
 test("player usage payload validates generated contract with explicit unsupported metrics", () => {
   const payload = {
     status: "partial",
+    season: 2026,
     players: [],
+    availableTeams: [{ teamId: "12", abbreviation: "KC" }],
     filters: { team: null, position: "WR", game: null, window: "last5" },
     metricAvailability: { redZoneTouches: false, redZoneTargets: false, explosiveRate: false },
     sourceCoverage: { requestedGames: 5, includedGames: 0, partialReasons: ["No completed games"] },

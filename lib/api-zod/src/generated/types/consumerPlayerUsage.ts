@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerPlayerUsageAvailableTeamsItem } from './consumerPlayerUsageAvailableTeamsItem';
 import type { ConsumerPlayerUsageFilters } from './consumerPlayerUsageFilters';
 import type { ConsumerPlayerUsageMetricAvailability } from './consumerPlayerUsageMetricAvailability';
 import type { ConsumerPlayerUsageSourceCoverage } from './consumerPlayerUsageSourceCoverage';
@@ -13,7 +14,9 @@ import type { ConsumerUsagePlayer } from './consumerUsagePlayer';
 
 export interface ConsumerPlayerUsage {
   status: ConsumerPlayerUsageStatus;
+  season: number;
   players: ConsumerUsagePlayer[];
+  availableTeams: ConsumerPlayerUsageAvailableTeamsItem[];
   filters: ConsumerPlayerUsageFilters;
   metricAvailability: ConsumerPlayerUsageMetricAvailability;
   sourceCoverage: ConsumerPlayerUsageSourceCoverage;

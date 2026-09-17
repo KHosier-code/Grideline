@@ -1635,6 +1635,7 @@ export const GetConsumerPlayerUsageQueryParams = zod.object({
 
 export const GetConsumerPlayerUsageResponse = zod.object({
   "status": zod.enum(['available', 'partial', 'unavailable']),
+  "season": zod.number().int(),
   "players": zod.array(zod.object({
   "playerId": zod.string(),
   "playerName": zod.string(),
@@ -1663,6 +1664,10 @@ export const GetConsumerPlayerUsageResponse = zod.object({
   "includedGames": zod.number().int(),
   "partialReasons": zod.array(zod.string())
 })
+})),
+  "availableTeams": zod.array(zod.object({
+  "teamId": zod.string(),
+  "abbreviation": zod.string()
 })),
   "filters": zod.object({
   "team": zod.string().nullable(),

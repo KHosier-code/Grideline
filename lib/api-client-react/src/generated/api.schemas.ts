@@ -817,6 +817,11 @@ export const ConsumerPlayerUsageStatus = {
   unavailable: 'unavailable',
 } as const;
 
+export type ConsumerPlayerUsageAvailableTeamsItem = {
+  teamId: string;
+  abbreviation: string;
+};
+
 export type ConsumerPlayerUsageFiltersWindow = typeof ConsumerPlayerUsageFiltersWindow[keyof typeof ConsumerPlayerUsageFiltersWindow];
 
 
@@ -847,7 +852,9 @@ export type ConsumerPlayerUsageSourceCoverage = {
 
 export interface ConsumerPlayerUsage {
   status: ConsumerPlayerUsageStatus;
+  season: number;
   players: ConsumerUsagePlayer[];
+  availableTeams: ConsumerPlayerUsageAvailableTeamsItem[];
   filters: ConsumerPlayerUsageFilters;
   metricAvailability: ConsumerPlayerUsageMetricAvailability;
   sourceCoverage: ConsumerPlayerUsageSourceCoverage;

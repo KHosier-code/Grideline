@@ -1142,10 +1142,19 @@ components:
             partialReasons: { type: array, items: { type: string } }
     ConsumerPlayerUsage:
       type: object
-      required: [status, players, filters, metricAvailability, sourceCoverage]
+      required: [status, season, players, availableTeams, filters, metricAvailability, sourceCoverage]
       properties:
         status: { type: string, enum: [available, partial, unavailable] }
+        season: { type: integer }
         players: { type: array, items: { $ref: "#/components/schemas/ConsumerUsagePlayer" } }
+        availableTeams:
+          type: array
+          items:
+            type: object
+            required: [teamId, abbreviation]
+            properties:
+              teamId: { type: string }
+              abbreviation: { type: string }
         filters:
           type: object
           required: [team, position, game, window]

@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { trendLabel, usageChartData } from "./consumer-usage.ts";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { sortUsagePlayers, trendLabel, usageChartData } from "./consumer-usage.ts";
 
 test("usage chart transformation preserves unavailable values", () => {
   assert.deepEqual(usageChartData([
@@ -13,6 +15,26 @@ test("usage chart transformation preserves unavailable values", () => {
 });
 
 test("usage trend labels distinguish flat from unavailable", () => {
-  assert.equal(trendLabel("flat"), "— Flat");
-  assert.equal(trendLabel("unavailable"), "— Trend unavailable");
+  assert.equal(trendLabel("flat"), "Flat");
+  assert.equal(trendLabel("unavailable"), "Trend unavailable");
+});
+
+test("usage sorting keeps unavailable values last in either direction", () => {
+  const players = [
+    { playerName: "Unavailable", trend: "unavailable" as const, aggregate: { targets: { value: null } } },
+    { playerName: "High", trend: "up" as const, aggregate: { targets: { value: 8 } } },
+    { playerName: "Low", trend: "down" as const, aggregate: { targets: { value: 2 } } },
+  ];
+  assert.deepEqual(sortUsagePlayers(players, "targets", "desc").map((player) => player.playerName), ["High", "Low", "Unavailable"]);
+  assert.deepEqual(sortUsagePlayers(players, "targets", "asc").map((player) => player.playerName), ["Low", "High", "Unavailable"]);
+});
+
+test("usage page renders server-validated filters and responsive expandable table evidence", () => {
+  const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
+  assert.match(source, /availableTeams\.map/);
+  assert.match(source, /<table/);
+  assert.match(source, /overflow-x-auto/);
+  assert.match(source, /Situational Context/);
+  assert.match(source, /sourceCoverage\.includedGames/);
+  assert.match(source, /colSpan=\{11\}/);
 });

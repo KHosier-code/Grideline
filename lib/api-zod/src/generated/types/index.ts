@@ -96,6 +96,7 @@ export * from './consumerPerformanceFamily';
 export * from './consumerPerformanceStatus';
 export * from './consumerPerformanceWindow';
 export * from './consumerPlayerUsage';
+export * from './consumerPlayerUsageAvailableTeamsItem';
 export * from './consumerPlayerUsageFilters';
 export * from './consumerPlayerUsageFiltersWindow';
 export * from './consumerPlayerUsageMetricAvailability';

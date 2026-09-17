@@ -89,6 +89,16 @@ export function filterUsagePlayers<T extends { teamId: string | null; position: 
     && (!position || player.position?.toUpperCase() === position.toUpperCase()));
 }
 
+export function eligibleUsageRows<T extends { season: number; gameId: string }>(
+  rows: T[],
+  season: number,
+  eligibleGameIds: Set<string>,
+  allowSourceChronology: boolean,
+) {
+  return rows.filter((row) =>
+    row.season === season && (allowSourceChronology || eligibleGameIds.has(row.gameId)));
+}
+
 export function eligibleUsageGames<T extends { gameId: string; season: number; kickoffTime: Date | null }>(
   games: T[],
   season: number,
@@ -104,6 +114,10 @@ export function eligibleUsageGames<T extends { gameId: string; season: number; k
     .sort((left, right) =>
       left.kickoffTime!.getTime() - right.kickoffTime!.getTime()
       || left.gameId.localeCompare(right.gameId));
+}
+
+export function usageSeasonAtCutoff(cutoff: Date) {
+  return cutoff.getUTCMonth() < 2 ? cutoff.getUTCFullYear() - 1 : cutoff.getUTCFullYear();
 }
 
 export function buildUsageTeamMappings(teams: Array<{ teamId: string; abbreviation: string }>) {
@@ -1147,9 +1161,7 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
       return;
     }
     const cutoff = matchup[0]?.kickoffTime ?? new Date();
-    const latestStatSeason = matchup[0]?.season ?? (await db.select({ season: playerGameStatsTable.season })
-      .from(playerGameStatsTable).orderBy(desc(playerGameStatsTable.season)).limit(1))[0]?.season ?? 0;
-    const applicableSeason = matchup[0]?.season ?? latestStatSeason;
+    const applicableSeason = matchup[0]?.season ?? usageSeasonAtCutoff(cutoff);
     const selectedGames = await db.select().from(gamesTable)
       .where(and(eq(gamesTable.season, applicableSeason), lte(gamesTable.kickoffTime, cutoff)))
       .orderBy(asc(gamesTable.season), asc(gamesTable.week), asc(gamesTable.gameId));
@@ -1219,7 +1231,7 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
       orderedGameIdsByTeam.set(home, [...(orderedGameIdsByTeam.get(home) ?? []), eligible.gameId]);
       orderedGameIdsByTeam.set(away, [...(orderedGameIdsByTeam.get(away) ?? []), eligible.gameId]);
     }
-    const usesSourceChronology = !matchup[0] && eligibleGames.length === 0;
+    const usesSourceChronology = !matchup[0] && selectedGames.length === 0;
     if (usesSourceChronology) {
       const sourceGames = new Map<string, { teamId: string; gameId: string; seasonType: string; week: number }>();
       for (const row of usageRows) sourceGames.set(`${row.teamId}:${row.gameId}`, {
@@ -1233,7 +1245,15 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
         teamSchedules.set(teamId, new Set(ordered).size);
       }
     }
-    const players = aggregatePlayerUsage(usageRows, snapRows, eligibleGames.length, window as "last3" | "last5" | "last8" | "season", teamSchedules, orderedGameIdsByTeam)
+    const verifiedUsageRows = eligibleUsageRows(
+      usageRows,
+      applicableSeason,
+      new Set(eligibleGames.map((eligible) => eligible.gameId)),
+      usesSourceChronology,
+    );
+    const verifiedPlayerIds = new Set(verifiedUsageRows.map((row) => row.playerId));
+    const verifiedSnapRows = snapRows.filter((row) => verifiedPlayerIds.has(row.playerId));
+    const players = aggregatePlayerUsage(verifiedUsageRows, verifiedSnapRows, eligibleGames.length, window as "last3" | "last5" | "last8" | "season", teamSchedules, orderedGameIdsByTeam)
       .filter((player) => filterUsagePlayers([player], canonicalFilter ?? undefined, position).length > 0);
     const fallbackScheduleGames = canonicalFilter
       ? teamSchedules.get(canonicalFilter) ?? 0
@@ -1256,8 +1276,12 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
     };
     res.json({
       status: players.length ? (sourceCoverage.partialReasons.length ? "partial" : "available") : "unavailable",
+      season: applicableSeason,
       players,
-      filters: { team: team ?? null, position: position ?? null, game: game ?? null, window },
+      availableTeams: teamRows
+        .map((row) => ({ teamId: row.teamId, abbreviation: row.abbreviation.toUpperCase() }))
+        .sort((left, right) => left.abbreviation.localeCompare(right.abbreviation)),
+      filters: { team: canonicalFilter ?? null, position: position ?? null, game: game ?? null, window },
       metricAvailability: Object.fromEntries([...USAGE_METRICS, ...UNSUPPORTED_USAGE_METRICS]
         .map((name) => [name, players.some((p) => p.metricAvailability[name])])),
       sourceCoverage,
