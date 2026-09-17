@@ -1196,6 +1196,11 @@ export function effectiveVerifiedCrosswalks(rows: CrosswalkEvidenceReadRow[]) {
   }));
 }
 
+export async function loadGridlineIdentityCandidates() {
+  const crosswalk = await loadVerifiedPlayerCrosswalk();
+  return sourceCandidates(crosswalk.rows);
+}
+
 async function sourceCandidates(crosswalks: VerifiedPlayerCrosswalk[]) {
   const [latestNflverseImport] = await db.select({
     id: identitySourceImportsTable.id,

@@ -648,6 +648,71 @@ export const sleeperPlayerCrosswalkEvidenceTable = pgTable("sleeper_player_cross
   index("sleeper_player_crosswalk_source_idx").on(table.sourceNamespace, table.sourcePlayerId, table.lastVerifiedAt),
   index("sleeper_player_crosswalk_gridline_idx").on(table.gridlinePlayerId, table.lastVerifiedAt),
 ]);
+
+/**
+ * Evaluation-only SportsDataIO evidence. These append-only tables are
+ * intentionally disconnected from production depth interpretation.
+ */
+export const sportsDataIoEvaluationRunsTable = pgTable("sportsdataio_evaluation_runs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  runId: text("run_id").notNull(),
+  status: text("status").notNull(),
+  endpoint: text("endpoint").notNull(),
+  authenticationMethod: text("authentication_method").notNull(),
+  accountAccess: text("account_access").notNull(),
+  documentedCallInterval: text("documented_call_interval"),
+  productionUseVerified: boolean("production_use_verified").notNull().default(false),
+  commercialLicenseVerified: boolean("commercial_license_verified").notNull().default(false),
+  limitation: text("limitation"),
+  capturedAt: timestamp("captured_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("sportsdataio_evaluation_runs_run_id_unique").on(table.runId),
+  index("sportsdataio_evaluation_runs_created_idx").on(table.createdAt),
+]);
+
+export const sportsDataIoDepthEvidenceTable = pgTable("sportsdataio_depth_evidence", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  runId: text("run_id").notNull(),
+  providerDepthChartId: text("provider_depth_chart_id").notNull(),
+  providerTeamId: text("provider_team_id").notNull(),
+  providerPlayerId: text("provider_player_id"),
+  playerName: text("player_name"),
+  originalPosition: text("original_position"),
+  originalRole: text("original_role"),
+  normalizedRole: text("normalized_role"),
+  unit: text("unit").notNull(),
+  depthOrder: integer("depth_order"),
+  statusFields: jsonb("status_fields").$type<Record<string, string | null>>().notNull().default({}),
+  providerUpdatedAt: timestamp("provider_updated_at", { withTimezone: true }),
+  providerVersion: text("provider_version"),
+  capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+  sourceHash: text("source_hash").notNull(),
+}, (table) => [
+  unique("sportsdataio_depth_evidence_run_row_unique").on(table.runId, table.providerDepthChartId),
+  index("sportsdataio_depth_evidence_run_team_idx").on(table.runId, table.providerTeamId),
+]);
+
+export const sportsDataIoIdentityMappingsTable = pgTable("sportsdataio_identity_mappings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  runId: text("run_id").notNull(),
+  providerDepthChartId: text("provider_depth_chart_id").notNull(),
+  providerPlayerId: text("provider_player_id"),
+  mappedGridlinePlayerId: text("mapped_gridline_player_id"),
+  mappingStatus: text("mapping_status").notNull(),
+  mappingMethod: text("mapping_method").notNull(),
+  mappingConfidence: doublePrecision("mapping_confidence").notNull().default(0),
+  candidateGridlinePlayerIds: jsonb("candidate_gridline_player_ids").$type<string[]>().notNull().default([]),
+  ambiguityReason: text("ambiguity_reason"),
+  unmatchedReason: text("unmatched_reason"),
+  collision: boolean("collision").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("sportsdataio_identity_mappings_run_row_unique").on(table.runId, table.providerDepthChartId),
+  index("sportsdataio_identity_mappings_run_status_idx").on(table.runId, table.mappingStatus),
+]);
 /**
  * Durable scheduler state. A row represents one recurring feed/slot rather
  * than one process, so a restart can continue from the persisted nextRunAt

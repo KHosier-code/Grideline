@@ -385,3 +385,34 @@ export async function getCurrentDepthValidationReport(cutoff = new Date()) {
     },
   };
 }
+
+/** Evaluation-only normalized evidence; it does not alter source precedence. */
+export async function getCurrentDepthComparisonEvidence(cutoff = new Date()) {
+  const evidence = await currentEvidence(cutoff);
+  const teams = await mapBounded(evidence.teams, async (team) => deriveCurrentTeamDepth({
+    teamId: team.teamId,
+    teamName: team.teamName,
+    abbreviation: team.abbreviation,
+    cutoff,
+    publishedDepth: evidence.publishedDepth,
+    snaps: evidence.snaps,
+    historicalDepth: evidence.historicalDepth,
+    injuries: evidence.injuries,
+    qbs: evidence.qbs,
+  }));
+  return teams.map((team) => ({
+    team: team.abbreviation,
+    players: [...team.depth.offense, ...team.depth.defense, ...team.depth.specialTeams].map((player) => ({
+      playerId: player.playerId,
+      position: player.position,
+      role: player.role,
+      rank: player.rank,
+      starter: player.starter,
+      source: player.source,
+      recentGames: player.recentGames,
+      recentSnapShare: player.recentSnapShare,
+      injuryState: player.injuryState,
+    })),
+    conflicts: team.conflicts,
+  }));
+}
