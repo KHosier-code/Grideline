@@ -1,0 +1,145 @@
+TASK A — SLEEPER INGESTION + SNAPSHOTS
+
+Goal:
+Add Sleeper as a secondary current NFL player/depth source for Gridline.
+
+Scope ownership:
+- Sleeper HTTP client
+- worker scheduling
+- snapshot persistence
+- sync health
+- no UI
+- no player interpretation
+- no production model changes
+
+HARD SAFETY RULES
+
+Do not:
+- retrain any model
+- refit any model
+- promote any model
+- alter Phase 6.1 features
+- change current production predictions
+- overwrite nflverse history
+- use Sleeper as a direct betting-model input
+
+SOURCE
+
+Use Sleeper’s public NFL players endpoint.
+
+Capture when available:
+
+- player_id
+- full_name
+- first_name
+- last_name
+- team
+- position
+- fantasy_positions
+- depth_chart_position
+- depth_chart_order
+- status
+- injury_status
+- practice_participation
+- years_exp
+- age
+- provider IDs
+
+TASK 1 — CLIENT
+
+Create a dedicated Sleeper NFL client.
+
+Requirements:
+- bounded timeout
+- bounded retries
+- explicit User-Agent
+- no excessive polling
+- failure isolated from other worker jobs
+- clear provider error classification
+- no raw provider errors exposed to consumer UI
+
+TASK 2 — WORKER SYNC
+
+Create a worker-owned sync.
+
+Default cadence:
+- once every 24 hours
+
+Allow configuration without changing code.
+
+Requirements:
+- reuse one fetch per sync cycle
+- do not fetch once per team
+- do not fetch once per player
+- idempotent
+- safe to rerun
+- worker only
+- API process must not start the schedule
+
+TASK 3 — IMMUTABLE SNAPSHOTS
+
+Add append-only Sleeper player snapshots.
+
+Persist:
+
+- snapshot_id
+- captured_at
+- source/provider identifier
+- sleeper_player_id
+- full_name
+- team
+- position
+- fantasy_positions
+- depth_chart_position
+- depth_chart_order
+- status
+- injury_status
+- practice_participation
+- provider IDs
+- source payload hash/version if useful
+
+Do not overwrite prior snapshots.
+
+If Replit production cannot install DB triggers, enforce append-only at application level and document the limitation honestly.
+
+TASK 4 — SYNC HEALTH
+
+Record:
+
+- last attempted sync
+- last successful sync
+- duration
+- player count
+- teams represented
+- players with depth order
+- failures
+- stale age
+
+Expose this through existing internal Data Health plumbing only.
+
+TASK 5 — TESTS
+
+Add tests for:
+
+- one fetch reused during sync
+- retries bounded
+- provider failure isolation
+- snapshots append-only
+- unchanged data does not create uncontrolled duplication
+- all 32 teams can coexist in one snapshot cycle
+- scheduler owned only by worker
+
+FINAL REPORT
+
+Return:
+
+1. endpoint used
+2. cadence
+3. player count
+4. team count
+5. depth-order count
+6. snapshot count
+7. sync health result
+8. tests passed
+9. whether a publish is required
+10. confirmation Phase 6.1 was untouched

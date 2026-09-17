@@ -17,6 +17,7 @@ import {
   schedulerJobsTable,
 } from "@workspace/db";
 import { syncEspnInjuries } from "./availability";
+import { sleeperSyncIntervalMs, syncSleeperPlayers } from "./sleeper";
 import { syncNflverseHistory } from "./nflverse";
 import { rebuildPregameFeatures } from "./features";
 import { rebuildPregamePersonnelContextFeatures } from "./personnel-context";
@@ -444,6 +445,41 @@ async function ensureNflverseJob(now: Date) {
   }
 }
 
+async function ensureSleeperJob(now: Date) {
+  const jobKey = "sleeper-players";
+  const [existing] = await db.select().from(schedulerJobsTable)
+    .where(eq(schedulerJobsTable.jobKey, jobKey)).limit(1);
+  const neverRun = Boolean(existing && !existing.lastRunAt && !existing.lastScheduledAt);
+  const rearmSkippedInitialRun = Boolean(neverRun && existing?.lastStatus === "skipped");
+  const initialRunAt = new Date(now.getTime() + TICK_MS);
+  const nextRunAt = !existing || rearmSkippedInitialRun
+    ? initialRunAt
+    : existing?.nextRunAt && existing.nextRunAt.getTime() > now.getTime()
+      ? existing.nextRunAt
+      : now;
+  if (!existing) {
+    await db.insert(schedulerJobsTable).values({
+      jobKey,
+      provider: "sleeper-players",
+      kind: "sleeper-players",
+      timezone: FOOTBALL_TIMEZONE,
+      cadence: `every ${sleeperSyncIntervalMs() / (60 * 60 * 1000)} hours`,
+      nextRunAt,
+    });
+  } else if (
+    rearmSkippedInitialRun
+    || existing.cadence !== `every ${sleeperSyncIntervalMs() / (60 * 60 * 1000)} hours`
+  ) {
+    await db.update(schedulerJobsTable).set({
+      cadence: `every ${sleeperSyncIntervalMs() / (60 * 60 * 1000)} hours`,
+      ...(rearmSkippedInitialRun
+        ? { nextRunAt, lastStatus: "pending", lastError: null }
+        : {}),
+      updatedAt: now,
+    }).where(eq(schedulerJobsTable.jobKey, jobKey));
+  }
+}
+
 async function ensurePersonnelContextJob(now: Date) {
   const jobKey = "pregame-v4-personnel-context";
   const [existing] = await db
@@ -660,6 +696,7 @@ async function prepareJobs(now: Date) {
   await ensureWeeklyJobs(now);
   await ensureScheduleJob(now);
   await ensureNflverseJob(now);
+  await ensureSleeperJob(now);
   await ensurePregameFeatureRepairJob(now);
   await ensurePersonnelContextJob(now);
   await ensureKickoffJobs(now);
@@ -829,6 +866,11 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
           };
         }
       }
+    } else if (job.kind === "sleeper-players") {
+      result = await syncSleeperPlayers({
+        jobKey: job.jobKey,
+        scheduledFor: scheduledFor ?? undefined,
+      });
     } else if (job.kind === "personnel-context") {
       result = await rebuildPregamePersonnelContextFeatures();
     } else if (job.kind === "pregame-feature-repair") {
@@ -889,6 +931,8 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
           ? new Date(now.getTime() + PERSONNEL_CONTEXT_INTERVAL_MS)
         : job.kind === "pregame-feature-repair"
           ? new Date(now.getTime() + FEATURE_REPAIR_INTERVAL_MS)
+        : job.kind === "sleeper-players"
+          ? new Date(now.getTime() + sleeperSyncIntervalMs())
         : definition
           ? await nextOccurrence(definition, now)
           : nextIntervalOccurrence(now);
@@ -940,6 +984,10 @@ async function tick() {
 }
 
 export async function startDataScheduler() {
+  if (!schedulerProcessOwnsRecurringJobs()) {
+    logger.info("Recurring data scheduler is worker-owned; API process will not start it");
+    return;
+  }
   if (timer) return;
   schedulerStartedAt = new Date();
   try {
@@ -954,6 +1002,12 @@ export async function startDataScheduler() {
   } catch (error) {
     logger.error({ error }, "Recurring data scheduler could not initialize");
   }
+}
+
+export function schedulerProcessOwnsRecurringJobs(
+  environment: { GRIDLINE_SCHEDULER_WORKER?: string } = process.env,
+) {
+  return environment.GRIDLINE_SCHEDULER_WORKER === "1";
 }
 
 export function stopDataScheduler() {

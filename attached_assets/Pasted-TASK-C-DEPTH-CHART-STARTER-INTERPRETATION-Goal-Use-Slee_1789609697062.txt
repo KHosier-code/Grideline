@@ -1,0 +1,190 @@
+TASK C — DEPTH CHART + STARTER INTERPRETATION
+
+Goal:
+Use Sleeper plus existing Gridline sources to build a current, evidence-backed NFL depth-chart/personnel layer.
+
+Scope ownership:
+- depth interpretation
+- starter selection
+- QB certainty
+- conflict handling
+- current team depth API
+- matchup-ready personnel output
+- no consumer UI
+- no Phase 6.1 changes
+
+Inputs:
+
+Sleeper:
+- current depth order
+- team
+- position
+- status
+- injury/practice context
+
+nflverse:
+- historical snaps
+- participation
+- QB game history
+- prior depth evidence
+
+ESPN:
+- primary current injury/game status
+
+HARD SAFETY RULES
+
+Do not:
+- change active Phase 6.1 schema
+- retrain/refit/promote models
+- rewrite predictions
+- claim a published depth order is official NFL data
+- fabricate WR-CB coverage assignments
+
+SOURCE INTERPRETATION
+
+Use:
+
+1. permitted official source if one exists
+2. Sleeper current published depth signal
+3. nflverse participation/snaps
+4. historical fallback/inference
+
+ESPN remains primary for current injury designation.
+
+Sleeper injury/practice fields are supplemental.
+
+TASK 1 — CURRENT DEPTH VIEW
+
+Build current position-group depth interpretation for:
+
+Offense:
+- QB
+- RB
+- WR
+- TE
+- OL
+
+Defense:
+- EDGE/DE
+- DT
+- LB
+- CB
+- S
+
+Special teams:
+- K
+- P if useful
+
+For every slot record:
+
+- player
+- position
+- depth order
+- source
+- inferred/published status
+- recent snap evidence
+- injury status
+- confidence
+- reason
+
+TASK 2 — QB STARTER CERTAINTY
+
+Improve personnel-context QB certainty using:
+
+- Sleeper QB depth order
+- nflverse recent QB snaps/dropbacks
+- ESPN injury status
+- role continuity
+- conflicting evidence
+
+Do not change Phase 6.1's trained feature definition unless it already consumes this personnel signal through an approved path.
+
+Every QB certainty result must include:
+
+- selected QB
+- confidence
+- evidence
+- unavailable/conflict reason
+
+Never silently default to 0.
+
+TASK 3 — CONFLICT HANDLING
+
+Examples:
+
+- Sleeper QB1 differs from recent snap leader
+- ESPN says out while Sleeper depth=1
+- Sleeper team is stale
+- depth order missing
+
+Return:
+
+- source conflict flag
+- selected interpretation
+- confidence reduction
+- reason
+
+TASK 4 — MATCHUP-READY FIELDS
+
+Prepare fields needed later for WR-CB analytics:
+
+For WR:
+- current depth rank
+- recent snap share
+- current injury status
+- likely role
+
+For CB:
+- current depth rank
+- recent snap share
+- current injury status
+- likely starter status
+
+Do NOT claim direct coverage assignment yet.
+
+TASK 5 — INTERNAL API
+
+Add internal/admin-safe endpoints for:
+
+- current team depth chart
+- current game personnel comparison
+- QB starter evidence
+- WR/CB personnel evidence
+
+No raw provider payloads.
+
+TASK 6 — VALIDATION
+
+For all 32 teams report:
+
+- QB1
+- QB confidence
+- RB1
+- top 3 WRs where supported
+- TE1
+- CB1/CB2 where supported
+- source conflicts
+- injury conflicts
+
+For at least 10 teams compare:
+
+- Sleeper signal
+- nflverse participation
+- ESPN injury status
+- final Gridline interpretation
+
+FINAL REPORT
+
+Return:
+
+1. all-team QB coverage
+2. QB agreement/conflict rate
+3. RB/WR/TE depth coverage
+4. CB depth coverage
+5. injury conflict count
+6. source conflict count
+7. 10-team sample
+8. API endpoints added
+9. whether the data is ready for consumer depth charts
+10. whether the data is ready for WR-CB matchup modeling
+11. confirmation Phase 6.1 was untouched

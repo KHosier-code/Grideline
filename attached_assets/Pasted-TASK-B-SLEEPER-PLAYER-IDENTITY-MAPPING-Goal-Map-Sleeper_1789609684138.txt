@@ -1,0 +1,126 @@
+TASK B — SLEEPER PLAYER IDENTITY MAPPING
+
+Goal:
+Map Sleeper NFL players to existing Gridline players safely and measure mapping quality.
+
+Scope ownership:
+- identity mapping
+- mapping confidence
+- ambiguous/unmatched classification
+- validation reports
+- no worker scheduling
+- no consumer UI
+- no model changes
+
+Assume Task A provides Sleeper snapshot rows or a stable contract for them.
+
+HARD SAFETY RULES
+
+Do not:
+- retrain/refit/promote models
+- alter Phase 6.1
+- overwrite existing Gridline player IDs
+- force ambiguous mappings
+- use fuzzy matching as unquestioned truth
+
+TASK 1 — MATCHING HIERARCHY
+
+Use strongest identifiers first.
+
+Priority:
+
+1. exact provider ID match where supported
+2. exact known cross-provider ID mapping
+3. normalized full name + team + position
+4. otherwise ambiguous/unmatched
+
+If team changes create conflict, do not silently reject a valid player identity; preserve evidence and reason.
+
+TASK 2 — NORMALIZATION
+
+Handle common identity issues safely:
+
+- punctuation
+- suffixes Jr./Sr./II/III
+- initials
+- apostrophes/hyphens
+- team abbreviations
+- position aliases
+
+Do not merge two people solely because names are similar.
+
+TASK 3 — MAPPING STATUS
+
+Persist/derive:
+
+- mapped_gridline_player_id
+- mapping_method
+- mapping_confidence
+- ambiguity flag
+- unmatched reason
+
+Use explicit categories such as:
+
+- exact_provider_id
+- exact_crosswalk
+- normalized_name_team_position
+- ambiguous
+- unmatched
+
+TASK 4 — COVERAGE REPORT
+
+Report:
+
+- total Sleeper NFL players
+- mapped count
+- exact-ID count
+- normalized-match count
+- ambiguous count
+- unmatched count
+- overall mapping %
+- QB mapping %
+- RB mapping %
+- WR mapping %
+- TE mapping %
+- OL mapping %
+- DL/LB/DB mapping %
+
+TASK 5 — VALIDATION
+
+For all 32 teams identify:
+
+- Sleeper QB1 candidates
+- Sleeper RB1 candidates
+- top WR depth-order players
+- TE1 candidates
+
+For at least 10 teams compare Sleeper identity mapping to existing Gridline roster/player records.
+
+TASK 6 — ADMIN/HEALTH CONTRACT
+
+Expose only the data contract needed for later Data Health and personnel logic.
+
+Do not build the UI in this task.
+
+FINAL REPORT
+
+Return:
+
+1. mapping hierarchy used
+2. overall mapping %
+3. exact match %
+4. ambiguous count
+5. unmatched count
+6. position-group coverage
+7. 10-team validation sample
+8. major mapping risks
+9. whether mapping quality is sufficient for Phase C
+10. confirmation Phase 6.1 was untouched
+
+Final verdict:
+
+SLEEPER MAPPING SUITABLE FOR DEPTH LOGIC
+
+or
+
+SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC

@@ -4,6 +4,7 @@ import { fetchSchedule, getEspnHealth, logEspnFailure } from "../lib/espn";
 import { getNflverseHealth } from "../lib/nflverse";
 import { resolveCurrentSeasonWeek } from "../lib/season";
 import { getAvailabilityHealth } from "../lib/availability";
+import { getSleeperHealth } from "../lib/sleeper";
 import { getOddsApiHealth } from "../lib/odds";
 import { getScheduleHealth } from "../lib/schedule";
 import { getSchedulerHealth } from "../lib/scheduler";
@@ -49,6 +50,7 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
   const schedule = await getScheduleHealth();
   const nflverse = await getNflverseHealth();
   const availability = await getAvailabilityHealth();
+  const sleeper = await getSleeperHealth();
 
   const [scheduledInjuryRuns, scheduledNflverseRuns, scheduledWeatherRuns] = await Promise.all([
     getRecentScheduledRuns("scheduled:injuries"),
@@ -289,6 +291,27 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
           failures: availability.depth.failures,
           recentRuns: availability.runs.filter((run) => run.provider === "espn-depth-charts"),
           timezone: scheduler.timezone,
+        },
+      },
+      {
+        provider: "sleeper-players",
+        label: "Sleeper NFL player snapshots",
+        status: sleeper.status,
+        detail: sleeper.latestFailure && sleeper.status !== "current"
+          ? sleeper.latestFailure
+          : `${sleeper.snapshotCount} immutable rows; latest successful cycle received ${sleeper.playerCount} players across ${sleeper.teamCount} teams, with ${sleeper.depthOrderCount} depth-order values.`,
+        schedule: `Every ${sleeper.cadenceHours} hours; worker-owned`,
+        retryPolicy: "Up to 3 bounded attempts with a 30-second timeout.",
+        lastUpdated: sleeper.lastUpdated,
+        nextUpdate: scheduler.jobs.find((job) => job.jobKey === "sleeper-players")?.nextRunAt ?? null,
+        requestsToday: 0,
+        requestsThisMonth: 0,
+        remainingQuota: "Public endpoint",
+        metadata: {
+          ...sleeper,
+          workerOwned: true,
+          rawPayloadsExposed: false,
+          scheduler: scheduler.jobs.find((job) => job.jobKey === "sleeper-players") ?? null,
         },
       },
     ]),

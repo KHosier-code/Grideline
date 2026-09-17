@@ -16,3 +16,4 @@
 - [Phase 6 identifier boundary](phase6-identifier-boundary.md) — canonicalize schedule and nflverse team IDs before feature, QB, or score joins.
 - [Immutable model provenance](immutable-model-provenance.md) — a production version must bind schema, preprocessing, and fitted parameters; never refit it during inference.
 - [Production artifact release boundary](production-artifact-release-boundary.md) — verify production rows and triggers after Publish; development artifacts and custom triggers may not transfer.
+- [First-run scheduler semantics](first-run-scheduler-semantics.md) — introduce new recurring feeds as future normal occurrences; missed-job recovery intentionally skips catch-up work.

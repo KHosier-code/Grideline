@@ -1,0 +1,162 @@
+TASK D — CONSUMER DEPTH CHART UI FOUNDATION
+
+Goal:
+Expose useful depth-chart/personnel information to Gridline users without turning the site into a generic roster website.
+
+Scope ownership:
+- frontend
+- consumer-safe API consumption
+- game detail presentation
+- admin depth audit UI
+- no ingestion
+- no mapping algorithms
+- no model logic
+
+Assume Tasks A/B/C provide stable APIs/contracts.
+
+HARD SAFETY RULES
+
+Do not:
+- retrain/refit/promote models
+- alter Phase 6.1 predictions
+- expose raw provider payloads
+- expose internal DB IDs
+- claim inferred data is official
+- invent WR-CB assignments
+
+TASK 1 — GAME DETAIL SECTION
+
+Add:
+
+DEPTH CHART & PLAYER MATCHUPS
+
+Show both teams side-by-side on desktop and stacked on mobile.
+
+Position groups:
+
+Offense:
+- QB
+- RB
+- WR
+- TE
+- OL
+
+Defense:
+- DL/EDGE
+- LB
+- CB
+- S
+
+Use compact hierarchy:
+- starter
+- backup
+- reserve when useful
+
+TASK 2 — STATUS BADGES
+
+Show concise statuses:
+
+- Starter
+- Backup
+- Questionable
+- Doubtful
+- Out
+- IR
+- Limited
+- Inferred
+- Published
+
+Do not over-clutter the page.
+
+TASK 3 — SOURCE HONESTY
+
+If Sleeper provides depth order, label subtly as published depth signal.
+
+If Gridline infers starter from snaps, label:
+
+Projected starter
+
+If uncertainty exists, show:
+
+Starter uncertain
+
+Do not imply certainty when evidence conflicts.
+
+TASK 4 — MATCHUP FOUNDATION
+
+For WR and CB groups, include a UI structure that can later support:
+
+WR
+vs
+Projected CB
+
+But for this task only display the pairing if Task C provides an explicitly supported projected matchup field.
+
+Otherwise show:
+
+Matchup projection not yet available
+
+Do not fabricate one.
+
+TASK 5 — EXPANDABLE PLAYER DETAILS
+
+Allow expansion to show, where available:
+
+- recent snap share
+- depth rank
+- injury status
+- practice status
+- starter confidence
+- source/evidence summary
+
+Do not show raw JSON or technical source details.
+
+TASK 6 — ADMIN DEPTH AUDIT
+
+Add an Admin-only depth audit view showing:
+
+- Sleeper depth signal
+- Gridline mapped player
+- nflverse recent snaps
+- ESPN injury status
+- final interpretation
+- confidence
+- conflict flag
+
+TASK 7 — RESPONSIVE QA
+
+Verify:
+
+Desktop ~1440px
+Mobile ~390px
+
+No:
+- overflow
+- clipping
+- overlapping
+- giant tables
+- broken navigation
+
+TASK 8 — FALLBACK STATES
+
+Use polished states:
+
+- Depth data updating
+- Player mapping pending
+- Starter uncertain
+- Injury status unavailable
+- Matchup projection not yet available
+
+FINAL REPORT
+
+Return:
+
+1. Game Detail UI status
+2. mobile status
+3. depth coverage visible
+4. injury status visible
+5. inferred vs published labeling
+6. Admin audit status
+7. console/network errors
+8. whether a publish is required
+9. confirmation no production model behavior changed

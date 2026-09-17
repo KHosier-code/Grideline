@@ -470,6 +470,44 @@ export const dataSyncRunsTable = pgTable("data_sync_runs", {
 });
 
 /**
+ * Point-in-time rows from Sleeper's published NFL players feed. Rows are
+ * append-only evidence: an unchanged player payload is deduplicated by its
+ * source hash, while later changes create a new immutable row.
+ */
+export const sleeperPlayerSnapshotsTable = pgTable("sleeper_player_snapshots", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  snapshotId: text("snapshot_id").notNull(),
+  capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+  sourceTimestamp: timestamp("source_timestamp", { withTimezone: true }),
+  source: text("source").notNull().default("sleeper"),
+  sleeperPlayerId: text("sleeper_player_id").notNull(),
+  fullName: text("full_name"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  team: text("team"),
+  position: text("position"),
+  fantasyPositions: jsonb("fantasy_positions").$type<string[]>().notNull().default([]),
+  depthChartPosition: text("depth_chart_position"),
+  depthChartOrder: integer("depth_chart_order"),
+  status: text("status"),
+  injuryStatus: text("injury_status"),
+  practiceParticipation: text("practice_participation"),
+  yearsExp: integer("years_exp"),
+  age: integer("age"),
+  providerIds: jsonb("provider_ids").$type<Record<string, unknown>>().notNull().default({}),
+  sourceHash: text("source_hash").notNull(),
+  sourceVersion: text("source_version"),
+}, (table) => [
+  unique("sleeper_player_snapshot_cycle_player_unique").on(
+    table.snapshotId,
+    table.sleeperPlayerId,
+  ),
+  index("sleeper_player_snapshots_captured_idx").on(table.capturedAt, table.id),
+  index("sleeper_player_snapshots_player_captured_idx").on(table.sleeperPlayerId, table.capturedAt),
+  index("sleeper_player_snapshots_team_idx").on(table.team, table.capturedAt),
+]);
+
+/**
  * Durable scheduler state. A row represents one recurring feed/slot rather
  * than one process, so a restart can continue from the persisted nextRunAt
  * and two server processes cannot both claim the same occurrence. The
