@@ -10,6 +10,7 @@ import { ConsumerLoading, ConsumerMessage, metric } from './consumer-ui';
 import { ResponsiveContainer, LineChart, Line, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import { AlertTriangle, Info, ChevronDown, ArrowDown, ArrowUp, ArrowUpDown, FilterX, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { sortUsagePlayers, usageChartData, type UsageSortColumn } from '../../lib/consumer-usage';
+import { trackEvent } from '../../lib/analytics';
 
 type SortCol = UsageSortColumn;
 type SortDir = 'asc' | 'desc';
@@ -118,15 +119,55 @@ export default function ConsumerUsage() {
   );
 
   function handleSort(col: SortCol) {
+    const direction: SortDir = sortCol === col
+      ? (sortDir === 'asc' ? 'desc' : 'asc')
+      : 'desc';
+
+    trackEvent('usage_sort_changed', {
+      column: col,
+      direction,
+    });
+
     if (sortCol === col) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+      setSortDir(direction);
     } else {
       setSortCol(col);
-      setSortDir('desc');
+      setSortDir(direction);
     }
   }
 
+  function handleFilterChange(filter: 'team' | 'position' | 'window', value: string) {
+    trackEvent('usage_filter_changed', {
+      filter,
+      value: value || 'all',
+    });
+  }
+
+  function handleGameFilterBlur() {
+    trackEvent('usage_filter_changed', {
+      filter: 'game',
+      value: game.trim() ? 'specific_game' : 'all',
+    });
+  }
+
+  function handleRowToggle(player: ConsumerUsagePlayer, rowId: string, isExpanded: boolean) {
+    trackEvent('usage_row_toggled', {
+      action: isExpanded ? 'collapse' : 'expand',
+      position: player.position ?? 'unknown',
+      trend: player.trend,
+      coverage: player.sourceCoverage.partialReasons.length > 0 ? 'partial' : 'complete',
+      window: windowFilter,
+    });
+    setExpandedId(isExpanded ? null : rowId);
+  }
+
   const handleReset = () => {
+    trackEvent('usage_filters_reset', {
+      had_team: Boolean(team),
+      had_position: Boolean(position),
+      had_game: Boolean(game.trim()),
+      window: windowFilter,
+    });
     setTeam('');
     setPosition('');
     setWindowFilter('last5');
@@ -147,7 +188,10 @@ export default function ConsumerUsage() {
         <div className="flex flex-col sm:flex-row gap-3 items-end bg-card p-4 rounded-xl border border-border shadow-sm w-full md:w-auto">
           <label className="flex flex-col gap-1.5 w-full sm:w-24">
             <span className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground font-semibold">Team</span>
-            <select className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow" value={team} onChange={e => setTeam(e.target.value)}>
+            <select className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow" value={team} onChange={e => {
+              setTeam(e.target.value);
+              handleFilterChange('team', e.target.value);
+            }}>
               <option value="">All</option>
               {query.data?.availableTeams.map(({ teamId, abbreviation }) => (
                 <option key={teamId} value={abbreviation}>{abbreviation}</option>
@@ -156,7 +200,10 @@ export default function ConsumerUsage() {
           </label>
           <label className="flex flex-col gap-1.5 w-full sm:w-24">
             <span className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground font-semibold">Position</span>
-            <select className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow" value={position} onChange={e => setPosition(e.target.value)}>
+            <select className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow" value={position} onChange={e => {
+              setPosition(e.target.value);
+              handleFilterChange('position', e.target.value);
+            }}>
               <option value="">All</option>
               <option value="QB">QB</option>
               <option value="RB">RB</option>
@@ -166,7 +213,10 @@ export default function ConsumerUsage() {
           </label>
           <label className="flex flex-col gap-1.5 w-full sm:w-32">
             <span className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground font-semibold">Window</span>
-            <select className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow" value={windowFilter} onChange={e => setWindowFilter(e.target.value)}>
+            <select className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow" value={windowFilter} onChange={e => {
+              setWindowFilter(e.target.value);
+              handleFilterChange('window', e.target.value);
+            }}>
               <option value="last3">Last 3 games</option>
               <option value="last5">Last 5 games</option>
               <option value="last8">Last 8 games</option>
@@ -175,7 +225,7 @@ export default function ConsumerUsage() {
           </label>
           <label className="flex flex-col gap-1.5 w-full sm:w-32">
             <span className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground font-semibold">Game ID</span>
-            <input type="text" placeholder="Optional" className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow placeholder:text-muted-foreground/50" value={game} onChange={e => setGame(e.target.value)} />
+            <input type="text" placeholder="Optional" className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow placeholder:text-muted-foreground/50" value={game} onChange={e => setGame(e.target.value)} onBlur={handleGameFilterBlur} />
           </label>
           <button
             className="h-9 px-4 bg-secondary text-secondary-foreground hover:bg-secondary/80 text-sm rounded-md transition-colors font-medium inline-flex items-center justify-center gap-2 border border-border w-full sm:w-auto"
@@ -246,7 +296,7 @@ export default function ConsumerUsage() {
                   return (
                     <React.Fragment key={rowId}>
                       <tr
-                        onClick={() => setExpandedId(isExpanded ? null : rowId)}
+                        onClick={() => handleRowToggle(player, rowId, isExpanded)}
                         className={`cursor-pointer group transition-colors ${isExpanded ? 'bg-accent/[0.04]' : 'hover:bg-muted/30'}`}
                       >
                         <td className="sticky left-0 z-10 bg-card px-4 py-3.5 whitespace-nowrap group-hover:bg-muted">

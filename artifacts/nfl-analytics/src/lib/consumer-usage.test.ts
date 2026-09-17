@@ -38,3 +38,12 @@ test("usage page renders server-validated filters and responsive expandable tabl
   assert.match(source, /sourceCoverage\.includedGames/);
   assert.match(source, /colSpan=\{11\}/);
 });
+
+test("usage interactions emit bounded analytics without player or game identifiers", () => {
+  const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
+  assert.match(source, /usage_filter_changed/);
+  assert.match(source, /usage_sort_changed/);
+  assert.match(source, /usage_row_toggled/);
+  assert.match(source, /value: game\.trim\(\) \? 'specific_game' : 'all'/);
+  assert.doesNotMatch(source, /trackEvent\([^)]*playerId/s);
+});
