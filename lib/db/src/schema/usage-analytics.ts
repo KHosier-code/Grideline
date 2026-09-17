@@ -1,4 +1,4 @@
-import { boolean, index, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
  * Usage Lab events contain only allow-listed interaction dimensions and are
@@ -28,5 +28,24 @@ export const usageAnalyticsEventsTable = pgTable("usage_analytics_events", {
   index("usage_analytics_events_name_created_idx").on(table.eventName, table.createdAt),
 ]);
 
+/**
+ * There is one retention record for the Usage Lab event store. It is updated
+ * by the persistent worker after each cleanup attempt; API processes only
+ * read it for administrator diagnostics.
+ */
+export const usageAnalyticsRetentionTable = pgTable("usage_analytics_retention", {
+  id: integer("id").primaryKey().default(1),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+  lastAttemptStatus: text("last_attempt_status"),
+  lastSuccessfulAt: timestamp("last_successful_at", { withTimezone: true }),
+  lastSuccessfulDeletedEvents: integer("last_successful_deleted_events"),
+  lastSuccessfulBatches: integer("last_successful_batches"),
+  lastSuccessfulCutoff: timestamp("last_successful_cutoff", { withTimezone: true }),
+  latestError: text("latest_error"),
+  latestErrorAt: timestamp("latest_error_at", { withTimezone: true }),
+});
+
 export type UsageAnalyticsEvent = typeof usageAnalyticsEventsTable.$inferSelect;
 export type InsertUsageAnalyticsEvent = typeof usageAnalyticsEventsTable.$inferInsert;
+export type UsageAnalyticsRetention = typeof usageAnalyticsRetentionTable.$inferSelect;
+export type InsertUsageAnalyticsRetention = typeof usageAnalyticsRetentionTable.$inferInsert;

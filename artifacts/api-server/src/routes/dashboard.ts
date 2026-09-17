@@ -21,6 +21,7 @@ import { getProductionModelStatus } from "../lib/live-predictions";
 import { weatherHealth } from "../lib/weather";
 import { requireAdmin } from "../middlewares/admin";
 import { getModelArtifactImmutabilityStatus } from "../lib/phase61-release";
+import { getUsageAnalyticsRetentionHealth } from "../lib/usage-analytics-retention";
 
 const router: IRouter = Router();
 
@@ -67,6 +68,7 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
   const scheduler = await getSchedulerHealth();
   const features = await getPregameFeatureHealth();
   const modelImmutability = await getModelArtifactImmutabilityStatus();
+  const usageAnalyticsRetention = await getUsageAnalyticsRetentionHealth();
   const schedulerJob = (provider: string) =>
     scheduler.jobs
       .filter((job) => job.provider === provider && job.enabled)
@@ -158,6 +160,30 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
           recentRuns: scheduler.runs.slice(0, 40),
           note: scheduler.note,
         },
+      },
+      {
+        provider: "usage-analytics-retention",
+        label: "Usage Lab analytics retention",
+        status: usageAnalyticsRetention.status === "healthy"
+          ? "current"
+          : usageAnalyticsRetention.status === "failed"
+            ? "unavailable"
+            : "stale",
+        detail: usageAnalyticsRetention.status === "failed"
+          ? `The latest Usage Lab retention cleanup failed: ${usageAnalyticsRetention.latestError ?? "error details unavailable"}.`
+          : usageAnalyticsRetention.status === "healthy"
+            ? usageAnalyticsRetention.lastSuccessfulDeletedEvents === 0
+              ? "The latest Usage Lab retention cleanup completed successfully; no expired rows were found."
+              : `The latest Usage Lab retention cleanup completed successfully and deleted ${usageAnalyticsRetention.lastSuccessfulDeletedEvents} expired row${usageAnalyticsRetention.lastSuccessfulDeletedEvents === 1 ? "" : "s"}.`
+            : "The first Usage Lab retention cleanup is pending.",
+        schedule: "Every 24 hours; worker-owned",
+        retryPolicy: "A failed cleanup is recorded and retried on the next daily tick.",
+        lastUpdated: usageAnalyticsRetention.lastAttemptAt,
+        nextUpdate: null,
+        requestsToday: 0,
+        requestsThisMonth: 0,
+        remainingQuota: "Local database",
+        metadata: usageAnalyticsRetention,
       },
       {
         provider: "espn",
