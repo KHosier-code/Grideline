@@ -92,6 +92,46 @@ test("database cleanup removes only expired events and preserves the seven-day r
   }
 });
 
+test("database cleanup removes expired events across multiple batches", async () => {
+  const now = new Date("2026-09-17T12:00:00.000Z");
+  const eventName = `retention-large-integration-${randomUUID()}`;
+  const cutoff = usageAnalyticsRetentionCutoff(now);
+  const expiredEventCount = 1_001;
+  const expiredEventTime = new Date(cutoff.getTime() - 1);
+  const freshEventTime = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+  await db.insert(usageAnalyticsEventsTable).values([
+    ...Array.from({ length: expiredEventCount }, (_, index) => ({
+      eventName,
+      value: `expired-${index}`,
+      createdAt: expiredEventTime,
+    })),
+    { eventName, value: "fresh", createdAt: freshEventTime },
+  ]);
+
+  try {
+    const result = await deleteExpiredUsageAnalyticsEvents(now);
+    assert.equal(result.deletedEvents, expiredEventCount);
+    assert.equal(result.batches, 2);
+
+    const remaining = await db.select({
+      value: usageAnalyticsEventsTable.value,
+      createdAt: usageAnalyticsEventsTable.createdAt,
+    }).from(usageAnalyticsEventsTable)
+      .where(eq(usageAnalyticsEventsTable.eventName, eventName));
+
+    assert.deepEqual(
+      remaining.map(({ value, createdAt }) => ({
+        value,
+        createdAt: createdAt.toISOString(),
+      })),
+      [{ value: "fresh", createdAt: freshEventTime.toISOString() }],
+    );
+  } finally {
+    await db.delete(usageAnalyticsEventsTable).where(eq(usageAnalyticsEventsTable.eventName, eventName));
+  }
+});
+
 test("worker cleanup failures are contained and retried on the next tick", async () => {
   let attempts = 0;
   const stop = startUsageAnalyticsRetention({
