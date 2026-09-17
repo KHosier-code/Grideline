@@ -6,6 +6,7 @@ import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } 
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { LineMovementExperience } from '../../components/LineMovementExperience';
+import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -51,6 +52,7 @@ export default function ConsumerGameDetail() {
         <details><summary><ShieldCheck /> Analysis drivers</summary><div>{game.analysis.drivers.length ? <ul>{game.analysis.drivers.map(driver => <li key={driver}>{driver}</li>)}</ul> : <p>No verified analysis drivers are available for this matchup.</p>}</div></details>
       </div>
     </section>
+    <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
     <LineMovementExperience movement={game.movement} />
     <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} />
     <ConsumerDepthChart context={game.context} />

@@ -723,7 +723,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/ConsumerGame"
         - type: object
-          required: [weather, movement, context, keyPlayers, analysis]
+          required: [weather, movement, context, keyPlayers, matchupBoard, analysis]
           properties:
             weather: { $ref: "#/components/schemas/ConsumerWeather" }
             movement: { $ref: "#/components/schemas/ConsumerMovement" }
@@ -732,6 +732,7 @@ components:
               type: array
               maxItems: 20
               items: { $ref: "#/components/schemas/ConsumerKeyPlayer" }
+            matchupBoard: { $ref: "#/components/schemas/ConsumerMatchupBoard" }
             analysis:
               type: object
               required: [drivers, availability]
@@ -744,6 +745,55 @@ components:
                     weather: { type: ["string", "null"] }
                     personnel: { type: ["string", "null"] }
                     movement: { type: ["string", "null"] }
+    ConsumerMatchupMetric:
+      type: object
+      required: [label, homeValue, awayValue, unit, higherIsBetter]
+      properties:
+        label: { type: string }
+        homeValue: { type: ["number", "null"] }
+        awayValue: { type: ["number", "null"] }
+        unit: { type: string, enum: [rate, seconds, score] }
+        higherIsBetter: { type: boolean }
+    ConsumerMatchupAssessment:
+      type: object
+      required: [category, title, edge, edgeLabel, confidence, strength, metrics, explanation, coverage, limitations]
+      properties:
+        category: { type: string }
+        title: { type: string }
+        edge: { type: string, enum: [home, away, neutral, insufficient] }
+        edgeLabel: { type: string }
+        confidence: { type: string, enum: [high, medium, low, unavailable] }
+        strength: { type: ["number", "null"] }
+        metrics: { type: array, items: { $ref: "#/components/schemas/ConsumerMatchupMetric" } }
+        explanation: { type: string }
+        coverage: { type: string }
+        limitations: { type: array, items: { type: string } }
+    ConsumerMatchupSummaryItem:
+      type: object
+      required: [category, title, edge, label, evidence, caveat]
+      properties:
+        category: { type: string }
+        title: { type: string }
+        edge: { type: string, enum: [home, away] }
+        label: { type: string }
+        evidence: { type: string }
+        caveat: { type: string }
+    ConsumerMatchupBoard:
+      type: object
+      required: [status, sourceCutoff, completeness, sources, methodology, summary, assessments]
+      properties:
+        status: { type: string, enum: [available, partial, unavailable] }
+        sourceCutoff: { type: string, format: date-time }
+        completeness:
+          type: object
+          required: [supportedCategories, totalCategories]
+          properties:
+            supportedCategories: { type: integer }
+            totalCategories: { type: integer }
+        sources: { type: array, items: { type: string } }
+        methodology: { type: string }
+        summary: { type: array, maxItems: 3, items: { $ref: "#/components/schemas/ConsumerMatchupSummaryItem" } }
+        assessments: { type: array, minItems: 10, maxItems: 10, items: { $ref: "#/components/schemas/ConsumerMatchupAssessment" } }
     ConsumerWeather:
       type: object
       required: [available, summary, temperature, sustainedWind, windGust, precipitationProbability, precipitationType, humidity, indoorOutdoor, roofStatus, validTime, message]
@@ -804,16 +854,18 @@ components:
         message: { type: ["string", "null"] }
     ConsumerContextTeam:
       type: object
-      required: [side, name, abbreviation, qbCertainty, qbChange, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, depth]
+      required: [side, name, abbreviation, qbCertainty, qbChange, qbEvidenceAvailable, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, injuryEvidenceAvailable, depth]
       properties:
         side: { type: string, enum: [home, away] }
         name: { type: string }
         abbreviation: { type: string }
         qbCertainty: { type: ["number", "null"] }
         qbChange: { type: ["boolean", "null"] }
+        qbEvidenceAvailable: { type: boolean }
         personnelCompleteness: { type: ["number", "null"] }
         offenseInjuryImpact: { type: ["number", "null"] }
         defenseInjuryImpact: { type: ["number", "null"] }
+        injuryEvidenceAvailable: { type: boolean }
         depth:
           type: array
           maxItems: 30

@@ -18,3 +18,9 @@ Future-only repair must still iterate completed games to accumulate chronologica
 **Why:** Filtering completed games before history accumulation produces empty future vectors, while application timestamps or conflict-only guards can still admit late inserts.
 
 **How to apply:** Let completed sources advance in-memory history, emit only future targets, set generation time from the database clock, and require both source cutoff and generation time to be strictly before kickoff.
+
+Consumer-facing retrospective assessments must read immutable, game/team-keyed pregame feature rows and their per-metric sample counts, not mutable normalized source rows filtered by their latest ingestion timestamp.
+
+**Why:** Source upserts can advance ingestion timestamps long after a game, making valid historical evidence disappear or changing what a retrospective cutoff appears to contain.
+
+**How to apply:** Reuse the immutable pregame row for the requested game, enforce a strictly pre-kickoff source cutoff, and derive availability and confidence from each metric's persisted sample count.

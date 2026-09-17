@@ -9,6 +9,7 @@ import type { ConsumerContext } from './consumerContext';
 import type { ConsumerGame } from './consumerGame';
 import type { ConsumerGameDetailAnalysis } from './consumerGameDetailAnalysis';
 import type { ConsumerKeyPlayer } from './consumerKeyPlayer';
+import type { ConsumerMatchupBoard } from './consumerMatchupBoard';
 import type { ConsumerMovement } from './consumerMovement';
 import type { ConsumerWeather } from './consumerWeather';
 
@@ -18,5 +19,6 @@ export type ConsumerGameDetail = ConsumerGame & {
   context: ConsumerContext;
   /** @maxItems 20 */
   keyPlayers: ConsumerKeyPlayer[];
+  matchupBoard: ConsumerMatchupBoard;
   analysis: ConsumerGameDetailAnalysis;
 };

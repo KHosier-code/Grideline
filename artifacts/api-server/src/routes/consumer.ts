@@ -18,6 +18,7 @@ import {
   getPredictionPerformance,
 } from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
+import { buildConsumerMatchupBoard } from "../lib/consumer-matchups";
 
 const router: IRouter = Router();
 export const MAX_CONSUMER_GAMES = 100;
@@ -508,8 +509,9 @@ type PersistedContext = {
       evidence?: unknown;
       unavailableReason?: unknown;
     }>;
-    qb?: { starterCertainty?: unknown; starterChange?: unknown };
+    qb?: { starterCertainty?: unknown; starterChange?: unknown; projectedStarter?: unknown };
     injuries?: Record<string, { impactScore?: unknown }>;
+    injuryPlayers?: unknown[];
     personnelCompleteness?: unknown;
   }>;
 };
@@ -565,9 +567,11 @@ export function serializeContext(context: PersistedContext | null, homeTeamId: s
       abbreviation: typeof team?.abbreviation === "string" ? team.abbreviation : side === "home" ? "HOME" : "AWAY",
       qbCertainty: safeNumber(team?.qb?.starterCertainty),
       qbChange: typeof team?.qb?.starterChange === "boolean" ? team.qb.starterChange : null,
+      qbEvidenceAvailable: Boolean(team?.qb?.projectedStarter),
       personnelCompleteness: safeNumber(team?.personnelCompleteness),
       offenseInjuryImpact: safeNumber(team?.injuries?.offense?.impactScore),
       defenseInjuryImpact: safeNumber(team?.injuries?.defense?.impactScore),
+      injuryEvidenceAvailable: Array.isArray(team?.injuryPlayers) && team.injuryPlayers.length > 0,
       depth,
     };
   });
@@ -752,7 +756,7 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       return;
     }
     const sourceCutoff = game.kickoffTime
-      ? new Date(Math.min(Date.now(), new Date(game.kickoffTime).getTime()))
+      ? new Date(Math.min(Date.now(), new Date(game.kickoffTime).getTime() - 1))
       : new Date();
     const kickoff = game.kickoffTime ? new Date(game.kickoffTime) : null;
     const [gameRow] = await db.select({
@@ -774,7 +778,11 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
         .orderBy(desc(weatherForecastSnapshotsTable.fetchedAt), desc(weatherForecastSnapshotsTable.id))
         .limit(1),
       db.select({
+        teamId: pregameTeamFeaturesTable.teamId,
+        features: pregameTeamFeaturesTable.features,
+        sampleCounts: pregameTeamFeaturesTable.sampleCounts,
         featureAudit: pregameTeamFeaturesTable.featureAudit,
+        sourceCutoff: pregameTeamFeaturesTable.sourceCutoff,
       }).from(pregameTeamFeaturesTable)
         .where(and(
           eq(pregameTeamFeaturesTable.gameId, game.gameId),
@@ -814,8 +822,9 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
         .from(gamesTable).where(eq(gamesTable.season, game.season)),
     ]);
     const forecast = weather[0];
-    const context = (contextRows[0]?.featureAudit as Record<string, unknown> | undefined)
-      ?._personnel_context as PersistedContext | undefined;
+    const context = contextRows
+      .map((row) => (row.featureAudit as Record<string, unknown> | undefined)?._personnel_context)
+      .find(Boolean) as PersistedContext | undefined;
     const finalizedContext = serializeContext(context ?? null, gameRow?.homeTeamId ?? "", gameRow?.awayTeamId ?? "");
     const eligibleRecentGames = eligibleUsageGames(recentGames, game.season, sourceCutoff, game.gameId)
       .filter((candidate) => candidate.homeTeamId === gameRow.homeTeamId || candidate.homeTeamId === gameRow.awayTeamId
@@ -880,6 +889,18 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
         };
       });
     const movement = serializeMovement(movementRows, kickoff);
+    const teamEvidence = (teamId: string) => {
+      const row = contextRows.find((candidate) => candidate.teamId === teamId);
+      return row ? { features: row.features, sampleCounts: row.sampleCounts } : null;
+    };
+    const matchupBoard = buildConsumerMatchupBoard({
+      homeEvidence: teamEvidence(gameRow.homeTeamId),
+      awayEvidence: teamEvidence(gameRow.awayTeamId),
+      personnelTeams: finalizedContext.teams,
+      homeName: game.matchup.home.abbreviation,
+      awayName: game.matchup.away.abbreviation,
+      sourceCutoff,
+    });
     res.json({
       ...game,
       weather: forecast ? {
@@ -912,6 +933,7 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       movement,
       context: finalizedContext,
       keyPlayers,
+      matchupBoard,
       analysis: {
         drivers: finalizedContext.drivers,
         availability: {

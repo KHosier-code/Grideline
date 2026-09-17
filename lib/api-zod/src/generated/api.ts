@@ -1103,6 +1103,11 @@ export const getConsumerGameResponseTwoContextProjectedMatchupsMax = 12;
 
 export const getConsumerGameResponseTwoKeyPlayersMax = 20;
 
+export const getConsumerGameResponseTwoMatchupBoardSummaryMax = 3;
+
+export const getConsumerGameResponseTwoMatchupBoardAssessmentsMin = 10;
+export const getConsumerGameResponseTwoMatchupBoardAssessmentsMax = 10;
+
 
 
 export const GetConsumerGameResponse = zod.object({
@@ -1271,9 +1276,11 @@ export const GetConsumerGameResponse = zod.object({
   "abbreviation": zod.string(),
   "qbCertainty": zod.number().nullable(),
   "qbChange": zod.boolean().nullable(),
+  "qbEvidenceAvailable": zod.boolean(),
   "personnelCompleteness": zod.number().nullable(),
   "offenseInjuryImpact": zod.number().nullable(),
   "defenseInjuryImpact": zod.number().nullable(),
+  "injuryEvidenceAvailable": zod.boolean(),
   "depth": zod.array(zod.object({
   "name": zod.string(),
   "position": zod.string(),
@@ -1323,6 +1330,42 @@ export const GetConsumerGameResponse = zod.object({
   "source": zod.string()
 })
 })).max(getConsumerGameResponseTwoKeyPlayersMax),
+  "matchupBoard": zod.object({
+  "status": zod.enum(['available', 'partial', 'unavailable']),
+  "sourceCutoff": zod.coerce.date(),
+  "completeness": zod.object({
+  "supportedCategories": zod.number().int(),
+  "totalCategories": zod.number().int()
+}),
+  "sources": zod.array(zod.string()),
+  "methodology": zod.string(),
+  "summary": zod.array(zod.object({
+  "category": zod.string(),
+  "title": zod.string(),
+  "edge": zod.enum(['home', 'away']),
+  "label": zod.string(),
+  "evidence": zod.string(),
+  "caveat": zod.string()
+})).max(getConsumerGameResponseTwoMatchupBoardSummaryMax),
+  "assessments": zod.array(zod.object({
+  "category": zod.string(),
+  "title": zod.string(),
+  "edge": zod.enum(['home', 'away', 'neutral', 'insufficient']),
+  "edgeLabel": zod.string(),
+  "confidence": zod.enum(['high', 'medium', 'low', 'unavailable']),
+  "strength": zod.number().nullable(),
+  "metrics": zod.array(zod.object({
+  "label": zod.string(),
+  "homeValue": zod.number().nullable(),
+  "awayValue": zod.number().nullable(),
+  "unit": zod.enum(['rate', 'seconds', 'score']),
+  "higherIsBetter": zod.boolean()
+})),
+  "explanation": zod.string(),
+  "coverage": zod.string(),
+  "limitations": zod.array(zod.string())
+})).min(getConsumerGameResponseTwoMatchupBoardAssessmentsMin).max(getConsumerGameResponseTwoMatchupBoardAssessmentsMax)
+}),
   "analysis": zod.object({
   "drivers": zod.array(zod.string()),
   "availability": zod.object({

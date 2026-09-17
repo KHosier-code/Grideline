@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   assertRetainedPersonnelComparisonFingerprint,
   assertPersonnelChronology,
   buildPersonnelComparisonPreflight,
   buildPersonnelComparisonReport,
+  comparablePersonnelComparisonReport,
   pairedUncertainty,
   personnelComparisonFingerprint,
   personnelVector,
@@ -156,4 +160,15 @@ test("preflight separates missing rows from derived zeroes and blocks chronology
   }]);
   assert.equal(invalid.status, "block");
   assert.equal(invalid.chronology.valid, false);
+});
+
+test("retained report fingerprint ignores execution-only preflight metadata", () => {
+  const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
+  const retained = JSON.parse(readFileSync(resolve(repositoryRoot, "reports/gridline-2025-personnel-comparison.json"), "utf8"));
+  const current = { ...retained, preflight: { status: "warn", modelFittingPerformed: false } };
+  assert.deepEqual(comparablePersonnelComparisonReport(current), retained);
+  assert.equal(
+    assertRetainedPersonnelComparisonFingerprint(current, retained),
+    personnelComparisonFingerprint(retained),
+  );
 });

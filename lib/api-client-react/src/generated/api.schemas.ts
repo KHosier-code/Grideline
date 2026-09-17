@@ -394,12 +394,14 @@ export interface ConsumerContextTeam {
   qbCertainty: number | null;
   /** @nullable */
   qbChange: boolean | null;
+  qbEvidenceAvailable: boolean;
   /** @nullable */
   personnelCompleteness: number | null;
   /** @nullable */
   offenseInjuryImpact: number | null;
   /** @nullable */
   defenseInjuryImpact: number | null;
+  injuryEvidenceAvailable: boolean;
   /** @maxItems 30 */
   depth: ConsumerDepthPlayer[];
 }
@@ -473,12 +475,112 @@ export interface ConsumerKeyPlayer {
   currentPersonnel: ConsumerKeyPlayerCurrentPersonnel;
 }
 
+export type ConsumerMatchupBoardStatus = typeof ConsumerMatchupBoardStatus[keyof typeof ConsumerMatchupBoardStatus];
+
+
+export const ConsumerMatchupBoardStatus = {
+  available: 'available',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerMatchupSummaryItemEdge = typeof ConsumerMatchupSummaryItemEdge[keyof typeof ConsumerMatchupSummaryItemEdge];
+
+
+export const ConsumerMatchupSummaryItemEdge = {
+  home: 'home',
+  away: 'away',
+} as const;
+
+export interface ConsumerMatchupSummaryItem {
+  category: string;
+  title: string;
+  edge: ConsumerMatchupSummaryItemEdge;
+  label: string;
+  evidence: string;
+  caveat: string;
+}
+
+export type ConsumerMatchupAssessmentEdge = typeof ConsumerMatchupAssessmentEdge[keyof typeof ConsumerMatchupAssessmentEdge];
+
+
+export const ConsumerMatchupAssessmentEdge = {
+  home: 'home',
+  away: 'away',
+  neutral: 'neutral',
+  insufficient: 'insufficient',
+} as const;
+
+export type ConsumerMatchupAssessmentConfidence = typeof ConsumerMatchupAssessmentConfidence[keyof typeof ConsumerMatchupAssessmentConfidence];
+
+
+export const ConsumerMatchupAssessmentConfidence = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerMatchupMetricUnit = typeof ConsumerMatchupMetricUnit[keyof typeof ConsumerMatchupMetricUnit];
+
+
+export const ConsumerMatchupMetricUnit = {
+  rate: 'rate',
+  seconds: 'seconds',
+  score: 'score',
+} as const;
+
+export interface ConsumerMatchupMetric {
+  label: string;
+  /** @nullable */
+  homeValue: number | null;
+  /** @nullable */
+  awayValue: number | null;
+  unit: ConsumerMatchupMetricUnit;
+  higherIsBetter: boolean;
+}
+
+export interface ConsumerMatchupAssessment {
+  category: string;
+  title: string;
+  edge: ConsumerMatchupAssessmentEdge;
+  edgeLabel: string;
+  confidence: ConsumerMatchupAssessmentConfidence;
+  /** @nullable */
+  strength: number | null;
+  metrics: ConsumerMatchupMetric[];
+  explanation: string;
+  coverage: string;
+  limitations: string[];
+}
+
+export type ConsumerMatchupBoardCompleteness = {
+  supportedCategories: number;
+  totalCategories: number;
+};
+
+export interface ConsumerMatchupBoard {
+  status: ConsumerMatchupBoardStatus;
+  sourceCutoff: string;
+  completeness: ConsumerMatchupBoardCompleteness;
+  sources: string[];
+  methodology: string;
+  /** @maxItems 3 */
+  summary: ConsumerMatchupSummaryItem[];
+  /**
+     * @minItems 10
+     * @maxItems 10
+     */
+  assessments: ConsumerMatchupAssessment[];
+}
+
 export type ConsumerGameDetail = ConsumerGame & {
   weather: ConsumerWeather;
   movement: ConsumerMovement;
   context: ConsumerContext;
   /** @maxItems 20 */
   keyPlayers: ConsumerKeyPlayer[];
+  matchupBoard: ConsumerMatchupBoard;
   analysis: ConsumerGameDetailAnalysis;
 };
 

@@ -430,13 +430,15 @@ test("consumer context is concise and excludes raw personnel evidence", () => {
           injuryStatus: { gameStatus: "Questionable", practiceStatus: "Limited" },
           recentStarterEvidence: ["Listed first on the latest supported depth chart."],
         }],
-        qb: { starterCertainty: 81, starterChange: true },
+        qb: { starterCertainty: 81, starterChange: true, projectedStarter: { playerId: "qb-home" } },
         injuries: { offense: { impactScore: 30 }, defense: { impactScore: 8 } },
+        injuryPlayers: [{ playerId: "injured-home" }],
         personnelCompleteness: 90,
       },
       away: {
-        qb: { starterCertainty: 75, starterChange: false },
+        qb: { starterCertainty: 75, starterChange: false, projectedStarter: { playerId: "qb-away" } },
         injuries: { offense: { impactScore: 5 }, defense: { impactScore: 28 } },
+        injuryPlayers: [{ playerId: "injured-away" }],
         personnelCompleteness: 85,
       },
     },
@@ -446,10 +448,35 @@ test("consumer context is concise and excludes raw personnel evidence", () => {
   assert.equal(serialized.teams.length, 2);
   assert.equal(serialized.teams[0]?.depth[0]?.name, "Safe Player");
   assert.equal(serialized.teams[0]?.depth[0]?.role, "published_starter");
+  assert.equal(serialized.teams[0]?.qbEvidenceAvailable, true);
+  assert.equal(serialized.teams[0]?.injuryEvidenceAvailable, true);
   assert.deepEqual(serialized.projectedMatchups, []);
   assert.equal(serialized.matchupMessage, "Matchup projection not yet available.");
   assert.ok(serialized.drivers.length <= 4);
   assert.doesNotMatch(JSON.stringify(serialized), /playerId|sourceUrl|featureAudit|modelVersion|unavailableReasons/);
+});
+
+test("consumer context preserves absence flags for derived personnel zeroes", () => {
+  const serialized = serializeContext({
+    teams: {
+      home: {
+        qb: { starterCertainty: 0, starterChange: false },
+        injuries: { offense: { impactScore: 0 }, defense: { impactScore: 0 } },
+        injuryPlayers: [],
+        personnelCompleteness: 0,
+      },
+      away: {
+        qb: { starterCertainty: 75, starterChange: false, projectedStarter: { playerId: "qb-away" } },
+        injuries: { offense: { impactScore: 8 }, defense: { impactScore: 4 } },
+        injuryPlayers: [{ playerId: "injured-away" }],
+        personnelCompleteness: 80,
+      },
+    },
+  }, "home", "away");
+  assert.equal(serialized.teams[0]?.qbEvidenceAvailable, false);
+  assert.equal(serialized.teams[0]?.injuryEvidenceAvailable, false);
+  assert.equal(serialized.teams[1]?.qbEvidenceAvailable, true);
+  assert.equal(serialized.teams[1]?.injuryEvidenceAvailable, true);
 });
 
 test("consumer performance is whitelisted and matches generated response contracts", () => {
@@ -549,6 +576,26 @@ test("generated contracts accept representative list, dashboard, detail, and una
     movement: serializeMovement([]),
     context: serializeContext(null, "home", "away"),
     keyPlayers: [],
+    matchupBoard: {
+      status: "unavailable" as const,
+      sourceCutoff: "2026-09-20T16:59:59.999Z",
+      completeness: { supportedCategories: 0, totalCategories: 10 },
+      sources: ["nflverse team game stats"],
+      methodology: "Only persisted evidence available before the game cutoff is used.",
+      summary: [],
+      assessments: Array.from({ length: 10 }, (_, index) => ({
+        category: `category-${index}`,
+        title: `Category ${index}`,
+        edge: "insufficient" as const,
+        edgeLabel: "Insufficient data",
+        confidence: "unavailable" as const,
+        strength: null,
+        metrics: [],
+        explanation: "No supported comparison.",
+        coverage: "Verified evidence unavailable",
+        limitations: ["Evidence unavailable"],
+      })),
+    },
     analysis: {
       drivers: [],
       availability: {
@@ -582,6 +629,8 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.match(source, /\.orderBy\(asc\(sportsbookOddsTable\.capturedAt\), asc\(sportsbookOddsTable\.id\)\)/);
   assert.match(source, /preKickoffOnly:\s*true/);
   assert.match(source, /authoritativeGameKickoff:\s*true/);
+  assert.match(source, /new Date\(game\.kickoffTime\)\.getTime\(\) - 1/);
+  assert.match(source, /featureVersion,\s*PERSONNEL_CONTEXT_VERSION/);
   assert.match(source, /maxRows:\s*MAX_CONSUMER_SNAPSHOT_ROWS/);
   assert.match(source, /getPredictionPerformance\(MAX_CONSUMER_PERFORMANCE_ROWS\)/);
   assert.match(predictionSource, /predictionTimestamp\}\s*<\s*\$\{gamesTable\.kickoffTime/);
@@ -617,4 +666,16 @@ test("consumer market board keeps neutral language and 320px responsive controls
   assert.doesNotMatch(component, /\bbet\b|\bpick\b|\bedge\b|recommendation|expected return/i);
   assert.match(css, /@media \(max-width: 420px\)/);
   assert.match(css, /\.btn-icon \{[^}]*width: 44px;[^}]*height: 44px/);
+});
+
+test("consumer matchup board exposes accessible partial states without wide tables or betting claims", () => {
+  const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
+  const component = readFileSync(path.join(webRoot, "components/ConsumerMatchupBoard.tsx"), "utf8");
+  const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
+  assert.match(component, /Insufficient data|edgeLabel/);
+  assert.match(component, /These assessments do not change the Gridline prediction/);
+  assert.match(component, /<details/);
+  assert.doesNotMatch(component, /<table|\bbet\b|recommendation/i);
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.matchup-assessment summary/);
+  assert.match(css, /\.matchup-assessment \{[^}]*overflow: hidden/);
 });

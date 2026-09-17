@@ -501,9 +501,15 @@ export function personnelComparisonFingerprint(report: unknown) {
   return createHash("sha256").update(JSON.stringify(report)).digest("hex");
 }
 
+export function comparablePersonnelComparisonReport(report: unknown) {
+  if (!report || typeof report !== "object" || Array.isArray(report)) return report;
+  const { preflight: _executionMetadata, ...comparable } = report as Record<string, unknown>;
+  return comparable;
+}
+
 export function assertRetainedPersonnelComparisonFingerprint(report: unknown, retainedReport: unknown) {
-  const actual = personnelComparisonFingerprint(report);
-  const expected = personnelComparisonFingerprint(retainedReport);
+  const actual = personnelComparisonFingerprint(comparablePersonnelComparisonReport(report));
+  const expected = personnelComparisonFingerprint(comparablePersonnelComparisonReport(retainedReport));
   if (actual !== expected) {
     throw new Error(`Optimized personnel comparison fingerprint ${actual} does not match retained report ${expected}`);
   }

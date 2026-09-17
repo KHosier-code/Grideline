@@ -16,12 +16,14 @@ export interface ConsumerContextTeam {
   qbCertainty: number | null;
   /** @nullable */
   qbChange: boolean | null;
+  qbEvidenceAvailable: boolean;
   /** @nullable */
   personnelCompleteness: number | null;
   /** @nullable */
   offenseInjuryImpact: number | null;
   /** @nullable */
   defenseInjuryImpact: number | null;
+  injuryEvidenceAvailable: boolean;
   /** @maxItems 30 */
   depth: ConsumerDepthPlayer[];
 }
