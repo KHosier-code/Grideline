@@ -1,0 +1,180 @@
+POST-ROLLBACK PRODUCTION VERIFICATION
+
+Rollback target:
+579ed235d60f-2026-09-17T18:10:00.275Z
+
+Goal:
+Confirm Gridline is fully restored and ready to track DET @ BUF tonight using the known-good Phase 6.1 production path.
+
+Do not change code, models, database evidence, workers, or production configuration unless required only to restart the restored deployment.
+
+Verify:
+
+1. API
+- startup gate passes
+- API starts successfully
+- health endpoint succeeds
+
+2. Worker
+- worker starts successfully
+- scheduler running
+- leases healthy
+
+3. Consumer site
+- gridelineanalytics.com loads
+- Games works
+- DET @ BUF Game Detail works
+- no raw errors
+- authentication works
+- no challenger output exposed
+
+4. Phase 6.1
+For DET @ BUF confirm:
+- production spread model active
+- production moneyline model active
+- production totals model active
+- artifact verification passes
+- pregame-v3 schema
+- 27/27 features
+- zero missing required inputs
+- valid vector fingerprint
+
+5. Odds ingestion
+Confirm adaptive odds collection resumed.
+
+Report:
+- quota remaining
+- latest successful request
+- latest DraftKings observation
+- latest FanDuel observation
+- spread
+- total
+- moneyline
+- observation timestamps
+
+If a recovery request is necessary, make no more than ONE normal immediate sync.
+
+Do not backfill the outage.
+
+6. Canonical cutoff
+
+DET @ BUF kickoff:
+7:15 PM Central
+
+Canonical cutoff:
+6:45 PM Central
+2026-09-17 23:45 UTC
+
+Verify the original Phase 6.1 canonical workflow is scheduled and ready.
+
+Do NOT use Task #168 shadow tracking tonight.
+
+7. Canonical evidence requirements
+
+At cutoff preserve:
+- game ID
+- prediction timestamp
+- evaluation cutoff
+- Phase 6.1 model versions
+- predicted score
+- projected margin
+- projected total
+- moneyline probability
+- current market evidence
+- market timestamps
+- prices
+- data/input quality
+- weather/personnel references where supported
+
+Exactly one canonical record.
+
+Do not rewrite it after creation.
+
+8. Postgame grading
+
+Verify automatic grading is ready after authoritative FINAL status for:
+
+- final score
+- spread
+- total
+- moneyline
+- model prediction error
+- supported returns
+
+9. Task #168
+
+Mark:
+
+DEFERRED
+
+Do not attempt to reactivate it tonight.
+
+Record the blocker:
+production immutability runbook must be extended and reviewed before Task #168 is published again.
+
+FINAL REPORT
+
+Return:
+
+Rollback:
+PASS / FAIL
+
+Running build:
+[identifier]
+
+Startup gate:
+PASS / FAIL
+
+API:
+HEALTHY / OFFLINE
+
+Worker:
+HEALTHY / OFFLINE
+
+Consumer site:
+HEALTHY / OFFLINE
+
+Phase 6.1:
+AVAILABLE / UNAVAILABLE
+
+Feature readiness:
+[value]/27
+
+Missing inputs:
+[value]
+
+Odds worker:
+HEALTHY / UNHEALTHY
+
+Quota remaining:
+[value]
+
+Latest DK:
+[timestamp + markets]
+
+Latest FD:
+[timestamp + markets]
+
+Canonical cutoff:
+READY / NOT READY
+
+Postgame grading:
+READY / NOT READY
+
+Task #168:
+DEFERRED
+
+FINAL VERDICT:
+
+RESTORED — READY TO TRACK TONIGHT
+
+or
+
+NOT RESTORED
+
+Confirm:
+- Phase 6.1 unchanged
+- no challenger promoted
+- no startup gate bypassed
+- no historical evidence rewritten
+- no sportsbook observations fabricated
