@@ -17,6 +17,7 @@ import {
   oddsApiRequestsTable,
   predictionSnapshotsTable,
   schedulerJobsTable,
+  shadowModelCutoffsTable,
 } from "@workspace/db";
 import { syncEspnInjuries } from "./availability";
 import { sleeperSyncIntervalMs, syncSleeperPlayers } from "./sleeper";
@@ -36,6 +37,7 @@ import { freezeOfficialFinalPredictions, generateLivePredictions, generateWeekly
 import { trainPhase4Models } from "./modeling";
 import { logger } from "./logger";
 import { captureConfidenceResults } from "./confidence-capture";
+import { captureShadowModelsForCanonicalGame, gradeShadowModels } from "./shadow-models";
 
 export const FOOTBALL_TIMEZONE = "America/New_York";
 const LOCK_TTL_MS = 2 * 60 * 60 * 1000;
@@ -800,6 +802,10 @@ async function ensureKickoffJobs(now: Date) {
         eq(predictionSnapshotsTable.gameId, game.gameId),
         eq(predictionSnapshotsTable.officialFinalPrediction, true),
       )).limit(1);
+    const shadowRows = await db.select({ id: shadowModelCutoffsTable.id })
+      .from(shadowModelCutoffsTable)
+      .where(eq(shadowModelCutoffsTable.gameId, game.gameId));
+    const shadowComplete = shadowRows.length === 4;
     const missedRunAt = canonicalAt > now ? canonicalAt : now;
     const [existing] = await db.select().from(schedulerJobsTable)
       .where(eq(schedulerJobsTable.jobKey, jobKey)).limit(1);
@@ -810,10 +816,10 @@ async function ensureKickoffJobs(now: Date) {
         kind: "prediction-canonical",
         timezone: FOOTBALL_TIMEZONE,
         cadence: `one-shot canonical model + market evidence at 30m before kickoff (${game.gameId})`,
-        nextRunAt: official ? null : missedRunAt,
-        enabled: !official,
+        nextRunAt: official && shadowComplete ? null : missedRunAt,
+        enabled: !(official && shadowComplete),
       });
-    } else if (!official && (
+    } else if ((!official || !shadowComplete) && (
       !existing.enabled
       || !existing.nextRunAt
       || (!existing.lastRunAt && Math.abs(existing.nextRunAt.getTime() - canonicalAt.getTime()) > 60_000)
@@ -823,7 +829,7 @@ async function ensureKickoffJobs(now: Date) {
         enabled: true,
         updatedAt: now,
       }).where(eq(schedulerJobsTable.jobKey, jobKey));
-    } else if (official && existing.enabled) {
+    } else if (official && shadowComplete && existing.enabled) {
       await db.update(schedulerJobsTable).set({
         nextRunAt: null,
         enabled: false,
@@ -1201,6 +1207,8 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
       result = await generateLivePredictions();
     } else if (job.kind === "prediction-grade") {
       result = await gradeCompletedPredictions();
+      const shadowGrades = await gradeShadowModels();
+      result = { ...(result as Record<string, unknown>), shadowGrades };
       const completed = await db
         .select({ season: gamesTable.season, week: gamesTable.week })
         .from(gamesTable)
@@ -1240,11 +1248,15 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
         gameId: canonicalGameId,
         cutoffOverride: cutoffOverride && Number.isFinite(cutoffOverride.getTime()) ? cutoffOverride : undefined,
       });
+      if (canonicalGameId && cutoffOverride) {
+        const shadowCapture = await captureShadowModelsForCanonicalGame(canonicalGameId, cutoffOverride);
+        result = { ...(result as Record<string, unknown>), shadowCapture };
+      }
       // Missing/stale market evidence is a recoverable condition. Keep the
       // occurrence enabled and retry; only an actually frozen snapshot ends
       // this one-shot lifecycle.
       disable = job.kind === "prediction-freeze"
-        || (result as { frozen?: number }).frozen! > 0;
+        || (result as { shadowCapture?: { status?: string } }).shadowCapture?.status === "success";
     } else if (job.kind === "confidence-capture") {
       disable = true;
       const [captureRun] = await db.insert(dataSyncRunsTable).values({
@@ -1321,7 +1333,16 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
   const now = new Date();
   const definition = ALL_WEEKLY_SLOTS.find((item) => item.jobKey === job.jobKey);
   let nextRunAt: Date | null = null;
-  if (!disable && job.kind !== "injury-kickoff" && job.kind !== "confidence-capture") {
+  if (!disable && job.kind === "prediction-canonical") {
+    const gameId = job.jobKey.slice("prediction-canonical-".length);
+    const [game] = await db.select({ kickoffTime: gamesTable.kickoffTime }).from(gamesTable)
+      .where(eq(gamesTable.gameId, gameId)).limit(1);
+    if (game?.kickoffTime && now < game.kickoffTime) {
+      nextRunAt = new Date(Math.min(now.getTime() + 2 * 60_000, game.kickoffTime.getTime() - 1_000));
+    } else {
+      disable = true;
+    }
+  } else if (!disable && job.kind !== "injury-kickoff" && job.kind !== "confidence-capture") {
     nextRunAt = job.kind === "schedule"
       ? nextIntervalOccurrence(now)
       : job.kind === "nflverse"

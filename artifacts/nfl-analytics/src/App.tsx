@@ -77,6 +77,7 @@ import ConsumerTrends from '@/pages/consumer/ConsumerTrends';
 import ConsumerProps from '@/pages/consumer/ConsumerProps';
 import ConsumerUsage from '@/pages/consumer/ConsumerUsage';
 import UsageAnalytics from '@/pages/admin/UsageAnalytics';
+import ShadowResearch from '@/pages/admin/ShadowResearch';
 import { useAdminStatus } from '@/hooks/use-admin-status';
 import './index.css';
 
@@ -104,6 +105,7 @@ const navGroups = [
       { href: '/depth-charts', label: 'Depth charts', icon: ListFilter },
       { href: '/backtesting', label: 'Backtesting', icon: History },
       { href: '/model-lab', label: 'Model lab', icon: Sparkles },
+      { href: '/shadow-research', label: 'Shadow research', icon: Microscope },
     ],
   },
   {
@@ -2090,7 +2092,7 @@ function AdminRoutes() {
     <Route path="/admin/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices." preferred="odds" /></Route>
     <Route path="/admin/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route>
     <Route path="/admin/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route>
-    <Route path="/admin/backtesting" component={Backtesting} /><Route path="/admin/model-lab" component={ModelLab} /><Route path="/admin/performance" component={Performance} /><Route path="/admin/settings" component={SettingsPage} /><Route component={NotFound} />
+    <Route path="/admin/backtesting" component={Backtesting} /><Route path="/admin/model-lab" component={ModelLab} /><Route path="/admin/shadow-research" component={ShadowResearch} /><Route path="/admin/performance" component={Performance} /><Route path="/admin/settings" component={SettingsPage} /><Route component={NotFound} />
   </Switch></AdminOnly>;
 }
 

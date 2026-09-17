@@ -16,6 +16,10 @@ import {
 import { MARKET_EDGE_BUCKETS, americanOddsProfit, settleSpread, settleTotal, matchHistoricalMarketGame, parseNflDataMarketCsv, qualify2025MarketSource, sourceFingerprint, type HistoricalMarketQuote } from "./market-baseline";
 import { fetch2025MarketSource } from "./market-baseline-run";
 import { assertModelFittingAllowed } from "./model-runtime-policy";
+import {
+  buildCurrentComparableBaselineCandidate,
+  verifyComparableBaselineOrThrow,
+} from "./shadow-baseline-manifest";
 
 export const ADVANCED_CHALLENGER_VERSION = "advanced-challenger-v1";
 export const ADVANCED_TRAINING_SEASONS = [2021, 2022, 2023, 2024] as const;
@@ -545,6 +549,7 @@ async function loadRetainedReference() {
 
 export async function runAdvancedChallenger() {
   assertModelFittingAllowed("advanced challenger evaluation");
+  await verifyComparableBaselineOrThrow(await buildCurrentComparableBaselineCandidate());
   const retainedReference = await loadRetainedReference();
   const rows = await loadAdvancedRows("pregame-v3");
   const [baseline] = await db.select().from(marketBaselineRunsTable)

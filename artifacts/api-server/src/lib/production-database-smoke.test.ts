@@ -12,8 +12,9 @@ import {
 test("uses a metadata-free connectivity query", async () => {
   let query = "";
   await runProductionDatabaseSmokeCheck({
-      async query() {
-        return { rows: [] };
+      async query(text) {
+        query = text;
+        return { rows: [{ connection_check: 1 }] };
       },
   });
 
@@ -187,17 +188,31 @@ function immutableGuardPool(options: {
 }
 
 test("proves immutable model and evidence update/delete guards and rolls back all probes", async () => {
-  const { pool, queries } = immutableGuardPool({ unexpectedGuardError: "grade_update_guard" });
-    await assert.rejects(
-      verifyImmutablePredictionGuards(pool, "build-123"),
-      new RegExp(`absent or ineffective for ${missingGuard}`),
-    );
-    assert.deepEqual(queries.slice(-2), ["ROLLBACK", "RELEASE CLIENT"]);
-  }
+  const { pool, queries } = immutableGuardPool();
+  await verifyImmutablePredictionGuards(pool, "build-123");
+  assert.deepEqual(queries.slice(-2), ["ROLLBACK", "RELEASE CLIENT"]);
 });
 
-test("fails closed when an immutable prediction guard returns an unexpected error", async () => {
-  const { pool, queries } = immutableGuardPool({ unexpectedGuardError: "grade_update_guard" });
+test("fails closed when an immutable prediction guard is absent", async () => {
+  for (const missingGuard of [
+    "snapshot_update_guard",
+    "snapshot_delete_guard",
+    "grade_update_guard",
+    "grade_delete_guard",
+    "training_run_update_guard",
+    "training_run_delete_guard",
+    "evaluation_update_guard",
+    "evaluation_delete_guard",
+    "market_run_update_guard",
+    "market_run_delete_guard",
+    "market_event_update_guard",
+    "market_event_delete_guard",
+    "market_quote_update_guard",
+    "market_quote_delete_guard",
+    "weather_update_guard",
+    "weather_delete_guard",
+  ]) {
+    const { pool, queries } = immutableGuardPool({ missingGuard });
     await assert.rejects(
       verifyImmutablePredictionGuards(pool, "build-123"),
       new RegExp(`absent or ineffective for ${missingGuard}`),

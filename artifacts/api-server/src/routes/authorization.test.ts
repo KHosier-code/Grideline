@@ -40,6 +40,8 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     ["models.ts", '/models/promotions'],
     ["models.ts", '/models/drift'],
     ["models.ts", '/admin/lifecycle-verification'],
+    ["models.ts", '/admin/research/shadow-scoreboard'],
+    ["models.ts", '/admin/research/shadow-status'],
     ["predictions.ts", '/predictions/live'],
     ["predictions.ts", '/predictions/current-week'],
     ["predictions.ts", '/predictions/games/:gameId'],

@@ -9,6 +9,7 @@ import { PromotionSafetyGateError, runPromotionSafetyGate, type PromotionSafetyG
 import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 import { getLifecycleVerificationReport } from "../lib/lifecycle-verification";
 import { get2025MarketBaselineReport, run2025MarketBaseline } from "../lib/market-baseline-run";
+import { getShadowOperationalStatus, getShadowResearchScoreboard } from "../lib/shadow-models";
 
 const router: IRouter = Router();
 type TrainingRun = typeof modelTrainingRunsTable.$inferSelect;
@@ -251,6 +252,26 @@ router.get("/models/evaluations/2025-market-baseline", requireAdmin, async (req,
     ));
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "2025 market baseline report unavailable" });
+  }
+});
+
+router.get("/admin/research/shadow-scoreboard", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    const season = typeof req.query.season === "string" && /^\d{4}$/.test(req.query.season)
+      ? Number(req.query.season) : undefined;
+    res.json(await getShadowResearchScoreboard(season));
+  } catch (error) {
+    req.log.error({ error }, "Shadow research scoreboard failed");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Shadow research scoreboard unavailable" });
+  }
+});
+
+router.get("/admin/research/shadow-status", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    res.json(await getShadowOperationalStatus());
+  } catch (error) {
+    req.log.error({ error }, "Shadow operational status failed");
+    res.status(500).json({ error: error instanceof Error ? error.message : "Shadow operational status unavailable" });
   }
 });
 
