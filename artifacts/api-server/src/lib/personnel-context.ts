@@ -54,7 +54,8 @@ async function selectInBatches<T>(
   const unique = [...new Set(values)];
   const rows: T[] = [];
   for (let index = 0; index < unique.length; index += PERSONNEL_BATCH_SIZE) {
-    rows.push(...await select(unique.slice(index, index + PERSONNEL_BATCH_SIZE)));
+    const batchRows = await select(unique.slice(index, index + PERSONNEL_BATCH_SIZE));
+    for (const row of batchRows) rows.push(row);
   }
   return rows;
 }
