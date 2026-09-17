@@ -164,18 +164,22 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
       {
         provider: "usage-analytics-retention",
         label: "Usage Lab analytics retention",
-        status: usageAnalyticsRetention.status === "healthy"
-          ? "current"
-          : usageAnalyticsRetention.status === "failed"
-            ? "unavailable"
-            : "stale",
-        detail: usageAnalyticsRetention.status === "failed"
-          ? `The latest Usage Lab retention cleanup failed: ${usageAnalyticsRetention.latestError ?? "error details unavailable"}.`
+        status: usageAnalyticsRetention.cleanupState === "overdue"
+          ? "stale"
           : usageAnalyticsRetention.status === "healthy"
-            ? usageAnalyticsRetention.lastSuccessfulDeletedEvents === 0
-              ? "The latest Usage Lab retention cleanup completed successfully; no expired rows were found."
-              : `The latest Usage Lab retention cleanup completed successfully and deleted ${usageAnalyticsRetention.lastSuccessfulDeletedEvents} expired row${usageAnalyticsRetention.lastSuccessfulDeletedEvents === 1 ? "" : "s"}.`
-            : "The first Usage Lab retention cleanup is pending.",
+            ? "current"
+            : usageAnalyticsRetention.status === "failed"
+              ? "unavailable"
+              : "stale",
+        detail: usageAnalyticsRetention.cleanupState === "overdue"
+          ? `The Usage Lab retention cleanup is overdue; the worker was expected to attempt it by ${usageAnalyticsRetention.nextCleanupAt?.toISOString() ?? "an unknown time"}.`
+          : usageAnalyticsRetention.status === "failed"
+            ? `The latest Usage Lab retention cleanup failed: ${usageAnalyticsRetention.latestError ?? "error details unavailable"}.`
+            : usageAnalyticsRetention.status === "healthy"
+              ? usageAnalyticsRetention.lastSuccessfulDeletedEvents === 0
+                ? "The latest Usage Lab retention cleanup completed successfully; no expired rows were found."
+                : `The latest Usage Lab retention cleanup completed successfully and deleted ${usageAnalyticsRetention.lastSuccessfulDeletedEvents} expired row${usageAnalyticsRetention.lastSuccessfulDeletedEvents === 1 ? "" : "s"}.`
+              : "The first Usage Lab retention cleanup is pending.",
         schedule: "Every 24 hours; worker-owned",
         retryPolicy: "A failed cleanup is recorded and retried on the next daily tick.",
         lastUpdated: usageAnalyticsRetention.lastAttemptAt,

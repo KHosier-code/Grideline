@@ -12,6 +12,7 @@ const CLEANUP_INTERVAL_MS = DAY_MS;
 const DELETE_BATCH_SIZE = 1_000;
 
 export type UsageAnalyticsRetentionStatus = "healthy" | "failed" | "pending";
+export type UsageAnalyticsRetentionCleanupState = "pending" | "on_time" | "overdue";
 export type UsageAnalyticsRetentionResult = {
   deletedEvents: number;
   batches: number;
@@ -23,6 +24,7 @@ export type UsageAnalyticsRetentionHealth = {
   retentionDays: number;
   cleanupIntervalHours: number;
   nextCleanupAt: Date | null;
+  cleanupState: UsageAnalyticsRetentionCleanupState;
   status: UsageAnalyticsRetentionStatus;
   lastAttemptAt: Date | null;
   lastAttemptStatus: "success" | "failed" | null;
@@ -46,6 +48,14 @@ export function usageAnalyticsRetentionNextCleanupAt(
   intervalMs = CLEANUP_INTERVAL_MS,
 ): Date | null {
   return lastAttemptAt ? new Date(lastAttemptAt.getTime() + intervalMs) : null;
+}
+
+export function usageAnalyticsRetentionCleanupState(
+  nextCleanupAt: Date | null,
+  now = new Date(),
+): UsageAnalyticsRetentionCleanupState {
+  if (!nextCleanupAt) return "pending";
+  return nextCleanupAt.getTime() < now.getTime() ? "overdue" : "on_time";
 }
 
 function errorMessage(error: unknown) {
@@ -196,11 +206,13 @@ export async function getUsageAnalyticsRetentionHealth(): Promise<UsageAnalytics
   const lastAttemptStatus = record?.lastAttemptStatus === "success" || record?.lastAttemptStatus === "failed"
     ? record.lastAttemptStatus
     : null;
+  const nextCleanupAt = usageAnalyticsRetentionNextCleanupAt(record?.lastAttemptAt ?? null);
 
   return {
     retentionDays: USAGE_ANALYTICS_RETENTION_DAYS,
     cleanupIntervalHours: CLEANUP_INTERVAL_MS / (60 * 60 * 1000),
-    nextCleanupAt: usageAnalyticsRetentionNextCleanupAt(record?.lastAttemptAt ?? null),
+    nextCleanupAt,
+    cleanupState: usageAnalyticsRetentionCleanupState(nextCleanupAt),
     status: lastAttemptStatus === "success"
       ? "healthy"
       : lastAttemptStatus === "failed"

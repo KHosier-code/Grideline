@@ -12,6 +12,7 @@ import {
 import {
   deleteExpiredUsageAnalyticsEvents,
   startUsageAnalyticsRetention,
+  usageAnalyticsRetentionCleanupState,
   usageAnalyticsRetentionCutoff,
   usageAnalyticsRetentionNextCleanupAt,
 } from "./usage-analytics-retention";
@@ -45,6 +46,35 @@ test("next cleanup is derived from the last worker attempt and daily cadence", (
   assert.equal(
     usageAnalyticsRetentionNextCleanupAt(lastAttemptAt, 60 * 60 * 1000)?.toISOString(),
     "2026-09-17T13:00:00.123Z",
+  );
+});
+
+test("cleanup schedule is pending before the worker records its first attempt", () => {
+  assert.equal(
+    usageAnalyticsRetentionCleanupState(null, new Date("2026-09-17T12:00:00.000Z")),
+    "pending",
+  );
+});
+
+test("cleanup schedule is on time until the expected next timestamp has passed", () => {
+  const nextCleanupAt = new Date("2026-09-18T12:00:00.000Z");
+  assert.equal(
+    usageAnalyticsRetentionCleanupState(nextCleanupAt, new Date("2026-09-18T12:00:00.000Z")),
+    "on_time",
+  );
+  assert.equal(
+    usageAnalyticsRetentionCleanupState(nextCleanupAt, new Date("2026-09-18T11:59:59.999Z")),
+    "on_time",
+  );
+});
+
+test("cleanup schedule is overdue after the expected next timestamp", () => {
+  assert.equal(
+    usageAnalyticsRetentionCleanupState(
+      new Date("2026-09-18T12:00:00.000Z"),
+      new Date("2026-09-18T12:00:00.001Z"),
+    ),
+    "overdue",
   );
 });
 

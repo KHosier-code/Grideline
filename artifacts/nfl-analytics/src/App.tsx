@@ -199,8 +199,8 @@ function marketLabel(market: string) {
 }
 
 function statusTone(status?: string | null) {
-  if (status === 'current' || status === 'available' || status === 'healthy' || status === 'success') return 'good';
-  if (status === 'stale' || status === 'warning' || status === 'running' || status === 'partial') return 'warn';
+  if (status === 'current' || status === 'available' || status === 'healthy' || status === 'success' || status === 'on_time') return 'good';
+  if (status === 'stale' || status === 'warning' || status === 'running' || status === 'partial' || status === 'pending') return 'warn';
   if (status === 'not_configured' || status === 'not_trained' || status === 'spread' || status === 'moneyline' || status === 'totals') return 'neutral';
   return 'bad';
 }
@@ -305,6 +305,10 @@ function formatStatusLabel(status?: string | null) {
 }
 function FreshnessCard({ item }: { item: DataHealth }) {
   const status = item?.status;
+  const cleanupState = item.provider === 'usage-analytics-retention'
+    && (item.metadata?.cleanupState === 'pending' || item.metadata?.cleanupState === 'on_time' || item.metadata?.cleanupState === 'overdue')
+    ? item.metadata.cleanupState
+    : null;
   const metadataEntries = Object.entries(item?.metadata ?? {})
     .filter(([key, value]) => key !== 'failures' && value !== null && value !== undefined && typeof value !== 'object')
     .slice(0, 4);
@@ -320,6 +324,7 @@ function FreshnessCard({ item }: { item: DataHealth }) {
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate font-semibold text-ink">{item.label}</p>
             <StatusPill status={status}>{status === 'not_configured' ? 'Not configured' : status}</StatusPill>
+            {cleanupState && <StatusPill status={cleanupState}>{cleanupState === 'on_time' ? 'On time' : cleanupState === 'overdue' ? 'Overdue' : 'Pending'}</StatusPill>}
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
            {item.schedule && <p className="health-schedule"><strong>Cadence:</strong> {item.schedule}</p>}
