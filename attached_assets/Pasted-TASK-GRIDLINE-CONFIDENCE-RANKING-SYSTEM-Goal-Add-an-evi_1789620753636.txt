@@ -1,0 +1,296 @@
+TASK — GRIDLINE CONFIDENCE RANKING SYSTEM
+
+Goal:
+Add an evidence-based confidence framework for Gridline predictions without changing Phase 6.1 model outputs.
+
+This task must separate:
+1. Data Confidence
+2. Model Confidence
+3. Market Edge Strength
+
+Do NOT collapse them into one opaque score without showing the components.
+
+Do NOT:
+- retrain, refit, or promote models
+- alter Phase 6.1 predictions
+- rewrite historical snapshots
+- create “lock,” “guaranteed,” or “best bet” labels
+- claim profitability without supporting historical evidence
+
+TASK 1 — PRESERVE DATA CONFIDENCE
+
+Keep existing Data Confidence as a distinct concept.
+
+It should continue to measure things such as:
+- QB certainty
+- personnel completeness
+- injury freshness
+- sportsbook freshness
+- weather availability
+- sample quality
+
+Do not redefine Data Confidence as betting confidence.
+
+TASK 2 — MODEL CONFIDENCE
+
+Create a new Model Confidence measure.
+
+Potential components:
+
+- prediction stability across recent model revisions
+- historical model error for comparable situations
+- sample quality
+- QB/starter certainty
+- feature completeness
+- personnel uncertainty
+- whether projection is near the model’s typical error range
+
+Return:
+- score
+- label
+- component breakdown
+- reason
+
+Do not use arbitrary numbers without normalization.
+
+TASK 3 — MARKET EDGE STRENGTH
+
+Create a separate Market Edge Strength measure for:
+
+Spread:
+absolute Gridline projected-margin difference versus current market spread
+
+Total:
+absolute Gridline projected-total difference versus current market total
+
+Moneyline:
+absolute Gridline probability difference versus sportsbook implied probability
+
+Also incorporate:
+- market freshness
+- number of books available
+- DK/FD agreement/disagreement
+- whether the line is stale
+- whether edge falls into a historically evaluated bucket
+
+Do not call this “confidence” by itself.
+
+TASK 4 — HISTORICAL EDGE EVIDENCE
+
+Use the retained 2025 evaluation baseline.
+
+For each current spread/total edge, identify its historical edge bucket.
+
+Important:
+The 2025 baseline showed:
+
+Spread 5+ edge:
+35-27
+56.45%
+
+Other spread buckets were approximately 50% or worse.
+
+Totals did not show a reliable positive edge bucket.
+
+Therefore:
+
+- do not automatically treat a larger edge as a proven profitable signal
+- do not recommend a threshold based on one historical season
+- expose sample size
+- expose confidence interval where available
+- label insufficient evidence clearly
+
+Historical performance should be supporting evidence, not the sole driver.
+
+TASK 5 — COMPOSITE PREDICTION CONFIDENCE
+
+Create a transparent composite confidence score only after the three components above exist.
+
+Suggested starting weights:
+
+- Market Edge Strength: 35%
+- Historical comparable-edge evidence: 25%
+- Data Confidence: 20%
+- Model Confidence/stability: 10%
+- Market freshness/consensus: 10%
+
+Treat these as an initial configuration, not mathematically proven weights.
+
+Make weights configurable and versioned.
+
+Do not tune them using 2025 results in this task.
+
+TASK 6 — CONFIDENCE LABELS
+
+Convert the composite score into consumer-friendly labels:
+
+- Low
+- Moderate
+- Strong
+- Very Strong
+
+Do not use:
+- Lock
+- Guaranteed
+- Can’t miss
+- Sure thing
+
+Each label must include a short explanation.
+
+Example:
+
+Strong confidence
+
+Model difference: +4.8 points
+Data confidence: 91
+Market freshness: Current
+Historical comparable sample: 62 games
+Historical win rate: 56.5%
+
+TASK 7 — FAIL-CLOSED RULES
+
+A prediction must never receive Strong or Very Strong confidence if:
+
+- required model inputs are missing
+- Data Confidence is below a minimum threshold
+- QB starter is unresolved
+- market is stale
+- sportsbook line is unavailable
+- prediction snapshot is invalid
+- model artifact verification fails
+
+Create explicit downgrade reasons.
+
+TASK 8 — MARKET-SPECIFIC CONFIDENCE
+
+Compute confidence separately for:
+
+- Spread
+- Moneyline
+- Total
+
+Do not assign one game-wide betting confidence score if the three markets disagree.
+
+Example:
+
+Spread: Strong
+Moneyline: Moderate
+Total: Low
+
+TASK 9 — CONSUMER UI
+
+Add confidence presentation to:
+
+- Market Board
+- Game Detail
+- Live Predictions
+
+Show:
+
+- confidence label
+- component score
+- short explanation
+- expandable “Why this confidence?” section
+
+Expanded view should include:
+
+- model difference
+- Data Confidence
+- Model Confidence
+- historical edge bucket
+- sample size
+- market freshness
+- book consensus
+- downgrade reasons
+
+Do not expose raw technical identifiers.
+
+TASK 10 — ADMIN AUDIT
+
+Add an Admin-only confidence audit showing:
+
+- raw component values
+- normalization
+- configured weights
+- composite score
+- label threshold
+- historical bucket evidence
+- downgrade reasons
+- confidence-version ID
+
+This should make every confidence result reproducible.
+
+TASK 11 — VERSIONING
+
+Version the confidence methodology.
+
+Persist:
+
+- confidence_version
+- weights
+- thresholds
+- normalization rules
+- historical evidence source
+- calculation timestamp
+
+Do not retroactively rewrite historical confidence scores if the methodology changes later.
+
+TASK 12 — VALIDATION
+
+Run the confidence framework against current upcoming games.
+
+Report at least:
+
+- 5 Low
+- 5 Moderate
+- any Strong
+- any Very Strong
+
+If no Strong or Very Strong cases legitimately qualify, report none.
+
+Do not force distribution across categories.
+
+TASK 13 — HISTORICAL SANITY CHECK
+
+Apply the confidence methodology to the retained 2025 evaluation set in evaluation-only mode.
+
+Report:
+
+- number of selections by confidence tier
+- ATS/O-U/ML performance by tier
+- sample sizes
+- confidence intervals where reasonable
+
+Do not tune the current weights after seeing these results.
+
+This is validation only.
+
+TASK 14 — SAFETY
+
+Confirm:
+
+- Phase 6.1 models unchanged
+- no retraining
+- no promotions
+- no production prediction rewrite
+- no sportsbook history rewrite
+- confidence is a presentation/evaluation layer only
+
+FINAL REPORT
+
+Return:
+
+1. Data Confidence definition
+2. Model Confidence definition
+3. Market Edge Strength definition
+4. composite formula
+5. version/weights
+6. confidence thresholds
+7. fail-closed rules
+8. current-game confidence distribution
+9. 2025 historical tier performance
+10. consumer UI status
+11. Admin audit status
+12. tests passed
+13. whether publish is required
+14. confirmation Phase 6.1 was untouched
