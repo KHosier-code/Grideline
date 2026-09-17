@@ -17,6 +17,8 @@ export type UsageAnalyticsRetentionResult = {
   retentionDays: number;
 };
 
+type UsageAnalyticsRetentionCleanup = () => Promise<UsageAnalyticsRetentionResult>;
+
 export function usageAnalyticsRetentionCutoff(now = new Date()): Date {
   return new Date(now.getTime() - USAGE_ANALYTICS_RETENTION_DAYS * DAY_MS);
 }
@@ -64,12 +66,17 @@ export async function deleteExpiredUsageAnalyticsEvents(
  * The persistent worker owns this maintenance. A failed cleanup is logged and
  * retried on the next daily tick; it never rejects the worker or capture path.
  */
-export function startUsageAnalyticsRetention() {
+export function startUsageAnalyticsRetention(options: {
+  cleanup?: UsageAnalyticsRetentionCleanup;
+  intervalMs?: number;
+} = {}) {
+  const cleanup = options.cleanup ?? deleteExpiredUsageAnalyticsEvents;
+  const intervalMs = options.intervalMs ?? CLEANUP_INTERVAL_MS;
   let cleanupInFlight: Promise<void> | null = null;
 
   const runCleanup = () => {
     if (cleanupInFlight) return cleanupInFlight;
-    cleanupInFlight = deleteExpiredUsageAnalyticsEvents()
+    cleanupInFlight = cleanup()
       .then((result) => {
         logger.info(
           {
@@ -96,11 +103,11 @@ export function startUsageAnalyticsRetention() {
   void runCleanup();
   const timer = setInterval(() => {
     void runCleanup();
-  }, CLEANUP_INTERVAL_MS);
+  }, intervalMs);
   timer.unref?.();
   logger.info(
     {
-      intervalHours: CLEANUP_INTERVAL_MS / (60 * 60 * 1000),
+      intervalHours: intervalMs / (60 * 60 * 1000),
       retentionDays: USAGE_ANALYTICS_RETENTION_DAYS,
     },
     "Usage Lab analytics retention maintenance started in the persistent worker",

@@ -1,7 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { USAGE_ANALYTICS_RETENTION_DAYS } from "@workspace/db";
-import { usageAnalyticsRetentionCutoff } from "./usage-analytics-retention";
+import { randomUUID } from "node:crypto";
+import { after } from "node:test";
+import { asc, eq } from "drizzle-orm";
+import {
+  db,
+  pool,
+  USAGE_ANALYTICS_RETENTION_DAYS,
+  usageAnalyticsEventsTable,
+} from "@workspace/db";
+import {
+  deleteExpiredUsageAnalyticsEvents,
+  startUsageAnalyticsRetention,
+  usageAnalyticsRetentionCutoff,
+} from "./usage-analytics-retention";
 
 test("keeps the Usage Lab report window inside the documented retention period", () => {
   assert.equal(USAGE_ANALYTICS_RETENTION_DAYS, 30);
@@ -17,4 +29,76 @@ test("retention cutoff preserves the exact timestamp boundary", () => {
   const cutoff = usageAnalyticsRetentionCutoff(now);
   assert.equal(cutoff.getUTCMilliseconds(), 123);
   assert.equal(cutoff.getTime(), now.getTime() - 30 * 24 * 60 * 60 * 1000);
+});
+
+test("database cleanup removes only expired events and preserves the seven-day report window", async () => {
+  const now = new Date("2026-09-17T12:00:00.000Z");
+  const eventName = `retention-integration-${randomUUID()}`;
+  const cutoff = usageAnalyticsRetentionCutoff(now);
+  const oldEventTime = new Date(cutoff.getTime() - 1);
+  const freshEventTime = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+  await db.insert(usageAnalyticsEventsTable).values([
+    { eventName, value: "expired", createdAt: oldEventTime },
+    { eventName, value: "at-cutoff", createdAt: cutoff },
+    { eventName, value: "fresh", createdAt: freshEventTime },
+  ]).returning({ id: usageAnalyticsEventsTable.id });
+
+  try {
+    const result = await deleteExpiredUsageAnalyticsEvents(now);
+    assert.equal(result.deletedEvents, 1);
+    assert.equal(result.cutoff.toISOString(), cutoff.toISOString());
+    assert.equal(result.retentionDays, USAGE_ANALYTICS_RETENTION_DAYS);
+
+    const remaining = await db.select({
+      value: usageAnalyticsEventsTable.value,
+      createdAt: usageAnalyticsEventsTable.createdAt,
+    }).from(usageAnalyticsEventsTable)
+      .where(eq(usageAnalyticsEventsTable.eventName, eventName))
+      .orderBy(asc(usageAnalyticsEventsTable.createdAt));
+
+    assert.deepEqual(
+      remaining.map(({ value, createdAt }) => ({ value, createdAt: createdAt.toISOString() })),
+      [
+        { value: "at-cutoff", createdAt: cutoff.toISOString() },
+        { value: "fresh", createdAt: freshEventTime.toISOString() },
+      ],
+    );
+    assert.ok(
+      remaining.some(
+        ({ value, createdAt }) =>
+          value === "fresh"
+          && createdAt.getTime() >= now.getTime() - 7 * 24 * 60 * 60 * 1000,
+      ),
+    );
+  } finally {
+    await db.delete(usageAnalyticsEventsTable).where(eq(usageAnalyticsEventsTable.eventName, eventName));
+  }
+});
+
+test("worker cleanup failures are contained and retried on the next tick", async () => {
+  let attempts = 0;
+  const stop = startUsageAnalyticsRetention({
+    intervalMs: 10,
+    cleanup: async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("simulated retention failure");
+      return {
+        deletedEvents: 0,
+        batches: 1,
+        cutoff: new Date("2026-09-17T12:00:00.000Z"),
+        retentionDays: USAGE_ANALYTICS_RETENTION_DAYS,
+      };
+    },
+  });
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 35));
+    assert.ok(attempts >= 2, `expected a retry after failure, got ${attempts} attempt(s)`);
+  } finally {
+    stop();
+  }
+});
+
+after(async () => {
+  await pool.end();
 });
