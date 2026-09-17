@@ -1,0 +1,426 @@
+{
+  "generatedAt": "2026-09-17",
+  "scope": {
+    "mode": "read-only",
+    "environments": [
+      "development",
+      "production"
+    ],
+    "sources": [
+      "repository",
+      "live database aggregates",
+      "retained reports",
+      "existing public deployment"
+    ]
+  },
+  "statuses": {
+    "engineering": "production-ready",
+    "dataFoundation": "functional-but-incomplete",
+    "coreModel": "functional-but-incomplete",
+    "personnel": "experimental",
+    "playerAnalytics": "functional-but-incomplete",
+    "marketAnalytics": "functional-but-incomplete",
+    "confidence": "functional-but-incomplete",
+    "consumerProduct": "functional-but-incomplete",
+    "externalReview": "production-ready-with-limits"
+  },
+  "keyMetrics": {
+    "development": {
+      "teams": 32,
+      "games": 70,
+      "injuries": 1527,
+      "depthChartSnapshots": 0,
+      "sportsbookOdds": 180,
+      "predictionSnapshots": 165,
+      "predictionGrades": 0,
+      "teamGameStats": 2880,
+      "qbGameStats": 3566,
+      "playerGameStats": 22579,
+      "snapCounts": 134108,
+      "historicalDepthCharts": 1204241,
+      "weatherSnapshots": 64
+    },
+    "production": {
+      "teams": 32,
+      "games": 70,
+      "injuries": 1644,
+      "sportsbookOdds": 180,
+      "predictionSnapshots": 229,
+      "teamGameStats": 2880,
+      "snapCounts": 134108,
+      "weatherSnapshots": 208,
+      "promotionRows": 9
+    },
+    "historicalCoverage": {
+      "teamGameStats": {
+        "2021": 285,
+        "2022": 284,
+        "2023": 285,
+        "2024": 285,
+        "2025": 285,
+        "2026": 16
+      },
+      "snapCounts": {
+        "2021": 285,
+        "2022": 284,
+        "2023": 285,
+        "2024": 285,
+        "2025": 285,
+        "2026": 16
+      },
+      "playerGameStats": 22579
+    },
+    "currentSchedule": {
+      "season": 2026,
+      "weeks": {
+        "1": {
+          "status": "final",
+          "games": 16
+        },
+        "2": {
+          "status": "scheduled",
+          "games": 16
+        },
+        "3": {
+          "status": "scheduled",
+          "games": 16
+        },
+        "4": {
+          "status": "scheduled",
+          "games": 16
+        }
+      },
+      "scoreSemanticWarning": "scheduled future rows currently carry 0-0 score fields; game_status must gate completion"
+    },
+    "markets": {
+      "rows": 180,
+      "games": 15,
+      "books": [
+        "DraftKings",
+        "FanDuel"
+      ],
+      "markets": [
+        "spread",
+        "moneyline",
+        "total"
+      ],
+      "lastCapture": "2026-09-14T02:29:36Z",
+      "status": "stale"
+    },
+    "personnelMapping": {
+      "processed": 12227,
+      "mapped": 7315,
+      "mappedPct": 59.86,
+      "ambiguous": 1373,
+      "ambiguousPct": 11.24,
+      "unmatched": 3539,
+      "unmatchedPct": 28.96,
+      "collisions": 1
+    },
+    "personnelRoles": {
+      "qb1": 1,
+      "rb1": 1,
+      "wr1": 1,
+      "wr2": 1,
+      "wr3": 0.9688,
+      "te1": 1,
+      "cb1": 0.8125,
+      "cb2": 0.875,
+      "cb3Slot": 0.9063,
+      "edgeStarters": 0.8906,
+      "lbStarters": 0.9844,
+      "safetyStarters": 0.4844,
+      "exactOlStarters": 0
+    },
+    "confidenceValidation": {
+      "games": 16,
+      "marketResults": 48,
+      "low": 48,
+      "moderate": 0,
+      "strong": 0,
+      "veryStrong": 0
+    }
+  },
+  "sources": [
+    {
+      "name": "ESPN",
+      "status": "active-best-effort",
+      "data": [
+        "schedule",
+        "scores",
+        "injuries",
+        "depth"
+      ],
+      "limitations": [
+        "depth completeness not guaranteed",
+        "terms/robots reuse not verified"
+      ]
+    },
+    {
+      "name": "nflverse",
+      "status": "active",
+      "data": [
+        "historical schedule",
+        "PBP/team stats",
+        "player stats",
+        "snaps",
+        "depth",
+        "identity"
+      ],
+      "limitations": [
+        "team aliases require canonicalization",
+        "upstream terms apply"
+      ]
+    },
+    {
+      "name": "Sleeper",
+      "status": "active",
+      "data": [
+        "current player/depth snapshots",
+        "identity mapping"
+      ],
+      "limitations": [
+        "mapping incomplete"
+      ]
+    },
+    {
+      "name": "The Odds API",
+      "status": "active",
+      "data": [
+        "DraftKings/FanDuel spread/moneyline/total"
+      ],
+      "limitations": [
+        "current corpus stale/sparse",
+        "provider quota/licensing"
+      ]
+    },
+    {
+      "name": "NWS",
+      "status": "active",
+      "data": [
+        "weather forecasts"
+      ],
+      "limitations": [
+        "unsupported/international/indoor states"
+      ]
+    },
+    {
+      "name": "SportsDataIO",
+      "status": "evaluation-only",
+      "data": [
+        "depth comparison"
+      ],
+      "limitations": [
+        "not adopted into production"
+      ]
+    },
+    {
+      "name": "Ourlads",
+      "status": "not-ingested",
+      "data": [],
+      "limitations": [
+        "terms prohibit automated access"
+      ]
+    }
+  ],
+  "models": [
+    {
+      "family": "spread",
+      "algorithm": "linear_regression",
+      "featureVersion": "pregame-v3",
+      "featureCount": 27,
+      "trainingSeasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "samplePolicy": "include_low_sample",
+      "production": true,
+      "oos2025": {
+        "n": 277,
+        "mae": 10.2677,
+        "rmse": 13.2741
+      }
+    },
+    {
+      "family": "moneyline",
+      "algorithm": "logistic_regression",
+      "featureVersion": "pregame-v3",
+      "featureCount": 27,
+      "trainingSeasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "samplePolicy": "include_low_sample",
+      "production": true,
+      "oos2025": {
+        "n": 277,
+        "accuracy": 0.6245,
+        "logLoss": 0.633488,
+        "brier": 0.222289
+      }
+    },
+    {
+      "family": "totals",
+      "algorithm": "gradient_boosting",
+      "featureVersion": "pregame-v3",
+      "featureCount": 27,
+      "trainingSeasons": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "samplePolicy": "exclude_low_sample",
+      "production": true,
+      "oos2025": {
+        "n": 230,
+        "mae": 10.9452,
+        "rmse": 13.8741
+      }
+    }
+  ],
+  "featureCategories": {
+    "activeVectorCount": 27,
+    "teamForm": 24,
+    "qbContext": 1,
+    "qualityGates": 2,
+    "personnel": 0,
+    "injuries": 0,
+    "matchup": 0,
+    "market": 0,
+    "weather": 0,
+    "playerLevel": 0,
+    "windows": [
+      "last_3",
+      "last_5",
+      "last_8"
+    ],
+    "unsupported": [
+      "points_per_drive",
+      "points_allowed_per_drive",
+      "pressure_rate_allowed",
+      "defensive_pressure_rate"
+    ]
+  },
+  "productSurfaces": {
+    "home": "partial-signed-in",
+    "games": "implemented-partial",
+    "gameDetail": "implemented-partial",
+    "performance": "implemented-incomplete",
+    "trends": "implemented-incomplete",
+    "props": "placeholder-unavailable",
+    "marketBoard": "implemented-stale-partial",
+    "lineMovement": "partial-readiness",
+    "depthChart": "partial-experimental",
+    "playerUsage": "implemented-partial",
+    "matchupBoard": "implemented-partial",
+    "confidence": "implemented-partial",
+    "admin": "implemented-incomplete"
+  },
+  "risks": [
+    {
+      "priority": "critical",
+      "item": "scheduled 0-0 scores can be mistaken for completed results"
+    },
+    {
+      "priority": "critical",
+      "item": "stale/incomplete current market capture"
+    },
+    {
+      "priority": "high",
+      "item": "current depth and exact OL evidence insufficient"
+    },
+    {
+      "priority": "high",
+      "item": "identity mapping unresolved"
+    },
+    {
+      "priority": "high",
+      "item": "no verified closing market/CLV"
+    },
+    {
+      "priority": "high",
+      "item": "injuries present but unquantified"
+    }
+  ],
+  "priorities": [
+    {
+      "rank": 1,
+      "priority": "P0",
+      "item": "restore fresh market capture and stale alerts"
+    },
+    {
+      "rank": 2,
+      "priority": "P0",
+      "item": "enforce status-safe result semantics"
+    },
+    {
+      "rank": 3,
+      "priority": "P0",
+      "item": "obtain verified closing-line provenance"
+    },
+    {
+      "rank": 4,
+      "priority": "P0",
+      "item": "surface depth freshness/contradictions"
+    },
+    {
+      "rank": 5,
+      "priority": "P1",
+      "item": "resolve identity aliases and retain prediction-level evaluation"
+    }
+  ],
+  "roadmap": {
+    "days30": [
+      "status-safe results",
+      "fresh market capture",
+      "depth health",
+      "prediction-level retention",
+      "team alias reconciliation"
+    ],
+    "days60": [
+      "controlled injury/depth challenger",
+      "admin personnel report",
+      "usage denominator improvements",
+      "market archive decision"
+    ],
+    "days90": [
+      "promotion decision based on evidence",
+      "player opportunity baselines",
+      "market residual evaluation",
+      "rewrite consumer evidence language"
+    ]
+  },
+  "externalReview": {
+    "url": "https://gridelineanalytics.com",
+    "deploymentType": "vm",
+    "visibility": "public",
+    "authentication": {
+      "anonymous": [
+        "/games",
+        "/games/:gameId"
+      ],
+      "required": [
+        "/",
+        "/usage",
+        "/performance",
+        "/trends",
+        "/props",
+        "/admin/*"
+      ]
+    },
+    "safeReadOnlyConsumer": true,
+    "adminPublic": false,
+    "mutationsPublic": false,
+    "secretsExposed": false,
+    "rawProviderPayloadsExposed": false,
+    "screenshot": "reports/product-review/production-games.png"
+  }
+}

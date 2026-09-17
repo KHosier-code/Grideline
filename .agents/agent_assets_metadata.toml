@@ -112,3 +112,59 @@ mtime_ms = 1789657724964
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/eabab408-db26-4e06-8454-e2460575d388/f722645a-c932-42e3-afab-0ff9f3b23113"
 storage_version_token = "1789657725758997"
 content_type = "text/csv"
+
+[[outputs]]
+id = "2ah-YsHAcfYYsbfqgn2Du"
+uri = "file://reports/gridline-current-state-audit.md"
+type = "text"
+title = "Gridline current-state audit"
+description = "Full 28-section evidence-based audit, gap analysis, priorities, and roadmap."
+logical_id = "7f926a27-b02b-4e26-89e7-6b40dbe8464a"
+content_hash = "sha256:67aa31fec33a1562a2932f82e37895a0c435dd0368338208678ce3eb083cf9c5"
+size = 55837
+mtime_ms = 1789663925611
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/7f926a27-b02b-4e26-89e7-6b40dbe8464a/3866a128-bc99-4926-be78-30dc64d2762b"
+storage_version_token = "1789663966610442"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "OS_Jfegi1SylDI_Dw8thC"
+uri = "file://reports/gridline-current-state-audit.json"
+type = "unspecified"
+title = "Gridline audit data"
+description = "Machine-readable audit summary with metrics, risks, models, sources, and roadmap."
+logical_id = "092b7ab7-5c44-498e-8cf3-7e8fe9457fbf"
+content_hash = "sha256:f97b04e10929771924d5825012947f91485986adfaf9f0da22480d93f8c4356c"
+size = 9621
+mtime_ms = 1789663925803
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/092b7ab7-5c44-498e-8cf3-7e8fe9457fbf/0d0591b4-3c44-4d10-8109-47f2f3983275"
+storage_version_token = "1789663967333937"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "lGo0u60X385MLVjSZo_8U"
+uri = "file://reports/gridline-product-review-index.md"
+type = "text"
+title = "Gridline product review guide"
+description = "External review URL, access boundaries, limitations, and reviewer checklist."
+logical_id = "ae928b77-da80-4a0f-87b4-0bfafbb059ea"
+content_hash = "sha256:86e59611a334faed71b30298f745d921dfcfb0aa32b02dd1dd3203086206caf0"
+size = 1771
+mtime_ms = 1789663925955
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/ae928b77-da80-4a0f-87b4-0bfafbb059ea/fb2ddd12-0dc8-41c1-9632-e16f95cd6d69"
+storage_version_token = "1789663967994219"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "13R6Gz6Mmx99agV-Dv1e8"
+uri = "file://reports/product-review/production-games.png"
+type = "image"
+title = "Gridline production Games capture"
+description = "Real production screenshot showing the stale and partial market-board state observed on September 17, 2026."
+logical_id = "0362074f-4e26-48fe-b0b1-5f1e5b8af115"
+content_hash = "sha256:e3cdaeaab0e4d66e7a0244189baa736843a27b852cfdbcdbe3dc0d2d9ea4b293"
+size = 138313
+mtime_ms = 1789663796927
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/0362074f-4e26-48fe-b0b1-5f1e5b8af115/cc7406ee-17c1-4c88-8736-fdc183ce2830"
+storage_version_token = "1789663968727472"
+content_type = "image/png"
