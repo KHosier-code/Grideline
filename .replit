@@ -99,6 +99,10 @@ args = "prediction-safety"
 task = "workflow.run"
 args = "production-db-smoke"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "api-typecheck"
+
 [[workflows.workflow]]
 name = "prediction-safety"
 author = "agent"
@@ -117,6 +121,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/api-server run test:production-database-smoke"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "api-typecheck"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run typecheck"
 
 [workflows.workflow.metadata]
 isValidation = true
