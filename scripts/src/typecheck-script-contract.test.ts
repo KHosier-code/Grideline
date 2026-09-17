@@ -54,3 +54,13 @@ test("root typecheck builds shared declarations exactly once", () => {
     1,
   );
 });
+
+test("root fast regression checks include this contract without typechecking", () => {
+  const rootFastTests = requireScript(rootPackage, "test:fast");
+
+  assert.match(
+    rootFastTests,
+    /--filter @workspace\/scripts run test:typecheck-script-contract/,
+  );
+  assert.doesNotMatch(rootFastTests, /\b(?:build|typecheck)\b(?!-script-contract)/);
+});
