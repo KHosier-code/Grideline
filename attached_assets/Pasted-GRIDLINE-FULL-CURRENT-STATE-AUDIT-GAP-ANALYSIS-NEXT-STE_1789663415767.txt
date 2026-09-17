@@ -1,0 +1,966 @@
+GRIDLINE — FULL CURRENT-STATE AUDIT, GAP ANALYSIS, NEXT-STEP RECOMMENDATIONS, AND EXTERNAL PRODUCT REVIEW
+
+Goal:
+Produce the most detailed, evidence-based assessment possible of the current Gridline project AND prepare a safe way for an external reviewer to inspect the consumer experience.
+
+This is primarily a READ-ONLY AUDIT.
+
+Do NOT:
+- change model logic
+- retrain or refit models
+- promote models
+- rewrite predictions
+- alter sportsbook history
+- weaken authentication
+- expose admin functionality publicly
+- expose secrets
+- expose private database controls
+- expose raw provider payloads
+- publish unverified experimental functionality into production
+
+The purpose is to answer:
+
+1. What is Gridline today?
+2. What is actually working?
+3. What data do we truly have?
+4. What analytics are genuinely implemented versus only displayed?
+5. What is missing?
+6. Where are the biggest weaknesses?
+7. What should be built next?
+8. Which parts are production-ready versus still experimental?
+9. Is the current product analytically strong enough to justify its premium-looking UI?
+10. What would materially improve prediction quality, player analytics, and betting research value?
+11. What does the actual consumer product feel like when reviewed as a user rather than as a developer?
+
+--------------------------------------------------
+SECTION 1 — EXECUTIVE SUMMARY
+--------------------------------------------------
+
+Give a concise but specific summary of:
+
+- Current product stage
+- Current production readiness
+- Current data maturity
+- Current model maturity
+- Current consumer-product maturity
+- Current biggest strengths
+- Current biggest weaknesses
+- Top 5 priorities
+
+Assign each major area one of:
+
+- Production-ready
+- Functional but incomplete
+- Experimental
+- Blocked
+- Not implemented
+
+Do not use vague language.
+
+--------------------------------------------------
+SECTION 2 — CURRENT ARCHITECTURE
+--------------------------------------------------
+
+Document the current architecture:
+
+- Frontend
+- API
+- Worker
+- Database
+- Authentication
+- Scheduling
+- Modeling
+- Evaluation
+- Market ingestion
+- Personnel/depth ingestion
+- Consumer APIs
+- Admin APIs
+
+Show the real data flow:
+
+external source
+→ ingestion
+→ persistence
+→ feature generation
+→ model inference
+→ prediction snapshot
+→ consumer API
+→ UI
+→ grading/evaluation
+
+Identify any stage where data is present but not used downstream.
+
+--------------------------------------------------
+SECTION 3 — SOURCE INVENTORY
+--------------------------------------------------
+
+Create a complete source inventory.
+
+For every active source include:
+
+- source name
+- endpoint or dataset
+- what data is collected
+- current cadence
+- historical availability
+- current-season availability
+- point-in-time / snapshot behavior
+- freshness
+- reliability
+- licensing/usage concerns
+- production status
+- downstream consumers
+
+Include at minimum:
+
+- ESPN
+- nflverse
+- Sleeper
+- The Odds API
+- NWS
+- any imported nflverse game/market files
+- any other source currently in code
+
+Clearly distinguish:
+
+- current-state data
+- historical data
+- inferred data
+- published data
+- model-derived data
+
+--------------------------------------------------
+SECTION 4 — DATA COVERAGE AUDIT
+--------------------------------------------------
+
+Measure actual data completeness.
+
+Report coverage for:
+
+TEAM DATA
+- schedule
+- results
+- team-game stats
+- EPA
+- success rate
+- explosive plays
+- red zone
+- turnovers
+- sacks
+- pass/rush splits
+
+PLAYER DATA
+- QB
+- RB
+- WR
+- TE
+- OL
+- DL
+- LB
+- CB
+- S
+
+For each player group report availability of:
+
+- snaps
+- participation
+- targets
+- receptions
+- receiving yards
+- carries
+- rushing yards
+- TDs
+- routes if available
+- target share
+- red-zone usage
+- alignment/slot data if available
+- injury status
+- depth order
+- starter status
+- role confidence
+
+MARKET DATA
+- spread
+- moneyline
+- totals
+- DK
+- FanDuel
+- first observed
+- current
+- final pre-kickoff
+- historical 2025 recorded market lines
+- verified closing lines
+- player props
+
+WEATHER
+- eligible outdoor games
+- coverage %
+- timestamp quality
+- kickoff alignment
+
+PERSONNEL
+- QB1
+- RB1
+- WR1/2/3
+- TE1
+- OL slots
+- EDGE
+- LB
+- CB1/2/slot
+- safeties
+
+Give actual percentages where possible.
+
+--------------------------------------------------
+SECTION 5 — CURRENT MODEL INVENTORY
+--------------------------------------------------
+
+Document every model currently implemented.
+
+For each model include:
+
+- family
+- algorithm
+- feature version
+- exact number of features
+- training seasons
+- sample count
+- low-sample policy
+- artifact status
+- production status
+- promotion history
+- current active version
+- inference inputs
+- validation results
+- known limitations
+
+Include:
+
+- Spread
+- Moneyline
+- Totals
+
+Also list any challenger/evaluation-only models.
+
+--------------------------------------------------
+SECTION 6 — EXACT ACTIVE FEATURE SET
+--------------------------------------------------
+
+List all active Phase 6.1 features.
+
+For each feature report:
+
+- name
+- definition
+- data source
+- window
+- whether current or historical
+- whether player-aware
+- whether injury-aware
+- whether depth-aware
+- whether market-aware
+- whether personnel-aware
+
+Then summarize:
+
+How much of the active model is:
+- team-form data
+- QB context
+- personnel
+- injuries
+- matchup data
+- market data
+- weather
+- player-level data
+
+Be explicit.
+
+--------------------------------------------------
+SECTION 7 — MODEL QUALITY AUDIT
+--------------------------------------------------
+
+Summarize current evidence for model quality.
+
+Include:
+
+2025 Phase 6.1 results
+- spread MAE/RMSE
+- totals MAE/RMSE
+- moneyline accuracy/log loss/Brier
+
+Recorded-market comparison
+- spread market MAE/RMSE
+- total market MAE/RMSE
+- moneyline market comparison
+
+ATS
+- record
+- win %
+- edge buckets
+
+Totals
+- record
+- win %
+- edge buckets
+
+ROI
+- spread
+- moneyline
+- totals
+
+True CLV status
+
+State clearly whether current evidence supports:
+
+- market-beating claim
+- profitable betting claim
+- strong calibration claim
+- useful baseline-model claim
+
+Do not overstate.
+
+--------------------------------------------------
+SECTION 8 — PERSONNEL-AWARE CHALLENGER STATUS
+--------------------------------------------------
+
+Audit the current personnel-aware challenger framework.
+
+Report:
+
+- whether code exists
+- whether numerical comparison report currently exists
+- what personnel features are included
+- historical data limitations
+- which features are reconstructed legitimately
+- which are unavailable historically
+- whether current challenger performance is actually known
+
+If a report is missing, say so.
+
+Do not infer that the challenger is better.
+
+--------------------------------------------------
+SECTION 9 — PLAYER ANALYTICS STATUS
+--------------------------------------------------
+
+Audit what player-level analytics exist TODAY.
+
+For:
+
+- QB
+- RB
+- WR
+- TE
+- CB
+- EDGE/LB
+- OL
+
+Report whether Gridline currently has:
+
+- historical usage
+- rolling usage
+- projection
+- matchup score
+- injury adjustment
+- depth adjustment
+- opponent adjustment
+- player-vs-player projection
+- TD probability
+- sportsbook prop comparison
+
+Mark each as:
+
+- implemented
+- partial
+- data available but unused
+- unavailable
+
+--------------------------------------------------
+SECTION 10 — WR-CB MATCHUP READINESS
+--------------------------------------------------
+
+Evaluate exact readiness for WR-CB matchup analysis.
+
+Report:
+
+- WR1
+- WR2
+- WR3
+- CB1
+- CB2
+- CB3/slot
+
+Also report:
+
+- mapping coverage
+- starter confidence
+- snap availability
+- historical performance data
+- direct coverage data
+- alignment data
+- zone/man assignment data
+- injury context
+- projection capability
+
+State clearly:
+
+What Gridline CAN legitimately say today
+
+and
+
+What Gridline CANNOT legitimately say today
+
+Do not imply direct man coverage if not supported.
+
+--------------------------------------------------
+SECTION 11 — INJURY ANALYTICS
+--------------------------------------------------
+
+Audit current injury handling.
+
+Report:
+
+- source freshness
+- ESPN coverage
+- Sleeper supplemental coverage
+- positions covered
+- whether injury data affects Phase 6.1 numerical prediction
+- whether injury data affects challenger
+- whether injury impact weights exist
+- whether positional injury importance is modeled
+
+Identify whether Gridline currently knows injuries but fails to quantify their effect.
+
+--------------------------------------------------
+SECTION 12 — DEPTH-CHART STATUS
+--------------------------------------------------
+
+Summarize:
+
+- Sleeper ingestion status
+- mapping status
+- QB1 coverage
+- WR coverage
+- CB coverage
+- safety coverage
+- OL coverage
+- current-depth readiness
+- consumer depth-chart readiness
+- known ambiguity
+
+Also document SportsDataIO evaluation result and why it was not adopted.
+
+--------------------------------------------------
+SECTION 13 — MARKET ANALYTICS STATUS
+--------------------------------------------------
+
+Audit:
+
+- Market Board
+- Line Movement
+- Best-book logic
+- First observed/current/final pre-kickoff
+- Implied probabilities
+- Stale-market logic
+- Historical market baseline
+- Closing-line availability
+- CLV capability
+
+Also report:
+
+Whether Gridline currently has enough market history to:
+- evaluate closing-line value
+- identify steam/movement patterns
+- compare model edge at multiple timestamps
+- build market-residual models
+
+--------------------------------------------------
+SECTION 14 — PLAYER PROP READINESS
+--------------------------------------------------
+
+Report readiness for:
+
+- passing yards
+- passing TDs
+- rushing yards
+- receiving yards
+- receptions
+- anytime TD
+
+For each identify:
+
+- data available
+- historical sample availability
+- current projection capability
+- sportsbook market availability
+- cost/API implications
+- missing features
+
+Do not implement props.
+
+--------------------------------------------------
+SECTION 15 — UI / PRODUCT MATURITY
+--------------------------------------------------
+
+Audit current consumer experience:
+
+- Home
+- Games
+- Game Detail
+- Performance
+- Trends
+- Props
+- Market Board
+- Line Movement
+- Depth Chart
+- Player Usage
+- Matchup Board
+- Confidence
+- Admin
+
+For each state:
+
+- implemented
+- complete
+- partial
+- placeholder
+- blocked
+
+Also identify any place where the UI appears more sophisticated than the underlying analytics.
+
+This section is important.
+
+--------------------------------------------------
+SECTION 16 — CONFIDENCE SYSTEM STATUS
+--------------------------------------------------
+
+Audit:
+
+- Data Confidence
+- Model Confidence
+- Market Edge Strength
+- composite confidence
+- historical tier validation
+
+State which are implemented versus proposed.
+
+If implemented, show exact methodology.
+
+If not implemented, say so.
+
+--------------------------------------------------
+SECTION 17 — TECHNICAL DEBT / INTEGRATION RISKS
+--------------------------------------------------
+
+Identify:
+
+- missing migrations
+- generated-client drift
+- stale API contracts
+- scheduler overlap
+- DB capacity concerns
+- missing tests
+- provenance gaps
+- historical reconstruction weaknesses
+- unreproducible tasks
+- task results that were not retained after merge
+- isolated-task artifacts not merged
+- source licensing risks
+- manual operational steps
+
+Rank each:
+
+- Critical
+- High
+- Medium
+- Low
+
+--------------------------------------------------
+SECTION 18 — ANALYTICS GAP ANALYSIS
+--------------------------------------------------
+
+This is one of the most important sections.
+
+Answer:
+
+What analytical capabilities would a serious premium NFL analytics product normally have that Gridline currently does not?
+
+Consider:
+
+- EPA splits
+- success-rate splits
+- early-down offense/defense
+- neutral-script pass rate
+- pressure/sack context
+- OL continuity
+- QB under pressure
+- explosive-play creation/prevention
+- red-zone efficiency
+- opponent-adjusted metrics
+- strength of schedule
+- play-action
+- motion
+- personnel grouping
+- route participation
+- target share
+- air yards
+- aDOT
+- red-zone share
+- coverage shell
+- man/zone
+- CB alignment
+- pass rush matchups
+- pace
+- game script
+- weather
+- injuries
+- depth
+- roster changes
+- player props
+- historical market movement
+- closing lines
+
+Classify each as:
+
+- already implemented
+- partially implemented
+- data available but unused
+- requires new source
+- likely paid data source
+
+--------------------------------------------------
+SECTION 19 — DATA SOURCE GAP RECOMMENDATIONS
+--------------------------------------------------
+
+Recommend new sources only when they materially improve analytics.
+
+For each candidate source explain:
+
+- exact missing data it solves
+- free vs paid
+- likely cost category
+- licensing considerations
+- whether it is essential
+- priority
+
+Potential categories:
+
+- verified NFL depth charts
+- historical injuries
+- route participation
+- coverage assignments
+- CB performance
+- OL/pass-rush matchups
+- player props
+- true historical closing odds
+- play-level tracking
+
+Do not recommend expensive sources without explaining ROI.
+
+--------------------------------------------------
+SECTION 20 — RECOMMENDED MODEL ROADMAP
+--------------------------------------------------
+
+Propose a disciplined model roadmap.
+
+Example structure:
+
+Phase 6.1
+Current baseline
+
+Phase 7
+Personnel-aware challenger
+
+Phase 7.1
+Injury/depth-adjusted
+
+Phase 7.2
+Player-matchup features
+
+Phase 8
+Market-residual / ensemble candidate
+
+For each phase specify:
+
+- new features
+- required sources
+- historical backtest feasibility
+- evaluation criteria
+- promotion gate
+
+Do not assume more complexity equals better performance.
+
+--------------------------------------------------
+SECTION 21 — PLAYER MODEL ROADMAP
+--------------------------------------------------
+
+Recommend separate models for:
+
+- QB passing
+- RB rushing
+- WR receiving
+- receptions
+- TD probability
+
+For each specify:
+
+- target variable
+- features
+- historical sample
+- walk-forward evaluation
+- baseline comparisons
+- sportsbook comparison
+
+--------------------------------------------------
+SECTION 22 — PRIORITY MATRIX
+--------------------------------------------------
+
+Rank the next 20 possible tasks by:
+
+- analytical impact
+- product impact
+- implementation effort
+- data-source cost
+- production risk
+
+Use:
+
+- P0
+- P1
+- P2
+- P3
+
+Do not prioritize cosmetic work over major data/model gaps.
+
+--------------------------------------------------
+SECTION 23 — WHAT NOT TO BUILD YET
+--------------------------------------------------
+
+List features that should NOT be prioritized yet.
+
+Explain why.
+
+Examples may include:
+
+- cosmetic dashboards without deeper analytics
+- unsupported coverage metrics
+- automated betting
+- overfit confidence rankings
+- paid data sources without clear need
+
+--------------------------------------------------
+SECTION 24 — 30 / 60 / 90 DAY ROADMAP
+--------------------------------------------------
+
+Give a realistic roadmap.
+
+Next 30 days:
+what should be completed first
+
+Next 60 days:
+what should be added after foundations stabilize
+
+Next 90 days:
+what should Gridline look like analytically and product-wise
+
+--------------------------------------------------
+SECTION 25 — EXTERNAL PRODUCT REVIEW ACCESS
+--------------------------------------------------
+
+This section is important.
+
+Prepare a SAFE way for an external reviewer to inspect the consumer-facing Gridline product.
+
+Preferred option:
+
+Create a temporary consumer-only review deployment, preview URL, or externally accessible review environment that allows inspection of the user-facing Gridline experience.
+
+Security requirements:
+
+- Do not expose Admin routes
+- Do not expose database tools
+- Do not expose secrets
+- Do not expose private provider credentials
+- Do not expose mutation endpoints
+- Do not expose raw internal APIs unnecessarily
+- Do not weaken production authentication
+- Do not make the production Admin workspace public
+- Do not copy production secrets into an unsafe environment
+
+The review environment should be READ-ONLY from a consumer perspective.
+
+It should allow external inspection of, where available:
+
+- Home
+- Games
+- Game Detail
+- Market Board
+- Line Movement
+- Performance
+- Trends
+- Depth Chart / Personnel
+- Player Usage
+- Matchup Board
+- Props placeholder/current state
+- Confidence presentation
+
+If a safe external review URL can be created:
+
+Return:
+- exact review URL
+- whether authentication is required
+- what pages are accessible
+- what data is real versus representative
+- expiration/removal instructions
+- confirmation no Admin or mutation functionality is exposed
+
+IMPORTANT:
+Do not create a public review deployment if doing so would materially weaken security.
+
+--------------------------------------------------
+SECTION 26 — SCREENSHOT FALLBACK
+--------------------------------------------------
+
+If a safe external review URL cannot be created, generate representative screenshots instead.
+
+Capture both:
+
+Desktop:
+approximately 1440px wide
+
+Mobile:
+approximately 390px wide
+
+Capture these pages where implemented:
+
+1. Home
+2. Games
+3. Game Detail with the fullest available real dataset
+4. Market Board
+5. Line Movement
+6. Performance
+7. Trends
+8. Depth Chart / Personnel
+9. Player Usage
+10. Matchup Board
+11. Props
+12. Consumer navigation
+13. Admin overview separately for internal review only
+
+For screenshots:
+
+- use real development or production-safe data
+- do not fabricate populated states
+- if a page has sparse data, capture the actual sparse state
+- do not expose secrets
+- do not expose raw IDs unnecessarily
+
+Store screenshots under:
+
+reports/product-review/
+
+Also generate:
+
+reports/gridline-product-review-index.md
+
+The index should explain:
+- screenshot filename
+- route
+- desktop/mobile
+- data completeness
+- known limitations
+- whether state is real, sparse, partial, stale, or unavailable
+
+--------------------------------------------------
+SECTION 27 — PRODUCT REVIEW CHECKLIST
+--------------------------------------------------
+
+For the external reviewer, include a checklist asking them to assess:
+
+VISUAL QUALITY
+- Does Gridline look premium?
+- Is hierarchy clear?
+- Is information too dense?
+- Is information too sparse?
+- Do cards feel repetitive?
+- Are numbers easy to scan?
+- Does mobile feel intentional?
+
+ANALYTICS CLARITY
+- Is it obvious what Gridline actually knows?
+- Are model projections clearly distinct from sportsbook numbers?
+- Are confidence labels understandable?
+- Are unavailable states honest?
+- Does depth/personnel information add value?
+- Does matchup analysis feel substantive?
+
+TRUST
+- Does the product overstate confidence?
+- Does it explain why a projection exists?
+- Are source freshness and uncertainty visible enough?
+- Does anything look more authoritative than the underlying data warrants?
+
+USER VALUE
+- What would make a serious NFL bettor/researcher return daily?
+- What is currently missing?
+- Which page provides the most value?
+- Which page provides the least value?
+- What should be removed or simplified?
+
+--------------------------------------------------
+SECTION 28 — FINAL ASSESSMENT
+--------------------------------------------------
+
+Answer directly:
+
+1. Is Gridline currently a real analytics product or mostly a polished model dashboard?
+
+2. Is the data foundation strong enough?
+
+3. Is the model sophisticated enough?
+
+4. Is the player-level analytics layer strong enough?
+
+5. Is the market analytics layer strong enough?
+
+6. What are the three biggest missing capabilities?
+
+7. What should be built NEXT?
+
+8. What should NOT be touched right now?
+
+9. What would most improve model quality?
+
+10. What would most improve user-perceived product quality?
+
+11. Is the product currently stronger in engineering/infrastructure than in actual analytics?
+
+12. If so, what exact analytics work would close that gap?
+
+--------------------------------------------------
+FINAL OUTPUT
+--------------------------------------------------
+
+Generate:
+
+reports/gridline-current-state-audit.md
+
+reports/gridline-current-state-audit.json
+
+and either:
+
+A SAFE EXTERNAL REVIEW URL
+
+or
+
+reports/gridline-product-review-index.md
+plus screenshots under:
+reports/product-review/
+
+The report must be evidence-based and use actual repository/database state.
+
+Do not rely on old task summaries when live code/database state disagrees.
+
+Do not make unrelated changes.
+
+If review access cannot be safely created, do not weaken security just to make it possible.
