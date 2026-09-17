@@ -1961,6 +1961,7 @@ function Router() {
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
     <Route path="/sign-up/*?" component={SignUpPage} />
     <Route path="/sign-in/*?" component={SignInPage} />
+    <Route path="/" component={SignInPage} />
     <Route component={SignInPage} />
   </Switch></RoutedErrorBoundary>;
   return <RoutedErrorBoundary><Switch>
