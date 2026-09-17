@@ -5,6 +5,7 @@ import { getNflverseHealth } from "../lib/nflverse";
 import { resolveCurrentSeasonWeek } from "../lib/season";
 import { getAvailabilityHealth } from "../lib/availability";
 import { getSleeperHealth } from "../lib/sleeper";
+import { getSleeperIdentityHealth } from "../lib/sleeper-identity";
 import { getOddsApiHealth } from "../lib/odds";
 import { getScheduleHealth } from "../lib/schedule";
 import { getSchedulerHealth } from "../lib/scheduler";
@@ -51,6 +52,7 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
   const nflverse = await getNflverseHealth();
   const availability = await getAvailabilityHealth();
   const sleeper = await getSleeperHealth();
+  const sleeperIdentity = await getSleeperIdentityHealth();
 
   const [scheduledInjuryRuns, scheduledNflverseRuns, scheduledWeatherRuns] = await Promise.all([
     getRecentScheduledRuns("scheduled:injuries"),
@@ -312,6 +314,26 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
           workerOwned: true,
           rawPayloadsExposed: false,
           scheduler: scheduler.jobs.find((job) => job.jobKey === "sleeper-players") ?? null,
+        },
+      },
+      {
+        provider: "sleeper-identity-mapping",
+        label: "Sleeper identity mapping",
+        status: sleeperIdentity.status,
+        detail: sleeperIdentity.latestFailure && sleeperIdentity.status !== "current"
+          ? sleeperIdentity.latestFailure
+          : `${sleeperIdentity.metadata.suitabilityVerdict ?? "Mapping suitability is not available."} ${sleeperIdentity.metadata.mappedCount ?? 0} of ${sleeperIdentity.metadata.totalSleeperRows ?? 0} rows mapped; depth-order coverage ${sleeperIdentity.metadata.depthOrder && typeof sleeperIdentity.metadata.depthOrder === "object" && "percentage" in sleeperIdentity.metadata.depthOrder ? sleeperIdentity.metadata.depthOrder.percentage : 0}%.`,
+        schedule: "After each successful Sleeper snapshot; worker-owned",
+        retryPolicy: "Runs independently after snapshot capture; failures do not invalidate snapshots.",
+        lastUpdated: sleeperIdentity.lastUpdated,
+        nextUpdate: null,
+        requestsToday: 0,
+        requestsThisMonth: 0,
+        remainingQuota: "Local database",
+        metadata: {
+          ...sleeperIdentity,
+          workerOwned: true,
+          rawPayloadsExposed: false,
         },
       },
     ]),

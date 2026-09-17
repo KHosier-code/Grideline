@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   changedSleeperPlayers,
   fetchSleeperPlayers,
+  isoTimestamp,
   SLEEPER_ACTIVE_TEAM_CODES,
   SLEEPER_PLAYERS_URL,
   sleeperSyncIntervalHours,
@@ -120,4 +121,12 @@ test("recurring Sleeper work is owned only by the persistent worker", () => {
   assert.equal(schedulerProcessOwnsRecurringJobs({ GRIDLINE_SCHEDULER_WORKER: "1" }), true);
   assert.equal(schedulerProcessOwnsRecurringJobs({ GRIDLINE_SCHEDULER_WORKER: "0" }), false);
   assert.equal(schedulerProcessOwnsRecurringJobs({ GRIDLINE_SCHEDULER_WORKER: undefined }), false);
+});
+
+test("Sleeper health timestamps accept PostgreSQL string aggregates", () => {
+  assert.equal(
+    isoTimestamp("2026-09-17 01:56:56.606+00"),
+    "2026-09-17T01:56:56.606Z",
+  );
+  assert.equal(isoTimestamp("not-a-timestamp"), null);
 });

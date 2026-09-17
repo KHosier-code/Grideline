@@ -508,6 +508,65 @@ export const sleeperPlayerSnapshotsTable = pgTable("sleeper_player_snapshots", {
 ]);
 
 /**
+ * Immutable, auditable output of the Sleeper-to-Gridline identity mapper.
+ * Every algorithm revision creates a new mapping run; existing results are
+ * never updated in place.
+ */
+export const sleeperIdentityMappingRunsTable = pgTable("sleeper_identity_mapping_runs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  mappingRunId: text("mapping_run_id").notNull(),
+  sourceSnapshotId: text("source_snapshot_id").notNull(),
+  sourceCapturedAt: timestamp("source_captured_at", { withTimezone: true }),
+  mappingVersion: text("mapping_version").notNull(),
+  status: text("status").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  recordsProcessed: integer("records_processed").notNull().default(0),
+  totalSleeperRows: integer("total_sleeper_rows").notNull().default(0),
+  mappedCount: integer("mapped_count").notNull().default(0),
+  ambiguousCount: integer("ambiguous_count").notNull().default(0),
+  unmatchedCount: integer("unmatched_count").notNull().default(0),
+  collisionCount: integer("collision_count").notNull().default(0),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+  errorMessage: text("error_message"),
+}, (table) => [
+  unique("sleeper_identity_mapping_runs_run_id_unique").on(table.mappingRunId),
+  index("sleeper_identity_mapping_runs_source_idx").on(table.sourceSnapshotId, table.startedAt),
+  index("sleeper_identity_mapping_runs_status_idx").on(table.status, table.startedAt),
+]);
+
+export const sleeperIdentityMappingsTable = pgTable("sleeper_identity_mappings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  mappingRunId: text("mapping_run_id").notNull(),
+  sourceSnapshotId: text("source_snapshot_id").notNull(),
+  sleeperPlayerId: text("sleeper_player_id").notNull(),
+  sourceHash: text("source_hash").notNull(),
+  mappedGridlinePlayerId: text("mapped_gridline_player_id"),
+  mappingStatus: text("mapping_status").notNull(),
+  mappingMethod: text("mapping_method").notNull(),
+  mappingConfidence: doublePrecision("mapping_confidence").notNull(),
+  originalTeam: text("original_team"),
+  normalizedTeam: text("normalized_team"),
+  teamNormalizationMethod: text("team_normalization_method"),
+  originalPosition: text("original_position"),
+  normalizedPosition: text("normalized_position"),
+  positionCompatibility: text("position_compatibility").notNull(),
+  evidenceSummary: text("evidence_summary"),
+  candidateGridlinePlayerIds: jsonb("candidate_gridline_player_ids").$type<string[]>().notNull().default([]),
+  candidateEvidence: jsonb("candidate_evidence").$type<Array<Record<string, unknown>>>().notNull().default([]),
+  ambiguityReason: text("ambiguity_reason"),
+  unmatchedReason: text("unmatched_reason"),
+  teamChangeEvidence: jsonb("team_change_evidence").$type<Record<string, unknown>>(),
+  depthRelevant: boolean("depth_relevant").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("sleeper_identity_mappings_run_player_unique").on(table.mappingRunId, table.sleeperPlayerId),
+  index("sleeper_identity_mappings_status_idx").on(table.mappingRunId, table.mappingStatus),
+  index("sleeper_identity_mappings_gridline_idx").on(table.mappedGridlinePlayerId, table.mappingRunId),
+  index("sleeper_identity_mappings_depth_idx").on(table.mappingRunId, table.depthRelevant),
+]);
+
+/**
  * Durable scheduler state. A row represents one recurring feed/slot rather
  * than one process, so a restart can continue from the persisted nextRunAt
  * and two server processes cannot both claim the same occurrence. The

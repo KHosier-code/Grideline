@@ -59,6 +59,15 @@ function integer(value: unknown): number | null {
   return typeof value === "number" && Number.isInteger(value) ? value : null;
 }
 
+export function isoTimestamp(value: unknown) {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    if (Number.isFinite(parsed.getTime())) return parsed.toISOString();
+  }
+  return null;
+}
+
 function hashMaterial(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
@@ -263,6 +272,8 @@ export async function syncSleeperPlayers(
     const metadata = {
       durationMs: Date.now() - startedAt,
       playerCount: players.length,
+      snapshotId,
+      sourceCapturedAt: capturedAt.toISOString(),
       ...teamCoverage,
       depthOrderCount,
       unchanged,
@@ -319,7 +330,7 @@ export async function getSleeperHealth() {
     lastUpdated: lastUpdated?.toISOString() ?? null,
     staleAgeMs,
     snapshotCount: summary?.snapshotCount ?? 0,
-    lastCapturedAt: summary?.lastCapturedAt?.toISOString() ?? null,
+    lastCapturedAt: isoTimestamp(summary?.lastCapturedAt),
     playerCount,
     teamCount,
     depthOrderCount,

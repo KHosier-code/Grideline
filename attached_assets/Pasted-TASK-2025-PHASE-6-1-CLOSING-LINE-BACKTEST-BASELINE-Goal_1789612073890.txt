@@ -1,0 +1,393 @@
+TASK — 2025 PHASE 6.1 CLOSING-LINE BACKTEST BASELINE
+
+Goal:
+Create a legitimate 2025 market-comparison baseline for the current Phase 6.1 Gridline models using historical closing spreads and closing totals.
+
+This is an evaluation task only.
+
+Do NOT:
+- change live Phase 6.1 models
+- retrain production models
+- promote any model
+- rewrite historical production predictions
+- fabricate historical sportsbook data
+- use future information
+- use current 2026 injury/depth data in 2025 evaluation
+
+The purpose is to answer:
+
+“How would the current approved Phase 6.1 modeling approach have performed against 2025 closing NFL spreads and totals using strict walk-forward, pregame-only information?”
+
+--------------------------------------------------
+1. HISTORICAL MARKET DATA DISCOVERY
+
+Find a legitimate source for 2025 NFL historical market lines.
+
+Priority:
+
+1. Verified closing spread and closing total from a source that explicitly identifies the values as closing lines
+2. If only recorded historical market lines are available, preserve that terminology and do NOT call them closing lines
+3. If multiple books are available, preserve book/source identity
+
+Prefer a reproducible data source that can be imported and retained for audit.
+
+For each game capture where available:
+
+- game ID / matchup
+- kickoff
+- market source
+- sportsbook if known
+- closing home spread
+- closing away spread/orientation
+- closing total
+- closing prices if available
+- opening spread if available
+- opening total if available
+- market timestamp if available
+- source provenance
+
+Do not silently infer spread orientation.
+
+--------------------------------------------------
+2. GAME MATCHING
+
+Match 2025 historical market rows to Gridline NFL games.
+
+Use:
+
+- season
+- week
+- teams
+- kickoff
+- canonical team aliases
+
+Audit:
+
+- matched count
+- unmatched count
+- ambiguous count
+- duplicate market rows
+- team alias issues
+- neutral-site issues if any
+
+Never force an ambiguous match.
+
+--------------------------------------------------
+3. PHASE 6.1 WALK-FORWARD RECONSTRUCTION
+
+Do not use the current final 2021–2025 fitted production artifact to predict games inside its own training sample and call that out-of-sample.
+
+Generate legitimate 2025 walk-forward predictions.
+
+For each 2025 prediction date/game, train or load an evaluation-only candidate using only information available before that game.
+
+Use the approved Phase 6.1 modeling configurations:
+
+Spread:
+- regularized linear regression
+- pregame-v3 schema
+- approved low-sample policy
+
+Moneyline:
+- logistic regression
+- pregame-v3 schema
+- approved low-sample policy
+
+Totals:
+- gradient boosting
+- pregame-v3 schema
+- approved low-sample policy
+
+Use only seasons/games available before the evaluated game.
+
+At minimum preserve the earlier Phase 4 walk-forward structure:
+- training through 2024 for 2025 evaluation
+
+If finer week-by-week expanding-window 2025 retraining is statistically and architecturally supported, report it separately rather than mixing methodologies.
+
+Do not use 2026 data anywhere.
+
+--------------------------------------------------
+4. IMMUTABLE EVALUATION RECORDS
+
+Persist evaluation outputs separately from production predictions.
+
+Each evaluation row should contain:
+
+- game ID
+- season/week
+- kickoff
+- evaluation model family
+- evaluation model version
+- training cutoff
+- feature version
+- artifact/checksum if fitted artifacts are persisted
+- projected margin
+- projected total
+- home win probability
+- historical market source
+- closing/recorded spread
+- closing/recorded total
+- prices if available
+- final score
+- evaluation timestamp
+- chronology validation
+
+Do NOT insert these into live production prediction snapshots.
+
+--------------------------------------------------
+5. SPREAD EVALUATION
+
+For every eligible 2025 game calculate:
+
+- Gridline projected margin
+- market closing spread
+- raw model-vs-market edge
+- ATS side implied by model
+- ATS result
+- push
+- no-bet/insufficient-edge state
+
+Report:
+
+- total graded games
+- wins
+- losses
+- pushes
+- ATS win %
+- ATS win % excluding pushes
+
+Break down by model edge:
+
+- < 1 point
+- 1–1.99
+- 2–2.99
+- 3–4.99
+- 5+
+
+Also report reasonable alternative buckets if sample sizes require it.
+
+Do not cherry-pick thresholds.
+
+--------------------------------------------------
+6. TOTALS EVALUATION
+
+For every eligible 2025 game calculate:
+
+- Gridline projected total
+- market closing total
+- model-vs-market difference
+- over/under direction
+- result
+- push
+
+Report:
+
+- total graded games
+- over recommendations
+- under recommendations
+- wins
+- losses
+- pushes
+- win %
+
+Break down by absolute edge:
+
+- < 1 point
+- 1–1.99
+- 2–2.99
+- 3–4.99
+- 5+
+
+--------------------------------------------------
+7. CORE MODEL ACCURACY
+
+Also report market-independent predictive accuracy.
+
+Spread:
+- MAE
+- RMSE
+
+Totals:
+- MAE
+- RMSE
+
+Moneyline:
+- accuracy
+- log loss
+- Brier score
+- calibration buckets
+
+Compare these to the retained Phase 6 historical reference metrics.
+
+Do not claim exact reproduction unless the methodology and artifacts truly reproduce them.
+
+--------------------------------------------------
+8. MARKET BASELINES
+
+Compare Gridline against simple market baselines.
+
+Spread:
+- closing market implied margin versus actual margin MAE/RMSE
+
+Totals:
+- closing market total versus actual total MAE/RMSE
+
+Moneyline:
+- if reliable historical moneyline prices are available, compare market implied probability versus Gridline using log loss/Brier
+- otherwise report unavailable
+
+This is important:
+Do not evaluate Gridline in isolation.
+
+Show whether the model adds information beyond the market.
+
+--------------------------------------------------
+9. WEEK-BY-WEEK REPORT
+
+For every 2025 regular-season week report:
+
+- games evaluated
+- spread ATS W-L-P
+- spread win %
+- average spread edge
+- totals W-L-P
+- totals win %
+- average total edge
+- spread MAE
+- totals MAE
+
+Also provide cumulative season-to-date performance.
+
+Do not hide losing weeks.
+
+--------------------------------------------------
+10. EDGE CALIBRATION
+
+Determine whether larger model-vs-market differences historically corresponded to stronger results.
+
+For spread and totals separately report:
+
+- number of games per edge bucket
+- win rate
+- average prediction error
+- confidence interval where reasonable
+
+Do NOT create a “recommended betting threshold” solely because one small sample bucket performed well.
+
+Flag insufficient samples.
+
+--------------------------------------------------
+11. PRICING / ROI
+
+If reliable historical prices are available:
+
+Calculate price-aware:
+
+- units won/lost
+- ROI
+- break-even comparison
+- closing-price return
+
+If only spread/total numbers are available without prices:
+
+Do NOT assume -110.
+
+Report ATS/O-U hit rates only.
+
+You may provide a clearly labeled hypothetical -110 break-even reference, but do not report it as historical ROI.
+
+--------------------------------------------------
+12. CLV
+
+Only calculate true CLV if both:
+- a legitimate earlier/pre-bet market price exists
+- a legitimate closing market reference exists
+
+If we only have closing lines:
+- model-vs-close difference is NOT CLV
+- label it model edge versus closing market
+
+Do not misuse the term CLV.
+
+--------------------------------------------------
+13. PERSONNEL LIMITATION
+
+This baseline intentionally evaluates the current Phase 6.1 pregame-v3 approach.
+
+Document explicitly that current Phase 6.1 does NOT directly use:
+
+- current injury designations
+- depth-chart changes
+- trades
+- WR-CB matchup data
+- OL injury continuity
+- defensive starter availability
+
+Do not retroactively add those features to this baseline.
+
+This evaluation will later serve as the comparison point for a personnel-aware challenger.
+
+--------------------------------------------------
+14. FUTURE CHALLENGER COMPARISON CONTRACT
+
+Create a reusable evaluation interface so a later personnel/injury-aware model can be tested against the exact same:
+
+- 2025 game set
+- market data
+- grading rules
+- edge buckets
+- chronology requirements
+- market baselines
+
+The future comparison should be:
+
+Phase 6.1 baseline
+vs
+Personnel-aware challenger
+vs
+Closing market baseline
+
+Do not build the challenger in this task.
+
+--------------------------------------------------
+15. DATA LEAKAGE / VALIDITY CHECKS
+
+Add tests proving:
+
+- no postgame features enter pregame predictions
+- no future 2025 games enter earlier 2025 evaluation
+- no 2026 data enters training/evaluation
+- market lines do not enter model features
+- final score is used only for grading
+- historical current-day Sleeper snapshots are not used for 2025
+- closing line is used only as evaluation reference, not as a model input
+- ambiguous game mappings are excluded
+
+--------------------------------------------------
+FINAL REPORT
+
+Return:
+
+1. Historical market source(s)
+2. Whether the lines are truly verified closing lines or only recorded market lines
+3. 2025 games available
+4. Successfully matched games
+5. Unmatched/ambiguous games
+6. Spread ATS record
+7. Spread ATS win %
+8. Totals record
+9. Totals win %
+10. Results by edge bucket
+11. Week-by-week results
+12. Spread MAE/RMSE
+13. Totals MAE/RMSE
+14. Moneyline accuracy/log loss/Brier
+15. Market baseline comparison
+16. Price-aware ROI if legitimately supported
+17. CLV result only if legitimately supported
+18. Leakage/chronology test results
+19. Major data limitations
+20. Whether this evaluation is suitable as the permanent Phase 6.1 baseline
+
+Do not change or promote the live production models.

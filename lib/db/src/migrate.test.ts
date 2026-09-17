@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 import {
   assertMigrationSafe,
@@ -67,4 +68,21 @@ test("migration requirements include validated constraints", () => {
       "model_evaluation_projection_completeness_check",
     ],
   );
+});
+
+test("Sleeper identity mapping migration protects runs and results as append-only", () => {
+  const migration = fs.readFileSync(
+    new URL("../migrations/0023_sleeper_identity_mapping.sql", import.meta.url),
+    "utf8",
+  );
+  const requirements = extractRequirements(migration);
+  assert.deepEqual(
+    [...requirements.triggers].sort(),
+    [
+      "sleeper_identity_mapping_runs_append_only",
+      "sleeper_identity_mappings_append_only",
+    ],
+  );
+  assert.match(migration, /BEFORE UPDATE OR DELETE ON "sleeper_identity_mapping_runs"/);
+  assert.match(migration, /BEFORE UPDATE OR DELETE ON "sleeper_identity_mappings"/);
 });

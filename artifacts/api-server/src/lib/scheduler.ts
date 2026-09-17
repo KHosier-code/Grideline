@@ -18,6 +18,7 @@ import {
 } from "@workspace/db";
 import { syncEspnInjuries } from "./availability";
 import { sleeperSyncIntervalMs, syncSleeperPlayers } from "./sleeper";
+import { refreshSleeperIdentityMappings } from "./sleeper-identity";
 import { syncNflverseHistory } from "./nflverse";
 import { rebuildPregameFeatures } from "./features";
 import { rebuildPregamePersonnelContextFeatures } from "./personnel-context";
@@ -871,6 +872,30 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
         jobKey: job.jobKey,
         scheduledFor: scheduledFor ?? undefined,
       });
+      const snapshotId = (result as { snapshotId?: string } | null)?.snapshotId;
+      const sourceCapturedAt = (result as { sourceCapturedAt?: string } | null)?.sourceCapturedAt;
+      if (snapshotId && sourceCapturedAt) {
+        try {
+          const identity = await refreshSleeperIdentityMappings({
+            sourceSnapshotId: snapshotId,
+            sourceCapturedAt: new Date(sourceCapturedAt),
+            jobKey: job.jobKey,
+            scheduledFor: scheduledFor ?? undefined,
+          });
+          result = {
+            ...(resultMetadata(result) as Record<string, unknown>),
+            identityMapping: identity,
+          };
+        } catch (error) {
+          // Mapping is advisory evidence and must not turn a successful
+          // Sleeper snapshot capture into a failed provider sync.
+          logger.error({ error, snapshotId }, "Sleeper identity mapping failed after snapshot sync");
+          result = {
+            ...(resultMetadata(result) as Record<string, unknown>),
+            identityMapping: { status: "failed", error: "Sleeper identity mapping failed." },
+          };
+        }
+      }
     } else if (job.kind === "personnel-context") {
       result = await rebuildPregamePersonnelContextFeatures();
     } else if (job.kind === "pregame-feature-repair") {

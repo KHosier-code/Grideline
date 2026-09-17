@@ -1,0 +1,292 @@
+TASK B — SLEEPER PLAYER IDENTITY MAPPING + COVERAGE VALIDATION
+
+Goal:
+Map Sleeper NFL players to existing Gridline players safely and measure mapping quality before Sleeper is used for depth-chart interpretation.
+
+Task A is complete and provides:
+- immutable Sleeper player snapshots
+- daily worker-owned sync
+- all 32 active NFL teams represented
+- 12,227 current Sleeper rows in development
+- 1,524 players with depth_chart_order
+- Data Health sync visibility
+
+This task must NOT change production model behavior.
+
+HARD SAFETY RULES
+
+Do NOT:
+- retrain any model
+- refit any model
+- promote any model
+- alter Phase 6.1 features
+- change prediction generation
+- rewrite historical predictions
+- overwrite nflverse history
+- force ambiguous player mappings
+- expose raw Sleeper payloads to consumers
+
+TASK 1 — CANONICAL TEAM NORMALIZATION
+
+Normalize Sleeper team labels to Gridline canonical team identities before player matching.
+
+Requirements:
+- support all current NFL abbreviations
+- explicitly handle legacy/team aliases such as OAK -> LV where appropriate
+- preserve the original Sleeper team value for audit
+- do not treat a legacy alias by itself as a player identity conflict
+- do not rewrite Sleeper source snapshots
+
+Return:
+- original Sleeper team code
+- normalized Gridline team ID/code
+- normalization method
+
+TASK 2 — PLAYER IDENTITY MATCHING HIERARCHY
+
+Map Sleeper players to Gridline players using the strongest available evidence.
+
+Priority:
+
+1. Exact provider ID / cross-provider ID match
+2. Exact known external-ID crosswalk
+3. Normalized full name + normalized team + compatible position
+4. Normalized name + strong supporting evidence only when team/position changes are explainable
+5. Otherwise mark ambiguous or unmatched
+
+Use provider IDs if Sleeper supplies identifiers such as:
+- GSIS
+- ESPN
+- Sportradar
+- Yahoo
+- Rotowire
+- other stable external IDs
+
+Do not rely on name matching when an exact ID is available.
+
+TASK 3 — NAME NORMALIZATION
+
+Support common player-name variations safely.
+
+Handle:
+- Jr / Sr
+- II / III / IV
+- apostrophes
+- hyphens
+- periods
+- initials
+- extra whitespace
+- accents/diacritics where appropriate
+- common abbreviation differences
+
+Examples should remain distinguishable when they refer to different players.
+
+Do not merge two players solely because their normalized names are similar.
+
+TASK 4 — POSITION NORMALIZATION
+
+Normalize compatible position aliases without overmatching.
+
+Examples:
+- PK -> K
+- DE / EDGE where existing Gridline taxonomy requires interpretation
+- DB should not automatically equal CB or S without supporting evidence
+- OL should not automatically equal OT/G/C when that would create ambiguity
+
+Preserve:
+- original Sleeper position
+- normalized Gridline position
+- position compatibility result
+
+TASK 5 — MAPPING RESULT MODEL
+
+For each Sleeper player derive:
+
+- sleeper_player_id
+- mapped_gridline_player_id
+- mapping_status
+- mapping_method
+- mapping_confidence
+- original_team
+- normalized_team
+- original_position
+- normalized_position
+- evidence summary
+- ambiguity reason if applicable
+- unmatched reason if applicable
+
+Use explicit statuses such as:
+
+- exact_provider_id
+- exact_crosswalk
+- normalized_name_team_position
+- supported_name_match
+- ambiguous
+- unmatched
+
+Do not use a vague generic "matched" status.
+
+TASK 6 — TRADE / TEAM-CHANGE HANDLING
+
+Do not create false mismatches when a player recently changed teams.
+
+When Sleeper team and Gridline historical team differ:
+
+- prefer stable provider identity if available
+- inspect current roster/team evidence
+- preserve both source values
+- record team-change evidence
+- do not silently rewrite historical Gridline records
+
+A current team mismatch with a stable exact player ID should not invalidate identity.
+
+TASK 7 — DUPLICATE / COLLISION PROTECTION
+
+Detect cases where:
+
+- two Sleeper players map to one Gridline player
+- one Sleeper player has multiple possible Gridline matches
+- duplicate normalized names exist on the same team
+- same-name players exist league-wide
+
+Do not choose arbitrarily.
+
+Mark these as conflicts requiring explicit evidence.
+
+TASK 8 — COVERAGE METRICS
+
+Produce mapping coverage for:
+
+Overall:
+- total Sleeper rows
+- rows representing active/current NFL players if derivable
+- mapped count
+- exact-ID count
+- crosswalk count
+- normalized-name/team/position count
+- supported-name count
+- ambiguous count
+- unmatched count
+- overall mapping percentage
+
+By position:
+- QB
+- RB
+- WR
+- TE
+- OL
+- EDGE/DE
+- DT
+- LB
+- CB
+- S
+- K
+- P
+
+Also specifically report mapping coverage for players with:
+- depth_chart_order
+- depth_chart_order = 1
+- current non-null team
+
+TASK 9 — DEPTH-RELEVANT VALIDATION
+
+For all 32 teams identify from Sleeper:
+
+- QB1 candidate
+- QB2 candidate
+- RB1 candidate
+- top WR depth-order players
+- TE1 candidate
+- CB1 / CB2 candidates where available
+
+For each candidate report:
+
+- Sleeper player ID
+- Sleeper name
+- team
+- position
+- depth order
+- mapped Gridline player
+- mapping method
+- mapping confidence
+
+Do NOT yet make the final Gridline starter decision.
+
+TASK 10 — MANUAL VALIDATION SAMPLE
+
+For at least 10 teams, compare Sleeper mapping against existing Gridline player records.
+
+Include a representative mix of:
+- QB
+- RB
+- WR
+- TE
+- CB
+
+Include at least:
+- one player with exact provider-ID mapping
+- one name/team/position mapping
+- one recent team-change case
+- one ambiguous/unmatched case if any exist
+- one legacy-team-alias case if present
+
+TASK 11 — ADMIN / DATA HEALTH SUPPORT
+
+Extend internal/admin diagnostics to show:
+
+- total mapping coverage
+- exact-match coverage
+- ambiguous count
+- unmatched count
+- position-level coverage
+- depth-order mapping coverage
+- team-alias normalization count
+- mapping conflicts
+
+Do not build the consumer UI in this task.
+
+TASK 12 — TESTS
+
+Add focused regression tests for:
+
+- exact provider ID takes precedence over name matching
+- OAK -> LV normalization where appropriate
+- team aliases preserve original source value
+- recent team changes do not break stable-ID mapping
+- suffix normalization
+- apostrophe/hyphen handling
+- same-name collision protection
+- ambiguous matches do not auto-resolve
+- duplicate mapping collisions are detected
+- DB/history is not rewritten
+- Phase 6.1 prediction paths are untouched
+
+FINAL REPORT
+
+Return:
+
+1. Total Sleeper players evaluated
+2. Overall mapping percentage
+3. Exact provider-ID percentage
+4. Crosswalk percentage
+5. Name/team/position percentage
+6. Ambiguous count
+7. Unmatched count
+8. Coverage by position
+9. Coverage among players with depth_chart_order
+10. Coverage among projected depth-order-1 players
+11. Legacy/team alias normalizations found
+12. Duplicate/collision count
+13. 10-team validation sample
+14. Major mapping limitations
+15. Tests passed
+16. Whether a publish is required
+17. Confirmation Phase 6.1 models/predictions were untouched
+
+Final verdict must be exactly one of:
+
+SLEEPER MAPPING SUITABLE FOR DEPTH LOGIC
+
+or
+
+SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC
