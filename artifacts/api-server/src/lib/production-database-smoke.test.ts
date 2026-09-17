@@ -5,6 +5,7 @@ import {
   isPostgresTlsCompatibilityWarning,
   recordReleaseSecurityEvidence,
   runProductionDatabaseSmokeCheck,
+  verifyImmutablePredictionGuards,
 } from "./production-database-smoke";
 
 test("uses a metadata-free connectivity query", async () => {
@@ -88,4 +89,102 @@ test("fails the smoke check when a PostgreSQL TLS warning was captured", () => {
       ]),
     /TLS compatibility warning detected/,
   );
+});
+
+function immutableGuardPool(options: {
+  missingGuard?: "snapshot_update_guard" | "snapshot_delete_guard" | "grade_update_guard" | "grade_delete_guard";
+  unexpectedGuardError?: "snapshot_update_guard" | "snapshot_delete_guard" | "grade_update_guard" | "grade_delete_guard";
+} = {}) {
+  const queries: string[] = [];
+  let activeSavepoint = "";
+  let transactionAborted = false;
+  const client = {
+    async query(text: string) {
+      queries.push(text);
+      if (transactionAborted && !text.startsWith("ROLLBACK TO SAVEPOINT") && text !== "ROLLBACK") {
+        throw new Error("current transaction is aborted");
+      }
+      if (text.startsWith("SAVEPOINT ")) {
+        activeSavepoint = text.slice("SAVEPOINT ".length);
+        return { rows: [] };
+      }
+      if (text.startsWith("ROLLBACK TO SAVEPOINT")) {
+        transactionAborted = false;
+        return { rows: [] };
+      }
+      if (text.includes("INSERT INTO prediction_snapshots")) return { rows: [{ id: 71 }] };
+      if (text.includes("INSERT INTO prediction_grades")) return { rows: [{ id: 72 }] };
+      if (
+        (text.startsWith("UPDATE prediction_snapshots") || text.startsWith("DELETE FROM prediction_snapshots"))
+        && activeSavepoint !== options.missingGuard
+      ) {
+        transactionAborted = true;
+        throw new Error(
+          activeSavepoint === options.unexpectedGuardError
+            ? "permission denied"
+            : "official prediction snapshots are immutable",
+        );
+      }
+      if (
+        (text.startsWith("UPDATE prediction_grades") || text.startsWith("DELETE FROM prediction_grades"))
+        && activeSavepoint !== options.missingGuard
+      ) {
+        transactionAborted = true;
+        throw new Error(
+          activeSavepoint === options.unexpectedGuardError
+            ? "permission denied"
+            : "prediction grades are immutable",
+        );
+      }
+      return { rows: [], rowCount: 1 };
+    },
+    release() {
+      queries.push("RELEASE CLIENT");
+    },
+  };
+  return {
+    queries,
+    pool: {
+      async connect() {
+        return client;
+      },
+    },
+  };
+}
+
+test("proves snapshot and grade update/delete guards and rolls back all probes", async () => {
+  const { pool, queries } = immutableGuardPool();
+  await verifyImmutablePredictionGuards(pool, "build-123");
+
+  assert.equal(queries[0], "BEGIN");
+  assert.ok(queries.some((query) => query.startsWith("UPDATE prediction_snapshots")));
+  assert.ok(queries.some((query) => query.startsWith("DELETE FROM prediction_snapshots")));
+  assert.ok(queries.some((query) => query.startsWith("UPDATE prediction_grades")));
+  assert.ok(queries.some((query) => query.startsWith("DELETE FROM prediction_grades")));
+  assert.deepEqual(queries.slice(-2), ["ROLLBACK", "RELEASE CLIENT"]);
+});
+
+test("fails closed and rolls back when any immutable prediction guard is absent", async () => {
+  for (const missingGuard of [
+    "snapshot_update_guard",
+    "snapshot_delete_guard",
+    "grade_update_guard",
+    "grade_delete_guard",
+  ] as const) {
+    const { pool, queries } = immutableGuardPool({ missingGuard });
+    await assert.rejects(
+      verifyImmutablePredictionGuards(pool, "build-123"),
+      new RegExp(`absent or ineffective for ${missingGuard}`),
+    );
+    assert.deepEqual(queries.slice(-2), ["ROLLBACK", "RELEASE CLIENT"]);
+  }
+});
+
+test("fails closed when an immutable prediction guard returns an unexpected error", async () => {
+  const { pool, queries } = immutableGuardPool({ unexpectedGuardError: "grade_update_guard" });
+  await assert.rejects(
+    verifyImmutablePredictionGuards(pool, "build-123"),
+    /unexpected error for grade_update_guard/,
+  );
+  assert.deepEqual(queries.slice(-2), ["ROLLBACK", "RELEASE CLIENT"]);
 });

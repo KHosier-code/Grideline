@@ -14,3 +14,17 @@ Release readiness must revalidate the complete approved payload from the persist
 **Why:** A conflicting but internally valid artifact could otherwise occupy an approved model version and pass generic integrity checks when the custom database trigger is unavailable.
 
 **How to apply:** Keep imports append-only and idempotent, reject conflicts, expose the database-trigger limitation honestly, and require exact artifact ID/checksum/schema verification again before shadow readiness or manual promotion review.
+
+For custom immutability triggers, separate Publish-managed table/index/constraint
+DDL from the trigger-only SQL an operator applies through the production Database
+tool. Gate process startup with rolled-back mutation probes that prove both update
+and delete rejection before recording release evidence.
+
+**Why:** Running a mixed migration after Publish can stop on an already-created
+constraint before reaching its trigger definitions, while catalog presence alone
+does not prove the guards reject mutations.
+
+**How to apply:** Use one outer transaction and a savepoint per expected failure;
+after PostgreSQL rejects a probe, roll back to its savepoint before the next query.
+Roll back all synthetic rows and fail startup on a successful mutation, unexpected
+error, or cleanup failure.

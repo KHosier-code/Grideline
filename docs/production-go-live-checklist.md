@@ -68,6 +68,25 @@ replace a pending or warning result with an assumption.
   verify its connection is distinct from development.
 - [ ] Review the Publish schema diff and take the Replit backup/checkpoint
   before applying a schema change.
+- [ ] Custom PostgreSQL triggers are not part of the managed table-schema diff.
+  After Publish, use the production Database tool's SQL runner to apply the
+  reviewed trigger-only section of
+  `lib/db/migrations/0033_immutable_canonical_prediction.sql`, beginning with
+  `CREATE OR REPLACE FUNCTION reject_canonical_prediction_mutation()` and
+  ending with the `prediction_grade_immutable` trigger. Do not execute the
+  index, column, foreign-key, or check-constraint statements from the start of
+  that file; the managed Publish schema diff owns those objects. This manual
+  trigger-only operation is supported through the Database tool; do not add a
+  production migration script, deployment build hook, or startup DDL.
+- [ ] Do not bypass the production startup gate after Publish. Before either
+  process starts, it inserts a synthetic canonical snapshot and grade inside a
+  transaction, proves update and delete are rejected for both tables, and
+  rolls the complete probe transaction back. A missing or ineffective guard,
+  an unexpected database error, or inability to run the probes fails closed
+  and leaves the API and worker unavailable.
+- [ ] Confirm the successful published build has a
+  `release_security_evidence` row only after all four immutable mutation probes
+  pass. The evidence row contains no probe data or database metadata.
 - [ ] Do not point the development migration runner at production. Production
   schema changes are owned by Replit Publish and its review/backup flow; never
   use a deploy-time schema push or startup migration against production.
@@ -198,6 +217,9 @@ replace a pending or warning result with an assumption.
 - [ ] After kickoff, predictions are immutable: a late feed update must not
   create or alter an official prediction. A read-only report cannot simulate
   this mutation; wait for the real kickoff guard verification.
+- [ ] Treat the transactional production startup probes as the database guard
+  verification for every publish. The later real-game check verifies scheduler
+  and application chronology, not whether the database permits mutation.
 - [ ] Never imply a betting recommendation, confidence guarantee, or CLV when
   the legitimate pregame market line is unavailable.
 - [ ] Confirm the report's canonical snapshot is the latest valid evidence at

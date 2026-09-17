@@ -1,5 +1,16 @@
 type QueryablePool = {
   query: (text: string, values?: readonly unknown[]) => Promise<{ rows: unknown[] }>;
+  connect: () => Promise<QueryableClient>;
+};
+
+type QueryResult = {
+  rows: unknown[];
+  rowCount?: number | null;
+};
+
+type QueryableClient = {
+  query: (text: string, values?: readonly unknown[]) => Promise<QueryResult>;
+  release: () => void;
 };
 
 export type ProductionDatabaseEvidence = {
@@ -8,6 +19,103 @@ export type ProductionDatabaseEvidence = {
   selectOneResult: 1;
   verifyFullPassed: true;
 };
+
+const IMMUTABLE_SNAPSHOT_MESSAGE = "official prediction snapshots are immutable";
+const IMMUTABLE_GRADE_MESSAGE = "prediction grades are immutable";
+
+async function expectRejectedMutation(
+  client: QueryableClient,
+  savepoint: string,
+  query: string,
+  values: readonly unknown[],
+  expectedMessage: string,
+): Promise<void> {
+  await client.query(`SAVEPOINT ${savepoint}`);
+  try {
+    await client.query(query, values);
+  } catch (error) {
+    await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    if (error instanceof Error && error.message.includes(expectedMessage)) return;
+    throw new Error(`Immutable prediction guard returned an unexpected error for ${savepoint}`);
+  }
+  await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+  throw new Error(`Immutable prediction guard is absent or ineffective for ${savepoint}`);
+}
+
+/**
+ * Proves the managed production database rejects canonical snapshot and grade
+ * mutations. Probe rows and all attempted changes are rolled back, so this is
+ * startup verification rather than startup schema management.
+ */
+export async function verifyImmutablePredictionGuards(
+  pool: Pick<QueryablePool, "connect">,
+  buildId: string,
+): Promise<void> {
+  const client = await pool.connect();
+  const probeKey = `production-immutability-probe:${buildId}`;
+  try {
+    await client.query("BEGIN");
+    const snapshot = await client.query(
+      `INSERT INTO prediction_snapshots
+         (snapshot_key, game_id, snapshot_label, feature_version, training_cutoff,
+          official_final_prediction, frozen_at)
+       VALUES ($1, $2, 'production-guard-probe', 'production-guard-probe',
+               'production-guard-probe', true, now())
+       RETURNING id`,
+      [probeKey, probeKey],
+    );
+    const snapshotId = (snapshot.rows[0] as { id?: unknown } | undefined)?.id;
+    if (typeof snapshotId !== "number") {
+      throw new Error("Immutable prediction guard probe snapshot was not inserted");
+    }
+
+    await expectRejectedMutation(
+      client,
+      "snapshot_update_guard",
+      "UPDATE prediction_snapshots SET snapshot_label = $1 WHERE id = $2",
+      ["mutation-must-fail", snapshotId],
+      IMMUTABLE_SNAPSHOT_MESSAGE,
+    );
+    await expectRejectedMutation(
+      client,
+      "snapshot_delete_guard",
+      "DELETE FROM prediction_snapshots WHERE id = $1",
+      [snapshotId],
+      IMMUTABLE_SNAPSHOT_MESSAGE,
+    );
+
+    const grade = await client.query(
+      `INSERT INTO prediction_grades (prediction_id, actual_home_score, actual_away_score)
+       VALUES ($1, 0, 0)
+       RETURNING id`,
+      [snapshotId],
+    );
+    const gradeId = (grade.rows[0] as { id?: unknown } | undefined)?.id;
+    if (typeof gradeId !== "number") {
+      throw new Error("Immutable prediction guard probe grade was not inserted");
+    }
+    await expectRejectedMutation(
+      client,
+      "grade_update_guard",
+      "UPDATE prediction_grades SET actual_home_score = 1 WHERE id = $1",
+      [gradeId],
+      IMMUTABLE_GRADE_MESSAGE,
+    );
+    await expectRejectedMutation(
+      client,
+      "grade_delete_guard",
+      "DELETE FROM prediction_grades WHERE id = $1",
+      [gradeId],
+      IMMUTABLE_GRADE_MESSAGE,
+    );
+  } finally {
+    try {
+      await client.query("ROLLBACK");
+    } finally {
+      client.release();
+    }
+  }
+}
 
 const TLS_WARNING_PATTERNS = [
   /sslmode/i,
@@ -29,7 +137,7 @@ export function assertNoPostgresTlsCompatibilityWarnings(
 }
 
 export async function runProductionDatabaseSmokeCheck(
-  pool: QueryablePool,
+  pool: Pick<QueryablePool, "query">,
 ): Promise<1> {
   const result = await pool.query("SELECT 1 AS connection_check");
   if (
@@ -42,7 +150,7 @@ export async function runProductionDatabaseSmokeCheck(
 }
 
 export async function recordReleaseSecurityEvidence(
-  pool: QueryablePool,
+  pool: Pick<QueryablePool, "query">,
   buildId: string,
   selectOneResult: 1,
 ): Promise<ProductionDatabaseEvidence> {
@@ -104,6 +212,7 @@ export async function verifyProductionDatabase(
     const database = await import("@workspace/db");
     pool = database.pool;
     const selectOneResult = await runProductionDatabaseSmokeCheck(pool);
+    await verifyImmutablePredictionGuards(pool, buildId);
     await new Promise<void>((resolve) => setImmediate(resolve));
     assertNoPostgresTlsCompatibilityWarnings(tlsWarnings);
     return await recordReleaseSecurityEvidence(pool, buildId, selectOneResult);
