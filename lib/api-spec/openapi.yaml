@@ -56,6 +56,23 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DataHealth"
+  /admin/sleeper-identity-report:
+    get:
+      operationId: getSleeperIdentityReport
+      tags: [dashboard]
+      summary: Read the administrator-only Sleeper identity mapping report
+      description: Returns immutable mapping coverage, classification totals, position coverage, all-team depth candidates, a deterministic validation sample, risks, suitability, and safety assertions. Provider diagnostics are never exposed through consumer APIs.
+      responses:
+        "200":
+          description: Sleeper identity mapping and validation report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SleeperIdentityReport"
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator access required
   /games:
     get:
       operationId: listGames
@@ -1045,6 +1062,144 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ScheduledDataHealthRun"
+    SleeperIdentityReport:
+      type: object
+      required:
+        [status, mappingVersion, latestAttemptMappingVersion,
+         expectedMappingVersion, mappingRunId, sourceSnapshotId, lastUpdated, lastAttempted,
+         staleAgeMs, latestFailure, recentFailureCount, durationMs, metadata,
+         mappingHierarchy, report, majorRisks, suitableForDepthLogic,
+         suitabilityVerdict, safety]
+      properties:
+        status: { type: string, enum: [current, stale, unavailable] }
+        mappingVersion: { type: ["string", "null"] }
+        latestAttemptMappingVersion: { type: ["string", "null"] }
+        expectedMappingVersion: { type: string }
+        mappingRunId: { type: ["string", "null"] }
+        sourceSnapshotId: { type: ["string", "null"] }
+        lastUpdated: { type: ["string", "null"], format: date-time }
+        lastAttempted: { type: ["string", "null"], format: date-time }
+        staleAgeMs: { type: ["number", "null"] }
+        latestFailure: { type: ["string", "null"] }
+        recentFailureCount: { type: integer }
+        durationMs: { type: ["number", "null"] }
+        metadata:
+          type: object
+          additionalProperties: true
+        mappingHierarchy:
+          type: array
+          items: { type: string }
+        report:
+          type: object
+          required:
+            [providerNamespaceInventory, trustedIdNamespaces, totalSleeperRows,
+             currentTeamRows, mappedCount, exactProviderIdCount, crosswalkCount,
+             normalizedNameTeamPositionCount, ambiguousCount, unmatchedCount,
+             unresolvedCount, collisionCount, selectedStarterCollisionCount,
+             staleCrosswalkEvidenceCount, crosswalkEvidenceCount,
+             effectiveCrosswalkLinkCount,
+             nflverseCrosswalkFingerprint, nflverseCrosswalkSourceUrl,
+             nflverseCrosswalkRows, appliedNflverseCrosswalkRows,
+             rejectedNflverseCrosswalkRows,
+             overallMappingPercentage, currentTeam, depthOrder, depthOrderOne,
+             qbDepthOrderOne, byPosition, roleCoverage,
+             authoritativeDepthCohortDefinition, suitabilityGates, blockerCategories,
+             depthRelevantCandidates, validationSample]
+          properties:
+            providerNamespaceInventory:
+              type: array
+              items:
+                type: object
+                required: [namespace, playersWithId, trustworthyForExactEquality, note]
+                properties:
+                  namespace: { type: string }
+                  playersWithId: { type: integer }
+                  trustworthyForExactEquality: { type: boolean }
+                  note: { type: string }
+            trustedIdNamespaces:
+              type: array
+              items: { type: string }
+            totalSleeperRows: { type: integer }
+            currentTeamRows: { type: integer }
+            mappedCount: { type: integer }
+            exactProviderIdCount: { type: integer }
+            crosswalkCount: { type: integer }
+            normalizedNameTeamPositionCount: { type: integer }
+            ambiguousCount: { type: integer }
+            unmatchedCount: { type: integer }
+            unresolvedCount: { type: integer }
+            collisionCount: { type: integer }
+            selectedStarterCollisionCount: { type: integer }
+            staleCrosswalkEvidenceCount: { type: integer }
+            crosswalkEvidenceCount: { type: integer }
+            effectiveCrosswalkLinkCount: { type: integer }
+            nflverseCrosswalkFingerprint: { type: ["string", "null"] }
+            nflverseCrosswalkSourceUrl: { type: ["string", "null"] }
+            nflverseCrosswalkRows: { type: integer }
+            appliedNflverseCrosswalkRows: { type: integer }
+            rejectedNflverseCrosswalkRows: { type: integer }
+            overallMappingPercentage: { type: number }
+            currentTeam: { $ref: "#/components/schemas/SleeperIdentityCoverageMetric" }
+            depthOrder: { $ref: "#/components/schemas/SleeperIdentityCoverageMetric" }
+            depthOrderOne: { $ref: "#/components/schemas/SleeperIdentityCoverageMetric" }
+            qbDepthOrderOne: { $ref: "#/components/schemas/SleeperIdentityCoverageMetric" }
+            byPosition:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/SleeperIdentityPositionCoverage"
+            roleCoverage:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/SleeperIdentityPositionCoverage"
+            authoritativeDepthCohortDefinition: { type: string }
+            suitabilityGates:
+              type: object
+              additionalProperties: { type: boolean }
+            blockerCategories:
+              type: array
+              items: { type: string }
+            depthRelevantCandidates:
+              type: array
+              items: { type: object, additionalProperties: true }
+            validationSample:
+              type: array
+              items: { type: object, additionalProperties: true }
+        majorRisks:
+          type: array
+          items: { type: string }
+        suitableForDepthLogic: { type: boolean }
+        suitabilityVerdict:
+          type: string
+          enum:
+            [SLEEPER MAPPING SUITABLE FOR DEPTH LOGIC,
+             SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC]
+        safety:
+          type: object
+          required:
+            [phase61Untouched, productionModelsUntouched, consumerApiExposed,
+             canonicalPlayerIdsMutated, sleeperSnapshotsMutated]
+          properties:
+            phase61Untouched: { type: boolean, const: true }
+            productionModelsUntouched: { type: boolean, const: true }
+            consumerApiExposed: { type: boolean, const: false }
+            canonicalPlayerIdsMutated: { type: boolean, const: false }
+            sleeperSnapshotsMutated: { type: boolean, const: false }
+    SleeperIdentityCoverageMetric:
+      type: object
+      required: [total, mapped, percentage]
+      properties:
+        total: { type: integer }
+        mapped: { type: integer }
+        percentage: { type: number }
+    SleeperIdentityPositionCoverage:
+      allOf:
+        - $ref: "#/components/schemas/SleeperIdentityCoverageMetric"
+        - type: object
+          required: [ambiguous, unmatched, unresolved]
+          properties:
+            ambiguous: { type: integer }
+            unmatched: { type: integer }
+            unresolved: { type: integer }
     ScheduledDataHealthRun:
       type: object
       required: [id, provider, status, error, startedAt, completedAt]

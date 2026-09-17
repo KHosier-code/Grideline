@@ -625,6 +625,30 @@ export const sleeperIdentityMappingsTable = pgTable("sleeper_identity_mappings",
 ]);
 
 /**
+ * Append-only observations of verified namespace-aware identity links.
+ * A later verification creates another row rather than rewriting history.
+ */
+export const sleeperPlayerCrosswalkEvidenceTable = pgTable("sleeper_player_crosswalk_evidence", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  gridlinePlayerId: text("gridline_player_id").notNull(),
+  sourceNamespace: text("source_namespace").notNull(),
+  sourcePlayerId: text("source_player_id").notNull(),
+  targetNamespace: text("target_namespace").notNull(),
+  targetPlayerId: text("target_player_id").notNull(),
+  evidenceMethod: text("evidence_method").notNull(),
+  evidenceConfidence: doublePrecision("evidence_confidence").notNull(),
+  firstObservedAt: timestamp("first_observed_at", { withTimezone: true }).notNull(),
+  lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }).notNull(),
+  evidenceFingerprint: text("evidence_fingerprint").notNull(),
+  ambiguous: boolean("ambiguous").notNull().default(false),
+  evidence: jsonb("evidence").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("sleeper_player_crosswalk_evidence_fingerprint_unique").on(table.evidenceFingerprint),
+  index("sleeper_player_crosswalk_source_idx").on(table.sourceNamespace, table.sourcePlayerId, table.lastVerifiedAt),
+  index("sleeper_player_crosswalk_gridline_idx").on(table.gridlinePlayerId, table.lastVerifiedAt),
+]);
+/**
  * Durable scheduler state. A row represents one recurring feed/slot rather
  * than one process, so a restart can continue from the persisted nextRunAt
  * and two server processes cannot both claim the same occurrence. The

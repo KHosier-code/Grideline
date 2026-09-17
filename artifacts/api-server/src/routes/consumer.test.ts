@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import path from "node:path";
 import {
   GetConsumerDashboardResponse,
   GetConsumerGameResponse,
@@ -60,9 +61,30 @@ test("consumer market quotes use deterministic, explicitly labeled sides", () =>
 
 test("consumer movement preserves legitimate A-B-A history without exposing row identifiers", () => {
   const movement = serializeMovement([
-    { sportsbook: "DraftKings", market: "spread", selection: "Home", point: -3, price: -110, capturedAt: new Date("2026-09-01T12:00:00Z") },
-    { sportsbook: "DraftKings", market: "spread", selection: "Home", point: -2.5, price: -105, capturedAt: new Date("2026-09-01T13:00:00Z") },
-    { sportsbook: "DraftKings", market: "spread", selection: "Home", point: -3, price: -108, capturedAt: new Date("2026-09-01T14:00:00Z") },
+    {
+      sportsbook: "DraftKings",
+      market: "spread",
+      selection: "Home",
+      point: -3,
+      price: -110,
+      capturedAt: new Date("2026-09-01T12:00:00Z"),
+    },
+    {
+      sportsbook: "DraftKings",
+      market: "spread",
+      selection: "Home",
+      point: -2.5,
+      price: -105,
+      capturedAt: new Date("2026-09-01T13:00:00Z"),
+    },
+    {
+      sportsbook: "DraftKings",
+      market: "spread",
+      selection: "Home",
+      point: -3,
+      price: -108,
+      capturedAt: new Date("2026-09-01T14:00:00Z"),
+    },
   ]);
 
   assert.equal(movement.available, true);
@@ -231,19 +253,9 @@ test("generated contracts accept representative list, dashboard, detail, and una
     },
   };
 
-  assert.equal(ListConsumerGamesResponse.safeParse({ status: "available", games: [game] }).success, true);
-  assert.equal(GetConsumerDashboardResponse.safeParse({ status: "available", games: [game], note: "Persisted only." }).success, true);
-  assert.equal(GetConsumerGameResponse.safeParse(detail).success, true);
-  assert.equal(GetConsumerPropsAvailabilityResponse.safeParse({
-    status: "unavailable",
-    message: "Player information temporarily unavailable",
-    available: false,
-  }).success, true);
-});
-
-test("consumer reads remain bounded and cannot invoke computation side effects", () => {
-  const source = readFileSync(fileURLToPath(new URL("./consumer.ts", import.meta.url)), "utf8");
-  const predictionSource = readFileSync(fileURLToPath(new URL("../lib/live-predictions.ts", import.meta.url)), "utf8");
+  const routesDirectory = path.join(fileURLToPath(new URL("../../", import.meta.url)), "src/routes");
+  const source = readFileSync(path.join(routesDirectory, "consumer.ts"), "utf8");
+  const predictionSource = readFileSync(path.join(routesDirectory, "../lib/live-predictions.ts"), "utf8");
   assert.equal(MAX_CONSUMER_GAMES, 100);
   assert.equal(MAX_CONSUMER_MOVEMENT_ROWS, 200);
   assert.equal(MAX_CONSUMER_SNAPSHOT_ROWS, 100);

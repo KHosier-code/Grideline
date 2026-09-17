@@ -82,6 +82,110 @@ export const GetDataHealthResponse = zod.array(GetDataHealthResponseItem)
 
 
 /**
+ * Returns immutable mapping coverage, classification totals, position coverage, all-team depth candidates, a deterministic validation sample, risks, suitability, and safety assertions. Provider diagnostics are never exposed through consumer APIs.
+ * @summary Read the administrator-only Sleeper identity mapping report
+ */
+export const GetSleeperIdentityReportResponse = zod.object({
+  "status": zod.enum(['current', 'stale', 'unavailable']),
+  "mappingVersion": zod.string().nullable(),
+  "latestAttemptMappingVersion": zod.string().nullable(),
+  "expectedMappingVersion": zod.string(),
+  "mappingRunId": zod.string().nullable(),
+  "sourceSnapshotId": zod.string().nullable(),
+  "lastUpdated": zod.coerce.date().nullable(),
+  "lastAttempted": zod.coerce.date().nullable(),
+  "staleAgeMs": zod.number().nullable(),
+  "latestFailure": zod.string().nullable(),
+  "recentFailureCount": zod.number().int(),
+  "durationMs": zod.number().nullable(),
+  "metadata": zod.record(zod.string(), zod.unknown()),
+  "mappingHierarchy": zod.array(zod.string()),
+  "report": zod.object({
+  "providerNamespaceInventory": zod.array(zod.object({
+  "namespace": zod.string(),
+  "playersWithId": zod.number().int(),
+  "trustworthyForExactEquality": zod.boolean(),
+  "note": zod.string()
+})),
+  "trustedIdNamespaces": zod.array(zod.string()),
+  "totalSleeperRows": zod.number().int(),
+  "currentTeamRows": zod.number().int(),
+  "mappedCount": zod.number().int(),
+  "exactProviderIdCount": zod.number().int(),
+  "crosswalkCount": zod.number().int(),
+  "normalizedNameTeamPositionCount": zod.number().int(),
+  "ambiguousCount": zod.number().int(),
+  "unmatchedCount": zod.number().int(),
+  "unresolvedCount": zod.number().int(),
+  "collisionCount": zod.number().int(),
+  "selectedStarterCollisionCount": zod.number().int(),
+  "staleCrosswalkEvidenceCount": zod.number().int(),
+  "crosswalkEvidenceCount": zod.number().int(),
+  "effectiveCrosswalkLinkCount": zod.number().int(),
+  "nflverseCrosswalkFingerprint": zod.string().nullable(),
+  "nflverseCrosswalkSourceUrl": zod.string().nullable(),
+  "nflverseCrosswalkRows": zod.number().int(),
+  "appliedNflverseCrosswalkRows": zod.number().int(),
+  "rejectedNflverseCrosswalkRows": zod.number().int(),
+  "overallMappingPercentage": zod.number(),
+  "currentTeam": zod.object({
+  "total": zod.number().int(),
+  "mapped": zod.number().int(),
+  "percentage": zod.number()
+}),
+  "depthOrder": zod.object({
+  "total": zod.number().int(),
+  "mapped": zod.number().int(),
+  "percentage": zod.number()
+}),
+  "depthOrderOne": zod.object({
+  "total": zod.number().int(),
+  "mapped": zod.number().int(),
+  "percentage": zod.number()
+}),
+  "qbDepthOrderOne": zod.object({
+  "total": zod.number().int(),
+  "mapped": zod.number().int(),
+  "percentage": zod.number()
+}),
+  "byPosition": zod.record(zod.string(), zod.object({
+  "total": zod.number().int(),
+  "mapped": zod.number().int(),
+  "percentage": zod.number()
+}).and(zod.object({
+  "ambiguous": zod.number().int(),
+  "unmatched": zod.number().int(),
+  "unresolved": zod.number().int()
+}))),
+  "roleCoverage": zod.record(zod.string(), zod.object({
+  "total": zod.number().int(),
+  "mapped": zod.number().int(),
+  "percentage": zod.number()
+}).and(zod.object({
+  "ambiguous": zod.number().int(),
+  "unmatched": zod.number().int(),
+  "unresolved": zod.number().int()
+}))),
+  "authoritativeDepthCohortDefinition": zod.string(),
+  "suitabilityGates": zod.record(zod.string(), zod.boolean()),
+  "blockerCategories": zod.array(zod.string()),
+  "depthRelevantCandidates": zod.array(zod.record(zod.string(), zod.unknown())),
+  "validationSample": zod.array(zod.record(zod.string(), zod.unknown()))
+}),
+  "majorRisks": zod.array(zod.string()),
+  "suitableForDepthLogic": zod.boolean(),
+  "suitabilityVerdict": zod.enum(['SLEEPER MAPPING SUITABLE FOR DEPTH LOGIC', 'SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC']),
+  "safety": zod.object({
+  "phase61Untouched": zod.literal(true),
+  "productionModelsUntouched": zod.literal(true),
+  "consumerApiExposed": zod.literal(false),
+  "canonicalPlayerIdsMutated": zod.literal(false),
+  "sleeperSnapshotsMutated": zod.literal(false)
+})
+})
+
+
+/**
  * @summary List NFL games for a season and week
  */
 export const listGamesQuerySeasonMin = 2020;
@@ -1186,5 +1290,3 @@ export const GetConsumerPropsAvailabilityResponse = zod.object({
   "message": zod.string(),
   "available": zod.literal(false)
 })
-
-

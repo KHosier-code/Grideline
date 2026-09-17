@@ -708,6 +708,131 @@ export interface DataHealth {
   scheduledRuns?: ScheduledDataHealthRun[];
 }
 
+export type SleeperIdentityReportStatus = typeof SleeperIdentityReportStatus[keyof typeof SleeperIdentityReportStatus];
+
+
+export const SleeperIdentityReportStatus = {
+  current: 'current',
+  stale: 'stale',
+  unavailable: 'unavailable',
+} as const;
+
+export type SleeperIdentityReportMetadata = { [key: string]: unknown };
+
+export type SleeperIdentityReportReportProviderNamespaceInventoryItem = {
+  namespace: string;
+  playersWithId: number;
+  trustworthyForExactEquality: boolean;
+  note: string;
+};
+
+export interface SleeperIdentityCoverageMetric {
+  total: number;
+  mapped: number;
+  percentage: number;
+}
+
+export type SleeperIdentityPositionCoverage = SleeperIdentityCoverageMetric & {
+  ambiguous: number;
+  unmatched: number;
+  unresolved: number;
+};
+
+export type SleeperIdentityReportReportByPosition = {[key: string]: SleeperIdentityPositionCoverage};
+
+export type SleeperIdentityReportReportRoleCoverage = {[key: string]: SleeperIdentityPositionCoverage};
+
+export type SleeperIdentityReportReportSuitabilityGates = {[key: string]: boolean};
+
+export type SleeperIdentityReportReportDepthRelevantCandidatesItem = { [key: string]: unknown };
+
+export type SleeperIdentityReportReportValidationSampleItem = { [key: string]: unknown };
+
+export type SleeperIdentityReportReport = {
+  providerNamespaceInventory: SleeperIdentityReportReportProviderNamespaceInventoryItem[];
+  trustedIdNamespaces: string[];
+  totalSleeperRows: number;
+  currentTeamRows: number;
+  mappedCount: number;
+  exactProviderIdCount: number;
+  crosswalkCount: number;
+  normalizedNameTeamPositionCount: number;
+  ambiguousCount: number;
+  unmatchedCount: number;
+  unresolvedCount: number;
+  collisionCount: number;
+  selectedStarterCollisionCount: number;
+  staleCrosswalkEvidenceCount: number;
+  crosswalkEvidenceCount: number;
+  effectiveCrosswalkLinkCount: number;
+  /** @nullable */
+  nflverseCrosswalkFingerprint: string | null;
+  /** @nullable */
+  nflverseCrosswalkSourceUrl: string | null;
+  nflverseCrosswalkRows: number;
+  appliedNflverseCrosswalkRows: number;
+  rejectedNflverseCrosswalkRows: number;
+  overallMappingPercentage: number;
+  currentTeam: SleeperIdentityCoverageMetric;
+  depthOrder: SleeperIdentityCoverageMetric;
+  depthOrderOne: SleeperIdentityCoverageMetric;
+  qbDepthOrderOne: SleeperIdentityCoverageMetric;
+  byPosition: SleeperIdentityReportReportByPosition;
+  roleCoverage: SleeperIdentityReportReportRoleCoverage;
+  authoritativeDepthCohortDefinition: string;
+  suitabilityGates: SleeperIdentityReportReportSuitabilityGates;
+  blockerCategories: string[];
+  depthRelevantCandidates: SleeperIdentityReportReportDepthRelevantCandidatesItem[];
+  validationSample: SleeperIdentityReportReportValidationSampleItem[];
+};
+
+export type SleeperIdentityReportSuitabilityVerdict = typeof SleeperIdentityReportSuitabilityVerdict[keyof typeof SleeperIdentityReportSuitabilityVerdict];
+
+
+export const SleeperIdentityReportSuitabilityVerdict = {
+  SLEEPER_MAPPING_SUITABLE_FOR_DEPTH_LOGIC: 'SLEEPER MAPPING SUITABLE FOR DEPTH LOGIC',
+  SLEEPER_MAPPING_NOT_SUITABLE_FOR_DEPTH_LOGIC: 'SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC',
+} as const;
+
+export type SleeperIdentityReportSafety = {
+  phase61Untouched: true;
+  productionModelsUntouched: true;
+  consumerApiExposed: false;
+  canonicalPlayerIdsMutated: false;
+  sleeperSnapshotsMutated: false;
+};
+
+export interface SleeperIdentityReport {
+  status: SleeperIdentityReportStatus;
+  /** @nullable */
+  mappingVersion: string | null;
+  /** @nullable */
+  latestAttemptMappingVersion: string | null;
+  expectedMappingVersion: string;
+  /** @nullable */
+  mappingRunId: string | null;
+  /** @nullable */
+  sourceSnapshotId: string | null;
+  /** @nullable */
+  lastUpdated: string | null;
+  /** @nullable */
+  lastAttempted: string | null;
+  /** @nullable */
+  staleAgeMs: number | null;
+  /** @nullable */
+  latestFailure: string | null;
+  recentFailureCount: number;
+  /** @nullable */
+  durationMs: number | null;
+  metadata: SleeperIdentityReportMetadata;
+  mappingHierarchy: string[];
+  report: SleeperIdentityReportReport;
+  majorRisks: string[];
+  suitableForDepthLogic: boolean;
+  suitabilityVerdict: SleeperIdentityReportSuitabilityVerdict;
+  safety: SleeperIdentityReportSafety;
+}
+
 export interface PerformanceSummary {
   record: string;
   /** @nullable */
@@ -1194,7 +1319,6 @@ season?: number;
  */
 week?: number;
 };
-
 export type ListOddsAuditsParams = {
 /**
  * @minimum 1
@@ -1260,4 +1384,3 @@ season?: number;
  */
 week?: number;
 };
-

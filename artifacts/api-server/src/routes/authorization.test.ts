@@ -2,14 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 const routeFiles = ["settings.ts", "data-sync.ts", "models.ts", "features.ts", "predictions.ts"];
+
+const routesDirectory = path.join(fileURLToPath(new URL("../../", import.meta.url)), "src/routes");
+const routeSource = (routeFile: string) =>
+  readFileSync(path.join(routesDirectory, routeFile), "utf8");
 
 test("every mutation route in protected route modules requires an administrator", () => {
   const mutationDeclaration = /router\.(post|put|patch|delete)\s*\([\s\S]*?(?:=>|\);)/g;
 
   for (const routeFile of routeFiles) {
-    const source = readFileSync(fileURLToPath(new URL(`./${routeFile}`, import.meta.url)), "utf8");
+    const source = routeSource(routeFile);
     const declarations = [...source.matchAll(mutationDeclaration)];
 
     assert.ok(declarations.length > 0, `${routeFile} should define at least one mutation route`);
@@ -29,6 +34,7 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     ["dashboard.ts", '/dashboard/summary'],
     ["data-sync.ts", '/odds/audit'],
     ["dashboard.ts", '/data-health'],
+    ["dashboard.ts", '/admin/sleeper-identity-report'],
     ["models.ts", '/models/lab'],
     ["models.ts", '/models/evaluations/audit'],
     ["models.ts", '/models/promotions'],
@@ -54,7 +60,7 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     ["features.ts", '/features/personnel/current/validation'],
   ];
   for (const [routeFile, path] of sensitiveReads) {
-    const source = readFileSync(fileURLToPath(new URL(`./${routeFile}`, import.meta.url)), "utf8");
+    const source = routeSource(routeFile);
     const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assert.match(
       source,
@@ -65,7 +71,7 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
 });
 
 test("consumer API is public and read-only", () => {
-  const source = readFileSync(fileURLToPath(new URL("./consumer.ts", import.meta.url)), "utf8");
+  const source = routeSource("consumer.ts");
   const expected = [
     "/consumer/dashboard",
     "/consumer/games",
@@ -80,4 +86,9 @@ test("consumer API is public and read-only", () => {
   }
   assert.doesNotMatch(source, /router\.(post|put|patch|delete)\s*\(/);
   assert.doesNotMatch(source, /\brequireAdmin\b/);
+  assert.doesNotMatch(
+    source,
+    /sleeper|provider[_A-Z]?id|mappingConfidence|candidateEvidence/i,
+    "consumer routes must not expose Sleeper identity diagnostics or provider identifiers",
+  );
 });

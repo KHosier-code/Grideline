@@ -1,11 +1,15 @@
 import { Router, type IRouter } from "express";
-import { GetDashboardSummaryResponse, GetDataHealthResponse } from "@workspace/api-zod";
+import {
+  GetDashboardSummaryResponse,
+  GetDataHealthResponse,
+  GetSleeperIdentityReportResponse,
+} from "@workspace/api-zod";
 import { fetchSchedule, getEspnHealth, logEspnFailure } from "../lib/espn";
 import { getNflverseHealth } from "../lib/nflverse";
 import { resolveCurrentSeasonWeek } from "../lib/season";
 import { getAvailabilityHealth } from "../lib/availability";
 import { getSleeperHealth } from "../lib/sleeper";
-import { getSleeperIdentityHealth } from "../lib/sleeper-identity";
+import { getSleeperIdentityHealth, getSleeperIdentityReport } from "../lib/sleeper-identity";
 import { getOddsApiHealth } from "../lib/odds";
 import { getScheduleHealth } from "../lib/schedule";
 import { getSchedulerHealth } from "../lib/scheduler";
@@ -343,6 +347,10 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
       },
     ]),
   );
+});
+
+router.get("/admin/sleeper-identity-report", requireAdmin, async (_req, res): Promise<void> => {
+  res.json(GetSleeperIdentityReportResponse.parse(await getSleeperIdentityReport()));
 });
 
 export default router;

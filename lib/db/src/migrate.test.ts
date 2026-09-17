@@ -124,3 +124,16 @@ test("identity parser revisions preserve immutable imports without overwriting s
     assertMigrationSafe(migration, "0025_identity_import_parser_version.sql"),
   );
 });
+
+test("Sleeper crosswalk evidence is namespace-aware and append-only", () => {
+  const migration = fs.readFileSync(
+    new URL("../migrations/0024_sleeper_crosswalk_evidence.sql", import.meta.url),
+    "utf8",
+  );
+  const requirements = extractRequirements(migration);
+  assert.deepEqual([...requirements.triggers], ["sleeper_player_crosswalk_evidence_append_only"]);
+  assert.match(migration, /"source_namespace" text NOT NULL/);
+  assert.match(migration, /"first_observed_at" timestamptz NOT NULL/);
+  assert.match(migration, /"last_verified_at" timestamptz NOT NULL/);
+  assert.match(migration, /BEFORE UPDATE OR DELETE ON "sleeper_player_crosswalk_evidence"/);
+});

@@ -55,6 +55,7 @@ import type {
   PregameFeatureRow,
   ScheduleSyncRequest,
   ScheduleSyncResult,
+  SleeperIdentityReport,
   Team
 } from './api.schemas';
 
@@ -305,6 +306,84 @@ export function useGetDataHealth<TData = Awaited<ReturnType<typeof getDataHealth
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetDataHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSleeperIdentityReportUrl = () => {
+
+
+
+
+  return `/api/admin/sleeper-identity-report`
+}
+
+/**
+ * Returns immutable mapping coverage, classification totals, position coverage, all-team depth candidates, a deterministic validation sample, risks, suitability, and safety assertions. Provider diagnostics are never exposed through consumer APIs.
+ * @summary Read the administrator-only Sleeper identity mapping report
+ */
+export const getSleeperIdentityReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<SleeperIdentityReport> => {
+
+  return customFetch<SleeperIdentityReport>(getGetSleeperIdentityReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSleeperIdentityReportQueryKey = () => {
+    return [
+    `/api/admin/sleeper-identity-report`
+    ] as const;
+    }
+
+
+export const getGetSleeperIdentityReportQueryOptions = <TData = Awaited<ReturnType<typeof getSleeperIdentityReport>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSleeperIdentityReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSleeperIdentityReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSleeperIdentityReport>>> = ({ signal }) => getSleeperIdentityReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSleeperIdentityReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSleeperIdentityReportQueryResult = NonNullable<Awaited<ReturnType<typeof getSleeperIdentityReport>>>
+export type GetSleeperIdentityReportQueryError = ErrorType<void>
+
+
+/**
+ * @summary Read the administrator-only Sleeper identity mapping report
+ */
+
+export function useGetSleeperIdentityReport<TData = Awaited<ReturnType<typeof getSleeperIdentityReport>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSleeperIdentityReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSleeperIdentityReportQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

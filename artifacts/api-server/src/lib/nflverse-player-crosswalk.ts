@@ -50,7 +50,8 @@ function parseCsvLine(line: string) {
 
 export function parseVerifiedPlayerCrosswalkCsv(csv: string) {
   const lines = csv.split(/\r?\n/).filter(Boolean);
-  const headers = parseCsvLine(lines.shift() ?? "").map((header) => header.replace(/^\uFEFF/, ""));
+  const headers = parseCsvLine(lines.shift() ?? "").map((header) =>
+    header.replace(/^\uFEFF/, ""));
   const column = new Map(headers.map((header, index) => [header, index]));
   return lines.flatMap((line): VerifiedPlayerCrosswalk[] => {
     const values = parseCsvLine(line);
@@ -78,7 +79,10 @@ export async function loadVerifiedPlayerCrosswalk(options?: { refresh?: boolean 
     compressed = await readFile(cachePath);
   } catch {
     const response = await fetch(NFLVERSE_PLAYER_CROSSWALK_URL, {
-      headers: { Accept: "application/octet-stream", "User-Agent": "Gridline/0.2 (nflverse player crosswalk)" },
+      headers: {
+        Accept: "application/octet-stream",
+        "User-Agent": "Gridline/0.2 (nflverse player crosswalk)",
+      },
       signal: AbortSignal.timeout(30_000),
     });
     if (!response.ok) {
@@ -90,10 +94,9 @@ export async function loadVerifiedPlayerCrosswalk(options?: { refresh?: boolean 
     await writeFile(temporaryPath, compressed);
     await rename(temporaryPath, cachePath);
   }
-  const fingerprint = createHash("sha256").update(compressed).digest("hex");
   return {
     rows: parseVerifiedPlayerCrosswalkCsv(gunzipSync(compressed).toString("utf8")),
-    fingerprint,
+    fingerprint: createHash("sha256").update(compressed).digest("hex"),
     sourceUrl: NFLVERSE_PLAYER_CROSSWALK_URL,
   };
 }
