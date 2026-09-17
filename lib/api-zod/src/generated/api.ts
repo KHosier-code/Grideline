@@ -20,8 +20,6 @@ export const GetConfidenceAuditResponse = zod.object({
   "historicalEvidence": zod.record(zod.string(), zod.unknown()),
   "results": zod.array(zod.record(zod.string(), zod.unknown()))
 })
-
-
 /**
  * @summary Calculate and append confidence evidence for a season and week
  */
@@ -36,7 +34,6 @@ export const AppendConfidenceEvidenceQueryParams = zod.object({
   "season": zod.coerce.number().int().min(appendConfidenceEvidenceQuerySeasonMin).max(appendConfidenceEvidenceQuerySeasonMax).optional(),
   "week": zod.coerce.number().int().min(1).max(appendConfidenceEvidenceQueryWeekMax).optional()
 })
-
 export const AppendConfidenceEvidenceResponse = zod.object({
   "gamesEvaluated": zod.number().int(),
   "marketResultsCalculated": zod.number().int(),
@@ -119,10 +116,23 @@ export const CaptureUsageAnalyticsEventResponse = zod.void()
 /**
  * @summary Summarize Player Usage Lab interactions for administrators
  */
+export const getUsageAnalyticsSummaryQueryPeriodDefault = `7d`;
+
+export const GetUsageAnalyticsSummaryQueryParams = zod.object({
+  "period": zod.enum(['7d', '14d', '30d']).default(getUsageAnalyticsSummaryQueryPeriodDefault).describe('Bounded reporting period ending today (UTC)')
+})
+
 export const GetUsageAnalyticsSummaryResponse = zod.object({
   "periodStart": zod.coerce.date(),
   "periodEnd": zod.coerce.date(),
   "periodDays": zod.number().int(),
+  "collectionStatus": zod.enum(['empty', 'partial', 'complete']),
+  "daysWithActivity": zod.number().int(),
+  "dailyTrends": zod.array(zod.object({
+  "date": zod.coerce.date(),
+  "eventCount": zod.number().int(),
+  "rowExpansionCount": zod.number().int()
+})),
   "totalEvents": zod.number().int(),
   "filterChanges": zod.array(zod.object({
   "label": zod.string(),
@@ -1783,3 +1793,5 @@ export const ListConsumerPlayerUsageGamesResponse = zod.object({
 })
 }))
 })
+
+

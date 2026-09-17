@@ -4,13 +4,21 @@ import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   CaptureUsageAnalyticsEventBody,
+  GetUsageAnalyticsSummaryQueryParams,
   GetUsageAnalyticsSummaryResponse,
 } from "@workspace/api-zod";
 import { db, usageAnalyticsEventsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/admin";
 
 const router: IRouter = Router();
-const PERIOD_DAYS = 7;
+const PERIOD_DAYS_BY_KEY = {
+  "7d": 7,
+  "14d": 14,
+  "30d": 30,
+} as const;
+const DEFAULT_PERIOD = "7d";
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+type UsageAnalyticsPeriod = keyof typeof PERIOD_DAYS_BY_KEY;
 type UsageAnalyticsEventInput = ReturnType<typeof CaptureUsageAnalyticsEventBody.parse>;
 
 const allowedValues = {
@@ -91,15 +99,22 @@ type UsageAnalyticsDatabase = typeof db;
 
 export async function getUsageAnalyticsSummary(
   database: UsageAnalyticsDatabase = db,
+  periodKey: UsageAnalyticsPeriod = DEFAULT_PERIOD,
   periodEnd = new Date(),
 ) {
-  const periodStart = new Date(periodEnd.getTime() - PERIOD_DAYS * 24 * 60 * 60 * 1000);
+  const periodDays = PERIOD_DAYS_BY_KEY[periodKey];
+  const periodStart = new Date(Date.UTC(
+    periodEnd.getUTCFullYear(),
+    periodEnd.getUTCMonth(),
+    periodEnd.getUTCDate() - periodDays + 1,
+  ));
   const inPeriod = gte(usageAnalyticsEventsTable.createdAt, periodStart);
   const expansions = and(
     inPeriod,
     eq(usageAnalyticsEventsTable.eventName, "usage_row_toggled"),
     eq(usageAnalyticsEventsTable.action, "expand"),
   );
+  const day = sql<string>`to_char(${usageAnalyticsEventsTable.createdAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`;
 
   const groupCounts = async (
     column: AnyPgColumn,
@@ -118,6 +133,7 @@ export async function getUsageAnalyticsSummary(
     expansionsByCoverage,
     expansionsByWindow,
     resets,
+    dailyRows,
   ] = await Promise.all([
     database.select({ count: count() }).from(usageAnalyticsEventsTable).where(inPeriod),
     database.select({
@@ -142,17 +158,42 @@ export async function getUsageAnalyticsSummary(
     groupCounts(usageAnalyticsEventsTable.window),
     database.select({ count: count() }).from(usageAnalyticsEventsTable)
       .where(and(inPeriod, eq(usageAnalyticsEventsTable.eventName, "usage_filters_reset"))),
+    database.select({
+      date: day,
+      eventCount: sql<number>`count(*)::int`,
+      rowExpansionCount: sql<number>`count(*) filter (where ${usageAnalyticsEventsTable.eventName} = 'usage_row_toggled' and ${usageAnalyticsEventsTable.action} = 'expand')::int`,
+    }).from(usageAnalyticsEventsTable)
+      .where(inPeriod)
+      .groupBy(day)
+      .orderBy(day),
   ]);
 
   const counts = (rows: Array<{ label: string | null; count: number }>) =>
     rows.filter((row): row is { label: string; count: number } => row.label !== null);
   const choices = (rows: Array<{ label: string | null; choice: string | null; count: number }>) =>
     rows.filter((row): row is { label: string; choice: string; count: number } => row.label !== null && row.choice !== null);
+  const observedDays = new Map(dailyRows.map((row) => [row.date, row]));
+  const dailyTrends = Array.from({ length: periodDays }, (_, index) => {
+    const date = new Date(periodStart.getTime() + index * DAY_IN_MS).toISOString().slice(0, 10);
+    const row = observedDays.get(date);
+    return {
+      date,
+      eventCount: row?.eventCount ?? 0,
+      rowExpansionCount: row?.rowExpansionCount ?? 0,
+    };
+  });
+  const daysWithActivity = dailyTrends.filter((row) => row.eventCount > 0).length;
+  const collectionStatus = totals[0]?.count
+    ? daysWithActivity === periodDays ? "complete" : "partial"
+    : "empty";
 
   return GetUsageAnalyticsSummaryResponse.parse({
     periodStart,
     periodEnd,
-    periodDays: PERIOD_DAYS,
+    periodDays,
+    collectionStatus,
+    daysWithActivity,
+    dailyTrends,
     totalEvents: totals[0]?.count ?? 0,
     filterChanges: choices(filterChanges),
     sortChoices: choices(sortChoices),
@@ -193,8 +234,20 @@ router.post("/analytics/usage-event", async (req, res): Promise<void> => {
   res.status(204).end();
 });
 
-router.get("/admin/usage-analytics", requireAdmin, async (_req, res): Promise<void> => {
-  res.json(await getUsageAnalyticsSummary());
+router.get("/admin/usage-analytics", requireAdmin, async (req, res): Promise<void> => {
+  const parsedParams = GetUsageAnalyticsSummaryQueryParams.safeParse(req.query);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: parsedParams.error.message });
+    return;
+  }
+  const summary = await getUsageAnalyticsSummary(db, parsedParams.data.period);
+  res.json({
+    ...summary,
+    dailyTrends: summary.dailyTrends.map((row) => ({
+      ...row,
+      date: row.date.toISOString().slice(0, 10),
+    })),
+  });
 });
 
 export default router;

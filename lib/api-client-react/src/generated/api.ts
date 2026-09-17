@@ -42,6 +42,7 @@ import type {
   Game,
   GetConsumerPlayerUsageParams,
   GetPregameFeatureHealthParams,
+  GetUsageAnalyticsSummaryParams,
   HealthStatus,
   ListConsumerGamesParams,
   ListGamesParams,
@@ -164,6 +165,13 @@ export function useGetConfidenceAudit<TData = Awaited<ReturnType<typeof getConfi
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getAppendConfidenceEvidenceUrl = (params?: AppendConfidenceEvidenceParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -316,6 +324,13 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getGetDashboardSummaryUrl = () => {
 
 
@@ -386,6 +401,13 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getCaptureUsageAnalyticsEventUrl = () => {
 
 
@@ -474,20 +496,27 @@ export const useCaptureUsageAnalyticsEvent = <TError = ErrorType<void>,
       return useMutation(getCaptureUsageAnalyticsEventMutationOptions(options));
     }
 
-export const getGetUsageAnalyticsSummaryUrl = () => {
+export const getGetUsageAnalyticsSummaryUrl = (params?: GetUsageAnalyticsSummaryParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/admin/usage-analytics`
+  return stringifiedParams.length > 0 ? `/api/admin/usage-analytics?${stringifiedParams}` : `/api/admin/usage-analytics`
 }
 
 /**
  * @summary Summarize Player Usage Lab interactions for administrators
  */
-export const getUsageAnalyticsSummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<UsageAnalyticsSummary> => {
+export const getUsageAnalyticsSummary = async (params?: GetUsageAnalyticsSummaryParams, options?: Parameters<typeof customFetch>[1]): Promise<UsageAnalyticsSummary> => {
 
-  return customFetch<UsageAnalyticsSummary>(getGetUsageAnalyticsSummaryUrl(),
+  return customFetch<UsageAnalyticsSummary>(getGetUsageAnalyticsSummaryUrl(params),
   {
     ...options,
     method: 'GET'
@@ -500,23 +529,23 @@ export const getUsageAnalyticsSummary = async ( options?: Parameters<typeof cust
 
 
 
-export const getGetUsageAnalyticsSummaryQueryKey = () => {
+export const getGetUsageAnalyticsSummaryQueryKey = (params?: GetUsageAnalyticsSummaryParams,) => {
     return [
-    `/api/admin/usage-analytics`
+    `/api/admin/usage-analytics`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetUsageAnalyticsSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetUsageAnalyticsSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError = ErrorType<void>>(params?: GetUsageAnalyticsSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetUsageAnalyticsSummaryQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetUsageAnalyticsSummaryQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>> = ({ signal }) => getUsageAnalyticsSummary({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>> = ({ signal }) => getUsageAnalyticsSummary(params, { signal, ...requestOptions });
 
 
 
@@ -534,11 +563,11 @@ export type GetUsageAnalyticsSummaryQueryError = ErrorType<void>
  */
 
 export function useGetUsageAnalyticsSummary<TData = Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetUsageAnalyticsSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetUsageAnalyticsSummaryQueryOptions(options)
+  const queryOptions = getGetUsageAnalyticsSummaryQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -7,11 +7,16 @@
  */
 import type { UsageAnalyticsChoiceCount } from './usageAnalyticsChoiceCount';
 import type { UsageAnalyticsCount } from './usageAnalyticsCount';
+import type { UsageAnalyticsDailyTrend } from './usageAnalyticsDailyTrend';
+import type { UsageAnalyticsSummaryCollectionStatus } from './usageAnalyticsSummaryCollectionStatus';
 
 export interface UsageAnalyticsSummary {
   periodStart: Date;
   periodEnd: Date;
   periodDays: number;
+  collectionStatus: UsageAnalyticsSummaryCollectionStatus;
+  daysWithActivity: number;
+  dailyTrends: UsageAnalyticsDailyTrend[];
   totalEvents: number;
   filterChanges: UsageAnalyticsChoiceCount[];
   sortChoices: UsageAnalyticsChoiceCount[];

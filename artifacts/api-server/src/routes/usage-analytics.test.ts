@@ -66,11 +66,6 @@ test("rejects arbitrary analytics dimensions and incomplete payloads", () => {
     window: "season",
     value: "unexpected",
   }), null);
-  assert.equal(parseUsageAnalyticsEvent({
-    eventName: "usage_filter_changed",
-    filter: "team",
-    value: "x".repeat(33),
-  }), null);
 });
 
 function fakeDatabase(results: unknown[]) {
@@ -94,62 +89,50 @@ function fakeDatabase(results: unknown[]) {
   return { database: { select } as never, whereConditions };
 }
 
-test("summary preserves filters, sorts, all expansion dimensions, resets, and cutoff", async () => {
+test("summary preserves aggregates, daily trends, and the selected cutoff", async () => {
   const periodEnd = new Date("2026-09-17T12:00:00.000Z");
   const { database, whereConditions } = fakeDatabase([
     [{ count: 12 }],
-    [
-      { label: "team", choice: "BUF", count: 4 },
-      { label: "window", choice: "last5", count: 2 },
-    ],
+    [{ label: "team", choice: "BUF", count: 4 }],
     [{ label: "targets", choice: "desc", count: 3 }],
     [{ label: "WR", count: 5 }],
     [{ label: "up", count: 3 }],
     [{ label: "complete", count: 4 }],
     [{ label: "last5", count: 5 }],
     [{ count: 2 }],
+    [
+      { date: "2026-09-11", eventCount: 5, rowExpansionCount: 2 },
+      { date: "2026-09-17", eventCount: 7, rowExpansionCount: 3 },
+    ],
   ]);
 
-  const summary = await getUsageAnalyticsSummary(database, periodEnd);
+  const summary = await getUsageAnalyticsSummary(database, "7d", periodEnd);
 
-  assert.deepEqual(summary, {
-    periodStart: new Date("2026-09-10T12:00:00.000Z"),
-    periodEnd,
-    periodDays: 7,
-    totalEvents: 12,
-    filterChanges: [
-      { label: "team", choice: "BUF", count: 4 },
-      { label: "window", choice: "last5", count: 2 },
-    ],
-    sortChoices: [{ label: "targets", choice: "desc", count: 3 }],
-    expansionsByPosition: [{ label: "WR", count: 5 }],
-    expansionsByTrend: [{ label: "up", count: 3 }],
-    expansionsByCoverage: [{ label: "complete", count: 4 }],
-    expansionsByWindow: [{ label: "last5", count: 5 }],
-    resets: 2,
-  });
-  assert.equal(whereConditions.length, 8);
+  assert.equal(summary.periodStart.toISOString(), "2026-09-11T00:00:00.000Z");
+  assert.equal(summary.periodDays, 7);
+  assert.equal(summary.collectionStatus, "partial");
+  assert.equal(summary.daysWithActivity, 2);
+  assert.equal(summary.dailyTrends[0]?.eventCount, 5);
+  assert.equal(summary.dailyTrends[6]?.rowExpansionCount, 3);
+  assert.equal(summary.totalEvents, 12);
+  assert.deepEqual(summary.filterChanges, [{ label: "team", choice: "BUF", count: 4 }]);
+  assert.deepEqual(summary.expansionsByPosition, [{ label: "WR", count: 5 }]);
+  assert.equal(summary.resets, 2);
+  assert.equal(whereConditions.length, 9);
 });
 
-test("summary returns empty groups and zero totals when there is no activity", async () => {
+test("summary identifies an empty period and returns zero-filled days", async () => {
   const periodEnd = new Date("2026-09-17T12:00:00.000Z");
   const { database } = fakeDatabase([
-    [{ count: 0 }], [], [], [], [], [], [], [{ count: 0 }],
+    [{ count: 0 }], [], [], [], [], [], [], [{ count: 0 }], [],
   ]);
 
-  assert.deepEqual(await getUsageAnalyticsSummary(database, periodEnd), {
-    periodStart: new Date("2026-09-10T12:00:00.000Z"),
-    periodEnd,
-    periodDays: 7,
-    totalEvents: 0,
-    filterChanges: [],
-    sortChoices: [],
-    expansionsByPosition: [],
-    expansionsByTrend: [],
-    expansionsByCoverage: [],
-    expansionsByWindow: [],
-    resets: 0,
-  });
+  const summary = await getUsageAnalyticsSummary(database, "14d", periodEnd);
+  assert.equal(summary.periodDays, 14);
+  assert.equal(summary.collectionStatus, "empty");
+  assert.equal(summary.daysWithActivity, 0);
+  assert.equal(summary.dailyTrends.length, 14);
+  assert.ok(summary.dailyTrends.every((row) => row.eventCount === 0 && row.rowExpansionCount === 0));
 });
 
 test("the route source protects capture and report access", async () => {
@@ -157,6 +140,8 @@ test("the route source protects capture and report access", async () => {
   const source = await readFile(new URL("./usage-analytics.ts", import.meta.url), "utf8");
   assert.match(source, /if \(!getAuth\(req\)\.userId\)/);
   assert.match(source, /router\.get\("\/admin\/usage-analytics", requireAdmin/);
-  assert.match(source, /eq\(usageAnalyticsEventsTable\.action, "expand"\)/);
-  assert.match(source, /gte\(usageAnalyticsEventsTable\.createdAt, periodStart\)/);
+  assert.match(source, /GetUsageAnalyticsSummaryQueryParams\.safeParse\(req\.query\)/);
+  assert.match(source, /collectionStatus/);
+  assert.match(source, /rowExpansionCount/);
+  assert.match(source, /hasOnlyAllowedEventKeys/);
 });

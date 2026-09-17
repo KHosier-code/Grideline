@@ -2,7 +2,7 @@
 
 Replit Project Analytics injects the Umami tracker into published website artifacts. The shared wrapper in `src/lib/analytics.ts` treats a missing or failing tracker as a no-op so analytics cannot interrupt Usage Lab interactions.
 
-The same bounded Usage Lab payload is copied to the application database for the administrator report at `/admin/usage-analytics`. That report uses a rolling seven-day period. Collection failures are non-blocking and do not affect the consumer interaction.
+The same bounded Usage Lab payload is copied to the application database for the administrator report at `/admin/usage-analytics`. Administrators can choose a bounded reporting period of 7, 14, or 30 days with the `period` query parameter (`7d`, `14d`, or `30d`; default `7d`). The report returns one UTC day row per day, including both total interactions and expanded evidence rows. Collection is marked `empty` when no events are present, `partial` when only some days have activity, and `complete` when every day has activity. Collection failures are non-blocking and do not affect the consumer interaction.
 
 No event includes player names, player IDs, game IDs, user-entered text, or other free-form values.
 

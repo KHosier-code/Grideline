@@ -109,9 +109,18 @@ paths:
       tags: [dashboard]
       summary: Summarize Player Usage Lab interactions for administrators
       security: [{ clerk: [] }]
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: Bounded reporting period ending today (UTC)
+          schema:
+            type: string
+            enum: [7d, 14d, 30d]
+            default: 7d
       responses:
         "200":
-          description: Seven-day Usage Lab interaction summary
+          description: Usage Lab interaction summary with daily trends
           content:
             application/json:
               schema:
@@ -707,14 +716,29 @@ components:
         label: { type: string }
         choice: { type: string }
         count: { type: integer }
+    UsageAnalyticsDailyTrend:
+      type: object
+      additionalProperties: false
+      required: [date, eventCount, rowExpansionCount]
+      properties:
+        date: { type: string, format: date }
+        eventCount: { type: integer }
+        rowExpansionCount: { type: integer }
     UsageAnalyticsSummary:
       type: object
       additionalProperties: false
-      required: [periodStart, periodEnd, periodDays, totalEvents, filterChanges, sortChoices, expansionsByPosition, expansionsByTrend, expansionsByCoverage, expansionsByWindow, resets]
+      required: [periodStart, periodEnd, periodDays, collectionStatus, daysWithActivity, dailyTrends, totalEvents, filterChanges, sortChoices, expansionsByPosition, expansionsByTrend, expansionsByCoverage, expansionsByWindow, resets]
       properties:
         periodStart: { type: string, format: date-time }
         periodEnd: { type: string, format: date-time }
         periodDays: { type: integer }
+        collectionStatus:
+          type: string
+          enum: [empty, partial, complete]
+        daysWithActivity: { type: integer }
+        dailyTrends:
+          type: array
+          items: { $ref: "#/components/schemas/UsageAnalyticsDailyTrend" }
         totalEvents: { type: integer }
         filterChanges:
           type: array

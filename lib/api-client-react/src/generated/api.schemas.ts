@@ -14,7 +14,6 @@ export const UsageAnalyticsEventInputEventName = {
   usage_row_toggled: 'usage_row_toggled',
   usage_filters_reset: 'usage_filters_reset',
 } as const;
-
 export type UsageAnalyticsEventInputFilter = typeof UsageAnalyticsEventInputFilter[keyof typeof UsageAnalyticsEventInputFilter];
 
 
@@ -24,7 +23,6 @@ export const UsageAnalyticsEventInputFilter = {
   window: 'window',
   game: 'game',
 } as const;
-
 export type UsageAnalyticsEventInputColumn = typeof UsageAnalyticsEventInputColumn[keyof typeof UsageAnalyticsEventInputColumn];
 
 
@@ -123,10 +121,28 @@ export interface UsageAnalyticsChoiceCount {
   count: number;
 }
 
+export interface UsageAnalyticsDailyTrend {
+  date: string;
+  eventCount: number;
+  rowExpansionCount: number;
+}
+
+export type UsageAnalyticsSummaryCollectionStatus = typeof UsageAnalyticsSummaryCollectionStatus[keyof typeof UsageAnalyticsSummaryCollectionStatus];
+
+
+export const UsageAnalyticsSummaryCollectionStatus = {
+  empty: 'empty',
+  partial: 'partial',
+  complete: 'complete',
+} as const;
+
 export interface UsageAnalyticsSummary {
   periodStart: string;
   periodEnd: string;
   periodDays: number;
+  collectionStatus: UsageAnalyticsSummaryCollectionStatus;
+  daysWithActivity: number;
+  dailyTrends: UsageAnalyticsDailyTrend[];
   totalEvents: number;
   filterChanges: UsageAnalyticsChoiceCount[];
   sortChoices: UsageAnalyticsChoiceCount[];
@@ -1987,6 +2003,22 @@ export type AppendConfidenceEvidence200 = {
   version: string;
 };
 
+export type GetUsageAnalyticsSummaryParams = {
+/**
+ * Bounded reporting period ending today (UTC)
+ */
+period?: GetUsageAnalyticsSummaryPeriod;
+};
+
+export type GetUsageAnalyticsSummaryPeriod = typeof GetUsageAnalyticsSummaryPeriod[keyof typeof GetUsageAnalyticsSummaryPeriod];
+
+
+export const GetUsageAnalyticsSummaryPeriod = {
+  '7d': '7d',
+  '14d': '14d',
+  '30d': '30d',
+} as const;
+
 export type ListGamesParams = {
 /**
  * @minimum 2020
@@ -2091,3 +2123,4 @@ export const GetConsumerPlayerUsageWindow = {
   last8: 'last8',
   season: 'season',
 } as const;
+

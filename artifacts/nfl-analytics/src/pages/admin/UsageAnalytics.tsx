@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useGetUsageAnalyticsSummary } from '@workspace/api-client-react';
 import {
   Activity,
@@ -33,6 +33,13 @@ interface UsageItem {
   count: number;
   choice?: string;
 }
+
+const REPORTING_PERIODS = [
+  { value: '7d', label: 'Last 7 days' },
+  { value: '14d', label: 'Last 14 days' },
+  { value: '30d', label: 'Last 30 days' },
+] as const;
+type ReportingPeriod = (typeof REPORTING_PERIODS)[number]['value'];
 
 function MetricCard({ label, value, detail, icon: Icon, accent = false }: { label: string; value: string; detail: string; icon: LucideIcon; accent?: boolean }) {
   return (
@@ -117,8 +124,54 @@ function UsageList({ title, data, limit }: { title: string; data: UsageItem[]; l
   );
 }
 
+function formatDayLabel(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  if (![year, month, day].every(Number.isFinite)) return value;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(year, month - 1, day));
+}
+
+function DailyTrend({ data }: { data: { date: string; eventCount: number; rowExpansionCount: number }[] }) {
+  const maxEvents = Math.max(1, ...data.map((row) => row.eventCount));
+  const maxExpansions = Math.max(1, ...data.map((row) => row.rowExpansionCount));
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+      <div className="bg-secondary/40 px-4 py-3 flex items-center justify-between border-b border-border">
+        <div>
+          <h3 className="text-[11px] font-bold text-ink uppercase tracking-wider">Daily activity</h3>
+          <p className="mt-1 text-[10px] text-muted-foreground">All interactions and expanded evidence rows by UTC day</p>
+        </div>
+        <div className="flex items-center gap-3 text-[9px] font-mono uppercase text-muted-foreground">
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" /> events</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-ink/40" /> expansions</span>
+        </div>
+      </div>
+      <div className="p-4 space-y-3">
+        {data.map((row) => (
+          <div key={row.date} className="grid grid-cols-[52px_1fr_70px] items-center gap-3">
+            <span className="text-[10px] font-mono text-muted-foreground">{formatDayLabel(row.date)}</span>
+            <div className="space-y-1.5">
+              <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(row.eventCount / maxEvents) * 100}%` }} />
+              </div>
+              <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full rounded-full bg-ink/40 transition-all" style={{ width: `${(row.rowExpansionCount / maxExpansions) * 100}%` }} />
+              </div>
+            </div>
+            <div className="text-right text-[10px] font-mono text-ink">
+              <div>{row.eventCount.toLocaleString()}</div>
+              <div className="text-muted-foreground">{row.rowExpansionCount.toLocaleString()}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function UsageAnalytics() {
-  const { data, isLoading, isError } = useGetUsageAnalyticsSummary();
+  const [period, setPeriod] = useState<ReportingPeriod>('7d');
+  const { data, isLoading, isError } = useGetUsageAnalyticsSummary({ period });
 
   if (isLoading) {
     return (
@@ -176,13 +229,50 @@ export default function UsageAnalytics() {
           <h1 className="page-title">Usage Analytics</h1>
           <p className="page-detail">Administrator-only summary of how analysts inspect player usage evidence.</p>
         </div>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="sr-only">Reporting period</span>
+          <select
+            value={period}
+            onChange={(event) => setPeriod(event.target.value as ReportingPeriod)}
+            className="input h-9 min-w-[140px] text-xs"
+          >
+            {REPORTING_PERIODS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        </label>
       </header>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Total Events" value={data.totalEvents.toLocaleString()} detail="Captured interactions" icon={MousePointerClick} accent />
         <MetricCard label="Filter Resets" value={data.resets.toLocaleString()} detail="Cleared all filters" icon={RefreshCcw} />
-        <MetricCard label="Reporting Period" value={`${data.periodDays} days`} detail="Rolling window" icon={Calendar} />
+        <MetricCard label="Reporting Period" value={`${data.periodDays} days`} detail="Selected UTC window" icon={Calendar} />
         <MetricCard label="Date Range" value={`${formatDate(data.periodStart)}`} detail={`Until ${formatDate(data.periodEnd)}`} icon={Activity} />
+      </div>
+
+      <div className="mt-5 panel">
+        <div className={cx(
+          'flex items-start gap-3 rounded-xl border px-4 py-3',
+          data.collectionStatus === 'complete' ? 'border-accent/30 bg-accent/5' : 'border-border bg-secondary/30',
+        )}>
+          <Activity className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+          <div>
+            <p className="text-sm font-semibold text-ink">
+              {data.collectionStatus === 'empty'
+                ? 'No activity collected'
+                : data.collectionStatus === 'partial'
+                  ? 'Partial collection'
+                  : 'Complete daily coverage'}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              {data.collectionStatus === 'empty'
+                ? `No Usage Lab events were recorded in the selected ${data.periodDays}-day period.`
+                : `${data.daysWithActivity} of ${data.periodDays} days contain recorded activity. Days without events may be quiet or may reflect an incomplete collection window.`}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <DailyTrend data={data.dailyTrends} />
       </div>
 
       {!hasActivity ? (
