@@ -1,0 +1,248 @@
+TASK — CB / SAFETY / EDGE / OL DEPTH RECOVERY
+
+Goal:
+Close the remaining depth-chart readiness gaps without disturbing the already-strong QB/RB/WR/TE mappings or Phase 6.1.
+
+Current authoritative readiness status:
+
+Strong:
+- QB1: 100%
+- RB1: 100%
+- WR1: 100%
+- WR2: 100%
+- WR3: 96.88%
+- TE1: 100%
+- LB starters: 98.44%
+- CB3/slot: 90.63%
+
+Blocking:
+- CB1: 81.25%
+- CB2: 87.50%
+- EDGE starters: 89.06%
+- starting safeties: 48.44%
+- OL starter slots: unavailable / insufficient
+- one ambiguous selected starter identity
+- current-depth and order-1 coverage just below 90%
+
+Final current verdict:
+CURRENT DEPTH LOGIC NOT READY
+WR-CB FOUNDATION NOT READY
+
+HARD SAFETY RULES
+
+Do not:
+- retrain, refit, or promote models
+- alter Phase 6.1 features or predictions
+- change already-valid QB/RB/WR/TE mappings unless stronger identity evidence proves an error
+- force ambiguous mappings
+- fabricate position assignments
+- invent WR-CB coverage assignments
+- rewrite historical evidence
+
+TASK 1 — CB1 / CB2 RECOVERY
+
+Prioritize unresolved CB1 and CB2 slots for all 32 teams.
+
+For every unresolved slot:
+
+- Sleeper player
+- Sleeper depth order
+- team
+- listed depth position
+- current mapping status
+- candidate Gridline identities
+- GSIS / ESPN / PFR / nflverse evidence
+- recent snap evidence
+- historical depth evidence
+- current roster evidence
+- injury status
+- conflict reason
+
+Attempt resolution using strongest stable identity evidence first.
+
+Do not use name-only fuzzy matching.
+
+Target:
+- CB1 coverage >= 90%
+- CB2 coverage >= 90%
+- zero ambiguous selected CB starters
+- zero collisions
+
+TASK 2 — SAFETY RECOVERY
+
+Resolve FS / SS / S identity and role normalization.
+
+Current safety coverage is poor.
+
+Audit whether the issue is:
+
+- identity mapping
+- role normalization
+- missing depth positions
+- FS/SS not being normalized to S
+- Sleeper schema differences
+- nflverse position differences
+- stale team assignments
+
+Normalize only where defensible.
+
+Target:
+- starting safety group coverage >= 90%
+
+TASK 3 — EDGE RECOVERY
+
+Resolve missing EDGE starters.
+
+Support defensive-role aliases where defensible:
+
+- DE
+- EDGE
+- OLB edge roles
+
+Do not treat every OLB as EDGE automatically.
+
+Use:
+- Sleeper depth position
+- recent snap usage
+- historical depth
+- roster position
+- team defensive role evidence
+
+Target:
+- EDGE starter coverage >= 90%
+
+TASK 4 — OFFENSIVE LINE SLOT EVIDENCE
+
+Determine why LT/LG/C/RG/RT starter coverage is effectively unavailable.
+
+Audit whether Sleeper provides:
+
+- LT
+- LG
+- C
+- RG
+- RT
+- T
+- G
+- OL
+
+If exact OL slots are not published, determine whether existing Gridline/nflverse evidence can support current starter slots.
+
+Use:
+- historical depth charts
+- recent snap participation
+- roster position
+- continuity
+- injury status
+
+Do not fabricate exact LT/LG/C/RG/RT assignments from generic OL labels.
+
+Return one of:
+
+OL SLOT EVIDENCE SUFFICIENT
+
+or
+
+OL SLOT EVIDENCE INSUFFICIENT
+
+If insufficient, document exactly what external source would be required.
+
+TASK 5 — AMBIGUOUS STARTER
+
+Resolve the one remaining ambiguous selected starter if stronger evidence exists.
+
+If not:
+- keep it ambiguous
+- identify exact position/team
+- explain why it cannot safely be resolved
+
+Do not force it.
+
+TASK 6 — AUTHORITATIVE READINESS RECOMPUTE
+
+Recompute using the established authoritative denominator:
+
+Include only:
+- canonical current NFL team
+- non-null current depth order
+- supported normalized role
+- ambiguous mappings excluded from mapped numerator
+
+Report:
+
+- current-depth coverage
+- current order-1 coverage
+- QB1
+- RB1
+- WR1
+- WR2
+- WR3
+- TE1
+- CB1
+- CB2
+- CB3/slot
+- EDGE starters
+- LB starters
+- starting safeties
+- OL starter coverage
+
+TASK 7 — WR-CB FOUNDATION GATE
+
+WR-CB foundation is ready only if:
+
+- WR1 >= 90%
+- WR2 >= 90%
+- WR3 >= 90%
+- CB1 >= 90%
+- CB2 >= 90%
+- zero selected-starter collisions
+- zero ambiguous selected CB starters
+
+Do not lower this gate.
+
+TASK 8 — TESTS
+
+Add focused regression tests for:
+
+- CB role normalization
+- FS/SS/S normalization
+- EDGE role normalization
+- OLB not always treated as EDGE
+- OL generic position does not become fabricated exact slot
+- stable provider ID beats name inference
+- ambiguous selected starter remains unresolved
+- existing strong mappings remain unchanged unless stronger evidence proves otherwise
+- Phase 6.1 remains untouched
+
+FINAL REPORT
+
+Return:
+
+1. CB1 coverage before/after
+2. CB2 coverage before/after
+3. safety coverage before/after
+4. EDGE coverage before/after
+5. OL slot-evidence result
+6. ambiguous selected starter status
+7. authoritative current-depth coverage
+8. authoritative order-1 coverage
+9. unresolved starter count
+10. tests passed
+11. whether publish is required
+12. confirmation Phase 6.1 was untouched
+
+Final verdicts:
+
+CURRENT DEPTH LOGIC READY
+
+or
+
+CURRENT DEPTH LOGIC NOT READY
+
+and
+
+WR-CB FOUNDATION READY
+
+or
+
+WR-CB FOUNDATION NOT READY

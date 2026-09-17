@@ -84,3 +84,17 @@ mtime_ms = 1789614299764
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/aa06da30-f0b5-4692-a6a2-a9504ac5b931/b5f53949-0539-434c-aab5-c4ce3e21f3a1"
 storage_version_token = "1789614314799389"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "Q35lkTBY-5_mhKFMHY5GP"
+uri = "file://reports/cb-safety-edge-ol-depth-recovery-2026-09-16.md"
+type = "text"
+title = "CB / Safety / EDGE / OL Depth Recovery Report"
+description = "Authoritative readiness recompute, evidence audit, regression results, and final verdicts."
+logical_id = "fefcea55-b53b-4460-a62c-e5e1ee3220bd"
+content_hash = "sha256:3632df29cdb7e0cadd46cb1ccd67a35187df0a67ec6c1eb080cbda43bc97a836"
+size = 7464
+mtime_ms = 1789615758968
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/fefcea55-b53b-4460-a62c-e5e1ee3220bd/9f176540-0992-4cc9-a8f8-5f13090de342"
+storage_version_token = "1789615766079811"
+content_type = "text/markdown"

@@ -14,10 +14,11 @@ const sleeper = (overrides: Partial<CurrentDepthSource>): CurrentDepthSource => 
 function derive(publishedDepth: CurrentDepthSource[], options: {
   snaps?: Parameters<typeof deriveCurrentTeamDepth>[0]["snaps"];
   injuries?: Parameters<typeof deriveCurrentTeamDepth>[0]["injuries"];
+  historicalDepth?: Parameters<typeof deriveCurrentTeamDepth>[0]["historicalDepth"];
 } = {}) {
   return deriveCurrentTeamDepth({
     teamId: "team", abbreviation: "TST", cutoff, publishedDepth,
-    snaps: options.snaps ?? [], historicalDepth: [], injuries: options.injuries ?? [],
+    snaps: options.snaps ?? [], historicalDepth: options.historicalDepth ?? [], injuries: options.injuries ?? [],
   });
 }
 
@@ -175,4 +176,69 @@ test("blocking non-QB identity conflicts fail downstream readiness", () => {
   ]);
   assert.equal(result.downstreamReady, false);
   assert.ok(result.conflicts.some((conflict) => conflict.type === "identity" && conflict.severity === "blocking"));
+});
+
+test("explicit CB roles recover generic DB rows without merging distinct CB slots", () => {
+  const result = derive([
+    sleeper({}),
+    sleeper({ playerId: "left", position: "DB", role: "LCB", depthOrder: 1 }),
+    sleeper({ playerId: "right", position: "DB", role: "RCB", depthOrder: 1 }),
+  ]);
+  assert.deepEqual(result.cbRoles.map((row) => row.playerId).sort(), ["left", "right"]);
+  assert.equal(result.conflicts.some((conflict) =>
+    conflict.type === "depth_order" && conflict.position === "CB"), false);
+});
+
+test("FS and SS normalize to safety while retaining distinct depth roles", () => {
+  const result = derive([
+    sleeper({}),
+    sleeper({ playerId: "free", position: "DB", role: "FS", depthOrder: 1 }),
+    sleeper({ playerId: "strong", position: "DB", role: "SS", depthOrder: 1 }),
+  ]);
+  const safeties = result.depth.defense.filter((row) => row.position === "S");
+  assert.deepEqual(safeties.map((row) => row.role).sort(), ["FS", "SS"]);
+  assert.equal(result.conflicts.some((conflict) =>
+    conflict.type === "depth_order" && conflict.position === "S"), false);
+});
+
+test("bare safety roles remain one slot and preserve rank ambiguity", () => {
+  const result = derive([
+    sleeper({}),
+    sleeper({ playerId: "s-one", position: "S", role: "S", depthOrder: 1 }),
+    sleeper({ playerId: "s-two", position: "S", role: "S", depthOrder: 1 }),
+  ]);
+  assert.ok(result.conflicts.some((conflict) =>
+    conflict.type === "depth_order" && conflict.position === "S" && conflict.severity === "blocking"));
+  assert.equal(result.downstreamReady, false);
+});
+
+test("OLB requires explicit edge-compatible roster evidence", () => {
+  const result = derive([
+    sleeper({}),
+    sleeper({ playerId: "linebacker", position: "OLB", role: "LOLB", depthOrder: 1 }),
+    sleeper({ playerId: "edge", position: "DE", role: "LDE", depthOrder: 1 }),
+  ]);
+  assert.equal(result.depth.defense.find((row) => row.playerId === "linebacker")?.position, "LB");
+  assert.equal(result.depth.defense.find((row) => row.playerId === "edge")?.position, "EDGE");
+});
+
+test("snap and historical evidence cannot fabricate offensive-line depth slots", () => {
+  const result = derive([sleeper({})], {
+    snaps: [{
+      gameId: "prior", season: 2026, week: 2, playerId: "snap-ol", playerName: "Snap Tackle",
+      position: "LT", teamId: "team", offensePct: 1, kickoffTime: "2026-09-10T00:00:00.000Z",
+      sourceUpdatedAt: "2026-09-11T00:00:00.000Z",
+    }],
+    historicalDepth: [{
+      playerId: "history-ol", playerName: "History Guard", teamId: "team",
+      sourceTeamId: "TST", position: "RG", role: "RG", depthPosition: 1,
+      sourceUpdatedAt: "2026-09-10T00:00:00.000Z",
+    }],
+  });
+  assert.equal(result.depth.offense.some((row) =>
+    ["OT", "OG", "C"].includes(row.position ?? "")), false);
+  assert.equal(result.positionalCoverage.OT, 0);
+  assert.equal(result.positionalCoverage.OG, 0);
+  assert.equal(result.positionalCoverage.C, 0);
+  assert.equal(result.downstreamReady, false);
 });

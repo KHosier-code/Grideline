@@ -136,12 +136,37 @@ function normalizedSlot(value: string | null | undefined) {
   return position;
 }
 
-function depthSlot(row: Pick<CurrentDepthSource, "position" | "role">) {
+function normalizedRole(value: string | null | undefined) {
+  const role = clean(value)?.toUpperCase() ?? null;
+  if (role === "NB") return "NCB";
+  return role;
+}
+
+function interpretedPosition(row: Pick<CurrentDepthSource, "position" | "role">) {
   const position = normalizedSlot(row.position);
-  const role = clean(row.role)?.toUpperCase() ?? null;
+  const role = normalizedRole(row.role);
+  if (role && ["LCB", "RCB"].includes(role) && ["CB", "S"].includes(position ?? "")) return "CB";
+  if (role && ["SCB", "NCB"].includes(role) && position === "CB") return "CB";
+  if (role && ["FS", "SS"].includes(role) && ["CB", "S"].includes(position ?? "")) return "S";
+  // An OLB role alone is not proof of edge usage. DE/E/EDGE roster evidence
+  // is required before a left/right outside role is treated as EDGE.
+  if (role && ["LOLB", "ROLB"].includes(role) && position !== "EDGE") return "LB";
+  return position ?? normalizedSlot(row.role);
+}
+
+function depthSlot(row: Pick<CurrentDepthSource, "position" | "role">) {
+  const position = interpretedPosition(row);
+  const role = normalizedRole(row.role);
   if (position === "WR" && role && ["LWR", "RWR", "SWR", "WR"].includes(role)) return role;
   if (position === "CB" && role && ["LCB", "RCB", "SCB", "NCB", "CB"].includes(role)) return role;
+  if (position === "S" && role && ["FS", "SS", "S"].includes(role)) return role;
+  if (position === "EDGE" && role && ["LDE", "RDE", "EDGE", "DE"].includes(role)) return role;
   return position ?? normalizedSlot(row.role) ?? "UNKNOWN";
+}
+
+function isOffensiveLinePosition(value: string | null | undefined) {
+  const upper = clean(value)?.toUpperCase() ?? "";
+  return ["OL", "OT", "T", "LT", "RT", "OG", "G", "LG", "RG", "C"].includes(upper);
 }
 
 function snapShare(row: PersonnelSnapRow) {
@@ -236,7 +261,7 @@ export function deriveCurrentTeamDepth(input: {
   const recentByPosition = new Map<string, PersonnelSnapRow[]>();
   for (const row of input.snaps.filter((item) => item.teamId === input.teamId)) {
     const position = normalizedSlot(row.position);
-    if (!position || availableSlots.has(position)) continue;
+    if (!position || isOffensiveLinePosition(row.position) || availableSlots.has(position)) continue;
     if ((timestamp(row.kickoffTime) ?? Infinity) >= cutoffTime || (timestamp(row.sourceUpdatedAt) ?? Infinity) > cutoffTime) continue;
     recentByPosition.set(position, [...(recentByPosition.get(position) ?? []), row]);
   }
@@ -264,7 +289,7 @@ export function deriveCurrentTeamDepth(input: {
     .filter((row) => (timestamp(row.sourceSnapshotAt ?? row.sourceUpdatedAt) ?? Infinity) <= cutoffTime)
     .sort((a, b) => (timestamp(b.sourceSnapshotAt ?? b.sourceUpdatedAt) ?? -1) - (timestamp(a.sourceSnapshotAt ?? a.sourceUpdatedAt) ?? -1))) {
     const position = normalizedSlot(historical.position);
-    if (!position || inferredSlots.has(position)) continue;
+    if (!position || isOffensiveLinePosition(historical.position) || inferredSlots.has(position)) continue;
     inferredSlots.add(position);
     rows.push({
       playerId: historical.playerId, playerName: historical.playerName ?? null, teamId: input.teamId,
@@ -292,7 +317,7 @@ export function deriveCurrentTeamDepth(input: {
   }
   const interpreted: InterpretedDepthPlayer[] = [];
   for (const [slot, candidates] of bySlot) {
-    const position = normalizedSlot(candidates[0]?.position ?? candidates[0]?.role);
+    const position = candidates[0] ? interpretedPosition(candidates[0]) : null;
     const officialFirst = candidates.filter((row) =>
       row.classification === "official" && row.depthOrder === 1);
     const sleeperFirst = candidates.filter((row) =>
@@ -504,8 +529,7 @@ export function deriveCurrentTeamDepth(input: {
     conflicts,
     positionalCoverage,
     downstreamReady: qbStarter.status === "available"
-      && interpreted.some((row) => row.position === "WR")
-      && interpreted.some((row) => row.position === "CB")
+      && REQUIRED.every((position) => positionalCoverage[position] > 0)
       && !conflicts.some((conflict) => conflict.severity === "blocking")
       && ageDays <= 8,
     unavailableReasons: [
