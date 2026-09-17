@@ -311,6 +311,110 @@ test("timed-out database health work cancels and releases its client without a l
   assert.equal(releaseError?.name, "AbortError");
 });
 
+test("repeatedly timed-out database health checks cancel and release every client exactly once", async () => {
+  const checkCount = 8;
+  let queriesStarted = 0;
+  let resolveQueriesStarted: (() => void) | undefined;
+  const allQueriesStarted = new Promise<void>((resolve) => {
+    resolveQueriesStarted = resolve;
+  });
+  const checks: Array<{
+    queryToken: object;
+    callback?: (error: unknown, result?: unknown) => void;
+    cancellationCount: number;
+    releaseCount: number;
+    releaseError?: Error;
+  }> = [];
+
+  const fakePool = {
+    connect: async () => {
+      const check = {
+        queryToken: {},
+        callback: undefined as
+          | ((error: unknown, result?: unknown) => void)
+          | undefined,
+        cancellationCount: 0,
+        releaseCount: 0,
+        releaseError: undefined as Error | undefined,
+      };
+      checks.push(check);
+
+      return {
+        _getActiveQuery: () => check.queryToken,
+        query(
+          _queryOrConfig: unknown,
+          _values: unknown[] | undefined,
+          callback: (error: unknown, result?: unknown) => void,
+        ) {
+          check.callback = callback;
+          queriesStarted += 1;
+          if (queriesStarted === checkCount) {
+            resolveQueriesStarted?.();
+          }
+          return check.queryToken;
+        },
+        cancel(_client: unknown, query: unknown) {
+          assert.equal(query, check.queryToken);
+          check.cancellationCount += 1;
+        },
+        release(error?: Error) {
+          check.releaseCount += 1;
+          check.releaseError = error;
+        },
+      };
+    },
+  };
+
+  const queries = Array.from({ length: checkCount }, () => {
+    const controller = new AbortController();
+    return {
+      controller,
+      query: executeCancellableDatabaseQuery(
+        fakePool,
+        { text: "select pg_sleep($1)" },
+        [60_000],
+        controller.signal,
+      ),
+    };
+  });
+
+  await allQueriesStarted;
+  for (const { controller } of queries) {
+    controller.abort();
+  }
+
+  const results = await Promise.allSettled(queries.map(({ query }) => query));
+  assert.equal(results.length, checkCount);
+  for (const result of results) {
+    assert.equal(result.status, "rejected");
+    if (result.status === "rejected") {
+      assert.ok(result.reason instanceof Error);
+      assert.equal(result.reason.name, "AbortError");
+    }
+  }
+
+  assert.equal(checks.length, checkCount);
+  for (const check of checks) {
+    assert.equal(check.cancellationCount, 1);
+    assert.equal(check.releaseCount, 1);
+    assert.equal(check.releaseError?.name, "AbortError");
+  }
+
+  // A database driver can report the cancelled query after the route has
+  // already returned its unavailable response. It must not release again or
+  // surface a second rejection.
+  for (const check of checks) {
+    check.callback?.(new Error("late database callback"));
+    check.callback?.(undefined, { rows: [] });
+  }
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  for (const check of checks) {
+    assert.equal(check.cancellationCount, 1);
+    assert.equal(check.releaseCount, 1);
+  }
+});
+
 test("protected data-health isolates a failed provider and keeps mixed provider states visible", async () => {
   const handler = createDataHealthHandler({
     ...dataHealthDependencies,
