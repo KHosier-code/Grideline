@@ -11,6 +11,7 @@
     "test:auth-hardening": "tsx ../artifacts/api-server/src/middlewares/admin.test.ts && tsx ../artifacts/api-server/src/routes/authorization.test.ts",
     "test:consumer-api": "tsx ../artifacts/api-server/src/routes/consumer.test.ts && tsx ../artifacts/api-server/src/routes/authorization.test.ts",
     "test:consumer-ui": "tsx ../artifacts/nfl-analytics/src/lib/consumer-personnel.test.ts",
+    "test:typecheck-script-contract": "tsx ./src/typecheck-script-contract.test.ts",
     "db:migrate": "tsx ../lib/db/src/migrate.ts",
     "test:db-migrations": "tsx ../lib/db/src/migrate.test.ts",
     "test:model-evaluation-evidence": "tsx ../artifacts/api-server/src/lib/model-evaluation-evidence.test.ts",
