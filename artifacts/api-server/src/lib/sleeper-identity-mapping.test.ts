@@ -17,6 +17,12 @@ import {
   type GridlineIdentityCandidate,
 } from "./sleeper-identity";
 import type { SleeperPlayer } from "./sleeper";
+import {
+  canonicalNflverseRowsHash,
+  deriveSleeperCrosswalks,
+  parseNflversePlayersCsv,
+  typedNflverseCrosswalks,
+} from "./nflverse-players";
 
 function player(overrides: Partial<SleeperPlayer> = {}): SleeperPlayer {
   return {
@@ -122,7 +128,7 @@ test("conflicting exact provider IDs remain ambiguous even when names agree", ()
 });
 
 test("provider ID inference never fabricates exact IDs from fallback source identifiers", () => {
-  assert.equal(inferCandidateProviderIdType("players", "12345"), "espn_id");
+  assert.equal(inferCandidateProviderIdType("players", "12345"), null);
   assert.equal(inferCandidateProviderIdType("players", "PHI:aj-brown"), null);
   assert.equal(inferCandidateProviderIdType("player_game_stats", "00-0012345"), "gsis_id");
   assert.equal(inferCandidateProviderIdType("player_game_stats", "BrowA.00"), null);
@@ -229,6 +235,125 @@ test("coverage metrics expose status, depth, aliases, and position dimensions", 
   assert.equal(coverage.byPosition.WR.total, 2);
   assert.equal(coverage.suitableForDepthLogic, false);
   assert.equal(coverage.suitabilityVerdict, "SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC");
+});
+
+test("verified crosswalks map Sleeper IDs only when exact provider evidence is absent", () => {
+  const sleeper = player({ provider_ids: {} });
+  const result = mapSleeperPlayer(sleeper, [candidate()], [{
+    sourceNamespace: "sleeper",
+    sourcePlayerId: sleeper.player_id,
+    targetNamespace: "gsis",
+    targetPlayerId: "00-001",
+    gridlinePlayerId: "grid-1",
+    ambiguityFlag: false,
+  }]);
+  assert.equal(result.mappingStatus, "exact_crosswalk");
+  assert.equal(result.mappedGridlinePlayerId, "grid-1");
+});
+
+test("current roster and QB1 gates are deterministic and conservative", () => {
+  const players = [
+    player({ player_id: "qb", team: "PHI", position: "QB", depth_chart_position: "QB", depth_chart_order: 1 }),
+    player({ player_id: "inactive", team: "PHI", status: "Inactive", depth_chart_order: null, provider_ids: {} }),
+  ];
+  const mappings = [
+    mapSleeperPlayer(players[0]!, [candidate({ position: "QB", normalizedPosition: "QB" })]),
+    mapSleeperPlayer(players[1]!, []),
+  ];
+  const coverage = calculateMappingCoverage(players, mappings);
+  assert.equal(coverage.currentTeamRows, 2);
+  assert.equal(coverage.currentRosterRows, 1);
+  assert.equal(coverage.currentRosterMappingPercentage, 100);
+  assert.equal(coverage.qb1.percentage, 100);
+  assert.equal(coverage.suitableForDepthLogic, true);
+  assert.equal(coverage.suitabilityVerdict, "SLEEPER MAPPING SUITABLE FOR DEPTH LOGIC");
+});
+
+test("selected depth collisions block suitability after global collision rejection", () => {
+  const players = [
+    player({ player_id: "qb-a", team: "PHI", position: "QB", depth_chart_position: "QB", depth_chart_order: 1 }),
+    player({ player_id: "qb-b", team: "DAL", position: "QB", depth_chart_position: "QB", depth_chart_order: 1 }),
+  ];
+  const mapped = mapSleeperPlayers(players, [candidate({ position: "QB", normalizedPosition: "QB" })]);
+  const coverage = calculateMappingCoverage(players, mapped.mappings, mapped.collisionCount);
+  assert.equal(coverage.selectedDepthStarterCollisionCount, 1);
+  assert.equal(coverage.suitableForDepthLogic, false);
+  assert.ok(coverage.blockerCategories.includes("selected_depth_starter_collisions"));
+});
+
+test("validation sample covers five priority roles for at least 20 teams", () => {
+  const teams = [
+    "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN",
+    "DET", "GB", "HOU", "IND", "JAX", "KC", "LAC", "LAR", "LV", "MIA",
+  ];
+  const positions = ["QB", "RB", "WR", "TE", "CB"];
+  const players = teams.flatMap((team) => positions.map((position) =>
+    player({
+      player_id: `${team}-${position}`,
+      full_name: `${team} ${position}`,
+      team,
+      position,
+      depth_chart_position: position,
+      depth_chart_order: 1,
+      provider_ids: {},
+    })));
+  const mappings = players.map((item) => mapSleeperPlayer(item, []));
+  const sample = buildValidationSample(players, mappings);
+  assert.equal(new Set(sample.map((row) => row.team)).size, 20);
+  assert.equal(sample.length, 100);
+});
+
+test("nflverse parser validates headers, duplicate GSIS IDs, and canonical hashes", () => {
+  const csv = [
+    "gsis_id,display_name,position,latest_team,status,espn_id,pfr_id,pff_id,otc_id,esb_id,nfl_id,smart_id",
+    '00-0000001,"Doe, Jane",QB,CHI,ACT,101,DoeJa00,201,301,DOE000001,401,smart-1',
+  ].join("\n");
+  const parsed = parseNflversePlayersCsv(csv);
+  assert.equal(parsed.rows[0]?.display_name, "Doe, Jane");
+  assert.equal(parsed.rows[0]?.espn_id, "101");
+  assert.equal(canonicalNflverseRowsHash(parsed.rows), canonicalNflverseRowsHash([...parsed.rows]));
+  assert.throws(() => parseNflversePlayersCsv("display_name\nJane Doe"), /missing required header/);
+  assert.throws(
+    () => parseNflversePlayersCsv(
+      `${csv}\n00-0000001,Other Person,QB,CHI,ACT,102,OtherP00,202,302,OTH000001,402,smart-2`,
+    ),
+    /duplicate gsis_id/,
+  );
+});
+
+test("typed nflverse crosswalks include GSIS self-links and preserve conflicting provider ambiguity", () => {
+  const observedAt = new Date("2026-09-16T00:00:00.000Z");
+  const identities = [
+    {
+      gsis_id: "00-0000001", espn_id: "101", pfr_id: null, pff_id: null,
+      otc_id: null, esb_id: null, nfl_id: null, smart_id: null,
+    },
+    {
+      gsis_id: "00-0000002", espn_id: "202", pfr_id: "SameP00", pff_id: null,
+      otc_id: null, esb_id: null, nfl_id: null, smart_id: null,
+    },
+    {
+      gsis_id: "00-0000003", espn_id: null, pfr_id: "SameP00", pff_id: null,
+      otc_id: null, esb_id: null, nfl_id: null, smart_id: null,
+    },
+  ];
+  const typed = typedNflverseCrosswalks(identities, 7, observedAt);
+  assert.ok(typed.some((row) =>
+    row.sourceNamespace === "gsis_id" && row.sourcePlayerId === "00-0000001"));
+  const derived = deriveSleeperCrosswalks([
+    {
+      sleeperPlayerId: "safe",
+      providerIds: { espn_id: 101 },
+      capturedAt: observedAt,
+    },
+    {
+      sleeperPlayerId: "conflict",
+      providerIds: { pfr_id: "SameP00" },
+      capturedAt: observedAt,
+    },
+  ], identities, 7);
+  assert.equal(derived.find((row) => row.sourcePlayerId === "safe")?.ambiguityFlag, false);
+  assert.equal(derived.find((row) => row.sourcePlayerId === "conflict")?.ambiguityFlag, true);
 });
 
 test("depth diagnostics enumerate all 32 canonical teams without choosing starters", () => {

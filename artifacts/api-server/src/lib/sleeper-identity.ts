@@ -8,18 +8,21 @@ import {
 import {
   db,
   historicalDepthChartTable,
+  identitySourceImportsTable,
   playerGameStatsTable,
   playersTable,
   sleeperIdentityMappingRunsTable,
   sleeperIdentityMappingsTable,
   sleeperPlayerSnapshotsTable,
+  nflversePlayerIdentitiesTable,
+  playerIdentityCrosswalkRevisionsTable,
   snapCountsTable,
   teamsTable,
 } from "@workspace/db";
 import { SLEEPER_ACTIVE_TEAM_CODES, type SleeperPlayer } from "./sleeper";
 import { logger } from "./logger";
 
-export const SLEEPER_MAPPING_VERSION = "sleeper-identity-v3";
+export const SLEEPER_MAPPING_VERSION = "sleeper-identity-v4-c0-crosswalk";
 export const DEPTH_MAPPING_SUITABILITY_MIN_PERCENT = 90;
 
 export type MappingStatus =
@@ -31,6 +34,17 @@ export type MappingStatus =
   | "unmatched";
 
 export type MappingMethod = MappingStatus | "none";
+
+export type TrustedCrosswalk = {
+  sourceNamespace: string;
+  sourcePlayerId: string;
+  targetNamespace: string;
+  targetPlayerId: string;
+  gridlinePlayerId: string;
+  evidenceMethod?: string;
+  evidenceConfidence?: string;
+  ambiguityFlag?: boolean;
+};
 
 export type TeamNormalization = {
   originalTeam: string | null;
@@ -140,6 +154,11 @@ const STABLE_PROVIDER_ID_TYPES = new Set([
   "gsis_id",
   "espn_id",
   "pfr_id",
+  "pff_id",
+  "otc_id",
+  "esb_id",
+  "nfl_id",
+  "smart_id",
   "sportradar_id",
   "yahoo_id",
   "rotowire_id",
@@ -229,7 +248,9 @@ export function inferCandidateProviderIdType(
   source: CandidateRecord["source"],
   value: string,
 ) {
-  if (source === "players") return isNumericId(value) ? "espn_id" : null;
+  // Gridline's players.player_id has no provider provenance. Numeric values
+  // must not be silently interpreted as ESPN IDs.
+  if (source === "players") return null;
   if (source === "player_game_stats") return isGsisId(value) ? "gsis_id" : null;
   if (source === "snap_counts") return isLikelyPfrId(value) ? "pfr_id" : null;
   if (source === "historical_depth_charts") {
@@ -363,6 +384,7 @@ function buildMappingIndexes(candidates: GridlineIdentityCandidate[]): MappingIn
 function mapSleeperPlayerWithIndexes(
   player: SleeperPlayer,
   indexes: MappingIndexes,
+  crosswalks: TrustedCrosswalk[] = [],
 ): SleeperIdentityMapping {
   const team = normalizeTeamCode(player.team);
   const normalizedPosition = normalizePosition(player.position);
@@ -379,6 +401,13 @@ function mapSleeperPlayerWithIndexes(
   let ambiguityReason: string | null = null;
   let unmatchedReason: string | null = null;
 
+  const trusted = [...new Map(crosswalks
+    .filter((row) => !row.ambiguityFlag
+      && row.sourceNamespace.toLowerCase() === "sleeper"
+      && row.sourcePlayerId === player.player_id
+      && row.targetNamespace.toLowerCase() === "gsis")
+    .map((row) => [row.gridlinePlayerId, row] as const)).values()];
+
   if (byExactId.length > 0) {
     const exactIds = new Set(byExactId.map((candidate) => candidate.gridlinePlayerId));
     if (exactIds.size === 1) {
@@ -388,6 +417,18 @@ function mapSleeperPlayerWithIndexes(
       status = "ambiguous";
       ambiguityReason = "Multiple exact provider IDs resolve to different Gridline identities.";
     }
+  } else if (trusted.length === 1) {
+    const crosswalk = trusted[0]!;
+    selected = indexes.byProviderId.get(`gsis_id:${crosswalk.targetPlayerId}`)?.[0] ?? null;
+    if (selected) {
+      status = "exact_crosswalk";
+      candidatesForEvidence = [selected];
+    } else {
+      unmatchedReason = "Trusted crosswalk target is absent from Gridline candidates.";
+    }
+  } else if (trusted.length > 1) {
+    status = "ambiguous";
+    ambiguityReason = "Multiple trusted crosswalk identities resolve to one Sleeper player.";
   } else {
     const nameCandidates = (indexes.byName.get(normalizePlayerName(player.full_name)) ?? [])
       .filter((candidate) => positionCompatibility(player.position, candidate.position) === "compatible");
@@ -454,16 +495,18 @@ function mapSleeperPlayerWithIndexes(
 export function mapSleeperPlayer(
   player: SleeperPlayer,
   candidates: GridlineIdentityCandidate[],
+  crosswalks?: TrustedCrosswalk[],
 ): SleeperIdentityMapping {
-  return mapSleeperPlayerWithIndexes(player, buildMappingIndexes(candidates));
+  return mapSleeperPlayerWithIndexes(player, buildMappingIndexes(candidates), crosswalks);
 }
 
 export function mapSleeperPlayers(
   players: SleeperPlayer[],
   candidates: GridlineIdentityCandidate[],
+  crosswalks?: TrustedCrosswalk[],
 ) {
   const indexes = buildMappingIndexes(candidates);
-  const mappings = players.map((player) => mapSleeperPlayerWithIndexes(player, indexes));
+  const mappings = players.map((player) => mapSleeperPlayerWithIndexes(player, indexes, crosswalks));
   const mappedByGridline = new Map<string, SleeperIdentityMapping[]>();
   for (const mapping of mappings) {
     if (!mapping.mappedGridlinePlayerId || mapping.mappingStatus === "ambiguous") continue;
@@ -491,10 +534,18 @@ function percent(numerator: number, denominator: number) {
   return denominator ? Number(((numerator / denominator) * 100).toFixed(2)) : 0;
 }
 
+function depthRolePosition(player: SleeperPlayer) {
+  const position = normalizePosition(player.depth_chart_position ?? player.position);
+  if (position === "FS" || position === "SS" || position === "DB") return "S";
+  if (position === "OT" || position === "OG" || position === "C") return "OL";
+  return position;
+}
+
 export function calculateMappingCoverage(
   players: SleeperPlayer[],
   mappings: SleeperIdentityMapping[],
   collisionCount = 0,
+  crosswalks: Array<{ lastVerified?: Date | string; ambiguityFlag?: boolean }> = [],
 ) {
   const total = players.length;
   const mapped = mappings.filter((mapping) => mapping.mappedGridlinePlayerId);
@@ -525,12 +576,65 @@ export function calculateMappingCoverage(
     mapped: depthOne.filter((mapping) => mapping.mappedGridlinePlayerId).length,
     percentage: percent(depthOne.filter((mapping) => mapping.mappedGridlinePlayerId).length, depthOne.length),
   };
+  const currentRosterPlayers = players.filter((player) => {
+    const canonicalTeam = normalizeTeamCode(player.team).normalizedTeam;
+    const status = player.status?.toLowerCase();
+    const activeStatus = status === "active" || status === "current" || status === "act";
+    return Boolean(canonicalTeam && (activeStatus || player.depth_chart_order !== null));
+  });
+  const currentRosterIds = new Set(currentRosterPlayers.map((player) => player.player_id));
+  const currentTeam = mappings.filter((mapping) => mapping.normalizedTeam);
+  const currentRoster = mappings.filter((mapping) => currentRosterIds.has(mapping.sleeperPlayerId));
+  const mapPercent = (rows: SleeperIdentityMapping[]) =>
+    percent(rows.filter((row) => row.mappedGridlinePlayerId).length, rows.length);
+  const priority = new Set(players.filter((player) => {
+    const pos = depthRolePosition(player);
+    const order = player.depth_chart_order ?? 999;
+    const max = pos === "QB" || pos === "RB" || pos === "TE" ? 3
+      : pos === "WR" ? 5
+        : pos === "CB" || pos === "S" ? 4
+          : pos === "OL" || pos === "EDGE" || pos === "LB" ? 1
+            : 0;
+    return max > 0 && order >= 1 && order <= max;
+  }).map((player) => player.player_id));
+  const priorityRows = mappings.filter((row) => priority.has(row.sleeperPlayerId));
+  const qb1Ids = new Set(players.filter((player) =>
+    depthRolePosition(player) === "QB" && player.depth_chart_order === 1,
+  ).map((player) => player.player_id));
+  const qb1Rows = mappings.filter((row) => qb1Ids.has(row.sleeperPlayerId));
+  const selectedSleeperIds = new Set(deriveDepthRelevantCandidates(players, mappings)
+    .flatMap((row) => row.sleeperPlayerId ? [row.sleeperPlayerId] : []));
+  const selectedIds = new Map<string, string[]>();
+  for (const mapping of mappings) {
+    if (!selectedSleeperIds.has(mapping.sleeperPlayerId)) continue;
+    const possibleId = mapping.mappedGridlinePlayerId
+      ?? (mapping.ambiguityReason === "Multiple Sleeper players resolve to one Gridline identity."
+        ? mapping.candidateGridlinePlayerIds[0] ?? null
+        : null);
+    if (!possibleId) continue;
+    const ids = selectedIds.get(possibleId) ?? [];
+    ids.push(mapping.sleeperPlayerId);
+    selectedIds.set(possibleId, ids);
+  }
+  const selectedDepthStarterCollisionCount = [...selectedIds.values()].filter((ids) => ids.length > 1).length;
+  const staleCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const staleCrosswalkCount = crosswalks.filter((row) =>
+    row.lastVerified && new Date(row.lastVerified).getTime() < staleCutoff).length;
+  const blockers = [
+    ...(depthOrder.percentage < 90 ? ["depth_order_below_90"] : []),
+    ...(depthOrderOne.percentage < 90 ? ["depth_order_one_below_90"] : []),
+    ...(mapPercent(qb1Rows) < 100 ? ["qb1_not_100"] : []),
+    ...(selectedDepthStarterCollisionCount > 0 ? ["selected_depth_starter_collisions"] : []),
+    ...(staleCrosswalkCount > 0 ? ["stale_crosswalk_evidence"] : []),
+  ];
   const suitableForDepthLogic = depthOrder.percentage >= DEPTH_MAPPING_SUITABILITY_MIN_PERCENT
     && depthOrderOne.percentage >= DEPTH_MAPPING_SUITABILITY_MIN_PERCENT
-    && collisionCount === 0;
+    && mapPercent(qb1Rows) === 100
+    && selectedDepthStarterCollisionCount === 0;
   return {
     totalSleeperRows: total,
     currentTeamRows: active.length,
+    currentRosterRows: currentRoster.length,
     mappedCount: mapped.length,
     exactProviderIdCount: countByStatus("exact_provider_id"),
     crosswalkCount: countByStatus("exact_crosswalk"),
@@ -539,6 +643,8 @@ export function calculateMappingCoverage(
     ambiguousCount: countByStatus("ambiguous"),
     unmatchedCount: countByStatus("unmatched"),
     overallMappingPercentage: percent(mapped.length, total),
+    currentTeamMappingPercentage: mapPercent(currentTeam),
+    currentRosterMappingPercentage: mapPercent(currentRoster),
     exactProviderIdPercentage: percent(countByStatus("exact_provider_id"), total),
     crosswalkPercentage: percent(countByStatus("exact_crosswalk"), total),
     nameTeamPositionPercentage: percent(countByStatus("normalized_name_team_position"), total),
@@ -546,8 +652,16 @@ export function calculateMappingCoverage(
     byPosition: positionCoverage,
     depthOrder,
     depthOrderOne,
+    depthPriority: {
+      total: priorityRows.length, mapped: priorityRows.filter((row) => row.mappedGridlinePlayerId).length,
+      percentage: mapPercent(priorityRows),
+    },
+    qb1: { total: qb1Rows.length, mapped: qb1Rows.filter((row) => row.mappedGridlinePlayerId).length, percentage: mapPercent(qb1Rows) },
     teamAliasNormalizationCount: mappings.filter((mapping) => mapping.teamNormalizationMethod === "legacy_alias").length,
     collisionCount,
+    selectedDepthStarterCollisionCount,
+    staleCrosswalkCount,
+    blockerCategories: blockers,
     suitabilityMinimumPercentage: DEPTH_MAPPING_SUITABILITY_MIN_PERCENT,
     suitableForDepthLogic,
     suitabilityVerdict: suitableForDepthLogic
@@ -558,7 +672,7 @@ export function calculateMappingCoverage(
 
 export type DepthRelevantCandidate = {
   team: string;
-  role: "QB1" | "QB2" | "RB1" | "WR" | "TE1" | "CB1" | "CB2";
+  role: "QB1" | "QB2" | "RB1" | "WR" | "TE1" | "CB1" | "CB2" | "S1" | "OL1" | "EDGE1" | "LB1";
   sleeperPlayerId: string | null;
   sleeperName: string | null;
   position: string | null;
@@ -597,14 +711,18 @@ export function deriveDepthRelevantCandidates(
       });
     };
     const byPosition = (position: string) => teamPlayers.filter((player) =>
-      normalizePosition(player.depth_chart_position ?? player.position) === position);
+      depthRolePosition(player) === position);
     add(byPosition("QB")[0], "QB1");
     add(byPosition("QB")[1], "QB2");
     add(byPosition("RB")[0], "RB1");
-    for (const player of byPosition("WR").slice(0, 3)) add(player, "WR");
+    for (const player of byPosition("WR").slice(0, 5)) add(player, "WR");
     add(byPosition("TE")[0], "TE1");
     add(byPosition("CB")[0], "CB1");
     add(byPosition("CB")[1], "CB2");
+    add(byPosition("S")[0], "S1");
+    add(byPosition("OL")[0], "OL1");
+    add(byPosition("EDGE")[0], "EDGE1");
+    add(byPosition("LB")[0], "LB1");
   }
   return result;
 }
@@ -617,7 +735,7 @@ export function buildValidationSample(
   const positionOrder = ["QB", "RB", "WR", "TE", "CB"];
   const teams = [...new Set(players
     .map((player) => normalizeTeamCode(player.team).normalizedTeam)
-    .filter((team): team is string => Boolean(team)))].sort().slice(0, 10);
+    .filter((team): team is string => Boolean(team)))].sort().slice(0, 20);
   const sample: Array<Record<string, unknown>> = [];
   const included = new Set<string>();
   const addPlayer = (player: SleeperPlayer, team: string, position: string) => {
@@ -632,6 +750,9 @@ export function buildValidationSample(
       mappedGridlinePlayerId: mapping?.mappedGridlinePlayerId ?? null,
       mappingMethod: mapping?.mappingMethod ?? "none",
       mappingConfidence: mapping?.mappingConfidence ?? 0,
+      evidenceSource: mapping?.mappingMethod === "exact_provider_id" ? "typed provider ID"
+        : mapping?.mappingMethod === "exact_crosswalk" ? "verified crosswalk" : "roster evidence",
+      conflict: mapping?.ambiguityReason ?? null,
       ambiguityReason: mapping?.ambiguityReason ?? null,
       originalTeam: mapping?.originalTeam ?? null,
       teamNormalizationMethod: mapping?.teamNormalizationMethod ?? null,
@@ -644,41 +765,23 @@ export function buildValidationSample(
     for (const position of positionOrder) {
       const player = teamPlayers
         .filter((candidate) => normalizePosition(candidate.position) === position)
-        .sort((left, right) => left.player_id.localeCompare(right.player_id))[0];
+        .sort((left, right) =>
+          (left.depth_chart_order ?? 999) - (right.depth_chart_order ?? 999)
+          || left.player_id.localeCompare(right.player_id))[0];
       if (player) addPlayer(player, team, position);
-    }
-  }
-  for (const requiredStatus of [
-    "exact_provider_id",
-    "normalized_name_team_position",
-    "ambiguous",
-    "unmatched",
-  ] satisfies MappingStatus[]) {
-    const index = mappings.findIndex((mapping) =>
-      mapping.mappingStatus === requiredStatus
-      && !included.has(mapping.sleeperPlayerId)
-      && positionOrder.includes(mapping.normalizedPosition ?? ""));
-    if (index < 0) continue;
-    const mapping = mappings[index]!;
-    const sourcePlayer = players.find((player) => player.player_id === mapping.sleeperPlayerId);
-    if (sourcePlayer) {
-      addPlayer(sourcePlayer, mapping.normalizedTeam ?? mapping.originalTeam ?? "UNKNOWN", mapping.normalizedPosition ?? "UNKNOWN");
-    }
-  }
-  const aliasIndex = mappings.findIndex((mapping) =>
-    mapping.teamNormalizationMethod === "legacy_alias" && !included.has(mapping.sleeperPlayerId));
-  if (aliasIndex >= 0) {
-    const mapping = mappings[aliasIndex]!;
-    const sourcePlayer = players.find((player) => player.player_id === mapping.sleeperPlayerId);
-    if (sourcePlayer) {
-      addPlayer(sourcePlayer, mapping.normalizedTeam ?? "UNKNOWN", mapping.normalizedPosition ?? "UNKNOWN");
     }
   }
   return sample;
 }
 
 async function sourceCandidates() {
-  const [players, stats, snaps, depth] = await Promise.all([
+  const [latestNflverseImport] = await db.select({
+    id: identitySourceImportsTable.id,
+  }).from(identitySourceImportsTable)
+    .where(eq(identitySourceImportsTable.sourceNamespace, "nflverse"))
+    .orderBy(desc(identitySourceImportsTable.id))
+    .limit(1);
+  const [players, stats, snaps, depth, nflverse] = await Promise.all([
     db.select({
       playerId: playersTable.playerId,
       name: playersTable.name,
@@ -721,10 +824,80 @@ async function sourceCandidates() {
       desc(historicalDepthChartTable.season),
       desc(historicalDepthChartTable.week),
     ),
+    latestNflverseImport
+      ? db.select().from(nflversePlayerIdentitiesTable)
+        .where(eq(nflversePlayerIdentitiesTable.importId, latestNflverseImport.id))
+      : Promise.resolve([]),
   ]);
+  const typedCanonicalTargets = new Map<string, Set<string>>();
+  const canonicalByNameTeamPosition = new Map<string, Set<string>>();
+  for (const row of nflverse) {
+    for (const [type, value] of Object.entries({
+      gsis_id: row.gsisId,
+      espn_id: row.espnId,
+      pfr_id: row.pfrId,
+      pff_id: row.pffId,
+      otc_id: row.otcId,
+      esb_id: row.esbId,
+      nfl_id: row.nflId,
+      smart_id: row.smartId,
+    })) {
+      if (!value) continue;
+      const key = `${type}:${value}`;
+      const targets = typedCanonicalTargets.get(key) ?? new Set<string>();
+      targets.add(row.gsisId);
+      typedCanonicalTargets.set(key, targets);
+    }
+    const team = normalizeTeamCode(row.team).normalizedTeam;
+    const position = normalizePosition(row.position);
+    if (team && position) {
+      const key = `${normalizePlayerName(row.displayName)}:${team}:${position}`;
+      const targets = canonicalByNameTeamPosition.get(key) ?? new Set<string>();
+      targets.add(row.gsisId);
+      canonicalByNameTeamPosition.set(key, targets);
+    }
+  }
+  const canonicalTypedId = (source: CandidateRecord["source"], playerId: string) => {
+    const type = inferCandidateProviderIdType(source, playerId);
+    if (!type) return null;
+    const targets = typedCanonicalTargets.get(`${type}:${playerId}`);
+    return targets?.size === 1 ? [...targets][0]! : null;
+  };
+  const canonicalUntypedObservation = (
+    name: string,
+    teamValue: string | null,
+    positionValue: string | null,
+  ) => {
+    const team = normalizeTeamCode(teamValue).normalizedTeam;
+    const position = normalizePosition(positionValue);
+    if (!team || !position) return null;
+    const targets = canonicalByNameTeamPosition.get(
+      `${normalizePlayerName(name)}:${team}:${position}`,
+    );
+    return targets?.size === 1 ? [...targets][0]! : null;
+  };
   const records: CandidateRecord[] = [
+    ...nflverse.flatMap((row) => Object.entries({
+      gsis_id: row.gsisId,
+      espn_id: row.espnId,
+      pfr_id: row.pfrId,
+      pff_id: row.pffId,
+      otc_id: row.otcId,
+      esb_id: row.esbId,
+      nfl_id: row.nflId,
+      smart_id: row.smartId,
+    }).flatMap(([externalIdType, externalIdValue]) => externalIdValue ? [{
+      gridlinePlayerId: row.gsisId,
+      name: row.displayName,
+      position: row.position,
+      team: row.team,
+      source: "nflverse_players",
+      externalIdType,
+      externalIdValue,
+    }] : [])),
     ...players.map((row) => ({
-      gridlinePlayerId: row.playerId,
+      gridlinePlayerId: canonicalUntypedObservation(row.name, row.team, row.position)
+        ?? row.playerId,
       name: row.name,
       position: row.position,
       team: row.team,
@@ -733,7 +906,8 @@ async function sourceCandidates() {
       externalIdValue: inferCandidateProviderIdType("players", row.playerId) ? row.playerId : null,
     })),
     ...stats.map((row) => ({
-      gridlinePlayerId: row.playerId,
+      gridlinePlayerId: canonicalTypedId("player_game_stats", row.playerId)
+        ?? row.playerId,
       name: row.name,
       position: row.position,
       team: row.team,
@@ -744,7 +918,8 @@ async function sourceCandidates() {
       externalIdValue: inferCandidateProviderIdType("player_game_stats", row.playerId) ? row.playerId : null,
     })),
     ...snaps.map((row) => ({
-      gridlinePlayerId: row.playerId,
+      gridlinePlayerId: canonicalTypedId("snap_counts", row.playerId)
+        ?? row.playerId,
       name: row.name,
       position: row.position,
       team: row.team,
@@ -755,7 +930,8 @@ async function sourceCandidates() {
       externalIdValue: inferCandidateProviderIdType("snap_counts", row.playerId) ? row.playerId : null,
     })),
     ...depth.map((row) => ({
-      gridlinePlayerId: row.playerId,
+      gridlinePlayerId: canonicalTypedId("historical_depth_charts", row.playerId)
+        ?? row.playerId,
       name: row.name,
       position: row.position,
       team: row.team,
@@ -830,9 +1006,21 @@ export async function refreshSleeperIdentityMappings(options: {
       provider_ids: row.providerIds,
     }));
     const candidates = await sourceCandidates();
+    const trustedCrosswalks = await db.select({
+      sourceNamespace: playerIdentityCrosswalkRevisionsTable.sourceNamespace,
+      sourcePlayerId: playerIdentityCrosswalkRevisionsTable.sourcePlayerId,
+      targetNamespace: playerIdentityCrosswalkRevisionsTable.targetNamespace,
+      targetPlayerId: playerIdentityCrosswalkRevisionsTable.targetPlayerId,
+      gridlinePlayerId: playerIdentityCrosswalkRevisionsTable.gridlinePlayerId,
+      ambiguityFlag: playerIdentityCrosswalkRevisionsTable.ambiguityFlag,
+      lastVerified: playerIdentityCrosswalkRevisionsTable.lastVerified,
+    }).from(playerIdentityCrosswalkRevisionsTable);
+    const crosswalkEvidenceFingerprint = createHash("sha256").update(JSON.stringify(
+      trustedCrosswalks.map((row) => Object.values(row)).sort(),
+    )).digest("hex");
     const candidateSetFingerprint = mappingCandidateFingerprint(candidates);
-    const mapped = mapSleeperPlayers(players, candidates);
-    const coverage = calculateMappingCoverage(players, mapped.mappings, mapped.collisionCount);
+    const mapped = mapSleeperPlayers(players, candidates, trustedCrosswalks);
+    const coverage = calculateMappingCoverage(players, mapped.mappings, mapped.collisionCount, trustedCrosswalks);
     const depthCandidates = deriveDepthRelevantCandidates(players, mapped.mappings);
     const validationSample = buildValidationSample(players, mapped.mappings);
     await db.transaction(async (tx) => {
@@ -856,7 +1044,14 @@ export async function refreshSleeperIdentityMappings(options: {
           depthRelevantCandidates: depthCandidates,
           validationSample,
           candidateCount: candidates.length,
-          candidateSetFingerprint,
+           candidateSetFingerprint,
+           crosswalkEvidenceFingerprint,
+           mappingInputFingerprint: createHash("sha256").update(JSON.stringify({
+             mappingVersion: SLEEPER_MAPPING_VERSION,
+             sourceRows: sourceRows.map((row) => row.sourceHash),
+             candidateSetFingerprint,
+             crosswalkEvidenceFingerprint,
+           })).digest("hex"),
           candidateSetCapturedAt: startedAt.toISOString(),
           mappingVersion: SLEEPER_MAPPING_VERSION,
         },
@@ -898,6 +1093,7 @@ export async function refreshSleeperIdentityMappings(options: {
       ...coverage,
       durationMs: Date.now() - startedAt.getTime(),
       candidateSetFingerprint,
+      crosswalkEvidenceFingerprint,
       depthRelevantCandidates: depthCandidates,
       validationSample,
     };

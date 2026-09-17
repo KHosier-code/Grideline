@@ -86,3 +86,41 @@ test("Sleeper identity mapping migration protects runs and results as append-onl
   assert.match(migration, /BEFORE UPDATE OR DELETE ON "sleeper_identity_mapping_runs"/);
   assert.match(migration, /BEFORE UPDATE OR DELETE ON "sleeper_identity_mappings"/);
 });
+
+test("verified identity migration protects all evidence tables as append-only", () => {
+  const migration = fs.readFileSync(
+    new URL("../migrations/0024_verified_player_identity.sql", import.meta.url),
+    "utf8",
+  );
+  const requirements = extractRequirements(migration);
+  assert.deepEqual(
+    [...requirements.triggers].sort(),
+    [
+      "identity_source_imports_append_only",
+      "nflverse_player_identities_append_only",
+      "player_identity_crosswalk_append_only",
+    ],
+  );
+  for (const table of [
+    "identity_source_imports",
+    "nflverse_player_identities",
+    "player_identity_crosswalk_revisions",
+  ]) {
+    assert.match(migration, new RegExp(`BEFORE UPDATE OR DELETE ON "${table}"`));
+  }
+});
+
+test("identity parser revisions preserve immutable imports without overwriting source evidence", () => {
+  const migration = fs.readFileSync(
+    new URL("../migrations/0025_identity_import_parser_version.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS "parser_version"/);
+  assert.match(
+    migration,
+    /UNIQUE \("source_namespace", "source_content_hash", "parser_version"\)/,
+  );
+  assert.doesNotThrow(() =>
+    assertMigrationSafe(migration, "0025_identity_import_parser_version.sql"),
+  );
+});

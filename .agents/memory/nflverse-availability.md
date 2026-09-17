@@ -14,3 +14,9 @@ Historical depth-chart releases use weekly season rows in older files and timest
 **Why:** Batch inserts exposed duplicate natural keys, and newer depth files changed columns rather than following the weekly schema.
 
 **How to apply:** Detect the format from headers, normalize both variants, deduplicate within each batch, and retain the original snapshot timestamp when present.
+
+The nflverse players release uses `latest_team`, not `team`, for its current team field. Version parser semantics independently from raw-file hashes so corrected column interpretation creates new immutable evidence instead of rewriting an old import.
+
+**Why:** A byte-identical players file initially parsed with the wrong team header, preventing safe name/team/position corroboration while the raw source hash still appeared unchanged.
+
+**How to apply:** Validate identity-critical headers, include a parser version in import uniqueness/provenance, and append a new import revision whenever parsing semantics change.

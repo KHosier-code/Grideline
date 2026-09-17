@@ -322,7 +322,12 @@ router.get("/data-health", requireAdmin, async (req, res): Promise<void> => {
         status: sleeperIdentity.status,
         detail: sleeperIdentity.latestFailure && sleeperIdentity.status !== "current"
           ? sleeperIdentity.latestFailure
-          : `${sleeperIdentity.metadata.suitabilityVerdict ?? "Mapping suitability is not available."} ${sleeperIdentity.metadata.mappedCount ?? 0} of ${sleeperIdentity.metadata.totalSleeperRows ?? 0} rows mapped; depth-order coverage ${sleeperIdentity.metadata.depthOrder && typeof sleeperIdentity.metadata.depthOrder === "object" && "percentage" in sleeperIdentity.metadata.depthOrder ? sleeperIdentity.metadata.depthOrder.percentage : 0}%.`,
+          : `${sleeperIdentity.metadata.suitabilityVerdict ?? "Mapping suitability is not available."} `
+            + `${sleeperIdentity.metadata.mappedCount ?? 0} of ${sleeperIdentity.metadata.totalSleeperRows ?? 0} rows mapped; `
+            + `current-team ${sleeperIdentity.metadata.currentTeamMappingPercentage ?? 0}%; `
+            + `depth-order ${sleeperIdentity.metadata.depthOrder && typeof sleeperIdentity.metadata.depthOrder === "object" && "percentage" in sleeperIdentity.metadata.depthOrder ? sleeperIdentity.metadata.depthOrder.percentage : 0}%; `
+            + `depth-order-1 ${sleeperIdentity.metadata.depthOrderOne && typeof sleeperIdentity.metadata.depthOrderOne === "object" && "percentage" in sleeperIdentity.metadata.depthOrderOne ? sleeperIdentity.metadata.depthOrderOne.percentage : 0}%; `
+            + `QB1 ${sleeperIdentity.metadata.qb1 && typeof sleeperIdentity.metadata.qb1 === "object" && "percentage" in sleeperIdentity.metadata.qb1 ? sleeperIdentity.metadata.qb1.percentage : 0}%.`,
         schedule: "After each successful Sleeper snapshot; worker-owned",
         retryPolicy: "Runs independently after snapshot capture; failures do not invalidate snapshots.",
         lastUpdated: sleeperIdentity.lastUpdated,

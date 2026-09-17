@@ -19,6 +19,7 @@ import {
 import { syncEspnInjuries } from "./availability";
 import { sleeperSyncIntervalMs, syncSleeperPlayers } from "./sleeper";
 import { refreshSleeperIdentityMappings } from "./sleeper-identity";
+import { refreshPlayerIdentityCrosswalk, syncNflversePlayers } from "./nflverse-players";
 import { syncNflverseHistory } from "./nflverse";
 import { rebuildPregameFeatures } from "./features";
 import { rebuildPregamePersonnelContextFeatures } from "./personnel-context";
@@ -876,6 +877,8 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
       const sourceCapturedAt = (result as { sourceCapturedAt?: string } | null)?.sourceCapturedAt;
       if (snapshotId && sourceCapturedAt) {
         try {
+          const identityImport = await syncNflversePlayers();
+          const crosswalk = await refreshPlayerIdentityCrosswalk(new Date(sourceCapturedAt));
           const identity = await refreshSleeperIdentityMappings({
             sourceSnapshotId: snapshotId,
             sourceCapturedAt: new Date(sourceCapturedAt),
@@ -884,6 +887,8 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
           });
           result = {
             ...(resultMetadata(result) as Record<string, unknown>),
+            identityImport,
+            crosswalk,
             identityMapping: identity,
           };
         } catch (error) {

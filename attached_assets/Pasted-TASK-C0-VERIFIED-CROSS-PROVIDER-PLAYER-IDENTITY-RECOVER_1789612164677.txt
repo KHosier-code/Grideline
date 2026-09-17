@@ -1,0 +1,237 @@
+TASK C0 — VERIFIED CROSS-PROVIDER PLAYER IDENTITY RECOVERY
+
+Goal:
+Improve Sleeper-to-Gridline identity coverage enough to support safe depth-chart logic.
+
+Current Task B result:
+
+- 12,227 Sleeper players evaluated
+- 2,037 mapped
+- 16.66% overall mapping
+- 1,524 depth-order rows
+- 471 mapped depth-order rows
+- 544 depth-order-one rows
+- 169 mapped depth-order-one rows
+- 2,004 ambiguous
+- 8,186 unmatched
+- 3 collisions correctly rejected
+- current verdict: SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC
+
+This task must NOT change starters, QB confidence, consumer depth charts, or Phase 6.1 model behavior.
+
+HARD SAFETY RULES
+
+Do not:
+
+- retrain, refit, or promote models
+- alter Phase 6.1 features or predictions
+- force ambiguous identities
+- use name-only fuzzy matching as truth
+- overwrite historical Gridline player records
+- rewrite Sleeper snapshots
+- expose raw provider payloads to consumers
+
+TASK 1 — INVENTORY ALL EXISTING PROVIDER IDENTIFIERS
+
+Audit Gridline player-related data for stable IDs, including where available:
+
+- GSIS / NFL ID
+- ESPN ID
+- Sportradar ID
+- Sleeper ID
+- PFR ID
+- Yahoo ID
+- Rotowire ID
+- nflverse IDs
+- other external provider IDs
+
+Report:
+- which namespaces actually exist
+- how many players have each
+- which namespaces are trustworthy/stable
+- which historical numeric IDs are ambiguous and must not be assumed
+
+TASK 2 — BUILD VERIFIED CROSSWALK EVIDENCE
+
+Create a deterministic cross-provider identity table.
+
+Each crosswalk row must contain:
+
+- Gridline player ID
+- source namespace
+- source player ID
+- target namespace if applicable
+- evidence method
+- evidence confidence
+- first observed timestamp
+- last verified timestamp
+- evidence fingerprint
+- ambiguity flag
+
+Only admit crosswalks backed by defensible evidence.
+
+TASK 3 — EVIDENCE HIERARCHY
+
+Use this order:
+
+1. Exact stable provider ID equality
+2. Existing trusted cross-provider mapping
+3. Stable historical identity linkage across multiple sources
+4. Exact normalized name + team + position + corroborating evidence
+5. Otherwise unresolved
+
+Do not use unsupported fuzzy matching to raise coverage.
+
+TASK 4 — HISTORICAL IDENTITY LINKAGE
+
+Use existing Gridline/nflverse history to resolve cases where current team differs due to:
+
+- trade
+- waiver claim
+- free agency
+- roster move
+- legacy franchise code
+- position label change
+
+Require stable evidence that it is the same player.
+
+TASK 5 — DEPTH-RELEVANT PRIORITY
+
+Prioritize current depth-chart players first.
+
+Specifically resolve:
+
+- QB depth order 1–3
+- RB depth order 1–3
+- WR depth order 1–5
+- TE depth order 1–3
+- CB depth order 1–4
+- S depth order 1–4
+- OL starters where supported
+- EDGE/LB starters where supported
+
+Report depth-relevant mapping separately from total historical/player-pool mapping.
+
+TASK 6 — CURRENT ROSTER FILTER
+
+Determine whether the 12,227 Sleeper records include retired, inactive, free-agent, historical, or otherwise non-current players.
+
+Create a current-roster/depth-relevant subset using defensible evidence such as:
+
+- non-null current team
+- active NFL team
+- current depth order
+- active/current status
+- recent participation where available
+
+Do not delete historical rows.
+
+Report:
+- full Sleeper population
+- current-team population
+- current depth-relevant population
+- mapping percentage for each
+
+TASK 7 — COLLISION RESOLUTION
+
+For every ambiguous one-to-many or many-to-one case:
+
+- identify competing identities
+- list evidence
+- resolve only when one candidate has stronger stable evidence
+- otherwise keep ambiguous
+
+Zero forced collision resolution.
+
+TASK 8 — TARGET GATES
+
+Evaluate these gates:
+
+Overall current-team mapping:
+>= 90% preferred
+
+Depth-order mapping:
+>= 90% required for Task C
+
+Depth-order-1 mapping:
+>= 90% required for Task C
+
+QB depth-order-1:
+target 100%
+
+No unresolved duplicate collisions among selected depth starters.
+
+If gates are not met, return NOT SUITABLE and identify the exact remaining blocker categories.
+
+TASK 9 — VALIDATION SAMPLE
+
+For at least 20 teams show:
+
+- QB1
+- RB1
+- top WR
+- TE1
+- CB1
+- Sleeper ID
+- mapped Gridline ID
+- evidence source
+- mapping method
+- confidence
+- any conflict
+
+TASK 10 — DATA HEALTH
+
+Add admin diagnostics for:
+
+- crosswalk coverage
+- current-team mapping %
+- depth-order mapping %
+- depth-order-1 mapping %
+- QB1 mapping %
+- collision count
+- unresolved count
+- stale crosswalk evidence
+
+TASK 11 — TESTS
+
+Add regression tests for:
+
+- exact provider IDs beat name matching
+- team changes do not break stable identity
+- legacy team aliases do not create false ambiguity
+- no unsupported numeric IDs are treated as ESPN IDs
+- one-to-many collisions remain unresolved without stronger evidence
+- same-name players do not merge
+- current-roster subset is deterministic
+- crosswalk evidence is immutable
+- Phase 6.1 remains untouched
+
+FINAL REPORT
+
+Return:
+
+1. provider namespaces available
+2. trusted ID namespaces
+3. full Sleeper population
+4. current-team population
+5. depth-relevant population
+6. overall mapping %
+7. current-team mapping %
+8. depth-order mapping %
+9. depth-order-1 mapping %
+10. QB1 mapping %
+11. unresolved ambiguous count
+12. collision count
+13. 20-team validation sample
+14. remaining blocker categories
+15. tests passed
+16. whether publish is required
+17. confirmation Phase 6.1 was untouched
+
+Final verdict must be exactly:
+
+SLEEPER MAPPING SUITABLE FOR DEPTH LOGIC
+
+or
+
+SLEEPER MAPPING NOT SUITABLE FOR DEPTH LOGIC
