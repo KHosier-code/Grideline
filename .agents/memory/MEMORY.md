@@ -28,3 +28,4 @@
 - [Consumer personnel display boundary](consumer-personnel-display.md) — display season-bound current evidence; immutable model context may lag and must not repopulate stale starters.
 - [Runtime analytics reporting](runtime-analytics-reporting.md) — self-serve admin reports need a privacy-safe first-party event copy; injected analytics is agent-queryable, not app-queryable.
 - [Retention state validation](retention-state-validation.md) — worker persistence tests require the development retention migrations applied before state assertions are meaningful.
+- [Singleton integration-test isolation](singleton-integration-test-isolation.md) — PostgreSQL advisory locks serialize parallel test files that mutate shared singleton fixtures.

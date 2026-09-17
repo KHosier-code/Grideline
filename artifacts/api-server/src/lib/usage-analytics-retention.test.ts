@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { randomUUID } from "node:crypto";
-import { after } from "node:test";
+import { after, before } from "node:test";
 import { asc, eq } from "drizzle-orm";
 import {
   db,
@@ -19,6 +19,24 @@ import {
   usageAnalyticsRetentionCutoff,
   usageAnalyticsRetentionNextCleanupAt,
 } from "./usage-analytics-retention";
+
+// node:test runs files in parallel, but the worker health row is a database
+// singleton. Hold a session lock for this file so dashboard health fixtures
+// cannot replace the row while worker tests are reading or writing it.
+const RETENTION_TEST_LOCK = "usage-analytics-retention-test-state";
+type RetentionTestLock = {
+  query: (queryText: string, values?: unknown[]) => Promise<unknown>;
+  release: () => void;
+};
+let retentionTestLock: RetentionTestLock | null = null;
+
+before(async () => {
+  retentionTestLock = await pool.connect();
+  await retentionTestLock.query(
+    "SELECT pg_advisory_lock(hashtext($1))",
+    [RETENTION_TEST_LOCK],
+  );
+});
 
 test("keeps the Usage Lab report window inside the documented retention period", () => {
   assert.equal(USAGE_ANALYTICS_RETENTION_DAYS, 30);
@@ -256,5 +274,16 @@ test("worker persists a critical alert after repeated cleanup failures", { concu
 });
 
 after(async () => {
+  if (retentionTestLock) {
+    try {
+      await retentionTestLock.query(
+        "SELECT pg_advisory_unlock(hashtext($1))",
+        [RETENTION_TEST_LOCK],
+      );
+    } finally {
+      retentionTestLock.release();
+      retentionTestLock = null;
+    }
+  }
   await pool.end();
 });

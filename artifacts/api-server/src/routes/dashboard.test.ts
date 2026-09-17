@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test, { after } from "node:test";
+import test, { after, before } from "node:test";
 import {
   db,
   pool,
@@ -8,6 +8,24 @@ import {
 import { eq } from "drizzle-orm";
 import dashboardRouter from "./dashboard";
 import { requireAdmin } from "../middlewares/admin";
+
+// node:test runs files in parallel, but the retention health fixture replaces
+// a database singleton. Hold the same session lock as the worker tests for
+// this file so those writes and reads cannot overlap.
+const RETENTION_TEST_LOCK = "usage-analytics-retention-test-state";
+type RetentionTestLock = {
+  query: (queryText: string, values?: unknown[]) => Promise<unknown>;
+  release: () => void;
+};
+let retentionTestLock: RetentionTestLock | null = null;
+
+before(async () => {
+  retentionTestLock = await pool.connect();
+  await retentionTestLock.query(
+    "SELECT pg_advisory_lock(hashtext($1))",
+    [RETENTION_TEST_LOCK],
+  );
+});
 
 type RouteLayer = {
   route?: {
@@ -199,5 +217,16 @@ test("protected data-health reports persisted Usage Lab cleanup states without m
 });
 
 after(async () => {
+  if (retentionTestLock) {
+    try {
+      await retentionTestLock.query(
+        "SELECT pg_advisory_unlock(hashtext($1))",
+        [RETENTION_TEST_LOCK],
+      );
+    } finally {
+      retentionTestLock.release();
+      retentionTestLock = null;
+    }
+  }
   await pool.end();
 });
