@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test, { after, before } from "node:test";
 import { db, pool, usageAnalyticsRetentionTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import dashboardRouter, { createDataHealthHandler } from "./dashboard";
 import { PREGAME_FEATURE_DEFINITION } from "../lib/features";
 import { requireAdmin } from "../middlewares/admin";
@@ -260,6 +260,53 @@ test("protected data-health returns a bounded unavailable result when a provider
   assert.ok(odds, "the data-health response should include Odds API");
   assert.equal(odds.status, "unavailable");
   assert.match(odds.detail, /did not complete within the admin route budget/);
+});
+
+test("completed database health work is not cancelled after the response finishes", async () => {
+  const timeoutMs = 137;
+  let databaseWorkCompleted = false;
+  let routeTimer: ReturnType<typeof setTimeout> | undefined;
+  let routeTimerCleared = false;
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const scheduleHealth = dataHealthDependencies?.getScheduleHealth;
+  assert.ok(scheduleHealth);
+
+  globalThis.setTimeout = ((...args: Parameters<typeof setTimeout>) => {
+    const timer = originalSetTimeout(...args);
+    if (args[1] === timeoutMs && !routeTimer) {
+      routeTimer = timer;
+    }
+    return timer;
+  }) as typeof setTimeout;
+  globalThis.clearTimeout = ((...args: Parameters<typeof clearTimeout>) => {
+    if (args[0] === routeTimer) {
+      routeTimerCleared = true;
+    }
+    return originalClearTimeout(...args);
+  }) as typeof clearTimeout;
+
+  try {
+    const handler = createDataHealthHandler(
+      {
+        ...dataHealthDependencies,
+        getScheduleHealth: async () => {
+          await db.execute(sql`SELECT 1`);
+          databaseWorkCompleted = true;
+          return scheduleHealth();
+        },
+      },
+      { timeoutMs },
+    ) as unknown as DataHealthHandler;
+
+    await readDataHealth(handler);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+
+  assert.equal(databaseWorkCompleted, true);
+  assert.equal(routeTimerCleared, true);
 });
 
 test("timed-out database health work cancels and releases its client without a live provider", async () => {

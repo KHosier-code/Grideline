@@ -161,19 +161,20 @@ export function createDataHealthHandler(
     const deadline = Date.now() + timeoutMs;
     const routeAbort = new AbortController();
     const routeAbortTimer = setTimeout(() => routeAbort.abort(), timeoutMs);
-    const now = new Date();
-    const bounded = <T>(
-      label: string,
-      operation: () => T | PromiseLike<T>,
-      fallback: T,
-    ): Promise<HealthCheckResult<T>> =>
-      boundedHealthCheck(
-        label,
-        operation,
-        fallback,
-        deadline,
-        routeAbort.signal,
-      );
+    try {
+      const now = new Date();
+      const bounded = <T>(
+        label: string,
+        operation: () => T | PromiseLike<T>,
+        fallback: T,
+      ): Promise<HealthCheckResult<T>> =>
+        boundedHealthCheck(
+          label,
+          operation,
+          fallback,
+          deadline,
+          routeAbort.signal,
+        );
     const espn = dependencies.getEspnHealth();
     const scheduleCheck = bounded(
       "ESPN schedule health",
@@ -402,8 +403,6 @@ export function createDataHealthHandler(
       gameDaysCheck,
       weatherCheck,
     ]);
-    clearTimeout(routeAbortTimer);
-
     const schedule = scheduleResult.value;
     const nflverse = nflverseResult.value;
     const availability = availabilityResult.value;
@@ -500,8 +499,8 @@ export function createDataHealthHandler(
             : lastSuccessfulInjuryAt
               ? "The latest injury synchronization completed successfully with no reported injuries."
               : "The first injury synchronization is pending.";
-    res.json(
-      GetDataHealthResponse.parse([
+      res.json(
+        GetDataHealthResponse.parse([
         {
           provider: "model-artifact-immutability",
           label: "Model artifact immutability",
@@ -885,8 +884,11 @@ export function createDataHealthHandler(
               : {}),
           },
         },
-      ]),
-    );
+        ]),
+      );
+    } finally {
+      clearTimeout(routeAbortTimer);
+    }
   };
 }
 
