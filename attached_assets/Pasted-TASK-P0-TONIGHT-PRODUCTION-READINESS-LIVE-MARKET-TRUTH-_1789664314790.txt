@@ -1,0 +1,288 @@
+TASK — P0 TONIGHT PRODUCTION READINESS + LIVE MARKET TRUTH
+
+Priority:
+CRITICAL
+
+Goal:
+Make Gridline trustworthy enough to begin immutable forward tracking with tonight's Detroit Lions at Buffalo Bills game.
+
+This task owns:
+- schedule/game state
+- team records
+- sportsbook freshness
+- odds worker
+- canonical pregame tracking
+- postgame grading readiness
+
+Do NOT:
+- modify Phase 6.1 model algorithms
+- retrain models
+- alter fitted model artifacts
+- change depth-chart logic
+- redesign consumer pages
+- rewrite old sportsbook snapshots
+- fabricate market history
+
+--------------------------------------------------
+1. FIX TEAM RECORDS
+--------------------------------------------------
+
+The current consumer UI shows teams such as Detroit and Buffalo as 0-0 entering Week 2.
+
+This is incorrect.
+
+Determine the root cause.
+
+Team record must be derived only from completed REGULAR-SEASON games.
+
+Do not use:
+- future game's 0-0 score values
+- score nullability alone
+- preseason games
+- scheduled games as completed games
+
+Completion must use authoritative game status.
+
+For tonight verify:
+
+Detroit Lions: 1-0
+Buffalo Bills: 1-0
+
+Also verify all 32 teams entering Week 2.
+
+Return discrepancies.
+
+--------------------------------------------------
+2. FIX FUTURE 0-0 GAME SEMANTICS
+--------------------------------------------------
+
+The audit found future scheduled games containing 0-0 scores.
+
+Do not interpret 0-0 as completed.
+
+Explicitly separate:
+
+scheduled
+pregame
+live
+final
+postponed/cancelled if supported
+
+Consumer APIs must not expose scheduled 0-0 as a legitimate game result.
+
+Add regression tests.
+
+--------------------------------------------------
+3. RESTORE LIVE ODDS INGESTION
+--------------------------------------------------
+
+Production currently contains market evidence last captured September 14.
+
+Diagnose why The Odds API worker stopped/stalled.
+
+Verify:
+
+- credentials available
+- worker running
+- leases functioning
+- job cadence
+- request failures
+- rate-limit handling
+- API quota
+- DK/FD filtering
+- timestamp persistence
+
+Perform ONE safe immediate production synchronization after diagnosis.
+
+Do not backfill fake observations.
+
+--------------------------------------------------
+4. TONIGHT MARKET VALIDATION
+--------------------------------------------------
+
+For DET @ BUF verify current:
+
+Spread
+Total
+Moneyline
+
+for:
+
+DraftKings
+FanDuel
+
+Persist new observations append-only.
+
+Verify:
+
+observed_at
+provider
+book
+market
+line
+price
+game/event mapping
+
+The consumer site's displayed "Current" value must correspond to the actual latest stored observation.
+
+--------------------------------------------------
+5. MARKET FRESHNESS RULES
+--------------------------------------------------
+
+Implement/verify strict freshness presentation.
+
+Suggested:
+
+More than 15 minutes old:
+mark market stale.
+
+Inside final hour:
+prefer <=5 minute freshness.
+
+Do NOT silently present stale market evidence as Current.
+
+Display:
+
+Updated X min ago
+
+or
+
+Stale — last observed [time]
+
+--------------------------------------------------
+6. ADAPTIVE GAME-DAY CAPTURE
+--------------------------------------------------
+
+Create cost-conscious adaptive odds collection.
+
+Do not exceed API quota.
+
+Preferred approach for tonight:
+
+>6 hours before kickoff:
+existing normal cadence
+
+6h–1h:
+approximately every 10–15 minutes
+
+final 60 minutes:
+approximately every 5 minutes IF quota safely permits
+
+final 15 minutes:
+capture at least one valid observation
+
+Only use frequency supported by current subscription/quota.
+
+Before enabling aggressive cadence, calculate expected request cost.
+
+--------------------------------------------------
+7. CANONICAL PREGAME SNAPSHOT
+--------------------------------------------------
+
+This is extremely important.
+
+Starting tonight create an immutable canonical evaluation snapshot.
+
+Suggested target:
+
+latest valid model + market observation
+at or before 30 minutes before kickoff
+
+Persist:
+
+game
+model IDs
+predicted scores
+spread projection
+total projection
+win probability
+market spread
+market total
+moneyline
+book
+prices
+data confidence
+market timestamp
+prediction timestamp
+personnel snapshot reference if available
+weather reference
+evaluation version
+
+Never rewrite this snapshot later.
+
+This becomes Gridline's forward track record.
+
+--------------------------------------------------
+8. FINAL PRE-KICKOFF MARKET
+--------------------------------------------------
+
+After kickoff:
+
+identify the latest valid sportsbook observation strictly BEFORE kickoff.
+
+Call it:
+
+Final pre-kickoff
+
+Do NOT call it a closing line unless methodology eventually supports that terminology.
+
+Use this for future forward CLV-style analysis.
+
+--------------------------------------------------
+9. POSTGAME GRADING
+--------------------------------------------------
+
+Verify tonight can automatically grade after FINAL:
+
+winner
+score
+spread result
+total result
+moneyline result
+
+Grade the canonical pregame snapshot separately from arbitrary historical market observations.
+
+Never choose the most favorable timestamp after seeing the result.
+
+--------------------------------------------------
+10. TONIGHT READINESS REPORT
+--------------------------------------------------
+
+Return:
+
+DET @ BUF kickoff
+team records
+latest DK market
+latest FD market
+market age
+worker status
+quota status
+prediction availability
+canonical-snapshot readiness
+grading readiness
+known blockers
+
+Final verdict:
+
+READY TO TRACK TONIGHT
+
+or
+
+NOT READY TO TRACK TONIGHT
+
+Do not return READY unless the stored evidence is genuinely current.
+
+--------------------------------------------------
+SAFETY
+--------------------------------------------------
+
+Confirm:
+
+Phase 6.1 untouched
+historical odds untouched
+no market rows rewritten
+no fabricated observations
+no artificial backfill
+no model promotion
+
+Run relevant tests and typechecks.

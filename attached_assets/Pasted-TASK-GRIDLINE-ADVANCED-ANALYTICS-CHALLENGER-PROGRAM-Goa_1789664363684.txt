@@ -1,0 +1,299 @@
+TASK — GRIDLINE ADVANCED ANALYTICS CHALLENGER PROGRAM
+
+Goal:
+Determine whether significantly richer football analytics can outperform Phase 6.1 without overfitting historical results.
+
+This is MODEL R&D ONLY.
+
+Do NOT promote anything.
+
+Do NOT change tonight's production prediction.
+
+Do NOT retrain Phase 6.1.
+
+Do NOT change historical accepted baseline evidence.
+
+--------------------------------------------------
+CHALLENGER A — ADVANCED FOOTBALL MODEL
+--------------------------------------------------
+
+Build a historically reproducible challenger using richer pregame football information.
+
+Use only features that can be reconstructed as-of the historical game cutoff.
+
+Candidate feature families:
+
+TEAM OFFENSE / DEFENSE
+
+EPA/play
+pass EPA
+rush EPA
+
+success rate
+pass success
+rush success
+
+early-down EPA
+early-down success
+
+neutral-script performance
+
+neutral-script pass tendency
+
+explosive pass creation
+explosive rush creation
+
+explosive pass prevention
+explosive rush prevention
+
+turnover rate
+
+sack rate
+QB-hit/pressure proxy where legitimately supported
+
+yards/play
+
+red-zone TD efficiency
+
+pace / plays per game
+
+first-half performance where useful
+
+opponent-adjusted metrics
+
+strength of schedule
+
+--------------------------------------------------
+QB FEATURES
+--------------------------------------------------
+
+Rolling QB:
+
+EPA/dropback
+success rate
+CPOE if supported
+yards/dropback
+TD rate
+INT/turnover rate
+sack rate
+explosive pass rate
+
+starter continuity
+
+QB evidence certainty
+
+Last 3
+Last 5
+Last 8
+season-to-date
+
+Do not use future starter information.
+
+--------------------------------------------------
+SCHEDULE CONTEXT
+--------------------------------------------------
+
+Home/away
+
+rest days
+
+short week
+
+bye week
+
+travel context if legitimately available
+
+weather only when historically timestamp-safe
+
+--------------------------------------------------
+PERSONNEL
+--------------------------------------------------
+
+Only use personnel/injury variables if they are historically reconstructable at the original prediction cutoff.
+
+Do NOT backfill today's knowledge into historical games.
+
+Missing historical personnel must remain missing.
+
+--------------------------------------------------
+MODEL CANDIDATES
+--------------------------------------------------
+
+Evaluate conservative models including:
+
+regularized linear/logistic
+Elastic Net where appropriate
+gradient boosting
+random forest only as appropriate
+
+Avoid unnecessary model complexity.
+
+Use temporal validation.
+
+--------------------------------------------------
+CHALLENGER B — MARKET-RESIDUAL MODEL
+--------------------------------------------------
+
+Build a separate evaluation-only challenger.
+
+Concept:
+
+Rather than predict the game completely independent of market information, predict:
+
+Where is the market potentially wrong?
+
+Spread target example:
+
+actual margin - source-designated recorded market spread expectation
+
+Totals:
+
+actual total - source-designated recorded total
+
+Moneyline:
+
+calibrated deviation from market implied probability
+
+Use football features to predict the residual.
+
+Important:
+
+The historical nflverse/nfldata game lines currently qualify only as:
+
+source-designated recorded market
+
+NOT verified closing lines.
+
+Preserve that terminology.
+
+--------------------------------------------------
+INDEPENDENT VS MARKET MODEL
+--------------------------------------------------
+
+Gridline should ultimately be capable of keeping TWO analytical concepts:
+
+Independent Gridline Number
+
+and
+
+Market-aware Residual Number
+
+Do not silently blend them.
+
+Evaluate whether an ensemble improves results.
+
+--------------------------------------------------
+VALIDATION
+--------------------------------------------------
+
+Use chronological evaluation.
+
+No random train/test split.
+
+No leakage.
+
+No threshold hunting.
+
+No choosing the best model because one edge bucket happened to win.
+
+Report:
+
+Spread:
+MAE
+RMSE
+ATS record
+ATS %
+ROI where legitimate
+
+ML:
+accuracy
+log loss
+Brier
+calibration
+ROI where legitimate
+
+Totals:
+MAE
+RMSE
+O/U record
+ROI where legitimate
+
+Compare against:
+
+Phase 6.1
+
+recorded market benchmark
+
+personnel-aware challenger
+
+--------------------------------------------------
+EDGE ANALYSIS
+--------------------------------------------------
+
+Report performance by PREDEFINED edge buckets.
+
+Do not create new bucket boundaries after seeing outcomes.
+
+Include:
+
+sample size
+win rate
+Wilson interval where applicable
+
+--------------------------------------------------
+FEATURE VALUE
+--------------------------------------------------
+
+Run feature-family ablation.
+
+Measure effect of:
+
+basic team form
+opponent adjustment
+early-down
+QB
+explosives
+pressure/sacks
+pace
+red zone
+schedule
+personnel
+market
+
+Answer:
+
+Which categories genuinely add predictive value?
+
+--------------------------------------------------
+NO PROMOTION
+--------------------------------------------------
+
+Even if the new model beats Phase 6.1 historically:
+
+do NOT promote it.
+
+2026 forward tracking becomes the next true evaluation layer.
+
+Generate immutable report:
+
+reports/gridline-advanced-challenger-evaluation.md
+
+reports/gridline-advanced-challenger-evaluation.json
+
+Final verdict independently for:
+
+Spread
+Moneyline
+Totals
+
+Use:
+
+MATERIAL IMPROVEMENT
+
+NO MATERIAL IMPROVEMENT
+
+WORSE THAN BASELINE
+
+Explain evidence.
+
+Confirm production Phase 6.1 remained untouched.

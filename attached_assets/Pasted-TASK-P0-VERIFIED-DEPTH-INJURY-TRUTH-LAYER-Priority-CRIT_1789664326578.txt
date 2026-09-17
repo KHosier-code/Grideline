@@ -1,0 +1,309 @@
+TASK — P0 VERIFIED DEPTH + INJURY TRUTH LAYER
+
+Priority:
+CRITICAL
+
+Goal:
+Make Gridline's displayed current depth chart trustworthy, beginning with DET @ BUF tonight and then expanding to all 32 NFL teams.
+
+The audit found current depth snapshot storage empty.
+
+Fix the truth layer WITHOUT fabricating certainty.
+
+This task owns:
+- current depth evidence
+- current starter evidence
+- injury overlay
+- role confidence
+- depth provenance
+
+Do NOT:
+- modify Phase 6.1
+- change sportsbook ingestion
+- create WR-CB coverage assignments
+- infer exact OL positions without evidence
+- scrape a provider where automated extraction is prohibited
+
+--------------------------------------------------
+1. SOURCE HIERARCHY
+--------------------------------------------------
+
+Establish explicit current-depth evidence hierarchy.
+
+Highest confidence:
+
+A. official team-published current depth chart
+B. explicitly licensed/current depth provider
+C. mapped Sleeper published depth evidence
+D. recent nflverse participation/depth evidence
+E. Gridline projection/inference
+
+ESPN/NFL injury information modifies availability.
+
+Injury reports do NOT independently determine published depth rank.
+
+Every displayed player must know whether they are:
+
+Published starter
+Published backup
+Projected starter
+Projected backup
+Uncertain
+Unavailable
+
+--------------------------------------------------
+2. OFFICIAL TEAM VALIDATION
+--------------------------------------------------
+
+For tonight specifically validate DET and BUF against their current official team-published depth charts.
+
+Do not automatically scrape if site terms or technical rules prohibit extraction.
+
+If automated ingestion is not permissible, create a safe manual verified-depth import path.
+
+A manually verified record must persist:
+
+team
+player
+position
+depth slot
+rank
+source
+source URL
+observed_at
+verified_at
+verification method
+
+The record must be append-only/auditable.
+
+--------------------------------------------------
+3. DETROIT TONIGHT
+--------------------------------------------------
+
+Verify all offensive and defensive primary roles.
+
+Pay special attention to:
+
+QB
+RB
+WR1/2/3
+TE
+LT
+LG
+C
+RG
+RT
+
+EDGE
+DL
+LB
+CB
+NCB
+S
+
+Overlay the final injury report.
+
+If a listed starter is OUT:
+
+retain the published depth evidence
+
+AND separately identify:
+
+Projected starter due to unavailable published starter
+
+Do not rewrite history and pretend the backup was always QB1/LG1/etc.
+
+--------------------------------------------------
+4. BUFFALO TONIGHT
+--------------------------------------------------
+
+Perform the exact same verification.
+
+Include offense, defense and relevant special teams.
+
+Overlay questionable/out designations.
+
+--------------------------------------------------
+5. STARTER AVAILABILITY IMPACT
+--------------------------------------------------
+
+Generate a structured consumer-safe personnel summary such as:
+
+Detroit:
+2 published OL starters OUT
+1 starting CB questionable
+
+Buffalo:
+X starters questionable
+Y starters out
+
+Do not automatically convert that into betting value yet.
+
+--------------------------------------------------
+6. CURRENT SNAPSHOT STORAGE
+--------------------------------------------------
+
+Populate the current depth snapshot mechanism.
+
+It must no longer be silently empty while the consumer UI appears complete.
+
+Each snapshot must have:
+
+source
+observed timestamp
+role
+depth rank
+confidence
+availability
+injury status
+provenance
+
+If unavailable:
+
+store/display unavailable state rather than guessing.
+
+--------------------------------------------------
+7. ALL-32-TEAM AUDIT
+--------------------------------------------------
+
+After tonight's two teams are verified, audit all 32 teams.
+
+Report coverage for:
+
+QB1
+RB1
+WR1
+WR2
+WR3
+TE1
+
+LT
+LG
+C
+RG
+RT
+
+EDGE starters
+LB starters
+
+CB1
+CB2
+slot/NCB
+
+S starters
+
+K
+P
+
+Show:
+
+verified %
+published %
+projected %
+unknown %
+ambiguous %
+
+--------------------------------------------------
+8. CURRENT STARTER PROMOTION
+--------------------------------------------------
+
+When injury makes a published starter unavailable:
+
+allow Gridline to show a projected replacement ONLY when evidence exists.
+
+Example terminology:
+
+Published:
+Player A — LG1 — OUT
+
+Projected tonight:
+Player B — starting LG — Medium confidence
+
+Never display Player B as an official published starter unless the source actually says so.
+
+--------------------------------------------------
+9. GAME DETAIL
+--------------------------------------------------
+
+Consumer payload must clearly distinguish:
+
+DEPTH
+published
+
+AVAILABILITY
+injury status
+
+EXPECTED LINEUP
+Gridline projection
+
+Do not conflate them.
+
+--------------------------------------------------
+10. WR-CB SAFETY
+--------------------------------------------------
+
+Continue current fail-closed behavior.
+
+Depth rank does NOT equal coverage assignment.
+
+Never claim:
+
+WR X will be covered by CB Y
+
+without supported assignment evidence.
+
+Allowed:
+
+Projected outside WR
+Projected starting outside CB
+Potential matchup
+
+--------------------------------------------------
+11. TONIGHT QA
+--------------------------------------------------
+
+Generate a DET-BUF personnel report showing:
+
+offense
+defense
+depth rank
+availability
+source
+confidence
+projected replacement when needed
+
+Manually compare against authoritative current sources.
+
+Final verdict:
+
+DET-BUF DEPTH READY
+
+or
+
+DET-BUF DEPTH NOT READY
+
+Then independently return:
+
+ALL-32 DEPTH READY
+
+or
+
+ALL-32 DEPTH NOT READY
+
+Do not force READY.
+
+--------------------------------------------------
+SAFETY
+--------------------------------------------------
+
+Phase 6.1 untouched.
+
+No silent inference.
+
+No unsupported coverage assignment.
+
+No invented OL positions.
+
+No fabricated depth ranks.
+
+Run tests/typechecks and report whether publish is required.

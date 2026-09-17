@@ -1,0 +1,298 @@
+TASK — P0/P1 GRIDLINE PREMIUM CONSUMER POLISH + TRUST PASS
+
+Goal:
+Move the Gridline consumer experience closer to a premium NFL analytics/research product while preserving the existing Gridline brand.
+
+Reference direction:
+
+Deep navy
+white/near-white content surfaces
+warm orange accent
+thin neutral borders
+high information density
+strong numeric hierarchy
+compact sportsbook/research feel
+professional rather than flashy
+
+Do NOT redesign Gridline into an unrelated product.
+
+Do NOT alter:
+models
+predictions
+market calculations
+depth logic
+database logic
+workers
+
+This task is consumer presentation only.
+
+--------------------------------------------------
+1. REMOVE MISLEADING CONFIDENCE
+--------------------------------------------------
+
+Current Games UI can display constructs such as:
+
+"Key Recommendation"
+"Confidence 100%"
+
+Do not show 100% prediction confidence unless a validated system truly produces that probability.
+
+Data completeness is NOT prediction probability.
+
+Until validated confidence scoring exists:
+
+replace:
+
+KEY RECOMMENDATION
+
+with:
+
+GRIDLINE MODEL VIEW
+
+or:
+
+MODEL LEAN
+
+Replace ambiguous "Confidence 100%" with appropriate explicit concepts such as:
+
+Model input quality
+Data quality
+Market freshness
+
+Do not imply probability of wager success.
+
+--------------------------------------------------
+2. REMOVE UNNECESSARY "SELECTED"
+--------------------------------------------------
+
+Do not display a Selected badge unless an actual user selection exists.
+
+If it represents model output, rename it accurately.
+
+--------------------------------------------------
+3. COMPACT GAME CARDS
+--------------------------------------------------
+
+Current cards are visually good but too tall.
+
+Reduce vertical space materially while preserving readability.
+
+Target:
+roughly 25–35% more information density.
+
+Each game card should quickly show:
+
+team logos
+team abbreviations/names
+actual record
+kickoff
+venue if useful
+
+Gridline projected score
+
+current market
+
+spread
+total
+ML
+
+model vs market difference
+
+market freshness
+
+important personnel count
+
+line movement indicator
+
+model-view status
+
+--------------------------------------------------
+4. TEAM PRESENTATION
+--------------------------------------------------
+
+Add clean team logos where supported.
+
+Make matchup visually obvious.
+
+Example concept:
+
+DET  1-0
+@
+BUF  1-0
+
+Do not allow inaccurate 0-0 records.
+
+--------------------------------------------------
+5. GRIDLINE VS MARKET
+--------------------------------------------------
+
+Make this one of the most visually important areas.
+
+Example:
+
+GRIDLINE
+BUF by 3.2
+
+MARKET
+BUF -5.5
+
+DIFFERENCE
+DET +2.3 relative to market
+
+Orientation must be mathematically correct and consumer understandable.
+
+--------------------------------------------------
+6. LINE MOVEMENT
+--------------------------------------------------
+
+Add a compact movement cue when available:
+
+BUF -4.5 → -5.5
+
+or tiny sparkline.
+
+Must originate from immutable stored evidence.
+
+Do not fabricate an opener.
+
+Use:
+
+First observed by Gridline
+
+where appropriate.
+
+--------------------------------------------------
+7. PERSONNEL SUMMARY
+--------------------------------------------------
+
+Add compact badges such as:
+
+DET
+2 OL OUT
+CB Q
+
+BUF
+S Q
+DL Q
+
+Only use verified/current evidence.
+
+Allow click/expand into Game Detail.
+
+--------------------------------------------------
+8. FRESHNESS
+--------------------------------------------------
+
+Make market freshness visible without clutter.
+
+Examples:
+
+Updated 4m ago
+
+Stale • 3h old
+
+Market unavailable
+
+A stale market must not visually look identical to fresh market data.
+
+--------------------------------------------------
+9. PREDICTION AND DATA QUALITY
+--------------------------------------------------
+
+Clearly separate:
+
+Gridline prediction
+
+Data/input quality
+
+Market difference
+
+Future validated prediction confidence
+
+These must not visually blur together.
+
+--------------------------------------------------
+10. PREMIUM DENSITY
+--------------------------------------------------
+
+The desired visual character is closer to:
+
+professional sportsbook research terminal
++
+sports analytics dashboard
+
+than a generic sports-news website.
+
+Prioritize:
+
+numbers
+comparison
+small trend indicators
+compact labels
+whitespace discipline
+
+Avoid:
+
+giant empty cards
+large decorative areas
+repeated labels
+oversized padding
+unnecessary pills
+
+--------------------------------------------------
+11. GAME DETAIL
+--------------------------------------------------
+
+Preserve the recently completed Premium Game Detail structure.
+
+Ensure it visually follows the same density and trust principles.
+
+Do not redo working functionality unnecessarily.
+
+--------------------------------------------------
+12. MOBILE
+--------------------------------------------------
+
+On mobile prioritize:
+
+matchup
+prediction
+market
+difference
+freshness
+
+Then progressively disclose:
+
+injuries
+movement
+usage
+matchups
+depth
+
+No horizontal overflow at 390px or 320px.
+
+--------------------------------------------------
+13. QA
+--------------------------------------------------
+
+Test:
+
+Games desktop
+Games mobile
+tonight's DET-BUF game
+Game Detail desktop
+Game Detail mobile
+
+Specifically verify:
+
+correct team records
+freshness visible
+no 100% misleading confidence
+no stale line shown as current
+no false depth certainty
+no raw IDs
+no debug language
+
+Return screenshots.
+
+Confirm frontend-only changes and Phase 6.1 untouched.

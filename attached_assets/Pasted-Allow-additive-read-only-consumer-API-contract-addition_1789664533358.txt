@@ -1,0 +1,81 @@
+Allow additive, read-only consumer API contract additions.
+
+The intent of the frontend-only restriction was to prevent this task from changing model logic, persistence behavior, workers, sportsbook calculations, depth logic, or Phase 6.1 — not to prevent the UI from receiving legitimate existing data.
+
+You MAY extend the Games consumer API with read-only fields derived from already persisted, authoritative Gridline data.
+
+Allowed additions include:
+
+TEAM RECORDS
+- wins
+- losses
+- ties if applicable
+- derived only from authoritative completed regular-season game status/results
+- never infer completion from 0-0 score values
+
+PERSONNEL SUMMARY
+- counts/summaries of verified current personnel evidence already available to Gridline
+- examples:
+  - starters OUT
+  - starters questionable
+  - OL starters OUT
+  - secondary starters questionable
+- preserve source/confidence/fail-closed rules
+- do not invent missing starters or positions
+
+LINE MOVEMENT
+- first observed by Gridline
+- current
+- direction/change
+- latest timestamp
+- derived only from immutable existing sportsbook observations
+- do not fabricate an opener
+- do not call anything “closing” unless separately verified
+
+MARKET FRESHNESS
+- current observation timestamp
+- age
+- stale/current status using existing freshness rules
+
+MODEL DATA
+- existing persisted Gridline prediction only
+- no recalculation or model changes
+
+CONSTRAINTS
+
+Do NOT:
+- modify Phase 6.1
+- retrain/refit/promote models
+- change feature generation
+- change sportsbook calculations
+- alter sportsbook history
+- change depth-chart inference logic
+- add new worker behavior
+- add new scheduled jobs
+- create new persisted analytics solely for this UI
+- mutate production data
+- fabricate missing values
+
+Prefer additive API fields and existing service/repository logic.
+
+If a requested field cannot be truthfully produced from current persisted data, return an explicit unavailable/null state instead of approximating it.
+
+Regenerate API clients as needed.
+
+Add contract tests ensuring:
+- future 0-0 games do not create false records
+- stale markets remain visibly stale
+- missing personnel stays unavailable
+- line movement preserves A-B-A and price-only evidence
+- existing consumers remain backward compatible
+
+Proceed with the premium Games-card redesign using these additive read-only consumer API fields.
+
+Confirm at completion:
+1. exact API fields added
+2. source for each field
+3. no database mutation behavior added
+4. no worker changes
+5. no model changes
+6. Phase 6.1 untouched
+7. desktop/mobile QA results
