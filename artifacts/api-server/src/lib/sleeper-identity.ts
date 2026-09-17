@@ -20,9 +20,13 @@ import {
   teamsTable,
 } from "@workspace/db";
 import { SLEEPER_ACTIVE_TEAM_CODES, type SleeperPlayer } from "./sleeper";
+import {
+  loadVerifiedPlayerCrosswalk,
+  type VerifiedPlayerCrosswalk,
+} from "./nflverse-player-crosswalk";
 import { logger } from "./logger";
 
-export const SLEEPER_MAPPING_VERSION = "sleeper-identity-v4-c0-crosswalk";
+export const SLEEPER_MAPPING_VERSION = "sleeper-identity-v5-verified-crosswalk";
 export const DEPTH_MAPPING_SUITABILITY_MIN_PERCENT = 90;
 
 export type MappingStatus =
@@ -66,6 +70,7 @@ export type GridlineIdentityCandidate = {
   position: string | null;
   normalizedPosition: string | null;
   externalIds: Record<string, string>;
+  crosswalkExternalIds: Record<string, string>;
   sources: string[];
   sourceCount: number;
   latestSeason: number | null;
@@ -295,6 +300,7 @@ export function deduplicateGridlineCandidates(records: CandidateRecord[]) {
         externalIds: record.externalIdType && record.externalIdValue
           ? { [record.externalIdType.toLowerCase()]: record.externalIdValue }
           : {},
+        crosswalkExternalIds: {},
         sources: [record.source],
         sourceCount: 1,
         latestSeason: record.season ?? null,
@@ -328,6 +334,106 @@ export function deduplicateGridlineCandidates(records: CandidateRecord[]) {
     left.gridlinePlayerId.localeCompare(right.gridlinePlayerId));
 }
 
+export function applyVerifiedPlayerCrosswalks(
+  candidates: GridlineIdentityCandidate[],
+  crosswalks: VerifiedPlayerCrosswalk[],
+) {
+  const providerOwners = new Map<string, Set<string>>();
+  for (const candidate of candidates) {
+    for (const [type, value] of Object.entries(candidate.externalIds)) {
+      const key = `${type}:${value}`;
+      const owners = providerOwners.get(key) ?? new Set<string>();
+      owners.add(candidate.gridlinePlayerId);
+      providerOwners.set(key, owners);
+    }
+  }
+  const crosswalkOwners = new Map<string, number[]>();
+  crosswalks.forEach((crosswalk, index) => {
+    for (const [type, value] of Object.entries(crosswalk.providerIds)) {
+      const key = `${type}:${value}`;
+      const owners = crosswalkOwners.get(key) ?? [];
+      owners.push(index);
+      crosswalkOwners.set(key, owners);
+    }
+  });
+
+  const aliases = new Map<string, string>();
+  const merged = new Map(candidates.map((candidate) => [
+    candidate.gridlinePlayerId,
+    {
+      ...candidate,
+      externalIds: { ...candidate.externalIds },
+      crosswalkExternalIds: { ...candidate.crosswalkExternalIds },
+      sources: [...candidate.sources],
+      teamCodes: [...candidate.teamCodes],
+    },
+  ]));
+  let appliedCrosswalkCount = 0;
+  let rejectedCrosswalkCount = 0;
+
+  for (const crosswalk of crosswalks) {
+    const keys = Object.entries(crosswalk.providerIds).map(([type, value]) => `${type}:${value}`);
+    if (keys.some((key) =>
+      (crosswalkOwners.get(key)?.length ?? 0) !== 1
+      || (providerOwners.get(key)?.size ?? 0) > 1)) {
+      rejectedCrosswalkCount += 1;
+      continue;
+    }
+    const linkedIds = [...new Set(keys.flatMap((key) => [...(providerOwners.get(key) ?? [])]))];
+    if (linkedIds.length === 0) continue;
+    const linked = linkedIds.map((id) => merged.get(aliases.get(id) ?? id)).filter(
+      (candidate): candidate is GridlineIdentityCandidate => Boolean(candidate),
+    );
+    const uniqueLinked = [...new Map(linked.map((candidate) => [candidate.gridlinePlayerId, candidate])).values()];
+    const target = uniqueLinked.find((candidate) => candidate.externalIds.gsis_id)
+      ?? uniqueLinked.find((candidate) => isGsisId(candidate.gridlinePlayerId))
+      ?? uniqueLinked[0];
+    if (!target) continue;
+    for (const candidate of uniqueLinked) {
+      if (candidate.gridlinePlayerId === target.gridlinePlayerId) continue;
+      for (const [type, value] of Object.entries(candidate.externalIds)) {
+        target.externalIds[type] = value;
+        target.crosswalkExternalIds[type] = value;
+      }
+      for (const source of candidate.sources) {
+        if (!target.sources.includes(source)) target.sources.push(source);
+      }
+      for (const team of candidate.teamCodes) {
+        if (!target.teamCodes.includes(team)) target.teamCodes.push(team);
+      }
+      aliases.set(candidate.gridlinePlayerId, target.gridlinePlayerId);
+      merged.delete(candidate.gridlinePlayerId);
+    }
+    for (const [type, value] of Object.entries(crosswalk.providerIds)) {
+      target.externalIds[type] = value;
+      if (!(providerOwners.get(`${type}:${value}`) ?? new Set()).has(target.gridlinePlayerId)) {
+        target.crosswalkExternalIds[type] = value;
+      }
+    }
+    if (!target.sources.includes("nflverse_player_crosswalk")) {
+      target.sources.push("nflverse_player_crosswalk");
+      target.sourceCount = target.sources.length;
+    }
+    const latestTeam = normalizeTeamCode(crosswalk.latestTeam).normalizedTeam;
+    if (latestTeam) {
+      target.normalizedTeam = latestTeam;
+      if (!target.teamCodes.includes(latestTeam)) target.teamCodes.push(latestTeam);
+    }
+    if (crosswalk.position) {
+      target.position = crosswalk.position;
+      target.normalizedPosition = normalizePosition(crosswalk.position);
+    }
+    appliedCrosswalkCount += 1;
+  }
+
+  return {
+    candidates: [...merged.values()].sort((left, right) =>
+      left.gridlinePlayerId.localeCompare(right.gridlinePlayerId)),
+    appliedCrosswalkCount,
+    rejectedCrosswalkCount,
+  };
+}
+
 export function mappingCandidateFingerprint(
   candidates: GridlineIdentityCandidate[],
 ) {
@@ -338,6 +444,9 @@ export function mappingCandidateFingerprint(
     normalizedPosition: candidate.normalizedPosition,
     externalIds: Object.fromEntries(
       Object.entries(candidate.externalIds).sort(([left], [right]) => left.localeCompare(right)),
+    ),
+    crosswalkExternalIds: Object.fromEntries(
+      Object.entries(candidate.crosswalkExternalIds).sort(([left], [right]) => left.localeCompare(right)),
     ),
     sources: [...candidate.sources].sort(),
     latestSeason: candidate.latestSeason,
@@ -359,13 +468,32 @@ function confidenceFor(status: MappingStatus) {
           : 0;
 }
 
+function supportedPositionCompatibility(
+  left: string | null | undefined,
+  right: string | null | undefined,
+) {
+  if (positionCompatibility(left, right) === "compatible") return true;
+  const normalizedLeft = normalizePosition(left);
+  const normalizedRight = normalizePosition(right);
+  const families = [
+    new Set(["DB", "CB", "S"]),
+    new Set(["DL", "EDGE", "DE", "DT"]),
+    new Set(["OL", "OT", "OG", "C"]),
+    new Set(["LB", "EDGE", "DE"]),
+  ];
+  return Boolean(normalizedLeft && normalizedRight
+    && families.some((family) => family.has(normalizedLeft) && family.has(normalizedRight)));
+}
+
 type MappingIndexes = {
   byProviderId: Map<string, GridlineIdentityCandidate[]>;
+  crosswalkProviderKeys: Set<string>;
   byName: Map<string, GridlineIdentityCandidate[]>;
 };
 
 function buildMappingIndexes(candidates: GridlineIdentityCandidate[]): MappingIndexes {
   const byProviderId = new Map<string, GridlineIdentityCandidate[]>();
+  const crosswalkProviderKeys = new Set<string>();
   const byName = new Map<string, GridlineIdentityCandidate[]>();
   for (const candidate of candidates) {
     const nameGroup = byName.get(candidate.normalizedName) ?? [];
@@ -376,9 +504,12 @@ function buildMappingIndexes(candidates: GridlineIdentityCandidate[]): MappingIn
       const idGroup = byProviderId.get(key) ?? [];
       idGroup.push(candidate);
       byProviderId.set(key, idGroup);
+      if (candidate.crosswalkExternalIds[type] === value) {
+        crosswalkProviderKeys.add(`${candidate.gridlinePlayerId}:${key}`);
+      }
     }
   }
-  return { byProviderId, byName };
+  return { byProviderId, crosswalkProviderKeys, byName };
 }
 
 function mapSleeperPlayerWithIndexes(
@@ -394,6 +525,8 @@ function mapSleeperPlayerWithIndexes(
       .flatMap(([type, value]) => indexes.byProviderId.get(`${type}:${value}`) ?? [])
       .map((candidate) => [candidate.gridlinePlayerId, candidate] as const),
   ).values()];
+  const exactName = byExactId.filter((candidate) =>
+    providerIdentityNameCompatible(candidate.name, player.full_name));
 
   let status: MappingStatus = "unmatched";
   let selected: GridlineIdentityCandidate | null = null;
@@ -408,15 +541,25 @@ function mapSleeperPlayerWithIndexes(
       && row.targetNamespace.toLowerCase() === "gsis")
     .map((row) => [row.gridlinePlayerId, row] as const)).values()];
 
-  if (byExactId.length > 0) {
-    const exactIds = new Set(byExactId.map((candidate) => candidate.gridlinePlayerId));
+  if (exactName.length > 0) {
+    const exactIds = new Set(exactName.map((candidate) => candidate.gridlinePlayerId));
+    candidatesForEvidence = exactName;
     if (exactIds.size === 1) {
-      selected = byExactId[0] ?? null;
-      status = "exact_provider_id";
+      selected = exactName[0] ?? null;
+      const selectedId = selected?.gridlinePlayerId;
+      const hasNativeProviderEvidence = selectedId
+        ? [...providerIds.entries()].some(([type, value]) =>
+            selected?.externalIds[type] === value
+            && !indexes.crosswalkProviderKeys.has(`${selectedId}:${type}:${value}`))
+        : false;
+      status = hasNativeProviderEvidence ? "exact_provider_id" : "exact_crosswalk";
     } else {
       status = "ambiguous";
       ambiguityReason = "Multiple exact provider IDs resolve to different Gridline identities.";
     }
+  } else if (byExactId.length > 0) {
+    status = "ambiguous";
+    ambiguityReason = "Exact provider ID evidence conflicts with the player name.";
   } else if (trusted.length === 1) {
     const crosswalk = trusted[0]!;
     selected = indexes.byProviderId.get(`gsis_id:${crosswalk.targetPlayerId}`)?.[0] ?? null;
@@ -430,7 +573,8 @@ function mapSleeperPlayerWithIndexes(
     status = "ambiguous";
     ambiguityReason = "Multiple trusted crosswalk identities resolve to one Sleeper player.";
   } else {
-    const nameCandidates = (indexes.byName.get(normalizePlayerName(player.full_name)) ?? [])
+    const allNameCandidates = indexes.byName.get(normalizePlayerName(player.full_name)) ?? [];
+    const nameCandidates = allNameCandidates
       .filter((candidate) => positionCompatibility(player.position, candidate.position) === "compatible");
     const sameTeam = nameCandidates.filter((candidate) =>
       team.normalizedTeam !== null && candidate.normalizedTeam === team.normalizedTeam);
@@ -442,12 +586,30 @@ function mapSleeperPlayerWithIndexes(
       status = "ambiguous";
       ambiguityReason = "Multiple Gridline identities share the normalized name, team, and compatible position.";
       candidatesForEvidence = sameTeam;
-    } else if (nameCandidates.length > 0) {
-      status = "ambiguous";
-      ambiguityReason = "Name and position match, but latest team evidence is absent or conflicting.";
-      candidatesForEvidence = nameCandidates;
     } else {
-      unmatchedReason = "No stable provider ID or constrained name/team/position candidate was found.";
+      const supportedSameTeam = allNameCandidates.filter((candidate) =>
+        team.normalizedTeam !== null
+        && candidate.normalizedTeam === team.normalizedTeam
+        && supportedPositionCompatibility(player.position, candidate.position)
+        && (
+          candidate.sources.includes("nflverse_player_crosswalk")
+          || candidate.sources.includes("historical_depth_charts")
+        ));
+      if (supportedSameTeam.length === 1) {
+        selected = supportedSameTeam[0] ?? null;
+        status = "supported_name_match";
+        candidatesForEvidence = supportedSameTeam;
+      } else if (supportedSameTeam.length > 1) {
+        status = "ambiguous";
+        ambiguityReason = "Multiple verified identities share the normalized name, team, and supported position family.";
+        candidatesForEvidence = supportedSameTeam;
+      } else if (nameCandidates.length > 0) {
+        status = "ambiguous";
+        ambiguityReason = "Name and position match, but latest team evidence is absent or conflicting.";
+        candidatesForEvidence = nameCandidates;
+      } else {
+        unmatchedReason = "No stable provider ID or constrained name/team/position candidate was found.";
+      }
     }
   }
 
@@ -515,9 +677,11 @@ export function mapSleeperPlayers(
     mappedByGridline.set(mapping.mappedGridlinePlayerId, group);
   }
   let collisionCount = 0;
+  let detectedCollisionCount = 0;
   for (const group of mappedByGridline.values()) {
     if (group.length < 2) continue;
-    collisionCount += 1;
+    detectedCollisionCount += 1;
+    if (group.some((mapping) => mapping.depthRelevant)) collisionCount += 1;
     for (const mapping of group) {
       mapping.mappingStatus = "ambiguous";
       mapping.mappingMethod = "ambiguous";
@@ -527,7 +691,11 @@ export function mapSleeperPlayers(
       mapping.evidenceSummary = mapping.ambiguityReason;
     }
   }
-  return { mappings, collisionCount };
+  return {
+    mappings,
+    collisionCount,
+    detectedCollisionCount,
+  };
 }
 
 function percent(numerator: number, denominator: number) {
@@ -774,7 +942,7 @@ export function buildValidationSample(
   return sample;
 }
 
-async function sourceCandidates() {
+async function sourceCandidates(crosswalks: VerifiedPlayerCrosswalk[]) {
   const [latestNflverseImport] = await db.select({
     id: identitySourceImportsTable.id,
   }).from(identitySourceImportsTable)
@@ -942,7 +1110,10 @@ async function sourceCandidates() {
       externalIdValue: inferCandidateProviderIdType("historical_depth_charts", row.playerId) ? row.playerId : null,
     })),
   ];
-  return deduplicateGridlineCandidates(records);
+  return applyVerifiedPlayerCrosswalks(
+    deduplicateGridlineCandidates(records),
+    crosswalks,
+  );
 }
 
 export function reconstructLatestSleeperState<T extends SnapshotStateRow>(
@@ -1005,7 +1176,9 @@ export async function refreshSleeperIdentityMappings(options: {
       age: row.age,
       provider_ids: row.providerIds,
     }));
-    const candidates = await sourceCandidates();
+    const verifiedCrosswalk = await loadVerifiedPlayerCrosswalk();
+    const enriched = await sourceCandidates(verifiedCrosswalk.rows);
+    const candidates = enriched.candidates;
     const trustedCrosswalks = await db.select({
       sourceNamespace: playerIdentityCrosswalkRevisionsTable.sourceNamespace,
       sourcePlayerId: playerIdentityCrosswalkRevisionsTable.sourcePlayerId,
@@ -1046,11 +1219,17 @@ export async function refreshSleeperIdentityMappings(options: {
           candidateCount: candidates.length,
            candidateSetFingerprint,
            crosswalkEvidenceFingerprint,
+           crosswalkSourceUrl: verifiedCrosswalk.sourceUrl,
+           crosswalkFingerprint: verifiedCrosswalk.fingerprint,
+           appliedCrosswalkCount: enriched.appliedCrosswalkCount,
+           rejectedCrosswalkCount: enriched.rejectedCrosswalkCount,
+           detectedCollisionCount: mapped.detectedCollisionCount,
            mappingInputFingerprint: createHash("sha256").update(JSON.stringify({
              mappingVersion: SLEEPER_MAPPING_VERSION,
              sourceRows: sourceRows.map((row) => row.sourceHash),
              candidateSetFingerprint,
              crosswalkEvidenceFingerprint,
+              crosswalkFingerprint: verifiedCrosswalk.fingerprint,
            })).digest("hex"),
           candidateSetCapturedAt: startedAt.toISOString(),
           mappingVersion: SLEEPER_MAPPING_VERSION,
@@ -1140,4 +1319,17 @@ export async function getSleeperIdentityHealth() {
     durationMs: typeof run?.metadata?.durationMs === "number" ? run.metadata.durationMs : null,
     metadata: run?.metadata ?? {},
   };
+}
+
+function providerIdentityNameCompatible(
+  left: string | null | undefined,
+  right: string | null | undefined,
+) {
+  const leftParts = normalizePlayerName(left).split(" ").filter(Boolean);
+  const rightParts = normalizePlayerName(right).split(" ").filter(Boolean);
+  if (leftParts.join(" ") === rightParts.join(" ")) return true;
+  return leftParts.length >= 2
+    && rightParts.length >= 2
+    && leftParts[0]?.[0] === rightParts[0]?.[0]
+    && leftParts.at(-1) === rightParts.at(-1);
 }

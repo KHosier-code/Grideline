@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   calculateMappingCoverage,
+  applyVerifiedPlayerCrosswalks,
   deduplicateGridlineCandidates,
   deriveDepthRelevantCandidates,
   buildValidationSample,
@@ -54,6 +55,7 @@ function candidate(overrides: Partial<GridlineIdentityCandidate> = {}): Gridline
     position: "WR",
     normalizedPosition: "WR",
     externalIds: { gsis_id: "00-001", espn_id: "123" },
+    crosswalkExternalIds: {},
     sources: ["players", "historical_depth_charts"],
     sourceCount: 2,
     latestSeason: 2024,
@@ -183,9 +185,28 @@ test("duplicate Sleeper mappings to one Gridline target are rejected as collisio
     player({ player_id: "sl-a" }),
     player({ player_id: "sl-b", full_name: "A.J. Brown", provider_ids: { gsis_id: "00-001" } }),
   ], [candidate()]);
+  assert.equal(results.detectedCollisionCount, 1);
   assert.equal(results.collisionCount, 1);
   assert.equal(results.mappings.every((mapping) => mapping.mappingStatus === "ambiguous"), true);
   assert.equal(results.mappings.every((mapping) => mapping.mappedGridlinePlayerId === null), true);
+});
+
+test("rejected duplicate identities outside depth rows do not block depth suitability", () => {
+  const results = mapSleeperPlayers([
+    player({ player_id: "sl-a", depth_chart_order: null }),
+    player({ player_id: "sl-b", depth_chart_order: null }),
+  ], [candidate()]);
+  assert.equal(results.detectedCollisionCount, 1);
+  assert.equal(results.collisionCount, 0);
+});
+
+test("provider identity accepts common first-name variants but rejects different people", () => {
+  const michael = candidate({ name: "Michael Jackson", normalizedName: normalizePlayerName("Michael Jackson") });
+  assert.equal(mapSleeperPlayer(player({ full_name: "Mike Jackson" }), [michael]).mappingStatus, "exact_provider_id");
+  assert.equal(
+    mapSleeperPlayer(player({ full_name: "Isaiah Searight" }), [candidate({ name: "Quinnen Williams" })]).mappingStatus,
+    "ambiguous",
+  );
 });
 
 test("candidate sources deduplicate into one identity while preserving evidence", () => {
@@ -216,6 +237,104 @@ test("candidate sources deduplicate into one identity while preserving evidence"
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0]?.sourceCount, 2);
   assert.deepEqual(candidates[0]?.teamCodes, ["PHI", "TEN"]);
+});
+
+test("verified provider crosswalks collapse ESPN and PFR records into the GSIS identity", () => {
+  const candidates = [
+    candidate({
+      gridlinePlayerId: "00-001",
+      externalIds: { gsis_id: "00-001" },
+      sources: ["player_game_stats"],
+      sourceCount: 1,
+    }),
+    candidate({
+      gridlinePlayerId: "123",
+      externalIds: { espn_id: "123" },
+      sources: ["players"],
+      sourceCount: 1,
+    }),
+    candidate({
+      gridlinePlayerId: "BrowAJ00",
+      externalIds: { pfr_id: "BrowAJ00" },
+      sources: ["snap_counts"],
+      sourceCount: 1,
+    }),
+  ];
+  const result = applyVerifiedPlayerCrosswalks(candidates, [{
+    displayName: "A.J. Brown",
+    position: "WR",
+    latestTeam: "PHI",
+    providerIds: { gsis_id: "00-001", espn_id: "123", pfr_id: "BrowAJ00" },
+  }]);
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.candidates[0]?.gridlinePlayerId, "00-001");
+  assert.deepEqual(result.candidates[0]?.externalIds, {
+    gsis_id: "00-001",
+    espn_id: "123",
+    pfr_id: "BrowAJ00",
+  });
+  assert.deepEqual(result.candidates[0]?.crosswalkExternalIds, {
+    espn_id: "123",
+    pfr_id: "BrowAJ00",
+  });
+});
+
+test("duplicate crosswalk provider IDs remain fail-closed", () => {
+  const result = applyVerifiedPlayerCrosswalks([candidate()], [
+    {
+      displayName: "A.J. Brown",
+      position: "WR",
+      latestTeam: "PHI",
+      providerIds: { gsis_id: "00-001", espn_id: "123" },
+    },
+    {
+      displayName: "Other Brown",
+      position: "WR",
+      latestTeam: "BUF",
+      providerIds: { gsis_id: "00-999", espn_id: "123" },
+    },
+  ]);
+  assert.equal(result.appliedCrosswalkCount, 0);
+  assert.equal(result.rejectedCrosswalkCount, 2);
+  assert.deepEqual(result.candidates[0]?.externalIds, candidate().externalIds);
+});
+
+test("crosswalks reject provider IDs already owned by multiple candidates", () => {
+  const result = applyVerifiedPlayerCrosswalks([
+    candidate({ gridlinePlayerId: "grid-a", externalIds: { espn_id: "123" } }),
+    candidate({ gridlinePlayerId: "grid-b", externalIds: { espn_id: "123" } }),
+  ], [{
+    displayName: "A.J. Brown",
+    position: "WR",
+    latestTeam: "PHI",
+    providerIds: { espn_id: "123", gsis_id: "00-001" },
+  }]);
+  assert.equal(result.appliedCrosswalkCount, 0);
+  assert.equal(result.rejectedCrosswalkCount, 1);
+  assert.equal(result.candidates.length, 2);
+});
+
+test("crosswalk-introduced provider IDs are reported separately from native exact IDs", () => {
+  const enriched = applyVerifiedPlayerCrosswalks([
+    candidate({
+      gridlinePlayerId: "00-001",
+      externalIds: { gsis_id: "00-001" },
+      crosswalkExternalIds: {},
+    }),
+  ], [{
+    displayName: "A.J. Brown",
+    position: "WR",
+    latestTeam: "PHI",
+    providerIds: { gsis_id: "00-001", espn_id: "123" },
+  }]).candidates;
+  assert.equal(
+    mapSleeperPlayer(player({ provider_ids: { espn_id: "123" } }), enriched).mappingStatus,
+    "exact_crosswalk",
+  );
+  assert.equal(
+    mapSleeperPlayer(player({ provider_ids: { gsis_id: "00-001" } }), enriched).mappingStatus,
+    "exact_provider_id",
+  );
 });
 
 test("coverage metrics expose status, depth, aliases, and position dimensions", () => {
