@@ -49,10 +49,9 @@ function TeamDepth({ team }: { team: ConsumerContextTeam }) {
 
 export function ConsumerDepthChart({ context }: { context: ConsumerContext }) {
   return (
-    <section className="depth-section">
-      <div className="consumer-section-heading"><div><p className="consumer-eyebrow">Personnel evidence</p><h2>Likely roles and depth</h2></div></div>
+    <section className="depth-section" data-section="personnel" data-testid="premium-depth-chart" aria-labelledby="personnel-heading">
+      <div className="consumer-section-heading"><div><p className="consumer-eyebrow">Personnel evidence</p><h2 id="personnel-heading">Likely roles and depth</h2></div></div>
       {context.teams.some((team) => team.depth.length) ? <div className="depth-teams">{context.teams.map((team) => <TeamDepth team={team} key={team.side} />)}</div> : <div className="depth-fallback"><strong>Depth chart updating</strong><p>{context.message ?? 'Supported player roles are not yet available for this matchup.'}</p></div>}
-      <div className="depth-matchups"><h3>Direct coverage assignments</h3>{context.projectedMatchups.length ? context.projectedMatchups.map((matchup) => <div key={`${matchup.receiverName}-${matchup.defenderName}`}><strong>{matchup.receiverName}</strong><span>vs</span><strong>{matchup.defenderName}</strong><p>{matchup.summary}</p></div>) : <p>Not shown. Gridline does not infer player-to-player coverage assignments from unit-level evidence.</p>}</div>
     </section>
   );
 }

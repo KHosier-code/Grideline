@@ -2,53 +2,17 @@ import {
   getListConsumerGamesQueryKey,
   useListConsumerGames,
   type ConsumerGame,
-  type ConsumerMarketComparison,
   type ConsumerMarketQuote,
 } from '@workspace/api-client-react';
 import { ChevronDown, ChevronRight, Clock3 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { Link } from 'wouter';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote } from './consumer-ui';
+import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
 
 function readPositiveInteger(value: string | null, fallback: number) {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function formatComparisonValue(comparison: ConsumerMarketComparison, value: number | null) {
-  if (value === null) return '—';
-  if (comparison.market === 'moneyline') return `${(value * 100).toFixed(1)}%`;
-  return `${value > 0 ? '+' : ''}${value.toFixed(1)}`;
-}
-
-function formatDifference(comparison: ConsumerMarketComparison) {
-  if (comparison.difference === null) return '—';
-  const suffix = comparison.differenceUnit === 'probability_points' ? ' pp' : ' pts';
-  return `${comparison.difference > 0 ? '+' : ''}${comparison.difference.toFixed(1)}${suffix}`;
-}
-
-function ComparisonCell({ comparison }: { comparison: ConsumerMarketComparison }) {
-  return (
-    <div className="tb-cell market-comparison-cell">
-      <div className="tc-quote-label">
-        <span>{comparison.label}</span>
-        <span className={`market-state market-state-${comparison.state}`}>
-          {comparison.state === 'absent' ? 'No market' : comparison.state}
-        </span>
-      </div>
-      <dl className="comparison-values">
-        <div><dt>Gridline</dt><dd>{formatComparisonValue(comparison, comparison.modelValue)}</dd></div>
-        <div><dt>Market</dt><dd>{formatComparisonValue(comparison, comparison.marketValue)}</dd></div>
-        <div><dt>Model difference</dt><dd>{formatDifference(comparison)}</dd></div>
-      </dl>
-      {comparison.selectedQuote && (
-        <p className="selected-book">
-          {comparison.selectedQuote.sportsbook} · {comparison.selectedQuote.price > 0 ? '+' : ''}
-          {comparison.selectedQuote.price}
-        </p>
-      )}
-    </div>
-  );
 }
 
 function EvidenceQuote({
@@ -78,7 +42,7 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
   const prediction = game.prediction;
 
   return (
-    <article className="tb-row">
+    <article className="tb-row" aria-label={`Model difference for ${game.matchup.away.abbreviation} at ${game.matchup.home.abbreviation}`}>
       <div className="tb-row-main">
         <div className="tb-cell tc-matchup">
           <div className="tc-time">
@@ -88,7 +52,7 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
           <div className="tc-team"><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span><b>{final ? final.away : prediction?.projectedAwayScore?.toFixed(1) ?? '—'}</b></div>
           <div className="tc-team"><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span><b>{final ? final.home : prediction?.projectedHomeScore?.toFixed(1) ?? '—'}</b></div>
         </div>
-        {game.marketBoard.comparisons.map((comparison) => <ComparisonCell key={comparison.market} comparison={comparison} />)}
+        {game.marketBoard.comparisons.map((comparison) => <ConsumerMarketComparisonCell className="tb-cell" key={comparison.market} comparison={comparison} />)}
         <div className="tc-action">
           <button
             type="button"

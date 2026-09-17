@@ -1,12 +1,13 @@
 import { getGetConsumerGameQueryKey, useGetConsumerGame } from '@workspace/api-client-react';
-import { ChevronLeft, CloudRain, Gauge, ShieldCheck, Users } from 'lucide-react';
+import { ChevronLeft, CloudRain, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useLocation, useParams, Link } from 'wouter';
-import { getConsumerPersonnelContent } from '../../lib/consumer-personnel';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } from './consumer-ui';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { LineMovementExperience } from '../../components/LineMovementExperience';
 import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
+import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
+import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -25,36 +26,138 @@ export default function ConsumerGameDetail() {
     typeof weather.sustainedWind === 'number' ? `${weather.sustainedWind.toFixed(0)} mph wind` : null,
     typeof weather.precipitationProbability === 'number' ? `${weather.precipitationProbability.toFixed(0)}% precipitation` : null,
   ].filter(Boolean) : [];
-  const personnelContent = getConsumerPersonnelContent(game.context);
 
   return <div className="consumer-page consumer-detail">
     <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
-    <section className="consumer-matchup-hero">
-      <p>{formatKickoff(game.kickoffTime)}{game.venue ? ` · ${game.venue}` : ''}</p>
-      <div className="consumer-teams">
-        <div><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span></div>
-        <div className="consumer-projection-score">{game.finalScore ? `${game.finalScore.away} – ${game.finalScore.home}` : prediction ? `${metric(prediction.projectedAwayScore)} – ${metric(prediction.projectedHomeScore)}` : 'VS'}<small>{game.finalScore ? 'Final score' : prediction ? 'Gridline projection' : 'Projection updating'}</small></div>
-        <div><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span></div>
+
+    <section className="premium-hero" data-section="game-header" data-testid="premium-hero" aria-label="Game summary">
+      <div className="premium-hero-context">
+        <div className="premium-hero-kickoff">
+          {formatKickoff(game.kickoffTime)}
+          {game.venue ? <span className="premium-venue"> · {game.venue}</span> : null}
+        </div>
+        <div className="premium-weather" data-testid="game-weather">
+          <CloudRain className="h-4 w-4" aria-hidden="true" />
+          <span>{weatherParts.length > 0 ? weatherParts.join(' · ') : game.analysis.availability.weather ?? 'Weather unavailable'}</span>
+        </div>
       </div>
-      <div className="consumer-detail-metrics">
-        <span><small>Home win probability</small>{prediction ? metric(prediction.homeWinProbability, true) : 'Unavailable'}</span>
-        <span><small>Projected margin</small>{prediction ? metric(prediction.projectedMargin) : 'Unavailable'}</span>
-        <span><small>Projected total</small>{prediction ? metric(prediction.projectedTotal) : 'Unavailable'}</span>
-        <span><small>Data confidence</small>{game.dataConfidence.label}</span>
+
+      <div className="premium-teams">
+        <div className="premium-team premium-away">
+          <span className="premium-team-abbr">{game.matchup.away.abbreviation}</span>
+          <span className="premium-team-name">{game.matchup.away.name}</span>
+        </div>
+        <div className="premium-vs">VS</div>
+        <div className="premium-team premium-home">
+          <span className="premium-team-abbr">{game.matchup.home.abbreviation}</span>
+          <span className="premium-team-name">{game.matchup.home.name}</span>
+        </div>
+      </div>
+
+      <div className="premium-current-market">
+        <span className="premium-eyebrow">Current Market</span>
+        <div className="premium-market-quotes">
+          <div className="premium-market-quote">
+            <small>Spread</small>
+            <span>{formatQuote(game.market.spread, 'spread')}</span>
+          </div>
+          <div className="premium-market-quote">
+            <small>Moneyline</small>
+            <span>{formatQuote(game.market.moneyline, 'moneyline')}</span>
+          </div>
+          <div className="premium-market-quote">
+            <small>Total</small>
+            <span>{formatQuote(game.market.total, 'total')}</span>
+          </div>
+        </div>
+        {game.availability.market && <p className="premium-market-note">{game.availability.market}</p>}
       </div>
     </section>
-    {!prediction && <ConsumerMessage title="Projection is updating" detail={game.availability.prediction ?? 'A persisted production projection is not available yet.'} />}
-    <section><div className="consumer-section-heading"><div><p className="consumer-eyebrow">Available evidence</p><h2>Matchup context</h2></div></div>
-      <div className="consumer-evidence-grid">
-        <details><summary><Gauge /> Current market</summary><div><p><b>Spread</b>{formatQuote(game.market.spread, 'spread')}</p><p><b>Moneyline</b>{formatQuote(game.market.moneyline, 'moneyline')}</p><p><b>Total</b>{formatQuote(game.market.total, 'total')}</p>{game.availability.market && <em>{game.availability.market}</em>}</div></details>
-        <details><summary><CloudRain /> Weather</summary><div>{weatherParts.length ? <p>{weatherParts.join(' · ')}</p> : <p>{game.analysis.availability.weather ?? 'Weather is not available for this matchup.'}</p>}</div></details>
-        <details><summary><Users /> Personnel</summary><div>{personnelContent.drivers.length ? <ul>{personnelContent.drivers.map(driver => <li key={driver}>{driver}</li>)}</ul> : <p>{personnelContent.message}</p>}</div></details>
-        <details><summary><ShieldCheck /> Analysis drivers</summary><div>{game.analysis.drivers.length ? <ul>{game.analysis.drivers.map(driver => <li key={driver}>{driver}</li>)}</ul> : <p>No verified analysis drivers are available for this matchup.</p>}</div></details>
+
+    <section className="premium-projection-section" data-section="gridline-projection" data-testid="premium-projection" aria-labelledby="projection-heading">
+      <div className="consumer-section-heading">
+        <div>
+          <p className="consumer-eyebrow">Pregame outlook</p>
+          <h2 id="projection-heading">Gridline projection</h2>
+        </div>
+        {prediction ? (
+          <span className="premium-confidence-badge">
+            <ShieldCheck className="h-4 w-4" /> {game.dataConfidence.label} confidence
+          </span>
+        ) : null}
       </div>
+
+      {game.finalScore && (
+        <div className="premium-final-result" data-testid="final-result">
+          <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+          <span><small>Final score</small>{game.finalScore.away} – {game.finalScore.home}</span>
+        </div>
+      )}
+      {prediction ? (
+        <div className="premium-projection-grid">
+          <div className="ppg-score">
+             <small>Projected Score</small>
+             <div className="ppg-score-value">{metric(prediction?.projectedAwayScore)} – {metric(prediction?.projectedHomeScore)}</div>
+          </div>
+          <div className="ppg-metrics">
+            <div><small>Margin</small><span>{metric(prediction?.projectedMargin)}</span></div>
+            <div><small>Total</small><span>{metric(prediction?.projectedTotal)}</span></div>
+            <div><small>{game.matchup.away.abbreviation} Win %</small><span>{metric(prediction?.awayWinProbability, true)}</span></div>
+            <div><small>{game.matchup.home.abbreviation} Win %</small><span>{metric(prediction?.homeWinProbability, true)}</span></div>
+          </div>
+        </div>
+      ) : (
+        <ConsumerMessage
+          title={game.finalScore ? 'Pregame projection unavailable' : 'Projection is updating'}
+          detail={game.availability.prediction ?? 'A saved Gridline projection is not available for this matchup.'}
+        />
+      )}
     </section>
+
+      <section className="premium-comparison-section" data-section="market-comparison" data-testid="premium-comparison" aria-labelledby="market-comparison-heading">
+        <div className="consumer-section-heading">
+          <div>
+            <p className="consumer-eyebrow">Current market context</p>
+            <h2 id="market-comparison-heading">Gridline vs. market</h2>
+          </div>
+          <span className={`market-state market-state-${game.marketBoard.status}`}>
+            {game.marketBoard.status === 'absent' ? 'Unavailable' : game.marketBoard.status}
+          </span>
+        </div>
+        <p className="consumer-note">Differences are informational and compare Gridline with available market lines. Market context does not change the Gridline projection.</p>
+        <div className="premium-comparison-grid">
+          {game.marketBoard.comparisons.map((comparison) => (
+            <ConsumerMarketComparisonCell key={comparison.market} comparison={comparison} />
+          ))}
+        </div>
+      </section>
+
     <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
-    <LineMovementExperience movement={game.movement} />
-    <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} />
+
     <ConsumerDepthChart context={game.context} />
+
+    <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} />
+
+    <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
+
+    <LineMovementExperience movement={game.movement} />
+
+    <section className="premium-analysis-section" data-section="projection-explanation" data-testid="premium-analysis" aria-labelledby="projection-explanation-heading">
+      <div className="consumer-section-heading">
+        <div>
+          <p className="consumer-eyebrow">Summary</p>
+          <h2 id="projection-explanation-heading">Why Gridline projects this</h2>
+        </div>
+      </div>
+      <div className="premium-analysis-content">
+        {game.analysis.drivers.length ? (
+          <ul className="premium-analysis-list">
+            {game.analysis.drivers.map(driver => <li key={driver}><ShieldCheck className="h-5 w-5 text-accent" /> <span>{driver}</span></li>)}
+          </ul>
+        ) : (
+          <p className="premium-analysis-empty">No verified analysis drivers are available for this matchup.</p>
+        )}
+      </div>
+    </section>
   </div>;
 }

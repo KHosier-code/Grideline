@@ -83,10 +83,10 @@ export function LineMovementExperience({ movement }: { movement: ConsumerMovemen
       String(left.capturedAt).localeCompare(String(right.capturedAt)));
   }, [streams]);
 
-  return <section className="movement-section" aria-labelledby="movement-heading">
+  return <section className="movement-section" data-section="line-movement" aria-labelledby="movement-heading">
     <div className="consumer-section-heading">
       <div>
-        <p className="consumer-eyebrow">Immutable sportsbook observations</p>
+        <p className="consumer-eyebrow">Sportsbook history</p>
         <h2 id="movement-heading">Line movement</h2>
       </div>
       {movement.completeness.status === 'truncated' &&
