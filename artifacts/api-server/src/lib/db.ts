@@ -25,6 +25,64 @@ export function createDatabaseAbortError(): Error {
 }
 
 /**
+ * Acquire a pool client without allowing a timed-out waiter to start work
+ * later. node-postgres does not accept an AbortSignal for pool.connect(), so a
+ * pending pool request may still resolve after the caller has given up. In
+ * that case, release the late client with the abort error and never dispatch
+ * the query.
+ */
+async function acquireCancellableDatabaseClient(
+  databasePool: DatabasePool,
+  signal: AbortSignal,
+): Promise<QueryClient> {
+  if (signal.aborted) {
+    throw createDatabaseAbortError();
+  }
+
+  const connection = Promise.resolve().then(() => databasePool.connect());
+
+  return new Promise<QueryClient>((resolve, reject) => {
+    let settled = false;
+    let aborted = false;
+    let abortError: Error | undefined;
+
+    const cleanup = () => {
+      signal.removeEventListener("abort", onAbort);
+    };
+
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      aborted = true;
+      abortError = createDatabaseAbortError();
+      cleanup();
+      reject(abortError);
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    void connection.then(
+      (client) => {
+        if (settled) {
+          if (aborted) {
+            client.release(abortError);
+          }
+          return;
+        }
+        settled = true;
+        cleanup();
+        resolve(client as QueryClient);
+      },
+      (error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(error);
+      },
+    );
+  });
+}
+
+/**
  * Run one node-postgres query with cancellation and client cleanup tied to an
  * AbortSignal. Releasing with an error removes a client whose query may still
  * be running, rather than returning it to the pool in an unknown state.
@@ -39,7 +97,7 @@ export async function executeCancellableDatabaseQuery<T>(
     throw createDatabaseAbortError();
   }
 
-  const client = (await databasePool.connect()) as QueryClient;
+  const client = await acquireCancellableDatabaseClient(databasePool, signal);
   if (signal.aborted) {
     const error = createDatabaseAbortError();
     client.release(error);

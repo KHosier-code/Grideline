@@ -415,6 +415,50 @@ test("repeatedly timed-out database health checks cancel and release every clien
   }
 });
 
+test("timed-out database health waiters release a late client without dispatching a query", async () => {
+  const controller = new AbortController();
+  let queryCount = 0;
+  let releaseCount = 0;
+  let releaseError: Error | undefined;
+  const lateClient = {
+    query() {
+      queryCount += 1;
+    },
+    release(error?: Error) {
+      releaseCount += 1;
+      releaseError = error;
+    },
+  };
+  let resolveClient!: (client: typeof lateClient) => void;
+  const fakePool = {
+    connect: () =>
+      new Promise<typeof lateClient>((resolve) => {
+        resolveClient = resolve;
+      }),
+  };
+
+  const query = executeCancellableDatabaseQuery(
+    fakePool,
+    "select 1",
+    undefined,
+    controller.signal,
+  );
+  controller.abort();
+
+  await assert.rejects(query, (error: unknown) => {
+    assert.ok(error instanceof Error);
+    assert.equal(error.name, "AbortError");
+    return true;
+  });
+
+  resolveClient(lateClient);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  assert.equal(queryCount, 0);
+  assert.equal(releaseCount, 1);
+  assert.equal(releaseError?.name, "AbortError");
+});
+
 test("protected data-health isolates a failed provider and keeps mixed provider states visible", async () => {
   const handler = createDataHealthHandler({
     ...dataHealthDependencies,
