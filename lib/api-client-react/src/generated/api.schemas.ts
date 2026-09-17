@@ -418,6 +418,47 @@ export const ConsumerContextTeamSide = {
   away: 'away',
 } as const;
 
+export type ConsumerContextTeamInjuryReportStatus = typeof ConsumerContextTeamInjuryReportStatus[keyof typeof ConsumerContextTeamInjuryReportStatus];
+
+
+export const ConsumerContextTeamInjuryReportStatus = {
+  available: 'available',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerInjuryPlayerSourceLabel = typeof ConsumerInjuryPlayerSourceLabel[keyof typeof ConsumerInjuryPlayerSourceLabel];
+
+
+export const ConsumerInjuryPlayerSourceLabel = {
+  ESPN_injury_report: 'ESPN injury report',
+} as const;
+
+export interface ConsumerInjuryPlayer {
+  name: string;
+  /** @nullable */
+  position: string | null;
+  /** @nullable */
+  injury: string | null;
+  /** @nullable */
+  gameStatus: string | null;
+  /** @nullable */
+  practiceStatus: string | null;
+  /** @nullable */
+  asOf: string | null;
+  sourceLabel: ConsumerInjuryPlayerSourceLabel;
+}
+
+export type ConsumerContextTeamDepthFreshness = typeof ConsumerContextTeamDepthFreshness[keyof typeof ConsumerContextTeamDepthFreshness];
+
+
+export const ConsumerContextTeamDepthFreshness = {
+  current: 'current',
+  stale: 'stale',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
 export type ConsumerDepthPlayerUnit = typeof ConsumerDepthPlayerUnit[keyof typeof ConsumerDepthPlayerUnit];
 
 
@@ -445,6 +486,15 @@ export const ConsumerDepthPlayerSourceLabel = {
   Evidence_uncertain: 'Evidence uncertain',
 } as const;
 
+export type ConsumerDepthPlayerFreshness = typeof ConsumerDepthPlayerFreshness[keyof typeof ConsumerDepthPlayerFreshness];
+
+
+export const ConsumerDepthPlayerFreshness = {
+  fresh: 'fresh',
+  stale: 'stale',
+  unavailable: 'unavailable',
+} as const;
+
 export interface ConsumerDepthPlayer {
   name: string;
   position: string;
@@ -463,6 +513,11 @@ export interface ConsumerDepthPlayer {
   starterConfidence: number | null;
   /** @nullable */
   evidenceSummary: string | null;
+  /** @nullable */
+  lineupSlot: string | null;
+  freshness: ConsumerDepthPlayerFreshness;
+  /** @nullable */
+  asOf: string | null;
 }
 
 export interface ConsumerContextTeam {
@@ -481,6 +536,12 @@ export interface ConsumerContextTeam {
   /** @nullable */
   defenseInjuryImpact: number | null;
   injuryEvidenceAvailable: boolean;
+  injuryReportStatus: ConsumerContextTeamInjuryReportStatus;
+  /** @maxItems 25 */
+  injuries: ConsumerInjuryPlayer[];
+  /** @nullable */
+  asOf: string | null;
+  depthFreshness: ConsumerContextTeamDepthFreshness;
   /** @maxItems 30 */
   depth: ConsumerDepthPlayer[];
 }

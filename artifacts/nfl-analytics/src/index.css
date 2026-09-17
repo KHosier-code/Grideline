@@ -589,6 +589,15 @@
   .depth-projected_starter { background: hsl(var(--accent) / .12); color: hsl(24 82% 42%); }
   .depth-uncertain { background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
   .depth-injury { background: hsl(38 80% 48% / .12); color: hsl(34 72% 34%); }
+  .injury-report { border-top: 1px solid hsl(var(--border)); padding: 16px 18px; }
+  .injury-report-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .injury-report-heading h4 { margin: 0; color: hsl(var(--accent)); font-family: var(--app-font-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .injury-report ul { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .injury-player { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(100px, 1fr) auto; align-items: center; gap: 10px; border: 1px solid hsl(var(--border)); border-radius: 9px; padding: 9px; font-size: 10px; }
+  .injury-player > div:first-child strong, .injury-player > div:first-child span { display: block; }
+  .injury-player > div:first-child span, .injury-player p { margin: 2px 0 0; color: hsl(var(--muted-foreground)); }
+  .injury-statuses { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+  .injury-statuses span { border-radius: 99px; background: hsl(38 80% 48% / .12); padding: 4px 6px; color: hsl(34 72% 34%); font-family: var(--app-font-mono); font-size: 8px; }
 
 /* --- Terminal Board (Gridline Games Page) --- */
 .terminal-page { display: flex; flex-direction: column; gap: 20px; max-width: 1480px; margin: 0 auto; color: hsl(var(--foreground)); padding: 20px; }

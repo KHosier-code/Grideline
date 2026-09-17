@@ -155,6 +155,7 @@ export type ProbableStarter = {
   };
   evidence: string[];
   unavailableReason: string | null;
+  lineupSlot: string | null;
 };
 
 export type InjuryImpact = {
@@ -164,6 +165,7 @@ export type InjuryImpact = {
   position: string | null;
   unit: string;
   designation: string | null;
+  injury: string | null;
   practiceStatus: string | null;
   gameStatus: string | null;
   snapshotTimestamp: string | null;
@@ -337,25 +339,41 @@ function depthForTeam(
   cutoff: Date,
   snaps: PersonnelSnapRow[],
   injuries: Map<string, PersonnelInjuryRow>,
+  season: number,
 ): ProbableStarter[] {
+  const evidenceSeason = (value: DateLike) => {
+    const parsed = time(value);
+    if (parsed === null) return null;
+    const date = new Date(parsed);
+    return date.getUTCMonth() < 2 ? date.getUTCFullYear() - 1 : date.getUTCFullYear();
+  };
+  const lineupSlot = (row: Pick<PersonnelDepthRow, "position" | "role">) => {
+    const position = normalizePosition(row.position);
+    const role = text(row.role)?.toUpperCase() ?? null;
+    if (position === "WR" && role && ["LWR", "RWR", "SWR"].includes(role)) return role;
+    return position;
+  };
   const current = depth.filter((row) =>
     row.teamId === teamId &&
+    evidenceSeason(row.snapshotTimestamp ?? row.sourceUpdatedAt) === season &&
     (row.source === "official_depth_chart" || row.source === "espn_depth_chart") &&
     (time(row.snapshotTimestamp) ?? -1) <= cutoff.getTime() &&
     (time(row.sourceUpdatedAt) ?? time(row.snapshotTimestamp) ?? -1) <= cutoff.getTime(),
   );
   const latest = latestBy(
     current.filter((row) => (row.depthPosition ?? 99) === 1 || row.starter === true),
-    (row) => normalizePosition(row.position) ?? "UNK",
+    (row) => lineupSlot(row) ?? "UNK",
     (row) => row.snapshotTimestamp,
   );
   const rows = [...latest.values()];
+  const seasonSnaps = snaps.filter((row) => row.season === season);
   const positionRows = new Set(rows.map((row) => normalizePosition(row.position)).filter(Boolean));
   // A current snapshot can be incomplete.  Participation is a legal,
   // auditable fallback, never an official depth chart.
-  const recent = snaps
+  const recent = seasonSnaps
     .filter((row) =>
       row.teamId === teamId &&
+      row.season === season &&
       time(row.sourceUpdatedAt) !== null &&
       time(row.sourceUpdatedAt)! <= cutoff.getTime() &&
       (time(row.kickoffTime) ?? -1) < cutoff.getTime())
@@ -392,6 +410,7 @@ function depthForTeam(
   const inferredPositions = new Set(rows.map((row) => normalizePosition(row.position)).filter(Boolean));
   const historical = historicalDepth.filter((row) =>
     row.teamId === teamId &&
+    row.season === season &&
     (time(row.sourceSnapshotAt ?? row.sourceUpdatedAt) ?? -1) <= cutoff.getTime(),
   );
   const latestHistorical = latestBy(
@@ -407,7 +426,7 @@ function depthForTeam(
     .filter((row) => (row.depthPosition ?? 99) === 1 || row.starter === true || row.source === "snap_counts_inference")
     .map((row) => {
       const position = normalizePosition(row.position);
-      const share = snapShare(recentSnaps(teamId, row.playerId, snaps, cutoff));
+      const share = snapShare(recentSnaps(teamId, row.playerId, seasonSnaps, cutoff));
       const fresh = freshness(row.snapshotTimestamp ?? row.sourceUpdatedAt, cutoff);
       const official = row.classification === "official" && row.source === "official_depth_chart";
       const injury = injuries.get(`${teamId}:${row.playerId}`);
@@ -445,7 +464,7 @@ function depthForTeam(
           snapshotTimestamp: iso(injury?.snapshotTimestamp),
         },
         priorWeekParticipation: (() => {
-          const previous = recentSnaps(teamId, row.playerId, snaps, cutoff)[0];
+          const previous = recentSnaps(teamId, row.playerId, seasonSnaps, cutoff)[0];
           return {
             gameId: previous?.gameId ?? null,
             participated: Boolean(previous),
@@ -459,6 +478,7 @@ function depthForTeam(
           ...(injury ? [`Injury feed status: ${injury.gameStatus ?? injury.practiceStatus ?? "reported"}.`] : ["No injury row reported as of cutoff."]),
         ],
         unavailableReason,
+        lineupSlot: lineupSlot(row),
       };
     });
 }
@@ -494,6 +514,7 @@ function deriveInjuries(
         position: normalizePosition(row.position),
         unit: personnelUnit(row.position),
         designation,
+        injury: text(row.injury),
         practiceStatus: text(row.practiceStatus),
         gameStatus: text(row.gameStatus),
         snapshotTimestamp: iso(row.snapshotTimestamp),
@@ -584,6 +605,7 @@ function deriveQb(
     },
     evidence: ["qb_game_stats participation inference", `Most recent pre-cutoff game: ${iso(primary[0].kickoffTime) ?? "unknown"}.`],
     unavailableReason: "No current depth-chart QB starter was available.",
+    lineupSlot: "QB",
   } : null);
   const recent = projected ? primary.filter((row) => sameQuarterback(row, projected)).slice(0, 5) : [];
   const totals = recent.reduce((sum, row) => ({
@@ -926,7 +948,9 @@ export function derivePersonnelContext(input: {
   const teamIds = [input.game.homeTeamId, input.game.awayTeamId];
   const teams: PersonnelContext["teams"] = {};
   for (const teamId of teamIds) {
-    const starters = depthForTeam(teamId, input.depth, input.historicalDepth ?? [], cutoff, input.snaps, injuryMap);
+    const starters = depthForTeam(
+      teamId, input.depth, input.historicalDepth ?? [], cutoff, input.snaps, injuryMap, input.game.season,
+    );
     const injuryPlayers = deriveInjuries(teamId, injuryMap, starters, input.snaps, cutoff);
     const qb = deriveQb(teamId, starters, input.qbs, input.snaps, cutoff);
     const olContinuity = deriveOl(teamId, starters, input.snaps, cutoff);

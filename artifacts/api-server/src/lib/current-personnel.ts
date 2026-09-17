@@ -5,6 +5,7 @@ import {
   gamesTable,
   historicalDepthChartTable,
   injuriesTable,
+  playersTable,
   qbGameStatsTable,
   sleeperIdentityMappingRunsTable,
   sleeperIdentityMappingsTable,
@@ -94,6 +95,11 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
       lte(qbGameStatsTable.sourceUpdatedAt, cutoff),
     )) : Promise.resolve([] as Array<typeof qbGameStatsTable.$inferSelect>),
   ]);
+  const injuryPlayerIds = [...new Set(injuries.map((injury) => injury.playerId))];
+  const injuryPlayers = injuryPlayerIds.length
+    ? await db.select({ playerId: playersTable.playerId, name: playersTable.name })
+      .from(playersTable).where(inArray(playersTable.playerId, injuryPlayerIds))
+    : [];
   const sleeperPlayerIds = mappings.map((mapping) => mapping.sleeperPlayerId);
   const sleeperRows = mappingRun && sleeperPlayerIds.length
     ? await db.selectDistinctOn([sleeperPlayerSnapshotsTable.sleeperPlayerId])
@@ -171,6 +177,7 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
       teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
     })),
     injuries,
+    playerNames: Object.fromEntries(injuryPlayers.map((player) => [player.playerId, player.name])),
     qbs: qbs.map((row) => ({
       ...row,
       sourceTeamId: row.teamId,
@@ -195,6 +202,7 @@ export async function getCurrentTeamDepth(teamIdentity: string, cutoff = new Dat
     snaps: evidence.snaps,
     historicalDepth: evidence.historicalDepth,
     injuries: evidence.injuries,
+    playerNames: evidence.playerNames,
     qbs: evidence.qbs,
   });
 }
@@ -208,8 +216,10 @@ export async function getCurrentGamePersonnel(gameId: string, cutoff = new Date(
     const team = evidence.teams.find((row) => row.teamId === teamId);
     return team ? deriveCurrentTeamDepth({
       teamId, teamName: team.teamName, abbreviation: team.abbreviation, cutoff: asOf,
+      season: game.season,
       publishedDepth: evidence.publishedDepth, snaps: evidence.snaps,
       historicalDepth: evidence.historicalDepth, injuries: evidence.injuries, qbs: evidence.qbs,
+      playerNames: evidence.playerNames,
     }) : null;
   };
   const home = derive(game.homeTeamId);

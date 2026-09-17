@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerDepthPlayerFreshness } from './consumerDepthPlayerFreshness';
 import type { ConsumerDepthPlayerRole } from './consumerDepthPlayerRole';
 import type { ConsumerDepthPlayerSourceLabel } from './consumerDepthPlayerSourceLabel';
 import type { ConsumerDepthPlayerUnit } from './consumerDepthPlayerUnit';
@@ -27,4 +28,9 @@ export interface ConsumerDepthPlayer {
   starterConfidence: number | null;
   /** @nullable */
   evidenceSummary: string | null;
+  /** @nullable */
+  lineupSlot: string | null;
+  freshness: ConsumerDepthPlayerFreshness;
+  /** @nullable */
+  asOf: Date | null;
 }

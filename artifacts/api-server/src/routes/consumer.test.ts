@@ -19,6 +19,7 @@ import consumerRouter, {
   MAX_CONSUMER_PERFORMANCE_ROWS,
   MAX_CONSUMER_SNAPSHOT_ROWS,
   aggregatePlayerUsage,
+  applyCurrentPersonnelToConsumerContext,
   americanOddsImpliedProbability,
   buildUsageSnapPlayerAliases,
   buildUsageTeamMappings,
@@ -499,6 +500,91 @@ test("consumer context preserves absence flags for derived personnel zeroes", ()
   assert.equal(serialized.teams[0]?.injuryEvidenceAvailable, false);
   assert.equal(serialized.teams[1]?.qbEvidenceAvailable, true);
   assert.equal(serialized.teams[1]?.injuryEvidenceAvailable, true);
+});
+
+test("consumer context serializes dual receiver slots and a partial cutoff-safe injury report", () => {
+  const serialized = serializeContext({
+    sourceCutoff: "2026-09-17T11:59:59.999Z",
+    teams: {
+      home: {
+        teamName: "Buffalo Bills", abbreviation: "BUF",
+        starters: [
+          { playerName: "Receiver One", position: "WR", lineupSlot: "LWR", estimatedDepthPosition: 1, classification: "published_secondary", dataFreshness: "fresh", snapshotTimestamp: "2026-09-17T10:00:00.000Z" },
+          { playerName: "Receiver Two", position: "WR", lineupSlot: "RWR", estimatedDepthPosition: 1, classification: "published_secondary", dataFreshness: "fresh", snapshotTimestamp: "2026-09-17T10:00:00.000Z" },
+        ],
+        injuryPlayers: [{
+          playerName: "Current Player", position: "WR", injury: "Hamstring",
+          gameStatus: "Questionable", practiceStatus: null, snapshotTimestamp: "2026-09-17T09:00:00.000Z",
+        }],
+      },
+    },
+  }, "home", "away");
+  assert.deepEqual(serialized.teams[0]?.depth.map((row) => row.lineupSlot), ["LWR", "RWR"]);
+  assert.equal(serialized.teams[0]?.injuryReportStatus, "partial");
+  assert.deepEqual(serialized.teams[0]?.injuries[0], {
+    name: "Current Player", position: "WR", injury: "Hamstring", gameStatus: "Questionable",
+    practiceStatus: null, asOf: "2026-09-17T09:00:00.000Z", sourceLabel: "ESPN injury report",
+  });
+  assert.equal(serialized.teams[0]?.asOf, "2026-09-17T11:59:59.999Z");
+});
+
+test("live season-bound personnel replaces stale persisted Buffalo starters", () => {
+  const persisted = serializeContext({
+    teams: {
+      home: {
+        starters: [{ playerName: "Devin Singletary", position: "RB", estimatedDepthPosition: 1, classification: "published_secondary" }],
+      },
+    },
+  }, "home", "away");
+  const player = (name: string, position: string, role: string) => ({
+    playerId: name, playerName: name, teamId: "home", position, unit: "offense", role, rank: 1,
+    starter: true, source: "sleeper", sourceClassification: "published_secondary" as const,
+    providerLabel: "Sleeper published secondary depth signal", providerEvidence: [{
+      source: "sleeper", classification: "published_secondary" as const, rank: 1, capturedAt: "2026-09-17T10:00:00.000Z",
+    }],
+    recentSnapShare: null, recentGames: 0,
+    injuryState: { injury: null, practiceStatus: null, gameStatus: null, asOf: null, source: null, sleeperStatus: null, sleeperInjuryStatus: null, sleeperPracticeParticipation: null },
+    confidence: 80, explanation: ["Current 2026 evidence."], conflicts: [],
+  });
+  const team = {
+    teamId: "home", teamName: "Buffalo Bills", abbreviation: "BUF", asOf: "2026-09-17T11:00:00.000Z",
+    freshness: "current" as const, sourcePrecedence: [], qbStarter: { status: "unavailable" as const, player: null, confidence: 0, supportingEvidence: [], conflicts: [], unavailableReason: "Unavailable" },
+    depth: { offense: [player("James Cook", "RB", "RB"), player("Receiver One", "WR", "LWR"), player("Receiver Two", "WR", "RWR")], defense: [], specialTeams: [], unknown: [] },
+    wrRoles: [], cbRoles: [], conflicts: [], positionalCoverage: {}, downstreamReady: false, unavailableReasons: [],
+    injuryReport: [],
+  };
+  const result = applyCurrentPersonnelToConsumerContext(persisted, {
+    asOf: team.asOf, teams: { home: team, away: null },
+  });
+  assert.equal(result.teams[0]?.depth.some((row) => row.name === "Devin Singletary"), false);
+  assert.equal(result.teams[0]?.depth.find((row) => row.position === "RB")?.name, "James Cook");
+  assert.deepEqual(result.teams[0]?.depth.filter((row) => row.position === "WR").map((row) => row.lineupSlot), ["LWR", "RWR"]);
+});
+
+test("live personnel is exposed when persisted model context is absent", () => {
+  const empty = serializeContext(null, "home", "away");
+  const team = {
+    teamId: "home", teamName: "Buffalo Bills", abbreviation: "BUF", asOf: "2026-09-17T11:00:00.000Z",
+    freshness: "current" as const, sourcePrecedence: [], qbStarter: { status: "unavailable" as const, player: null, confidence: 0, supportingEvidence: [], conflicts: [], unavailableReason: "Unavailable" },
+    depth: { offense: [{
+      playerId: "cook", playerName: "James Cook", teamId: "home", position: "RB", unit: "backfield", role: "RB", rank: 1,
+      starter: true, source: "sleeper", sourceClassification: "published_secondary" as const,
+      providerLabel: "Sleeper published secondary depth signal", providerEvidence: [{
+        source: "sleeper", classification: "published_secondary" as const, rank: 1, capturedAt: "2026-09-17T10:00:00.000Z",
+      }], recentSnapShare: null, recentGames: 0,
+      injuryState: { injury: null, practiceStatus: null, gameStatus: null, asOf: null, source: null, sleeperStatus: null, sleeperInjuryStatus: null, sleeperPracticeParticipation: null },
+      confidence: 80, explanation: ["Current 2026 evidence."], conflicts: [],
+    }], defense: [], specialTeams: [], unknown: [] },
+    wrRoles: [], cbRoles: [], conflicts: [], positionalCoverage: {}, downstreamReady: false, unavailableReasons: [],
+    injuryReport: [],
+  };
+  const result = applyCurrentPersonnelToConsumerContext(empty, {
+    asOf: team.asOf, teams: { home: team, away: null },
+  });
+  assert.equal(result.available, true);
+  assert.equal(result.teams.length, 2);
+  assert.equal(result.teams[0]?.depth[0]?.name, "James Cook");
+  assert.equal(result.message, null);
 });
 
 test("consumer performance is whitelisted and matches generated response contracts", () => {

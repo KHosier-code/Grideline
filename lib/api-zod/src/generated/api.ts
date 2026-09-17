@@ -1187,6 +1187,8 @@ export const getConsumerGameResponseOneConfidenceMarketsMax = 3;
 
 export const getConsumerGameResponseTwoMovementStreamsMax = 24;
 
+export const getConsumerGameResponseTwoContextTeamsItemInjuriesMax = 25;
+
 export const getConsumerGameResponseTwoContextTeamsItemDepthMax = 30;
 
 export const getConsumerGameResponseTwoContextTeamsMax = 2;
@@ -1399,6 +1401,18 @@ export const GetConsumerGameResponse = zod.object({
   "offenseInjuryImpact": zod.number().nullable(),
   "defenseInjuryImpact": zod.number().nullable(),
   "injuryEvidenceAvailable": zod.boolean(),
+  "injuryReportStatus": zod.enum(['available', 'partial', 'unavailable']),
+  "injuries": zod.array(zod.object({
+  "name": zod.string(),
+  "position": zod.string().nullable(),
+  "injury": zod.string().nullable(),
+  "gameStatus": zod.string().nullable(),
+  "practiceStatus": zod.string().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "sourceLabel": zod.enum(['ESPN injury report'])
+})).max(getConsumerGameResponseTwoContextTeamsItemInjuriesMax),
+  "asOf": zod.coerce.date().nullable(),
+  "depthFreshness": zod.enum(['current', 'stale', 'partial', 'unavailable']),
   "depth": zod.array(zod.object({
   "name": zod.string(),
   "position": zod.string(),
@@ -1410,7 +1424,10 @@ export const GetConsumerGameResponse = zod.object({
   "injuryStatus": zod.string().nullable(),
   "practiceStatus": zod.string().nullable(),
   "starterConfidence": zod.number().nullable(),
-  "evidenceSummary": zod.string().nullable()
+  "evidenceSummary": zod.string().nullable(),
+  "lineupSlot": zod.string().nullable(),
+  "freshness": zod.enum(['fresh', 'stale', 'unavailable']),
+  "asOf": zod.coerce.date().nullable()
 })).max(getConsumerGameResponseTwoContextTeamsItemDepthMax)
 })).max(getConsumerGameResponseTwoContextTeamsMax),
   "drivers": zod.array(zod.string()).max(getConsumerGameResponseTwoContextDriversMax),

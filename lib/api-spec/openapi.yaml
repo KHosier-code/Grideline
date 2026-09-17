@@ -942,7 +942,7 @@ components:
         message: { type: ["string", "null"] }
     ConsumerContextTeam:
       type: object
-      required: [side, name, abbreviation, qbCertainty, qbChange, qbEvidenceAvailable, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, injuryEvidenceAvailable, depth]
+      required: [side, name, abbreviation, qbCertainty, qbChange, qbEvidenceAvailable, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, injuryEvidenceAvailable, injuryReportStatus, injuries, asOf, depthFreshness, depth]
       properties:
         side: { type: string, enum: [home, away] }
         name: { type: string }
@@ -954,13 +954,20 @@ components:
         offenseInjuryImpact: { type: ["number", "null"] }
         defenseInjuryImpact: { type: ["number", "null"] }
         injuryEvidenceAvailable: { type: boolean }
+        injuryReportStatus: { type: string, enum: [available, partial, unavailable] }
+        injuries:
+          type: array
+          maxItems: 25
+          items: { $ref: "#/components/schemas/ConsumerInjuryPlayer" }
+        asOf: { type: ["string", "null"], format: date-time }
+        depthFreshness: { type: string, enum: [current, stale, partial, unavailable] }
         depth:
           type: array
           maxItems: 30
           items: { $ref: "#/components/schemas/ConsumerDepthPlayer" }
     ConsumerDepthPlayer:
       type: object
-      required: [name, position, unit, depthRank, role, sourceLabel, recentSnapShare, injuryStatus, practiceStatus, starterConfidence, evidenceSummary]
+      required: [name, position, unit, depthRank, role, sourceLabel, recentSnapShare, injuryStatus, practiceStatus, starterConfidence, evidenceSummary, lineupSlot, freshness, asOf]
       properties:
         name: { type: string }
         position: { type: string }
@@ -973,6 +980,20 @@ components:
         practiceStatus: { type: ["string", "null"] }
         starterConfidence: { type: ["number", "null"] }
         evidenceSummary: { type: ["string", "null"] }
+        lineupSlot: { type: ["string", "null"] }
+        freshness: { type: string, enum: [fresh, stale, unavailable] }
+        asOf: { type: ["string", "null"], format: date-time }
+    ConsumerInjuryPlayer:
+      type: object
+      required: [name, position, injury, gameStatus, practiceStatus, asOf, sourceLabel]
+      properties:
+        name: { type: string }
+        position: { type: ["string", "null"] }
+        injury: { type: ["string", "null"] }
+        gameStatus: { type: ["string", "null"] }
+        practiceStatus: { type: ["string", "null"] }
+        asOf: { type: ["string", "null"], format: date-time }
+        sourceLabel: { type: string, enum: [ESPN injury report] }
     ConsumerProjectedMatchup:
       type: object
       required: [receiverName, defenderName, summary]

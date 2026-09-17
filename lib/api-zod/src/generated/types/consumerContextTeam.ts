@@ -5,8 +5,11 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerContextTeamDepthFreshness } from './consumerContextTeamDepthFreshness';
+import type { ConsumerContextTeamInjuryReportStatus } from './consumerContextTeamInjuryReportStatus';
 import type { ConsumerContextTeamSide } from './consumerContextTeamSide';
 import type { ConsumerDepthPlayer } from './consumerDepthPlayer';
+import type { ConsumerInjuryPlayer } from './consumerInjuryPlayer';
 
 export interface ConsumerContextTeam {
   side: ConsumerContextTeamSide;
@@ -24,6 +27,12 @@ export interface ConsumerContextTeam {
   /** @nullable */
   defenseInjuryImpact: number | null;
   injuryEvidenceAvailable: boolean;
+  injuryReportStatus: ConsumerContextTeamInjuryReportStatus;
+  /** @maxItems 25 */
+  injuries: ConsumerInjuryPlayer[];
+  /** @nullable */
+  asOf: Date | null;
+  depthFreshness: ConsumerContextTeamDepthFreshness;
   /** @maxItems 30 */
   depth: ConsumerDepthPlayer[];
 }

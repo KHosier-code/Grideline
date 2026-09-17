@@ -58,6 +58,23 @@ test("post-cutoff published, injury, and participation evidence is excluded", ()
   assert.equal(result.qbStarter.status, "unavailable");
 });
 
+test("injury report resolves a player absent from current depth sources", () => {
+  const result = deriveCurrentTeamDepth({
+    teamId: "team", cutoff, publishedDepth: [], snaps: [], historicalDepth: [],
+    playerNames: { injuredReserve: "Injured Reserve Player" },
+    injuries: [{
+      playerId: "injuredReserve", teamId: "team", position: "WR", injury: "Knee",
+      gameStatus: "Out", practiceStatus: "Did Not Participate",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }],
+  });
+  assert.deepEqual(result.injuryReport, [{
+    playerName: "Injured Reserve Player", position: "WR", injury: "Knee",
+    gameStatus: "Out", practiceStatus: "Did Not Participate",
+    asOf: "2026-09-17T11:00:00.000Z", source: "espn",
+  }]);
+});
+
 test("injury authority and participation disagreements create confidence-reducing conflicts", () => {
   const result = derive([
     sleeper({}),
@@ -241,4 +258,42 @@ test("snap and historical evidence cannot fabricate offensive-line depth slots",
   assert.equal(result.positionalCoverage.OG, 0);
   assert.equal(result.positionalCoverage.C, 0);
   assert.equal(result.downstreamReady, false);
+});
+
+test("matchup season prevents stale Buffalo-like RB evidence from replacing the current lead back", () => {
+  const result = deriveCurrentTeamDepth({
+    teamId: "team", abbreviation: "BUF", cutoff, season: 2026,
+    publishedDepth: [
+      sleeper({ playerId: "cook", playerName: "James Cook", position: "RB", role: "RB", depthOrder: 1 }),
+      sleeper({
+        playerId: "singletary", playerName: "Devin Singletary", position: "RB", role: "RB",
+        depthOrder: 1, capturedAt: "2025-09-10T10:00:00.000Z", sourceUpdatedAt: "2025-09-10T10:00:00.000Z",
+      }),
+    ],
+    snaps: [{
+      gameId: "old", season: 2025, week: 18, playerId: "singletary", playerName: "Devin Singletary",
+      position: "RB", teamId: "team", offensePct: 1, kickoffTime: "2026-01-01T00:00:00.000Z",
+      sourceUpdatedAt: "2026-01-02T00:00:00.000Z",
+    }],
+    historicalDepth: [{
+      season: 2025, week: 18, playerId: "singletary", playerName: "Devin Singletary", teamId: "team",
+      position: "RB", role: "RB", depthPosition: 1, sourceUpdatedAt: "2026-01-02T00:00:00.000Z",
+    }],
+    injuries: [],
+  });
+  assert.equal(result.depth.offense.find((row) => row.position === "RB" && row.starter)?.playerName, "James Cook");
+  assert.equal(result.depth.offense.some((row) => row.playerName === "Devin Singletary"), false);
+});
+
+test("matchup season leaves a missing position unavailable instead of using prior-season participation", () => {
+  const result = deriveCurrentTeamDepth({
+    teamId: "team", cutoff, season: 2026, publishedDepth: [], historicalDepth: [], injuries: [],
+    snaps: [{
+      gameId: "old", season: 2025, week: 18, playerId: "old-rb", playerName: "Old RB",
+      position: "RB", teamId: "team", offensePct: 1, kickoffTime: "2026-01-01T00:00:00.000Z",
+      sourceUpdatedAt: "2026-01-02T00:00:00.000Z",
+    }],
+  });
+  assert.equal(result.depth.offense.some((row) => row.position === "RB"), false);
+  assert.ok(result.unavailableReasons.includes("RB depth is unavailable."));
 });

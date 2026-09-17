@@ -31,6 +31,8 @@ import {
 import { verifyArtifactIntegrity } from "../lib/modeling";
 import retained2025Baseline from "../../../../reports/gridline-2025-market-baseline.json" with { type: "json" };
 import { persistConfidenceMethodology, persistConfidenceResults } from "../lib/confidence-persistence";
+import { getCurrentGamePersonnel } from "../lib/current-personnel";
+import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
 
 const router: IRouter = Router();
 export const MAX_CONSUMER_GAMES = 100;
@@ -519,6 +521,7 @@ export function serializeMovement(rows: MovementRow[], kickoffTime?: Date | null
 }
 
 type PersistedContext = {
+  sourceCutoff?: unknown;
   dataConfidence?: { overall?: unknown };
   teams?: Record<string, {
     teamName?: unknown;
@@ -535,15 +538,68 @@ type PersistedContext = {
       recentStarterEvidence?: unknown;
       evidence?: unknown;
       unavailableReason?: unknown;
+      lineupSlot?: unknown;
+      dataFreshness?: unknown;
+      snapshotTimestamp?: unknown;
     }>;
     qb?: { starterCertainty?: unknown; starterChange?: unknown; projectedStarter?: unknown };
     injuries?: Record<string, { impactScore?: unknown }>;
-    injuryPlayers?: unknown[];
+    injuryPlayers?: Array<{
+      playerId?: unknown;
+      playerName?: unknown;
+      position?: unknown;
+      injury?: unknown;
+      designation?: unknown;
+      gameStatus?: unknown;
+      practiceStatus?: unknown;
+      snapshotTimestamp?: unknown;
+      unavailableReasons?: unknown;
+    }>;
     personnelCompleteness?: unknown;
   }>;
 };
 
-export function serializeContext(context: PersistedContext | null, homeTeamId: string, awayTeamId: string) {
+type SerializedContext = {
+  available: boolean;
+  dataConfidence: number | null;
+  teams: Array<{
+    side: "home" | "away";
+    name: string;
+    abbreviation: string;
+    qbCertainty: number | null;
+    qbChange: boolean | null;
+    qbEvidenceAvailable: boolean;
+    personnelCompleteness: number | null;
+    offenseInjuryImpact: number | null;
+    defenseInjuryImpact: number | null;
+    injuryEvidenceAvailable: boolean;
+    injuryReportStatus: "available" | "partial" | "unavailable";
+    injuries: Array<{
+      name: string; position: string | null; injury: string | null; gameStatus: string | null;
+      practiceStatus: string | null; asOf: string | null; sourceLabel: "ESPN injury report";
+    }>;
+    asOf: string | null;
+    depthFreshness: "current" | "stale" | "partial" | "unavailable";
+    depth: Array<{
+      name: string; position: string; unit: "offense" | "defense"; depthRank: number | null;
+      role: "published_starter" | "published_backup" | "projected_starter" | "uncertain";
+      sourceLabel: "Published depth" | "Projected from recent participation" | "Evidence uncertain";
+      recentSnapShare: number | null; injuryStatus: string | null; practiceStatus: string | null;
+      starterConfidence: number | null; evidenceSummary: string | null; lineupSlot: string | null;
+      freshness: "fresh" | "stale" | "unavailable"; asOf: string | null;
+    }>;
+  }>;
+  drivers: string[];
+  projectedMatchups: [];
+  matchupMessage: string;
+  message: string | null;
+};
+
+export function serializeContext(
+  context: PersistedContext | null,
+  homeTeamId: string,
+  awayTeamId: string,
+): SerializedContext {
   if (!context) {
     return {
       available: false,
@@ -586,8 +642,31 @@ export function serializeContext(context: PersistedContext | null, homeTeamId: s
         practiceStatus: typeof player.injuryStatus?.practiceStatus === "string" ? player.injuryStatus.practiceStatus : null,
         starterConfidence: safeNumber(player.confidence),
         evidenceSummary: evidence[0] ?? (typeof player.unavailableReason === "string" ? player.unavailableReason : null),
+        lineupSlot: typeof player.lineupSlot === "string" ? player.lineupSlot : null,
+        freshness: ["fresh", "stale", "unavailable"].includes(String(player.dataFreshness))
+          ? player.dataFreshness as "fresh" | "stale" | "unavailable"
+          : "unavailable" as const,
+        asOf: typeof player.snapshotTimestamp === "string" ? player.snapshotTimestamp : null,
       }];
     });
+    const injuries = (team?.injuryPlayers ?? []).slice(0, 25).flatMap((player) => {
+      if (typeof player.playerName !== "string") return [];
+      return [{
+        name: player.playerName,
+        position: typeof player.position === "string" ? player.position : null,
+        injury: typeof player.injury === "string" ? player.injury : null,
+        gameStatus: typeof player.gameStatus === "string" ? player.gameStatus : null,
+        practiceStatus: typeof player.practiceStatus === "string" ? player.practiceStatus : null,
+        asOf: typeof player.snapshotTimestamp === "string" ? player.snapshotTimestamp : null,
+        sourceLabel: "ESPN injury report" as const,
+      }];
+    });
+    const injuryReportStatus = !Array.isArray(team?.injuryPlayers) || team.injuryPlayers.length === 0
+      ? "unavailable" as const
+      : injuries.length < team.injuryPlayers.length || injuries.some((player) =>
+        !player.position || !player.injury || !player.gameStatus || !player.practiceStatus || !player.asOf)
+        ? "partial" as const
+        : "available" as const;
     return {
       side,
       name: typeof team?.teamName === "string" ? team.teamName : side === "home" ? "Home team" : "Away team",
@@ -599,6 +678,13 @@ export function serializeContext(context: PersistedContext | null, homeTeamId: s
       offenseInjuryImpact: safeNumber(team?.injuries?.offense?.impactScore),
       defenseInjuryImpact: safeNumber(team?.injuries?.defense?.impactScore),
       injuryEvidenceAvailable: Array.isArray(team?.injuryPlayers) && team.injuryPlayers.length > 0,
+      injuryReportStatus,
+      injuries,
+      asOf: typeof context.sourceCutoff === "string" ? context.sourceCutoff : null,
+      depthFreshness: depth.length === 0 ? "unavailable" as const
+        : depth.some((player) => player.freshness === "stale") ? "stale" as const
+        : depth.some((player) => player.freshness === "unavailable") ? "partial" as const
+        : "current" as const,
       depth,
     };
   });
@@ -617,6 +703,114 @@ export function serializeContext(context: PersistedContext | null, homeTeamId: s
     projectedMatchups: [],
     matchupMessage: "Matchup projection not yet available.",
     message: null,
+  };
+}
+
+export function applyCurrentPersonnelToConsumerContext(
+  context: SerializedContext,
+  current: { asOf: string; teams: { home: InterpretedTeamDepth | null; away: InterpretedTeamDepth | null } } | null,
+): SerializedContext {
+  if (!current) return {
+    ...context,
+    teams: context.teams.map((team) => ({
+      ...team, depth: [], injuries: [], depthFreshness: "unavailable" as const,
+      injuryReportStatus: "unavailable" as const,
+    })),
+  };
+  const baseTeams = context.teams.length ? context.teams : (["home", "away"] as const).map((side) => {
+    const source = current.teams[side];
+    return {
+      side,
+      name: source?.teamName ?? "Team unavailable",
+      abbreviation: source?.abbreviation ?? "—",
+      qbCertainty: null,
+      qbChange: null,
+      qbEvidenceAvailable: false,
+      personnelCompleteness: null,
+      offenseInjuryImpact: null,
+      defenseInjuryImpact: null,
+      injuryEvidenceAvailable: false,
+      injuryReportStatus: "unavailable" as const,
+      injuries: [],
+      asOf: current.asOf,
+      depthFreshness: "unavailable" as const,
+      depth: [],
+    };
+  });
+  const currentAvailable = Object.values(current.teams).some((team) =>
+    Boolean(team && (team.depth.offense.length || team.depth.defense.length || team.injuryReport.length)));
+  return {
+    ...context,
+    available: context.available || currentAvailable,
+    message: context.message && !currentAvailable ? context.message : null,
+    teams: baseTeams.map((team) => {
+      const source = current.teams[team.side];
+      if (!source) return {
+        ...team, depth: [], injuries: [], depthFreshness: "unavailable" as const,
+        injuryReportStatus: "unavailable" as const, asOf: current.asOf,
+      };
+      const players = [...source.depth.offense, ...source.depth.defense]
+        .filter((player) => player.starter || (player.rank ?? 99) <= 2)
+        .slice(0, 30);
+      const depth = players.map((player) => {
+        const published = player.sourceClassification === "official" || player.sourceClassification === "published_secondary";
+        const offense = ["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"]
+          .includes(player.position ?? "");
+        const role = published
+          ? player.rank === 1 ? "published_starter" as const : "published_backup" as const
+          : player.rank === 1 ? "projected_starter" as const : "uncertain" as const;
+        const normalizedRole = player.role?.toUpperCase() ?? null;
+        return {
+          name: player.playerName ?? "Player name unavailable",
+          position: player.position ?? "Unknown",
+          unit: offense ? "offense" as const : "defense" as const,
+          depthRank: player.rank,
+          role,
+          sourceLabel: published ? "Published depth" as const
+            : player.sourceClassification === "inferred" ? "Projected from recent participation" as const
+            : "Evidence uncertain" as const,
+          recentSnapShare: player.recentSnapShare,
+          injuryStatus: player.injuryState.gameStatus,
+          practiceStatus: player.injuryState.practiceStatus,
+          starterConfidence: player.confidence,
+          evidenceSummary: player.explanation[0] ?? null,
+          lineupSlot: player.position === "WR" && ["LWR", "RWR", "SWR"].includes(normalizedRole ?? "")
+            ? normalizedRole : player.position,
+          freshness: source.freshness === "current" ? "fresh" as const
+            : source.freshness === "stale" ? "stale" as const : "unavailable" as const,
+          asOf: player.providerEvidence.map((evidence) => evidence.capturedAt).filter(Boolean).sort().at(-1) ?? null,
+        };
+      });
+      const injuries = source.injuryReport.flatMap((injury) => {
+        if (!injury.playerName) return [];
+        return [{
+          name: injury.playerName,
+          position: injury.position,
+          injury: injury.injury,
+          gameStatus: injury.gameStatus,
+          practiceStatus: injury.practiceStatus,
+          asOf: injury.asOf,
+          sourceLabel: "ESPN injury report" as const,
+        }];
+      });
+      const injuryReportStatus = source.injuryReport.length === 0 ? "unavailable" as const
+        : injuries.length < source.injuryReport.length ? "partial" as const
+        : injuries.some((player) =>
+          !player.position || !player.injury || !player.gameStatus || !player.practiceStatus || !player.asOf)
+          ? "partial" as const : "available" as const;
+      return {
+        ...team,
+        name: source.teamName ?? team.name,
+        abbreviation: source.abbreviation ?? team.abbreviation,
+        asOf: source.asOf,
+        depthFreshness: source.freshness === "current" ? "current" as const
+          : source.freshness === "stale" ? "stale" as const : "unavailable" as const,
+        depth,
+        injuries,
+        injuryEvidenceAvailable: injuries.length > 0,
+        injuryReportStatus,
+      };
+    }),
   };
 }
 
@@ -929,7 +1123,7 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
     const detailSourceTeams = [gameRow.homeTeamId, gameRow.awayTeamId]
       .map((id) => detailTeamMaps.scheduleToAbbreviation.get(id))
       .flatMap((abbr) => abbr ? nflverseTeamCandidates(abbr) : []);
-    const [weather, contextRows, movementRows, recentStats, recentSnaps, recentGames] = await Promise.all([
+    const [weather, contextRows, movementRows, recentStats, recentSnaps, recentGames, currentPersonnel] = await Promise.all([
       db.select().from(weatherForecastSnapshotsTable)
         .where(and(
           eq(weatherForecastSnapshotsTable.gameId, game.gameId),
@@ -982,12 +1176,16 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
         )),
       db.select({ gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week, kickoffTime: gamesTable.kickoffTime, homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId })
         .from(gamesTable).where(eq(gamesTable.season, game.season)),
+      getCurrentGamePersonnel(game.gameId, sourceCutoff),
     ]);
     const forecast = weather[0];
     const context = contextRows
       .map((row) => (row.featureAudit as Record<string, unknown> | undefined)?._personnel_context)
       .find(Boolean) as PersistedContext | undefined;
-    const finalizedContext = serializeContext(context ?? null, gameRow?.homeTeamId ?? "", gameRow?.awayTeamId ?? "");
+    const finalizedContext = applyCurrentPersonnelToConsumerContext(
+      serializeContext(context ?? null, gameRow?.homeTeamId ?? "", gameRow?.awayTeamId ?? ""),
+      currentPersonnel,
+    );
     const eligibleRecentGames = eligibleUsageGames(recentGames, game.season, sourceCutoff, game.gameId)
       .filter((candidate) => candidate.homeTeamId === gameRow.homeTeamId || candidate.homeTeamId === gameRow.awayTeamId
         || candidate.awayTeamId === gameRow.homeTeamId || candidate.awayTeamId === gameRow.awayTeamId);

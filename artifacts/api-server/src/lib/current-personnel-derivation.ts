@@ -28,6 +28,7 @@ export type CurrentDepthSource = {
   sleeperStatus?: string | null;
   sleeperInjuryStatus?: string | null;
   sleeperPracticeParticipation?: string | null;
+  season?: number | null;
 };
 
 export type PersonnelConflict = {
@@ -102,6 +103,15 @@ export type InterpretedTeamDepth = {
   positionalCoverage: Record<string, number>;
   downstreamReady: boolean;
   unavailableReasons: string[];
+  injuryReport: Array<{
+    playerName: string | null;
+    position: string | null;
+    injury: string | null;
+    practiceStatus: string | null;
+    gameStatus: string | null;
+    asOf: string | null;
+    source: "espn";
+  }>;
 };
 
 const OFFENSE = new Set(["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"]);
@@ -226,12 +236,22 @@ export function deriveCurrentTeamDepth(input: {
   historicalDepth: PersonnelHistoricalDepthRow[];
   injuries: PersonnelInjuryRow[];
   qbs?: PersonnelQbRow[];
+  season?: number;
+  playerNames?: Record<string, string>;
 }): InterpretedTeamDepth {
   const cutoff = input.cutoff ?? new Date();
   const cutoffTime = cutoff.getTime();
   const conflicts: PersonnelConflict[] = [];
+  const evidenceSeason = (value: DateLike) => {
+    const parsed = timestamp(value);
+    if (parsed === null) return null;
+    const date = new Date(parsed);
+    return date.getUTCMonth() < 2 ? date.getUTCFullYear() - 1 : date.getUTCFullYear();
+  };
   const sourceRows = input.publishedDepth
     .filter((row) => row.teamId === input.teamId)
+    .filter((row) => input.season === undefined
+      || (row.season ?? evidenceSeason(row.capturedAt)) === input.season)
     .filter((row) => (timestamp(row.capturedAt) ?? Infinity) <= cutoffTime)
     .filter((row) => (timestamp(row.sourceUpdatedAt ?? row.capturedAt) ?? Infinity) <= cutoffTime);
   const latestSourceAt = Math.max(-1, ...sourceRows.map((row) => timestamp(row.capturedAt) ?? -1));
@@ -259,7 +279,8 @@ export function deriveCurrentTeamDepth(input: {
 
   const availableSlots = new Set(rows.map((row) => normalizedSlot(row.position ?? row.role)).filter(Boolean));
   const recentByPosition = new Map<string, PersonnelSnapRow[]>();
-  for (const row of input.snaps.filter((item) => item.teamId === input.teamId)) {
+  for (const row of input.snaps.filter((item) =>
+    item.teamId === input.teamId && (input.season === undefined || item.season === input.season))) {
     const position = normalizedSlot(row.position);
     if (!position || isOffensiveLinePosition(row.position) || availableSlots.has(position)) continue;
     if ((timestamp(row.kickoffTime) ?? Infinity) >= cutoffTime || (timestamp(row.sourceUpdatedAt) ?? Infinity) > cutoffTime) continue;
@@ -286,6 +307,7 @@ export function deriveCurrentTeamDepth(input: {
   const inferredSlots = new Set(rows.map((row) => normalizedSlot(row.position ?? row.role)).filter(Boolean));
   for (const historical of [...input.historicalDepth]
     .filter((row) => row.teamId === input.teamId && (row.depthPosition ?? 99) <= 2)
+    .filter((row) => input.season === undefined || row.season === input.season)
     .filter((row) => (timestamp(row.sourceSnapshotAt ?? row.sourceUpdatedAt) ?? Infinity) <= cutoffTime)
     .sort((a, b) => (timestamp(b.sourceSnapshotAt ?? b.sourceUpdatedAt) ?? -1) - (timestamp(a.sourceSnapshotAt ?? a.sourceUpdatedAt) ?? -1))) {
     const position = normalizedSlot(historical.position);
@@ -349,7 +371,10 @@ export function deriveCurrentTeamDepth(input: {
       });
     }
     const topParticipation = ordered
-      .map((row) => ({ row, evidence: recentParticipation(input.snaps, input.teamId, row.playerId, cutoffTime) }))
+      .map((row) => ({ row, evidence: recentParticipation(
+        input.season === undefined ? input.snaps : input.snaps.filter((snap) => snap.season === input.season),
+        input.teamId, row.playerId, cutoffTime,
+      ) }))
       .sort((a, b) => (b.evidence.share ?? -1) - (a.evidence.share ?? -1))[0];
     for (const row of ordered) {
       const providerEvidence = rows
@@ -364,7 +389,10 @@ export function deriveCurrentTeamDepth(input: {
           rank: source.depthOrder,
           capturedAt: asIso(source.capturedAt),
         }));
-      const participation = recentParticipation(input.snaps, input.teamId, row.playerId, cutoffTime);
+      const participation = recentParticipation(
+        input.season === undefined ? input.snaps : input.snaps.filter((snap) => snap.season === input.season),
+        input.teamId, row.playerId, cutoffTime,
+      );
       const injury = latestInjury(input.injuries, input.teamId, row.playerId, cutoffTime);
       const sleeperAvailability = rows
         .filter((source) => source.playerId === row.playerId && source.source === "sleeper")
@@ -461,6 +489,7 @@ export function deriveCurrentTeamDepth(input: {
   interpreted.sort((a, b) => (a.position ?? "").localeCompare(b.position ?? "") || (a.rank ?? 999) - (b.rank ?? 999));
   const qbRows = (input.qbs ?? [])
     .filter((row) => row.teamId === input.teamId)
+    .filter((row) => input.season === undefined || row.season === input.season)
     .filter((row) => (timestamp(row.kickoffTime) ?? Infinity) < cutoffTime)
     .filter((row) => (timestamp(row.sourceUpdatedAt) ?? Infinity) <= cutoffTime)
     .sort((a, b) => (timestamp(b.kickoffTime) ?? -1) - (timestamp(a.kickoffTime) ?? -1));
@@ -504,6 +533,21 @@ export function deriveCurrentTeamDepth(input: {
     interpreted.some((row) => row.position === position) ? 100 : 0,
   ]));
   const ageDays = latestSourceAt < 0 ? Infinity : Math.max(0, cutoffTime - latestSourceAt) / 86_400_000;
+  const playerNames = new Map<string, string | null>([
+    ...Object.entries(input.playerNames ?? {}),
+    ...sourceRows.map((row) => [row.playerId, clean(row.playerName)] as const),
+  ]);
+  const latestTeamInjuries = new Map<string, PersonnelInjuryRow>();
+  for (const row of input.injuries
+    .filter((injury) => injury.teamId === input.teamId)
+    .filter((injury) => (timestamp(injury.snapshotTimestamp) ?? Infinity) <= cutoffTime)
+    .filter((injury) => (timestamp(injury.sourceUpdatedAt ?? injury.snapshotTimestamp) ?? Infinity) <= cutoffTime)
+    .filter((injury) => (timestamp(injury.snapshotTimestamp) ?? -Infinity) >= cutoffTime - CURRENT_INJURY_EVIDENCE_MS)) {
+    const prior = latestTeamInjuries.get(row.playerId);
+    if (!prior || (timestamp(row.snapshotTimestamp) ?? -1) > (timestamp(prior.snapshotTimestamp) ?? -1)) {
+      latestTeamInjuries.set(row.playerId, row);
+    }
+  }
   return {
     teamId: input.teamId,
     teamName: input.teamName ?? null,
@@ -538,5 +582,19 @@ export function deriveCurrentTeamDepth(input: {
       ...(qbStarter.status !== "available" ? [qbStarter.unavailableReason ?? "QB starter evidence remains conflicted."] : []),
       ...REQUIRED.filter((position) => positionalCoverage[position] === 0).map((position) => `${position} depth is unavailable.`),
     ],
+    injuryReport: [...latestTeamInjuries.values()]
+      .filter((injury) =>
+        Boolean(clean(injury.injury))
+        || Boolean(clean(injury.practiceStatus))
+        || !/^(active|available|healthy)$/i.test(clean(injury.gameStatus) ?? ""))
+      .map((injury) => ({
+        playerName: playerNames.get(injury.playerId) ?? null,
+        position: normalizePosition(injury.position),
+        injury: clean(injury.injury),
+        practiceStatus: clean(injury.practiceStatus),
+        gameStatus: clean(injury.gameStatus),
+        asOf: asIso(injury.snapshotTimestamp),
+        source: "espn" as const,
+      })),
   };
 }

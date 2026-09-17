@@ -336,3 +336,20 @@ test("QB history joins to a projected starter across source ID namespaces by cut
   assert.equal(context.teams.h.qb.recentDropbacks, 90);
   assert.equal(context.teams.h.qb.starterCertainty, 70);
 });
+
+test("current-season receiver slots remain distinct while stale RB evidence stays unavailable", () => {
+  const context = derivePersonnelContext({
+    now: new Date("2026-09-17T12:00:00.000Z"),
+    game: { gameId: "slots", season: 2026, week: 2, kickoffTime: "2026-09-18T00:00:00.000Z", homeTeamId: "h", awayTeamId: "a" },
+    depth: [
+      { teamId: "h", playerId: "wr-left", playerName: "Left Receiver", position: "WR", role: "LWR", depthPosition: 1, source: "espn_depth_chart", snapshotTimestamp: "2026-09-17T10:00:00.000Z" },
+      { teamId: "h", playerId: "wr-right", playerName: "Right Receiver", position: "WR", role: "RWR", depthPosition: 1, source: "espn_depth_chart", snapshotTimestamp: "2026-09-17T10:00:00.000Z" },
+      { teamId: "h", playerId: "old-rb", playerName: "Old Back", position: "RB", depthPosition: 1, source: "espn_depth_chart", snapshotTimestamp: "2025-09-17T10:00:00.000Z" },
+    ],
+    historicalDepth: [{ season: 2025, week: 18, teamId: "h", playerId: "old-rb", playerName: "Old Back", position: "RB", depthPosition: 1, sourceUpdatedAt: "2026-01-01T00:00:00.000Z" }],
+    injuries: [], snaps: [], qbs: [], priorGames: [], odds: [],
+  });
+  assert.deepEqual(context.teams.h.starters.filter((row) => row.position === "WR").map((row) => row.lineupSlot).sort(), ["LWR", "RWR"]);
+  assert.equal(context.teams.h.starters.some((row) => row.position === "RB"), false);
+  assert.ok(context.teams.h.missingRequiredPositions.includes("RB"));
+});
