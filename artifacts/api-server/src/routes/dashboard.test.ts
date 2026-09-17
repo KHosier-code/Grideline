@@ -411,6 +411,64 @@ test("data-health clears its deadline timer when response validation fails after
   assert.equal(routeTimerCleared, true);
 });
 
+test("data-health clears its deadline timer when response serialization fails after health checks", async () => {
+  const timeoutMs = 163;
+  let databaseWorkCompleted = false;
+  let routeTimer: ReturnType<typeof setTimeout> | undefined;
+  let routeTimerCleared = false;
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const scheduleHealth = dataHealthDependencies?.getScheduleHealth;
+  assert.ok(scheduleHealth);
+
+  globalThis.setTimeout = ((...args: Parameters<typeof setTimeout>) => {
+    const timer = originalSetTimeout(...args);
+    if (args[1] === timeoutMs && !routeTimer) {
+      routeTimer = timer;
+    }
+    return timer;
+  }) as typeof setTimeout;
+  globalThis.clearTimeout = ((...args: Parameters<typeof clearTimeout>) => {
+    if (args[0] === routeTimer) {
+      routeTimerCleared = true;
+    }
+    return originalClearTimeout(...args);
+  }) as typeof clearTimeout;
+
+  try {
+    const handler = createDataHealthHandler(
+      {
+        ...dataHealthDependencies,
+        getScheduleHealth: async () => {
+          await db.execute(sql`SELECT 1`);
+          databaseWorkCompleted = true;
+          return scheduleHealth();
+        },
+      },
+      { timeoutMs },
+    ) as unknown as DataHealthHandler;
+
+    const responseError = new Error("response serialization failed");
+    await assert.rejects(
+      handler(
+        {},
+        {
+          json() {
+            throw responseError;
+          },
+        },
+      ),
+      responseError,
+    );
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+
+  assert.equal(databaseWorkCompleted, true);
+  assert.equal(routeTimerCleared, true);
+});
+
 test("timed-out database health work cancels and releases its client without a live provider", async () => {
   const controller = new AbortController();
   const queryToken = {};
@@ -617,6 +675,339 @@ test("repeatedly timed-out database health checks cancel and release every clien
   }
 });
 
+/*
+test("timed-out database health waiters release a late client without dispatching a query", async () => {
+  const timeoutMs = 163;
+  let databaseWorkCompleted = false;
+  let routeTimer: ReturnType<typeof setTimeout> | undefined;
+  let routeTimerCleared = false;
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const scheduleHealth = dataHealthDependencies?.getScheduleHealth;
+  assert.ok(scheduleHealth);
+
+  globalThis.setTimeout = ((...args: Parameters<typeof setTimeout>) => {
+    const timer = originalSetTimeout(...args);
+    if (args[1] === timeoutMs && !routeTimer) {
+      routeTimer = timer;
+    }
+    return timer;
+  }) as typeof setTimeout;
+  globalThis.clearTimeout = ((...args: Parameters<typeof clearTimeout>) => {
+    if (args[0] === routeTimer) {
+      routeTimerCleared = true;
+    }
+    return originalClearTimeout(...args);
+  }) as typeof clearTimeout;
+
+  try {
+  const handler = createDataHealthHandler({
+    ...dataHealthDependencies,
+    getScheduleHealth: async () => {
+      throw new Error("schedule database unavailable");
+    },
+    getNflverseHealth: async () => ({
+      status: "current",
+      detail: "Historical data is ready.",
+      lastUpdated: now.toISOString(),
+      requestsToday: 0,
+      requestsThisMonth: 0,
+      remainingQuota: "Test fixture",
+      metadata: {
+        seasonsLoaded: 2,
+        gamesLoaded: 10,
+        teamGameRows: 20,
+        playerGameRows: 30,
+        snapCountRows: 40,
+        historicalDepthRows: 50,
+        failures: [],
+      },
+    }),
+    getUsageAnalyticsRetentionHealth: async () => ({
+      retentionDays: 30,
+      cleanupIntervalHours: 24,
+      nextCleanupAt: new Date(now.getTime() + 60 * 60 * 1000),
+      cleanupState: "on_time",
+      status: "healthy",
+      lastAttemptAt: now,
+      lastAttemptStatus: "success",
+      consecutiveFailures: 0,
+      firstFailureAt: null,
+      lastSuccessfulAt: now,
+      lastSuccessfulDeletedEvents: 0,
+      lastSuccessfulBatches: 0,
+      lastSuccessfulCutoff: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      latestError: null,
+      latestErrorAt: null,
+      alert: null,
+      workerOwned: true,
+    }),
+  }) as unknown as DataHealthHandler;
+
+    const responseError = new Error("response serialization failed");
+
+    await assert.rejects(
+      readDataHealth(handler),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        return true;
+      },
+    );
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+
+  assert.equal(databaseWorkCompleted, true);
+  assert.equal(routeTimerCleared, true);
+});
+
+test("data-health clears its deadline timer when response serialization fails after health checks", async () => {
+  const timeoutMs = 163;
+  let databaseWorkCompleted = false;
+  let routeTimer: ReturnType<typeof setTimeout> | undefined;
+  let routeTimerCleared = false;
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const scheduleHealth = dataHealthDependencies?.getScheduleHealth;
+  assert.ok(scheduleHealth);
+
+  globalThis.setTimeout = ((...args: Parameters<typeof setTimeout>) => {
+    const timer = originalSetTimeout(...args);
+    if (args[1] === timeoutMs && !routeTimer) {
+      routeTimer = timer;
+    }
+    return timer;
+  }) as typeof setTimeout;
+  globalThis.clearTimeout = ((...args: Parameters<typeof clearTimeout>) => {
+    if (args[0] === routeTimer) {
+      routeTimerCleared = true;
+    }
+    return originalClearTimeout(...args);
+  }) as typeof clearTimeout;
+
+  try {
+  const handler = createDataHealthHandler({
+    ...dataHealthDependencies,
+    getScheduleHealth: async () => {
+      throw new Error("schedule database unavailable");
+    },
+    getNflverseHealth: async () => ({
+      status: "current",
+      detail: "Historical data is ready.",
+      lastUpdated: now.toISOString(),
+      requestsToday: 0,
+      requestsThisMonth: 0,
+      remainingQuota: "Test fixture",
+      metadata: {
+        seasonsLoaded: 2,
+        gamesLoaded: 10,
+        teamGameRows: 20,
+        playerGameRows: 30,
+        snapCountRows: 40,
+        historicalDepthRows: 50,
+        failures: [],
+      },
+    }),
+    getUsageAnalyticsRetentionHealth: async () => ({
+      retentionDays: 30,
+      cleanupIntervalHours: 24,
+      nextCleanupAt: new Date(now.getTime() + 60 * 60 * 1000),
+      cleanupState: "on_time",
+      status: "healthy",
+      lastAttemptAt: now,
+      lastAttemptStatus: "success",
+      consecutiveFailures: 0,
+      firstFailureAt: null,
+      lastSuccessfulAt: now,
+      lastSuccessfulDeletedEvents: 0,
+      lastSuccessfulBatches: 0,
+      lastSuccessfulCutoff: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      latestError: null,
+      latestErrorAt: null,
+      alert: null,
+      workerOwned: true,
+    }),
+  }) as unknown as DataHealthHandler;
+
+    const responseError = new Error("response serialization failed");
+  const controller = new AbortController();
+  const queryToken = {};
+  let cancellationCount = 0;
+  let releaseCount = 0;
+  let releaseError: Error | undefined;
+
+  const fakeClient = {
+    _getActiveQuery: () => queryToken,
+    query(
+      _queryOrConfig: unknown,
+      _values: unknown[] | undefined,
+      _callback: (error: unknown, result?: unknown) => void,
+    ) {
+      return undefined;
+    },
+    cancel(_client: unknown, query: unknown) {
+      assert.equal(query, queryToken);
+      cancellationCount += 1;
+    },
+    release(error?: Error) {
+      releaseCount += 1;
+      releaseError = error;
+    },
+  };
+  const fakePool = {
+    connect: () =>
+      new Promise<typeof lateClient>((resolve) => {
+        resolveClient = resolve;
+      }),
+  };
+
+  const query = executeCancellableDatabaseQuery(
+    fakePool,
+    "select 1",
+    undefined,
+    controller.signal,
+  );
+  const timeout = setTimeout(() => controller.abort(), 25);
+
+  await assert.rejects(query, (error: unknown) => {
+    assert.ok(error instanceof Error);
+    assert.equal(error.name, "AbortError");
+    return true;
+  });
+  clearTimeout(timeout);
+
+  assert.equal(cancellationCount, 1);
+  assert.equal(releaseCount, 1);
+  assert.equal(releaseError?.name, "AbortError");
+});
+
+test("a timed-out PostgreSQL health query is cancelled, discarded, and followed by a usable connection", async () => {
+  const client = await pool.connect();
+  const cancellableClient = client as typeof client & {
+    cancel: (client: unknown, query: unknown) => void;
+  };
+  const originalRelease = cancellableClient.release.bind(cancellableClient);
+  const originalCancel = cancellableClient.cancel.bind(cancellableClient);
+  let releaseError: Error | undefined;
+  let cancellationCount = 0;
+
+  cancellableClient.release = (error?: Error) => {
+    releaseError = error;
+    originalRelease(error);
+  };
+  cancellableClient.cancel = (...args: Parameters<typeof cancellableClient.cancel>) => {
+    cancellationCount += 1;
+    return originalCancel(...args);
+  };
+
+  const controller = new AbortController();
+  const query = executeCancellableDatabaseQuery(
+    fakePool,
+    "select 1",
+    undefined,
+    controller.signal,
+  );
+  const timeout = setTimeout(() => controller.abort(), 25);
+
+  try {
+    await assert.rejects(query, (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.name, "AbortError");
+      return true;
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  assert.equal(
+    cancellationCount,
+    1,
+    "the live PostgreSQL client should receive a cancellation request",
+  );
+  assert.equal(
+    releaseError?.name,
+    "AbortError",
+    "the active client should be discarded instead of returned to the pool",
+  );
+
+  const result = await pool.query("SELECT 1 AS connection_check");
+  assert.deepEqual(result.rows, [{ connection_check: 1 }]);
+});
+
+test("repeatedly timed-out database health checks cancel and release every client exactly once", async () => {
+  const checkCount = 8;
+  let queriesStarted = 0;
+  let resolveQueriesStarted: (() => void) | undefined;
+  const allQueriesStarted = new Promise<void>((resolve) => {
+    resolveQueriesStarted = resolve;
+  });
+  const checks: Array<{
+    queryToken: object;
+    callback?: (error: unknown, result?: unknown) => void;
+    cancellationCount: number;
+    releaseCount: number;
+    releaseError?: Error;
+  }> = [];
+
+  const fakePool = {
+    connect: () =>
+      new Promise<typeof lateClient>((resolve) => {
+        resolveClient = resolve;
+      }),
+  };
+
+  const queries = Array.from({ length: checkCount }, () => {
+    const controller = new AbortController();
+    return {
+      controller,
+      query: executeCancellableDatabaseQuery(
+        fakePool,
+        { text: "select pg_sleep($1)" },
+        [60_000],
+        controller.signal,
+      ),
+    };
+  });
+
+  await allQueriesStarted;
+  for (const { controller } of queries) {
+    controller.abort();
+  }
+
+  const results = await Promise.allSettled(queries.map(({ query }) => query));
+  assert.equal(results.length, checkCount);
+  for (const result of results) {
+    assert.equal(result.status, "rejected");
+    if (result.status === "rejected") {
+      assert.ok(result.reason instanceof Error);
+      assert.equal(result.reason.name, "AbortError");
+    }
+  }
+
+  assert.equal(checks.length, checkCount);
+  for (const check of checks) {
+    assert.equal(check.cancellationCount, 1);
+    assert.equal(check.releaseCount, 1);
+    assert.equal(check.releaseError?.name, "AbortError");
+  }
+
+  // A database driver can report the cancelled query after the route has
+  // already returned its unavailable response. It must not release again or
+  // surface a second rejection.
+  for (const check of checks) {
+    check.callback?.(new Error("late database callback"));
+    check.callback?.(undefined, { rows: [] });
+  }
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  for (const check of checks) {
+    assert.equal(check.cancellationCount, 1);
+    assert.equal(check.releaseCount, 1);
+  }
+});
+*/
+
 test("timed-out database health waiters release a late client without dispatching a query", async () => {
   const controller = new AbortController();
   let queryCount = 0;
@@ -704,6 +1095,8 @@ test("protected data-health isolates a failed provider and keeps mixed provider 
       workerOwned: true,
     }),
   }) as unknown as DataHealthHandler;
+
+    const responseError = new Error("response serialization failed");
 
   const body = await readDataHealth(handler);
   const espn = providerByName(body, "espn");
