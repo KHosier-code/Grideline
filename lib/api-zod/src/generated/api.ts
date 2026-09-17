@@ -1701,3 +1701,23 @@ export const GetConsumerPlayerUsageResponse = zod.object({
 })
 
 
+/**
+ * Returns lightweight persisted schedule rows for the optional Usage Lab game-context selector.
+ * @summary List current-season games available as player-usage cutoffs
+ */
+export const ListConsumerPlayerUsageGamesResponse = zod.object({
+  "status": zod.enum(['available', 'absent']),
+  "season": zod.number().int(),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date().nullable(),
+  "matchup": zod.object({
+  "home": zod.string(),
+  "away": zod.string()
+})
+}))
+})
+
+

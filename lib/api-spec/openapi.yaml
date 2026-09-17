@@ -608,6 +608,19 @@ paths:
               schema: { $ref: "#/components/schemas/ConsumerPlayerUsage" }
         "400": { $ref: "#/components/responses/ConsumerInvalidRequest" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/player-usage-games:
+    get:
+      operationId: listConsumerPlayerUsageGames
+      tags: [nfl]
+      summary: List current-season games available as player-usage cutoffs
+      description: Returns lightweight persisted schedule rows for the optional Usage Lab game-context selector.
+      responses:
+        "200":
+          description: Player-usage game contexts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerPlayerUsageGames" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -798,6 +811,29 @@ components:
         games:
           type: array
           items: { $ref: "#/components/schemas/ConsumerGame" }
+    ConsumerPlayerUsageGame:
+      type: object
+      required: [gameId, season, week, kickoffTime, matchup]
+      properties:
+        gameId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        kickoffTime: { type: ["string", "null"], format: date-time }
+        matchup:
+          type: object
+          required: [home, away]
+          properties:
+            home: { type: string }
+            away: { type: string }
+    ConsumerPlayerUsageGames:
+      type: object
+      required: [status, season, games]
+      properties:
+        status: { type: string, enum: [available, absent] }
+        season: { type: integer }
+        games:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerPlayerUsageGame" }
     ConsumerDashboard:
       type: object
       required: [status, games, note]

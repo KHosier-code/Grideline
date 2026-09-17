@@ -34,6 +34,7 @@ import type {
   ConsumerInvalidRequestResponse,
   ConsumerPerformance,
   ConsumerPlayerUsage,
+  ConsumerPlayerUsageGames,
   ConsumerPropsAvailability,
   ConsumerTrends,
   DashboardSummary,
@@ -2560,6 +2561,84 @@ export function useGetConsumerPlayerUsage<TData = Awaited<ReturnType<typeof getC
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerPlayerUsageQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListConsumerPlayerUsageGamesUrl = () => {
+
+
+
+
+  return `/api/consumer/player-usage-games`
+}
+
+/**
+ * Returns lightweight persisted schedule rows for the optional Usage Lab game-context selector.
+ * @summary List current-season games available as player-usage cutoffs
+ */
+export const listConsumerPlayerUsageGames = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPlayerUsageGames> => {
+
+  return customFetch<ConsumerPlayerUsageGames>(getListConsumerPlayerUsageGamesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConsumerPlayerUsageGamesQueryKey = () => {
+    return [
+    `/api/consumer/player-usage-games`
+    ] as const;
+    }
+
+
+export const getListConsumerPlayerUsageGamesQueryOptions = <TData = Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConsumerPlayerUsageGamesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>> = ({ signal }) => listConsumerPlayerUsageGames({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConsumerPlayerUsageGamesQueryResult = NonNullable<Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>>
+export type ListConsumerPlayerUsageGamesQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary List current-season games available as player-usage cutoffs
+ */
+
+export function useListConsumerPlayerUsageGames<TData = Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConsumerPlayerUsageGamesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
   getGetConsumerPlayerUsageQueryKey,
+  getListConsumerPlayerUsageGamesQueryKey,
   useGetConsumerPlayerUsage,
+  useListConsumerPlayerUsageGames,
   type ConsumerUsageMetric,
   type ConsumerUsagePlayer,
   type GetConsumerPlayerUsageParams,
@@ -112,6 +114,12 @@ export default function ConsumerUsage() {
       staleTime: 60_000
     }
   });
+  const gamesQuery = useListConsumerPlayerUsageGames({
+    query: {
+      queryKey: getListConsumerPlayerUsageGamesQueryKey(),
+      staleTime: 300_000,
+    },
+  });
 
   const sortedPlayers = useMemo(
     () => sortUsagePlayers(query.data?.players ?? [], sortCol, sortDir),
@@ -143,10 +151,11 @@ export default function ConsumerUsage() {
     });
   }
 
-  function handleGameFilterBlur() {
+  function handleGameFilterChange(value: string) {
+    setGame(value);
     trackEvent('usage_filter_changed', {
       filter: 'game',
-      value: game.trim() ? 'specific_game' : 'all',
+      value: value ? 'specific_game' : 'all',
     });
   }
 
@@ -223,9 +232,39 @@ export default function ConsumerUsage() {
               <option value="season">Season to date</option>
             </select>
           </label>
-          <label className="flex flex-col gap-1.5 w-full sm:w-32">
-            <span className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground font-semibold">Game ID</span>
-            <input type="text" placeholder="Optional" className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow placeholder:text-muted-foreground/50" value={game} onChange={e => setGame(e.target.value)} onBlur={handleGameFilterBlur} />
+          <label className="flex flex-col gap-1.5 w-full sm:w-64">
+            <span className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground font-semibold">Game context</span>
+            <select
+              aria-describedby="usage-game-context-status"
+              className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow"
+              value={game}
+              disabled={gamesQuery.isLoading || gamesQuery.isError || !gamesQuery.data?.games.length}
+              onChange={event => handleGameFilterChange(event.target.value)}
+            >
+              <option value="">
+                {gamesQuery.isLoading
+                  ? 'Loading schedule…'
+                  : gamesQuery.isError
+                    ? 'Schedule unavailable'
+                    : gamesQuery.data?.games.length
+                      ? 'Current season (default)'
+                      : `No ${gamesQuery.data?.season ?? 'current-season'} games`}
+              </option>
+              {gamesQuery.data?.games.map((context) => (
+                <option key={context.gameId} value={context.gameId}>
+                  {context.season} · Week {context.week} · {context.matchup.away} at {context.matchup.home}
+                </option>
+              ))}
+            </select>
+            <span id="usage-game-context-status" className="text-[10px] leading-tight text-muted-foreground">
+              {gamesQuery.isLoading
+                ? 'Loading valid game contexts.'
+                : gamesQuery.isError
+                  ? 'Game context is unavailable; current-season usage still works.'
+                  : gamesQuery.data?.games.length
+                    ? 'Optional cutoff for games played before the selected matchup.'
+                    : `No game contexts are available for ${gamesQuery.data?.season ?? 'the current season'}.`}
+            </span>
           </label>
           <button
             className="h-9 px-4 bg-secondary text-secondary-foreground hover:bg-secondary/80 text-sm rounded-md transition-colors font-medium inline-flex items-center justify-center gap-2 border border-border w-full sm:w-auto"

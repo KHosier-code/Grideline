@@ -1343,6 +1343,45 @@ router.get("/consumer/props", (_req, res): void => {
   res.json({ status: "unavailable", message: "Player information temporarily unavailable", available: false });
 });
 
+router.get("/consumer/player-usage-games", async (req, res): Promise<void> => {
+  const season = usageSeasonAtCutoff(new Date());
+  try {
+    const games = await db.select({
+      gameId: gamesTable.gameId,
+      season: gamesTable.season,
+      week: gamesTable.week,
+      kickoffTime: gamesTable.kickoffTime,
+      homeTeamId: gamesTable.homeTeamId,
+      awayTeamId: gamesTable.awayTeamId,
+    }).from(gamesTable)
+      .where(eq(gamesTable.season, season))
+      .orderBy(desc(gamesTable.week), desc(gamesTable.kickoffTime), asc(gamesTable.gameId));
+    const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
+    const teams = teamIds.length
+      ? await db.select({
+          teamId: teamsTable.teamId,
+          abbreviation: teamsTable.abbreviation,
+        }).from(teamsTable).where(inArray(teamsTable.teamId, teamIds))
+      : [];
+    const abbreviationById = new Map(teams.map((team) => [team.teamId, team.abbreviation]));
+    const contexts = games.flatMap((game) => {
+      const home = abbreviationById.get(game.homeTeamId);
+      const away = abbreviationById.get(game.awayTeamId);
+      return home && away ? [{
+        gameId: game.gameId,
+        season: game.season,
+        week: game.week,
+        kickoffTime: game.kickoffTime?.toISOString() ?? null,
+        matchup: { home, away },
+      }] : [];
+    });
+    res.json({ status: contexts.length ? "available" : "absent", season, games: contexts });
+  } catch (error) {
+    req.log.error({ error }, "Consumer player usage games read failed");
+    res.status(503).json({ error: "Schedule data is being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
 router.get("/consumer/player-usage", async (req, res): Promise<void> => {
   const team = typeof req.query.team === "string" ? req.query.team : undefined;
   const position = typeof req.query.position === "string" ? req.query.position.toUpperCase() : undefined;

@@ -297,6 +297,34 @@ export interface ConsumerGames {
   games: ConsumerGame[];
 }
 
+export type ConsumerPlayerUsageGameMatchup = {
+  home: string;
+  away: string;
+};
+
+export interface ConsumerPlayerUsageGame {
+  gameId: string;
+  season: number;
+  week: number;
+  /** @nullable */
+  kickoffTime: string | null;
+  matchup: ConsumerPlayerUsageGameMatchup;
+}
+
+export type ConsumerPlayerUsageGamesStatus = typeof ConsumerPlayerUsageGamesStatus[keyof typeof ConsumerPlayerUsageGamesStatus];
+
+
+export const ConsumerPlayerUsageGamesStatus = {
+  available: 'available',
+  absent: 'absent',
+} as const;
+
+export interface ConsumerPlayerUsageGames {
+  status: ConsumerPlayerUsageGamesStatus;
+  season: number;
+  games: ConsumerPlayerUsageGame[];
+}
+
 export type ConsumerDashboardStatus = typeof ConsumerDashboardStatus[keyof typeof ConsumerDashboardStatus];
 
 
