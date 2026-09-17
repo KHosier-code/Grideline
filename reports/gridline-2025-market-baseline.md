@@ -24,6 +24,15 @@ The source supplies home/away moneyline prices, spread prices, totals prices,
 week, date, teams, scores, and neutral-site status. It does not identify the
 sportsbook or observation timestamp. Those values remain unavailable.
 
+Before any audit rerun loads models or writes results, an automated qualification
+check requires the recorded `games.csv` schema, exactly 285 events across weeks
+1–22 of the 2025 season, and the reviewed `DATASETS.md` Games and `README.md`
+documentation fingerprints. Any column, coverage, line-designation, timing,
+sportsbook, licensing, or provenance documentation change stops the rerun with
+a review-required diagnostic. Passing this check preserves the
+**source-designated recorded** classification; it never upgrades these values to
+verified closing evidence.
+
 ## Coverage and matching
 
 - Source events: **285**

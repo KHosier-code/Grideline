@@ -8,6 +8,9 @@ import {
   matchHistoricalMarketGame,
   parseNflDataMarketCsv,
   pricingAvailability,
+  qualify2025MarketSource,
+  qualify2025MarketSourceAgainstContract,
+  sourceFingerprint,
   settlementReturn,
   settleSpread,
   settleTotal,
@@ -18,6 +21,27 @@ const csv = `game_id,season,week,gameday,gametime,away_team,home_team,location,a
 2025_01_MIA_IND,2025,1,2025-09-07,17:00,MIA,IND,Home,105,-125,2.5,-110,-110,44.5,-110,-110
 `;
 
+const qualifiedHeader = "game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,home_score,location,away_moneyline,home_moneyline,spread_line,away_spread_odds,home_spread_odds,total_line,under_odds,over_odds";
+
+function qualificationFixture() {
+  const rows = Array.from({ length: 285 }, (_, index) => {
+    const week = index < 22 ? index + 1 : 22;
+    return `game-${index},2025,REG,${week},2025-09-07,13:00,AWY,10,HME,20,Home,-110,-110,3,-110,-110,44,-110,-110`;
+  });
+  const gamesDocumentation = `prefix\n## Games\nstable contract\n\n<a name="colors"/>\nsuffix`;
+  const provenanceDocumentation = "stable provenance";
+  return { csv: `${qualifiedHeader}\n${rows.join("\n")}`, datasetsDocumentation: gamesDocumentation, provenanceDocumentation };
+}
+
+function fixtureContract(fixture: ReturnType<typeof qualificationFixture>) {
+  return {
+    expected2025Events: 285,
+    expected2025Weeks: Array.from({ length: 22 }, (_, index) => index + 1),
+    gamesDocumentationSha256: sourceFingerprint("## Games\nstable contract\n"),
+    provenanceDocumentationSha256: sourceFingerprint("stable provenance\n"),
+  };
+}
+
 test("preserves recorded designation and unavailable provenance", () => {
   const rows = parseNflDataMarketCsv(csv);
   assert.equal(rows.length, 6);
@@ -26,6 +50,51 @@ test("preserves recorded designation and unavailable provenance", () => {
   assert.equal(rows[0].sportsbook, null);
   assert.equal(rows[0].observedAt, null);
   assert.equal(rows[0].price, 105);
+});
+
+test("source qualification validates schema and 2025 coverage without upgrading recorded evidence", () => {
+  const fixture = qualificationFixture();
+  const result = qualify2025MarketSourceAgainstContract(fixture, fixtureContract(fixture));
+  assert.equal(result.eventCount, 285);
+  assert.deepEqual(result.weeks, Array.from({ length: 22 }, (_, index) => index + 1));
+  assert.equal(result.designation, "source_designated_recorded");
+  assert.equal(result.sportsbook, null);
+  assert.equal(result.observationTimestamp, null);
+  assert.throws(
+    () => qualify2025MarketSourceAgainstContract(
+      { ...fixture, csv: fixture.csv.replace("away_moneyline,", "") },
+      fixtureContract(fixture),
+    ),
+    /review required.*missing required columns: away_moneyline/,
+  );
+  assert.throws(
+    () => qualify2025MarketSourceAgainstContract(
+      { ...fixture, csv: fixture.csv.split("\n").slice(0, -1).join("\n") },
+      fixtureContract(fixture),
+    ),
+    /2025 coverage is 284 events/,
+  );
+});
+
+test("source qualification fails closed on documentation changes affecting market claims", () => {
+  const fixture = qualificationFixture();
+  const contract = fixtureContract(fixture);
+  assert.throws(
+    () => qualify2025MarketSourceAgainstContract(
+      { ...fixture, datasetsDocumentation: fixture.datasetsDocumentation.replace("stable contract", "calls lines closing") },
+      contract,
+    ),
+    /review required.*line designation, timing, or source-field semantics/,
+  );
+  assert.throws(
+    () => qualify2025MarketSourceAgainstContract(
+      { ...fixture, provenanceDocumentation: "changed licensing terms" },
+      contract,
+    ),
+    /README\.md provenance or licensing context changed/,
+  );
+  assert.throws(() => qualify2025MarketSource(fixture), /review required/);
+  assert.equal(parseNflDataMarketCsv(csv)[0].sourceDesignation, "source_designated_recorded");
 });
 
 test("matching rejects aliases and neutral-site games rather than forcing orientation", () => {

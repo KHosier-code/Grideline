@@ -21,6 +21,7 @@ import {
   matchHistoricalMarketGame,
   parseNflDataMarketCsv,
   pricingAvailability,
+  qualify2025MarketSource,
   settleSpread,
   settleTotal,
   sourceFingerprint,
@@ -47,6 +48,8 @@ import { assertModelFittingAllowed } from "./model-runtime-policy";
 import { PREGAME_FEATURE_VERSION } from "./features";
 
 const SOURCE_RAW_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv";
+const SOURCE_DATASETS_DOCUMENTATION_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/DATASETS.md";
+const SOURCE_PROVENANCE_DOCUMENTATION_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/README.md";
 const MATCH_CONTRACT_VERSION = 4;
 const MINIMUM_RECORDED_LINE_EDGE = 1;
 const PHASE6_REFERENCE = {
@@ -98,9 +101,17 @@ function artifactChecksum(value: unknown) {
 }
 
 export async function fetch2025MarketSource() {
-  const response = await fetch(SOURCE_RAW_URL);
-  if (!response.ok) throw new Error(`Historical market source request failed with HTTP ${response.status}`);
-  return response.text();
+  const requests = await Promise.all([
+    fetch(SOURCE_RAW_URL),
+    fetch(SOURCE_DATASETS_DOCUMENTATION_URL),
+    fetch(SOURCE_PROVENANCE_DOCUMENTATION_URL),
+  ]);
+  const labels = ["games.csv", "DATASETS.md", "README.md"];
+  for (const [index, response] of requests.entries()) {
+    if (!response.ok) throw new Error(`Historical market source ${labels[index]} request failed with HTTP ${response.status}`);
+  }
+  const [csv, datasetsDocumentation, provenanceDocumentation] = await Promise.all(requests.map((response) => response.text()));
+  return { csv, datasetsDocumentation, provenanceDocumentation };
 }
 
 type BaselineBuild = Awaited<ReturnType<typeof build2025MarketBaseline>>;
@@ -529,7 +540,10 @@ export function report2025MarketBaseline(build: BaselineBuild) {
 }
 
 export async function run2025MarketBaseline(csv?: string) {
-  const build = await build2025MarketBaseline(csv ?? await fetch2025MarketSource());
+  const source = await fetch2025MarketSource();
+  if (csv !== undefined) source.csv = csv;
+  qualify2025MarketSource(source);
+  const build = await build2025MarketBaseline(source.csv);
   const persistence = await persist2025MarketBaseline(build);
   return { ...persistence, report: report2025MarketBaseline(build) };
 }

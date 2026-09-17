@@ -4,6 +4,17 @@ export const MARKET_BASELINE_SOURCE = "nflverse/nfldata";
 export const MARKET_BASELINE_SOURCE_URL = "https://github.com/nflverse/nfldata";
 export const MARKET_BASELINE_SOURCE_FILES = ["games.csv"] as const;
 export const MARKET_BASELINE_SEASON = 2025;
+export const MARKET_BASELINE_EXPECTED_2025_EVENTS = 285;
+export const MARKET_BASELINE_EXPECTED_2025_WEEKS = Array.from({ length: 22 }, (_, index) => index + 1);
+export const MARKET_BASELINE_GAMES_DOCUMENTATION_SHA256 = "5aacebf50250ac29a1de79d71fa7e258e621da8d16f1692b38d926775ad4939c";
+export const MARKET_BASELINE_PROVENANCE_DOCUMENTATION_SHA256 = "42035b4ee0e548389ef91509bc672a861b43c6226a7317507d41536816c9f88a";
+
+export const MARKET_BASELINE_REQUIRED_COLUMNS = [
+  "game_id", "season", "game_type", "week", "gameday", "gametime",
+  "away_team", "away_score", "home_team", "home_score", "location",
+  "away_moneyline", "home_moneyline", "spread_line", "away_spread_odds",
+  "home_spread_odds", "total_line", "under_odds", "over_odds",
+] as const;
 
 export type MarketSourceDesignation = "source_designated_recorded";
 export type MarketFamily = "spread" | "moneyline" | "totals";
@@ -154,6 +165,95 @@ function csvRows(input: string): string[][] {
   row.push(field);
   if (row.some((item) => item.length > 0)) rows.push(row);
   return rows;
+}
+
+function normalizedDocumentation(input: string): string {
+  return `${input.replace(/\r\n/g, "\n").trim()}\n`;
+}
+
+function gamesDocumentationSection(input: string): string | null {
+  const normalized = input.replace(/\r\n/g, "\n");
+  return normalized.match(/## Games\n[\s\S]*?(?=\n<a name="colors"\/?>)/)?.[0] ?? null;
+}
+
+function reviewRequired(reasons: string[]): never {
+  throw new Error(`Market source contract changed; review required before audit rerun: ${reasons.join("; ")}`);
+}
+
+/**
+ * Qualify the live source before an audit is allowed to load models or write
+ * append-only results. Documentation hashes intentionally fail on any edit:
+ * changes must be reviewed to ensure recorded lines are not relabeled as
+ * closing evidence and that timestamp, sportsbook, and provenance claims still
+ * match the source.
+ */
+type MarketSourceQualificationInput = {
+  csv: string;
+  datasetsDocumentation: string;
+  provenanceDocumentation: string;
+};
+
+type MarketSourceContract = {
+  expected2025Events: number;
+  expected2025Weeks: number[];
+  gamesDocumentationSha256: string;
+  provenanceDocumentationSha256: string;
+};
+
+export function qualify2025MarketSourceAgainstContract(
+  input: MarketSourceQualificationInput,
+  contract: MarketSourceContract,
+) {
+  const reasons: string[] = [];
+  const rows = csvRows(input.csv);
+  const header = rows.shift()?.map((item) => item.trim().toLowerCase()) ?? [];
+  const missingColumns = MARKET_BASELINE_REQUIRED_COLUMNS.filter((name) => !header.includes(name));
+  if (missingColumns.length) reasons.push(`games.csv is missing required columns: ${missingColumns.join(", ")}`);
+
+  const seasonIndex = header.indexOf("season");
+  const weekIndex = header.indexOf("week");
+  const seasonRows = seasonIndex < 0 ? [] : rows.filter((row) => parseNumber(row[seasonIndex] ?? "") === MARKET_BASELINE_SEASON);
+  const weeks = weekIndex < 0
+    ? []
+    : [...new Set(seasonRows.map((row) => parseNumber(row[weekIndex] ?? "")).filter((week): week is number => week !== null))].sort((a, b) => a - b);
+  if (seasonRows.length !== contract.expected2025Events) {
+    reasons.push(`2025 coverage is ${seasonRows.length} events; expected ${contract.expected2025Events}`);
+  }
+  if (weeks.join(",") !== contract.expected2025Weeks.join(",")) {
+    reasons.push(`2025 week coverage is [${weeks.join(",")}]; expected [${contract.expected2025Weeks.join(",")}]`);
+  }
+
+  const gamesSection = gamesDocumentationSection(input.datasetsDocumentation);
+  const gamesDocumentationFingerprint = gamesSection ? sourceFingerprint(normalizedDocumentation(gamesSection)) : null;
+  if (gamesDocumentationFingerprint !== contract.gamesDocumentationSha256) {
+    reasons.push("DATASETS.md Games documentation changed (line designation, timing, or source-field semantics require review)");
+  }
+  const provenanceDocumentationFingerprint = sourceFingerprint(normalizedDocumentation(input.provenanceDocumentation));
+  if (provenanceDocumentationFingerprint !== contract.provenanceDocumentationSha256) {
+    reasons.push("README.md provenance or licensing context changed and requires review");
+  }
+  if (reasons.length) reviewRequired(reasons);
+
+  return {
+    season: MARKET_BASELINE_SEASON,
+    eventCount: seasonRows.length,
+    weeks,
+    requiredColumns: [...MARKET_BASELINE_REQUIRED_COLUMNS],
+    gamesDocumentationFingerprint,
+    provenanceDocumentationFingerprint,
+    designation: "source_designated_recorded" as const,
+    sportsbook: null,
+    observationTimestamp: null,
+  };
+}
+
+export function qualify2025MarketSource(input: MarketSourceQualificationInput) {
+  return qualify2025MarketSourceAgainstContract(input, {
+    expected2025Events: MARKET_BASELINE_EXPECTED_2025_EVENTS,
+    expected2025Weeks: MARKET_BASELINE_EXPECTED_2025_WEEKS,
+    gamesDocumentationSha256: MARKET_BASELINE_GAMES_DOCUMENTATION_SHA256,
+    provenanceDocumentationSha256: MARKET_BASELINE_PROVENANCE_DOCUMENTATION_SHA256,
+  });
 }
 
 /**
