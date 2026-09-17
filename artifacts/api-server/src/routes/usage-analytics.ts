@@ -28,6 +28,29 @@ const allowedValues = {
   filterGame: new Set(["all", "specific_game"]),
 };
 
+function allowedKeysForEvent(eventName: unknown): readonly string[] | null {
+  switch (eventName) {
+    case "usage_filter_changed":
+      return ["eventName", "filter", "value"];
+    case "usage_sort_changed":
+      return ["eventName", "column", "direction"];
+    case "usage_row_toggled":
+      return ["eventName", "action", "position", "trend", "coverage", "window"];
+    case "usage_filters_reset":
+      return ["eventName", "hadTeam", "hadPosition", "hadGame", "window"];
+    default:
+      return null;
+  }
+}
+
+function hasOnlyAllowedEventKeys(input: unknown): boolean {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+  const rawEvent = input as Record<string, unknown>;
+  const allowedKeys = allowedKeysForEvent(rawEvent.eventName);
+  return allowedKeys !== null
+    && Object.keys(rawEvent).every((key) => allowedKeys.includes(key));
+}
+
 export function eventIsCoherent(event: UsageAnalyticsEventInput): boolean {
   if (event.eventName === "usage_filter_changed") {
     if (!event.filter || !allowedValues.filter.has(event.filter) || !event.value) return false;
@@ -59,8 +82,86 @@ export function eventIsCoherent(event: UsageAnalyticsEventInput): boolean {
 }
 
 export function parseUsageAnalyticsEvent(input: unknown): UsageAnalyticsEventInput | null {
+  if (!hasOnlyAllowedEventKeys(input)) return null;
   const parsed = CaptureUsageAnalyticsEventBody.safeParse(input);
   return parsed.success && eventIsCoherent(parsed.data) ? parsed.data : null;
+}
+
+type UsageAnalyticsDatabase = typeof db;
+
+export async function getUsageAnalyticsSummary(
+  database: UsageAnalyticsDatabase = db,
+  periodEnd = new Date(),
+) {
+  const periodStart = new Date(periodEnd.getTime() - PERIOD_DAYS * 24 * 60 * 60 * 1000);
+  const inPeriod = gte(usageAnalyticsEventsTable.createdAt, periodStart);
+  const expansions = and(
+    inPeriod,
+    eq(usageAnalyticsEventsTable.eventName, "usage_row_toggled"),
+    eq(usageAnalyticsEventsTable.action, "expand"),
+  );
+
+  const groupCounts = async (
+    column: AnyPgColumn,
+  ) => database.select({ label: column, count: count() })
+    .from(usageAnalyticsEventsTable)
+    .where(and(expansions, sql`${column} is not null`))
+    .groupBy(column)
+    .orderBy(desc(count()));
+
+  const [
+    totals,
+    filterChanges,
+    sortChoices,
+    expansionsByPosition,
+    expansionsByTrend,
+    expansionsByCoverage,
+    expansionsByWindow,
+    resets,
+  ] = await Promise.all([
+    database.select({ count: count() }).from(usageAnalyticsEventsTable).where(inPeriod),
+    database.select({
+      label: usageAnalyticsEventsTable.filter,
+      choice: usageAnalyticsEventsTable.value,
+      count: count(),
+    }).from(usageAnalyticsEventsTable)
+      .where(and(inPeriod, eq(usageAnalyticsEventsTable.eventName, "usage_filter_changed")))
+      .groupBy(usageAnalyticsEventsTable.filter, usageAnalyticsEventsTable.value)
+      .orderBy(desc(count())),
+    database.select({
+      label: usageAnalyticsEventsTable.column,
+      choice: usageAnalyticsEventsTable.direction,
+      count: count(),
+    }).from(usageAnalyticsEventsTable)
+      .where(and(inPeriod, eq(usageAnalyticsEventsTable.eventName, "usage_sort_changed")))
+      .groupBy(usageAnalyticsEventsTable.column, usageAnalyticsEventsTable.direction)
+      .orderBy(desc(count())),
+    groupCounts(usageAnalyticsEventsTable.position),
+    groupCounts(usageAnalyticsEventsTable.trend),
+    groupCounts(usageAnalyticsEventsTable.coverage),
+    groupCounts(usageAnalyticsEventsTable.window),
+    database.select({ count: count() }).from(usageAnalyticsEventsTable)
+      .where(and(inPeriod, eq(usageAnalyticsEventsTable.eventName, "usage_filters_reset"))),
+  ]);
+
+  const counts = (rows: Array<{ label: string | null; count: number }>) =>
+    rows.filter((row): row is { label: string; count: number } => row.label !== null);
+  const choices = (rows: Array<{ label: string | null; choice: string | null; count: number }>) =>
+    rows.filter((row): row is { label: string; choice: string; count: number } => row.label !== null && row.choice !== null);
+
+  return GetUsageAnalyticsSummaryResponse.parse({
+    periodStart,
+    periodEnd,
+    periodDays: PERIOD_DAYS,
+    totalEvents: totals[0]?.count ?? 0,
+    filterChanges: choices(filterChanges),
+    sortChoices: choices(sortChoices),
+    expansionsByPosition: counts(expansionsByPosition),
+    expansionsByTrend: counts(expansionsByTrend),
+    expansionsByCoverage: counts(expansionsByCoverage),
+    expansionsByWindow: counts(expansionsByWindow),
+    resets: resets[0]?.count ?? 0,
+  });
 }
 
 router.post("/analytics/usage-event", async (req, res): Promise<void> => {
@@ -93,76 +194,7 @@ router.post("/analytics/usage-event", async (req, res): Promise<void> => {
 });
 
 router.get("/admin/usage-analytics", requireAdmin, async (_req, res): Promise<void> => {
-  const periodEnd = new Date();
-  const periodStart = new Date(periodEnd.getTime() - PERIOD_DAYS * 24 * 60 * 60 * 1000);
-  const inPeriod = gte(usageAnalyticsEventsTable.createdAt, periodStart);
-  const expansions = and(
-    inPeriod,
-    eq(usageAnalyticsEventsTable.eventName, "usage_row_toggled"),
-    eq(usageAnalyticsEventsTable.action, "expand"),
-  );
-
-  const groupCounts = async (
-    column: AnyPgColumn,
-  ) => db.select({ label: column, count: count() })
-    .from(usageAnalyticsEventsTable)
-    .where(and(expansions, sql`${column} is not null`))
-    .groupBy(column)
-    .orderBy(desc(count()));
-
-  const [
-    totals,
-    filterChanges,
-    sortChoices,
-    expansionsByPosition,
-    expansionsByTrend,
-    expansionsByCoverage,
-    expansionsByWindow,
-    resets,
-  ] = await Promise.all([
-    db.select({ count: count() }).from(usageAnalyticsEventsTable).where(inPeriod),
-    db.select({
-      label: usageAnalyticsEventsTable.filter,
-      choice: usageAnalyticsEventsTable.value,
-      count: count(),
-    }).from(usageAnalyticsEventsTable)
-      .where(and(inPeriod, eq(usageAnalyticsEventsTable.eventName, "usage_filter_changed")))
-      .groupBy(usageAnalyticsEventsTable.filter, usageAnalyticsEventsTable.value)
-      .orderBy(desc(count())),
-    db.select({
-      label: usageAnalyticsEventsTable.column,
-      choice: usageAnalyticsEventsTable.direction,
-      count: count(),
-    }).from(usageAnalyticsEventsTable)
-      .where(and(inPeriod, eq(usageAnalyticsEventsTable.eventName, "usage_sort_changed")))
-      .groupBy(usageAnalyticsEventsTable.column, usageAnalyticsEventsTable.direction)
-      .orderBy(desc(count())),
-    groupCounts(usageAnalyticsEventsTable.position),
-    groupCounts(usageAnalyticsEventsTable.trend),
-    groupCounts(usageAnalyticsEventsTable.coverage),
-    groupCounts(usageAnalyticsEventsTable.window),
-    db.select({ count: count() }).from(usageAnalyticsEventsTable)
-      .where(and(inPeriod, eq(usageAnalyticsEventsTable.eventName, "usage_filters_reset"))),
-  ]);
-
-  const counts = (rows: Array<{ label: string | null; count: number }>) =>
-    rows.filter((row): row is { label: string; count: number } => row.label !== null);
-  const choices = (rows: Array<{ label: string | null; choice: string | null; count: number }>) =>
-    rows.filter((row): row is { label: string; choice: string; count: number } => row.label !== null && row.choice !== null);
-
-  res.json(GetUsageAnalyticsSummaryResponse.parse({
-    periodStart,
-    periodEnd,
-    periodDays: PERIOD_DAYS,
-    totalEvents: totals[0]?.count ?? 0,
-    filterChanges: choices(filterChanges),
-    sortChoices: choices(sortChoices),
-    expansionsByPosition: counts(expansionsByPosition),
-    expansionsByTrend: counts(expansionsByTrend),
-    expansionsByCoverage: counts(expansionsByCoverage),
-    expansionsByWindow: counts(expansionsByWindow),
-    resets: resets[0]?.count ?? 0,
-  }));
+  res.json(await getUsageAnalyticsSummary());
 });
 
 export default router;
