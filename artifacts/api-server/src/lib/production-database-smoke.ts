@@ -29,6 +29,7 @@ export type ProductionDatabaseEvidence = {
 const IMMUTABLE_SNAPSHOT_MESSAGE = "official prediction snapshots are immutable";
 const IMMUTABLE_GRADE_MESSAGE = "prediction grades are immutable";
 
+const IMMUTABLE_TRAINING_RUN_MESSAGE = "checksum-backed model training runs are fully immutable";
 async function expectRejectedMutation(
   client: QueryableClient,
   savepoint: string,
@@ -49,9 +50,10 @@ async function expectRejectedMutation(
 }
 
 /**
- * Proves the managed production database rejects canonical snapshot and grade
- * mutations. Probe rows and all attempted changes are rolled back, so this is
- * startup verification rather than startup schema management.
+ * Proves the managed production database rejects mutations to canonical
+ * predictions and the highest-risk immutable model/evidence records. Probe
+ * rows and all attempted changes are rolled back, so this is startup
+ * verification rather than startup schema management.
  */
 export async function verifyImmutablePredictionGuards(
   pool: Pick<QueryablePool, "connect">,
@@ -113,6 +115,156 @@ export async function verifyImmutablePredictionGuards(
       "DELETE FROM prediction_grades WHERE id = $1",
       [gradeId],
       IMMUTABLE_GRADE_MESSAGE,
+    );
+
+    const modelVersion = `${probeKey}:model`;
+    const trainingRun = await client.query(
+      `INSERT INTO model_training_runs
+         (model_version, family, algorithm, feature_version, training_seasons,
+          test_season, sample_policy, sample_size, vector_feature_names,
+          vector_schema_fingerprint, model_artifact)
+       VALUES ($1, 'spread', 'production-guard-probe', 'production-guard-probe',
+               '[]'::jsonb, 2025, 'production-guard-probe', 0, '[]'::jsonb,
+               'production-guard-probe',
+               '{"metadata":{"artifactChecksum":"production-guard-probe"}}'::jsonb)
+       RETURNING id`,
+      [modelVersion],
+    );
+    const trainingRunId = (trainingRun.rows[0] as { id?: unknown } | undefined)?.id;
+    if (typeof trainingRunId !== "number") {
+      throw new Error("Immutable model guard probe training run was not inserted");
+    }
+    await expectRejectedMutation(
+      client,
+      "training_run_update_guard",
+      "UPDATE model_training_runs SET notes = $1 WHERE id = $2",
+      ["mutation-must-fail", trainingRunId],
+      IMMUTABLE_TRAINING_RUN_MESSAGE,
+    );
+    await expectRejectedMutation(
+      client,
+      "training_run_delete_guard",
+      "DELETE FROM model_training_runs WHERE id = $1",
+      [trainingRunId],
+      "artifact-backed model training runs are immutable",
+    );
+
+    const evaluation = await client.query(
+      `INSERT INTO model_evaluation_predictions
+         (model_version, family, algorithm, feature_version, test_season, week,
+          game_id, kickoff_time, prediction_cutoff, training_seasons,
+          training_cutoff, game_stage, home_feature_source_cutoff,
+          away_feature_source_cutoff, low_sample, predicted_value, actual_value,
+          actual_home_score, actual_away_score, actual_margin, actual_total,
+          actual_home_win)
+       VALUES ($1, 'spread', 'production-guard-probe', 'production-guard-probe',
+               2025, 1, $2, '2025-09-02T00:00:00Z', '2025-09-01T23:00:00Z',
+               '[]'::jsonb, 'production-guard-probe', 'regular',
+               '2025-09-01T22:00:00Z', '2025-09-01T22:00:00Z', false,
+               0, 0, 0, 0, 0, 0, 0)
+       RETURNING id`,
+      [modelVersion, `${probeKey}:evaluation-game`],
+    );
+    const evaluationId = (evaluation.rows[0] as { id?: unknown } | undefined)?.id;
+    if (typeof evaluationId !== "number") {
+      throw new Error("Immutable model guard probe evaluation was not inserted");
+    }
+    await expectRejectedMutation(
+      client,
+      "evaluation_update_guard",
+      "UPDATE model_evaluation_predictions SET predicted_value = 1 WHERE id = $1",
+      [evaluationId],
+      IMMUTABLE_EVALUATION_MESSAGE,
+    );
+    await expectRejectedMutation(
+      client,
+      "evaluation_delete_guard",
+      "DELETE FROM model_evaluation_predictions WHERE id = $1",
+      [evaluationId],
+      IMMUTABLE_EVALUATION_MESSAGE,
+    );
+
+    const baselineRunId = `${probeKey}:market`;
+    const baselineRun = await client.query(
+      `INSERT INTO market_baseline_runs
+         (run_id, season, source, source_url, status)
+       VALUES ($1, 2025, 'production-guard-probe', 'production-guard-probe', 'probe')
+       RETURNING id`,
+      [baselineRunId],
+    );
+    const baselineRunRowId = (baselineRun.rows[0] as { id?: unknown } | undefined)?.id;
+    if (typeof baselineRunRowId !== "number") {
+      throw new Error("Immutable model guard probe market run was not inserted");
+    }
+    const baselineEvent = await client.query(
+      `INSERT INTO market_baseline_events
+         (run_id, source_game_id, alt_game_id, outcome, reason)
+       VALUES ($1, $2, 'production-guard-probe', 'probe', 'production-guard-probe')
+       RETURNING id`,
+      [baselineRunId, `${probeKey}:market-game`],
+    );
+    const baselineEventId = (baselineEvent.rows[0] as { id?: unknown } | undefined)?.id;
+    if (typeof baselineEventId !== "number") {
+      throw new Error("Immutable model guard probe market event was not inserted");
+    }
+    const baselineQuote = await client.query(
+      `INSERT INTO market_baseline_quotes
+         (run_id, source_game_id, alt_game_id, source_file, family, side,
+          source_designation)
+       VALUES ($1, $2, 'production-guard-probe', 'production-guard-probe',
+               'spread', 'home', 'source_designated_recorded')
+       RETURNING id`,
+      [baselineRunId, `${probeKey}:market-quote`],
+    );
+    const baselineQuoteId = (baselineQuote.rows[0] as { id?: unknown } | undefined)?.id;
+    if (typeof baselineQuoteId !== "number") {
+      throw new Error("Immutable model guard probe market quote was not inserted");
+    }
+    for (const [name, table, id] of [
+      ["market_run", "market_baseline_runs", baselineRunRowId],
+      ["market_event", "market_baseline_events", baselineEventId],
+      ["market_quote", "market_baseline_quotes", baselineQuoteId],
+    ] as const) {
+      await expectRejectedMutation(
+        client,
+        `${name}_update_guard`,
+        `UPDATE ${table} SET created_at = created_at WHERE id = $1`,
+        [id],
+        IMMUTABLE_MARKET_BASELINE_MESSAGE,
+      );
+      await expectRejectedMutation(
+        client,
+        `${name}_delete_guard`,
+        `DELETE FROM ${table} WHERE id = $1`,
+        [id],
+        IMMUTABLE_MARKET_BASELINE_MESSAGE,
+      );
+    }
+
+    const weather = await client.query(
+      `INSERT INTO weather_forecast_snapshots
+         (game_id, source, fetched_at, valid_time, indoor_outdoor)
+       VALUES ($1, 'production-guard-probe', now(), now(), 'outdoor')
+       RETURNING id`,
+      [`${probeKey}:weather`],
+    );
+    const weatherId = (weather.rows[0] as { id?: unknown } | undefined)?.id;
+    if (typeof weatherId !== "number") {
+      throw new Error("Immutable model guard probe weather snapshot was not inserted");
+    }
+    await expectRejectedMutation(
+      client,
+      "weather_update_guard",
+      "UPDATE weather_forecast_snapshots SET source = $1 WHERE id = $2",
+      ["mutation-must-fail", weatherId],
+      IMMUTABLE_WEATHER_MESSAGE,
+    );
+    await expectRejectedMutation(
+      client,
+      "weather_delete_guard",
+      "DELETE FROM weather_forecast_snapshots WHERE id = $1",
+      [weatherId],
+      IMMUTABLE_WEATHER_MESSAGE,
     );
   } finally {
     try {
@@ -253,3 +405,9 @@ export async function verifyProductionDatabase(
     if (pool) await (pool as typeof import("@workspace/db").pool).end();
   }
 }
+
+const IMMUTABLE_EVALUATION_MESSAGE = "model evaluation prediction evidence is immutable";
+
+const IMMUTABLE_MARKET_BASELINE_MESSAGE = "market baseline evidence is append-only";
+
+const IMMUTABLE_WEATHER_MESSAGE = "weather forecast snapshots are append-only";

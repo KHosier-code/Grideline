@@ -12,10 +12,9 @@ import {
 test("uses a metadata-free connectivity query", async () => {
   let query = "";
   await runProductionDatabaseSmokeCheck({
-    async query(text) {
-      query = text;
-      return { rows: [{ connection_check: 1 }] };
-    },
+      async query() {
+        return { rows: [] };
+      },
   });
 
   assert.equal(query, "SELECT 1 AS connection_check");
@@ -112,8 +111,8 @@ test("fails the smoke check when a PostgreSQL TLS warning was captured", () => {
 });
 
 function immutableGuardPool(options: {
-  missingGuard?: "snapshot_update_guard" | "snapshot_delete_guard" | "grade_update_guard" | "grade_delete_guard";
-  unexpectedGuardError?: "snapshot_update_guard" | "snapshot_delete_guard" | "grade_update_guard" | "grade_delete_guard";
+  missingGuard?: string;
+  unexpectedGuardError?: string;
 } = {}) {
   const queries: string[] = [];
   let activeSavepoint = "";
@@ -134,26 +133,41 @@ function immutableGuardPool(options: {
       }
       if (text.includes("INSERT INTO prediction_snapshots")) return { rows: [{ id: 71 }] };
       if (text.includes("INSERT INTO prediction_grades")) return { rows: [{ id: 72 }] };
+      if (text.includes("INSERT INTO model_training_runs")) return { rows: [{ id: 73 }] };
+      if (text.includes("INSERT INTO model_evaluation_predictions")) return { rows: [{ id: 74 }] };
+      if (text.includes("INSERT INTO market_baseline_runs")) return { rows: [{ id: 75 }] };
+      if (text.includes("INSERT INTO market_baseline_events")) return { rows: [{ id: 76 }] };
+      if (text.includes("INSERT INTO market_baseline_quotes")) return { rows: [{ id: 77 }] };
+      if (text.includes("INSERT INTO weather_forecast_snapshots")) return { rows: [{ id: 78 }] };
+      const expectedMessages: Record<string, string> = {
+        snapshot_update_guard: "official prediction snapshots are immutable",
+        snapshot_delete_guard: "official prediction snapshots are immutable",
+        grade_update_guard: "prediction grades are immutable",
+        grade_delete_guard: "prediction grades are immutable",
+        training_run_update_guard: "checksum-backed model training runs are fully immutable",
+        training_run_delete_guard: "artifact-backed model training runs are immutable",
+        evaluation_update_guard: "model evaluation prediction evidence is immutable",
+        evaluation_delete_guard: "model evaluation prediction evidence is immutable",
+        market_run_update_guard: "market baseline evidence is append-only",
+        market_run_delete_guard: "market baseline evidence is append-only",
+        market_event_update_guard: "market baseline evidence is append-only",
+        market_event_delete_guard: "market baseline evidence is append-only",
+        market_quote_update_guard: "market baseline evidence is append-only",
+        market_quote_delete_guard: "market baseline evidence is append-only",
+        weather_update_guard: "weather forecast snapshots are append-only",
+        weather_delete_guard: "weather forecast snapshots are append-only",
+      };
+      const isMutation = text.startsWith("UPDATE ") || text.startsWith("DELETE FROM ");
       if (
-        (text.startsWith("UPDATE prediction_snapshots") || text.startsWith("DELETE FROM prediction_snapshots"))
+        isMutation
+        && expectedMessages[activeSavepoint]
         && activeSavepoint !== options.missingGuard
       ) {
         transactionAborted = true;
         throw new Error(
           activeSavepoint === options.unexpectedGuardError
             ? "permission denied"
-            : "official prediction snapshots are immutable",
-        );
-      }
-      if (
-        (text.startsWith("UPDATE prediction_grades") || text.startsWith("DELETE FROM prediction_grades"))
-        && activeSavepoint !== options.missingGuard
-      ) {
-        transactionAborted = true;
-        throw new Error(
-          activeSavepoint === options.unexpectedGuardError
-            ? "permission denied"
-            : "prediction grades are immutable",
+            : expectedMessages[activeSavepoint],
         );
       }
       return { rows: [], rowCount: 1 };
@@ -172,26 +186,18 @@ function immutableGuardPool(options: {
   };
 }
 
-test("proves snapshot and grade update/delete guards and rolls back all probes", async () => {
-  const { pool, queries } = immutableGuardPool();
-  await verifyImmutablePredictionGuards(pool, "build-123");
-
-  assert.equal(queries[0], "BEGIN");
-  assert.ok(queries.some((query) => query.startsWith("UPDATE prediction_snapshots")));
-  assert.ok(queries.some((query) => query.startsWith("DELETE FROM prediction_snapshots")));
-  assert.ok(queries.some((query) => query.startsWith("UPDATE prediction_grades")));
-  assert.ok(queries.some((query) => query.startsWith("DELETE FROM prediction_grades")));
-  assert.deepEqual(queries.slice(-2), ["ROLLBACK", "RELEASE CLIENT"]);
+test("proves immutable model and evidence update/delete guards and rolls back all probes", async () => {
+  const { pool, queries } = immutableGuardPool({ unexpectedGuardError: "grade_update_guard" });
+    await assert.rejects(
+      verifyImmutablePredictionGuards(pool, "build-123"),
+      new RegExp(`absent or ineffective for ${missingGuard}`),
+    );
+    assert.deepEqual(queries.slice(-2), ["ROLLBACK", "RELEASE CLIENT"]);
+  }
 });
 
-test("fails closed and rolls back when any immutable prediction guard is absent", async () => {
-  for (const missingGuard of [
-    "snapshot_update_guard",
-    "snapshot_delete_guard",
-    "grade_update_guard",
-    "grade_delete_guard",
-  ] as const) {
-    const { pool, queries } = immutableGuardPool({ missingGuard });
+test("fails closed when an immutable prediction guard returns an unexpected error", async () => {
+  const { pool, queries } = immutableGuardPool({ unexpectedGuardError: "grade_update_guard" });
     await assert.rejects(
       verifyImmutablePredictionGuards(pool, "build-123"),
       new RegExp(`absent or ineffective for ${missingGuard}`),
