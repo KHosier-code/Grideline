@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import test, { after, before } from "node:test";
-import {
-  db,
-  pool,
-  usageAnalyticsRetentionTable,
-} from "@workspace/db";
+import { db, pool, usageAnalyticsRetentionTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import dashboardRouter, { createDataHealthHandler } from "./dashboard";
 import { PREGAME_FEATURE_DEFINITION } from "../lib/features";
@@ -22,10 +18,9 @@ let retentionTestLock: RetentionTestLock | null = null;
 
 before(async () => {
   retentionTestLock = await pool.connect();
-  await retentionTestLock.query(
-    "SELECT pg_advisory_lock(hashtext($1))",
-    [RETENTION_TEST_LOCK],
-  );
+  await retentionTestLock.query("SELECT pg_advisory_lock(hashtext($1))", [
+    RETENTION_TEST_LOCK,
+  ]);
 });
 
 type RouteLayer = {
@@ -40,8 +35,9 @@ type DataHealthHandler = (
   res: { json: (body: unknown) => unknown },
 ) => Promise<void>;
 
-const dataHealthRoute = (dashboardRouter as unknown as { stack: RouteLayer[] }).stack
-  .find((layer) => layer.route?.path === "/data-health")?.route;
+const dataHealthRoute = (
+  dashboardRouter as unknown as { stack: RouteLayer[] }
+).stack.find((layer) => layer.route?.path === "/data-health")?.route;
 
 assert.ok(dataHealthRoute, "the data-health route should be registered");
 assert.equal(
@@ -50,12 +46,16 @@ assert.equal(
   "the data-health route must remain protected by requireAdmin",
 );
 
-const protectedDataHealthHandler = dataHealthRoute.stack.at(-1)?.handle as DataHealthHandler | undefined;
-assert.ok(protectedDataHealthHandler, "the data-health route should have a response handler");
+const protectedDataHealthHandler = dataHealthRoute.stack.at(-1)?.handle as
+  DataHealthHandler | undefined;
+assert.ok(
+  protectedDataHealthHandler,
+  "the data-health route should have a response handler",
+);
 
 const now = new Date();
 
-const dataHealthOverrides = {
+const dataHealthDependencies = {
   getEspnHealth: () => ({
     lastSuccessfulRequest: null,
     requestsToday: 0,
@@ -69,7 +69,7 @@ const dataHealthOverrides = {
     runs: [],
   }),
   getNflverseHealth: async () => ({
-    status: "stale" as const,
+    status: "stale",
     detail: "Historical sync has not completed.",
     lastUpdated: null,
     requestsToday: 0,
@@ -116,7 +116,7 @@ const dataHealthOverrides = {
     cadenceHours: 24,
   }),
   getSleeperIdentityHealth: async () => ({
-    status: "unavailable" as const,
+    status: "unavailable",
     mappingVersion: null,
     latestAttemptMappingVersion: null,
     mappingRunId: null,
@@ -131,7 +131,7 @@ const dataHealthOverrides = {
   }),
   getRecentScheduledRuns: async () => [],
   getOddsApiHealth: async () => ({
-    status: "not_configured" as const,
+    status: "not_configured",
     detail: "Test fixture",
     lastUpdated: null,
     requestsToday: 0,
@@ -162,7 +162,7 @@ const dataHealthOverrides = {
     latestGeneratedAt: null,
   }),
   getModelArtifactImmutabilityStatus: async () => ({
-    status: "application_only" as const,
+    status: "application_only",
     mechanism: "application_append_only",
     applicationUpdateDeleteBlocked: true,
     productionFittingBlocked: true,
@@ -178,8 +178,11 @@ const dataHealthOverrides = {
     userAgentConfigured: false,
     lastRun: null,
   }),
-};
-const dataHealthHandler = createDataHealthHandler(dataHealthOverrides) as unknown as DataHealthHandler;
+} as Parameters<typeof createDataHealthHandler>[0];
+
+const dataHealthHandler = createDataHealthHandler(
+  dataHealthDependencies,
+) as unknown as DataHealthHandler;
 
 type RetentionRow = typeof usageAnalyticsRetentionTable.$inferSelect;
 
@@ -199,47 +202,68 @@ async function replaceRetentionRow(row: RetentionRow | null): Promise<void> {
   }
 }
 
-async function readDataHealth(handler = dataHealthHandler): Promise<unknown[]> {
+async function readDataHealth(
+  handler: DataHealthHandler = dataHealthHandler,
+): Promise<unknown[]> {
   let responseBody: unknown;
-  await handler({}, {
-    json(body) {
-      responseBody = body;
-      return body;
+  await handler(
+    {},
+    {
+      json(body) {
+        responseBody = body;
+        return body;
+      },
     },
-  });
-  assert.ok(responseBody, "the data-health route should return a response body");
-  assert.ok(Array.isArray(responseBody), "the data-health response should be a provider list");
-  return responseBody;
-}
-
-function usageRetentionProvider(body: unknown[]) {
-  const provider = body.find(
-    (item): item is Record<string, any> =>
-      typeof item === "object"
-      && item !== null
-      && (item as Record<string, unknown>).provider === "usage-analytics-retention",
   );
-  assert.ok(provider, "the data-health response should include Usage Lab retention");
-  return provider;
+  assert.ok(
+    responseBody,
+    "the data-health route should return a response body",
+  );
+  assert.ok(
+    Array.isArray(responseBody),
+    "the data-health response should be a provider list",
+  );
+  return responseBody;
 }
 
 function providerByName(body: unknown[], name: string) {
   const provider = body.find(
     (item): item is Record<string, any> =>
-      typeof item === "object"
-      && item !== null
-      && (item as Record<string, unknown>).provider === name,
+      typeof item === "object" &&
+      item !== null &&
+      (item as Record<string, unknown>).provider === name,
   );
   assert.ok(provider, `the data-health response should include ${name}`);
   return provider;
 }
 
-const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+test("protected data-health returns a bounded unavailable result when a provider hangs", async () => {
+  const handler = createDataHealthHandler(
+    {
+      ...dataHealthDependencies,
+      getOddsApiHealth: async () => new Promise<never>(() => {}),
+    },
+    { timeoutMs: 25 },
+  ) as unknown as DataHealthHandler;
+  const startedAt = Date.now();
+  const body = await readDataHealth(handler);
+  const elapsedMs = Date.now() - startedAt;
+  const odds = body.find(
+    (item): item is Record<string, any> =>
+      typeof item === "object" &&
+      item !== null &&
+      (item as Record<string, unknown>).provider === "odds-api",
+  );
+
+  assert.ok(elapsedMs < 500, `the bounded health check took ${elapsedMs}ms`);
+  assert.ok(odds, "the data-health response should include Odds API");
+  assert.equal(odds.status, "unavailable");
+  assert.match(odds.detail, /did not complete within the admin route budget/);
+});
 
 test("protected data-health isolates a failed provider and keeps mixed provider states visible", async () => {
   const handler = createDataHealthHandler({
-    ...dataHealthOverrides,
+    ...dataHealthDependencies,
     getScheduleHealth: async () => {
       throw new Error("schedule database unavailable");
     },
@@ -287,13 +311,31 @@ test("protected data-health isolates a failed provider and keeps mixed provider 
   const odds = providerByName(body, "odds-api");
   const retention = usageRetentionProvider(body);
 
-  assert.equal(espn.status, "unavailable", "a throwing schedule health check should become unavailable");
+  assert.equal(espn.status, "unavailable");
   assert.equal(espn.metadata.healthCheck, "failed");
-  assert.equal(nflverse.status, "current", "healthy providers should retain their normal status");
-  assert.equal(odds.status, "not_configured", "a successful unavailable provider should remain distinguishable");
-  assert.equal(retention.status, "current", "Usage Lab retention should remain visible and healthy");
+  assert.equal(nflverse.status, "current");
+  assert.equal(odds.status, "not_configured");
+  assert.equal(retention.status, "current");
   assert.equal(retention.metadata.workerOwned, true);
 });
+
+function usageRetentionProvider(body: unknown[]) {
+  const provider = body.find(
+    (item): item is Record<string, any> =>
+      typeof item === "object" &&
+      item !== null &&
+      (item as Record<string, unknown>).provider ===
+        "usage-analytics-retention",
+  );
+  assert.ok(
+    provider,
+    "the data-health response should include Usage Lab retention",
+  );
+  return provider;
+}
+
+const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
 
 test("protected data-health reports persisted Usage Lab cleanup states without mutating retention state", async () => {
   const originalRow = await readRetentionRow();
@@ -331,14 +373,17 @@ test("protected data-health reports persisted Usage Lab cleanup states without m
         lastSuccessfulAt: hourAgo,
         lastSuccessfulDeletedEvents: 0,
         lastSuccessfulBatches: 0,
-        lastSuccessfulCutoff: new Date(hourAgo.getTime() - 30 * 24 * 60 * 60 * 1000),
+        lastSuccessfulCutoff: new Date(
+          hourAgo.getTime() - 30 * 24 * 60 * 60 * 1000,
+        ),
         latestError: null,
         latestErrorAt: null,
       },
       expected: {
         status: "current",
         cleanupState: "on_time",
-        detail: "The latest Usage Lab retention cleanup completed successfully; no expired rows were found.",
+        detail:
+          "The latest Usage Lab retention cleanup completed successfully; no expired rows were found.",
         persistedStatus: "success",
         metadataStatus: "healthy",
       },
@@ -354,7 +399,9 @@ test("protected data-health reports persisted Usage Lab cleanup states without m
         lastSuccessfulAt: twoDaysAgo,
         lastSuccessfulDeletedEvents: 2,
         lastSuccessfulBatches: 1,
-        lastSuccessfulCutoff: new Date(twoDaysAgo.getTime() - 30 * 24 * 60 * 60 * 1000),
+        lastSuccessfulCutoff: new Date(
+          twoDaysAgo.getTime() - 30 * 24 * 60 * 60 * 1000,
+        ),
         latestError: null,
         latestErrorAt: null,
       },
@@ -384,7 +431,8 @@ test("protected data-health reports persisted Usage Lab cleanup states without m
       expected: {
         status: "unavailable",
         cleanupState: "on_time",
-        detail: "The latest Usage Lab retention cleanup failed: database temporarily unavailable.",
+        detail:
+          "The latest Usage Lab retention cleanup failed: database temporarily unavailable.",
         persistedStatus: "failed",
         metadataStatus: "failed",
       },
@@ -398,15 +446,45 @@ test("protected data-health reports persisted Usage Lab cleanup states without m
       const provider = usageRetentionProvider(await readDataHealth());
       const after = await readRetentionRow();
 
-      assert.deepEqual(after, before, `${testCase.name} must not mutate persisted retention state`);
+      assert.deepEqual(
+        after,
+        before,
+        `${testCase.name} must not mutate persisted retention state`,
+      );
       assert.equal(provider.status, testCase.expected.status, testCase.name);
-      assert.equal(provider.metadata.cleanupState, testCase.expected.cleanupState, testCase.name);
-      assert.equal(provider.metadata.lastAttemptStatus, testCase.expected.persistedStatus, testCase.name);
-      assert.equal(provider.metadata.status, testCase.expected.metadataStatus, testCase.name);
-      assert.match(provider.detail, new RegExp(testCase.expected.detail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), testCase.name);
+      assert.equal(
+        provider.metadata.cleanupState,
+        testCase.expected.cleanupState,
+        testCase.name,
+      );
+      assert.equal(
+        provider.metadata.lastAttemptStatus,
+        testCase.expected.persistedStatus,
+        testCase.name,
+      );
+      assert.equal(
+        provider.metadata.status,
+        testCase.expected.metadataStatus,
+        testCase.name,
+      );
+      assert.match(
+        provider.detail,
+        new RegExp(
+          testCase.expected.detail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        ),
+        testCase.name,
+      );
       assert.equal(provider.metadata.workerOwned, true, testCase.name);
-      assert.equal(provider.schedule, "Every 24 hours; worker-owned", testCase.name);
-      assert.equal(provider.retryPolicy, "A failed cleanup is recorded and retried on the next daily tick.", testCase.name);
+      assert.equal(
+        provider.schedule,
+        "Every 24 hours; worker-owned",
+        testCase.name,
+      );
+      assert.equal(
+        provider.retryPolicy,
+        "A failed cleanup is recorded and retried on the next daily tick.",
+        testCase.name,
+      );
     }
   } finally {
     await replaceRetentionRow(originalRow);
@@ -416,10 +494,9 @@ test("protected data-health reports persisted Usage Lab cleanup states without m
 after(async () => {
   if (retentionTestLock) {
     try {
-      await retentionTestLock.query(
-        "SELECT pg_advisory_unlock(hashtext($1))",
-        [RETENTION_TEST_LOCK],
-      );
+      await retentionTestLock.query("SELECT pg_advisory_unlock(hashtext($1))", [
+        RETENTION_TEST_LOCK,
+      ]);
     } finally {
       retentionTestLock.release();
       retentionTestLock = null;
