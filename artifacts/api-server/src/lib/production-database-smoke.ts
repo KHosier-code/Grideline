@@ -18,6 +18,12 @@ export type ProductionDatabaseEvidence = {
   checkedAt: Date;
   selectOneResult: 1;
   verifyFullPassed: true;
+  connectivityPassed: true;
+  tlsPassed: true;
+  snapshotUpdateGuardPassed: true;
+  snapshotDeleteGuardPassed: true;
+  gradeUpdateGuardPassed: true;
+  gradeDeleteGuardPassed: true;
 };
 
 const IMMUTABLE_SNAPSHOT_MESSAGE = "official prediction snapshots are immutable";
@@ -156,11 +162,16 @@ export async function recordReleaseSecurityEvidence(
 ): Promise<ProductionDatabaseEvidence> {
   const result = await pool.query(
     `INSERT INTO release_security_evidence
-       (build_id, select_one_result, verify_full_passed)
-     VALUES ($1, $2, true)
+       (build_id, select_one_result, verify_full_passed, connectivity_passed,
+        tls_passed, snapshot_update_guard_passed, snapshot_delete_guard_passed,
+        grade_update_guard_passed, grade_delete_guard_passed)
+     VALUES ($1, $2, true, true, true, true, true, true, true)
      ON CONFLICT (build_id) DO UPDATE
        SET build_id = EXCLUDED.build_id
-     RETURNING build_id, checked_at, select_one_result, verify_full_passed`,
+     RETURNING build_id, checked_at, select_one_result, verify_full_passed,
+       connectivity_passed, tls_passed, snapshot_update_guard_passed,
+       snapshot_delete_guard_passed, grade_update_guard_passed,
+       grade_delete_guard_passed`,
     [buildId, selectOneResult],
   );
   const row = result.rows[0] as
@@ -169,6 +180,12 @@ export async function recordReleaseSecurityEvidence(
         checked_at: Date;
         select_one_result: 1;
         verify_full_passed: true;
+        connectivity_passed: true;
+        tls_passed: true;
+        snapshot_update_guard_passed: true;
+        snapshot_delete_guard_passed: true;
+        grade_update_guard_passed: true;
+        grade_delete_guard_passed: true;
       }
     | undefined;
   if (!row) throw new Error("Release security evidence was not recorded");
@@ -177,7 +194,25 @@ export async function recordReleaseSecurityEvidence(
     checkedAt: row.checked_at,
     selectOneResult: row.select_one_result,
     verifyFullPassed: row.verify_full_passed,
+    connectivityPassed: row.connectivity_passed,
+    tlsPassed: row.tls_passed,
+    snapshotUpdateGuardPassed: row.snapshot_update_guard_passed,
+    snapshotDeleteGuardPassed: row.snapshot_delete_guard_passed,
+    gradeUpdateGuardPassed: row.grade_update_guard_passed,
+    gradeDeleteGuardPassed: row.grade_delete_guard_passed,
   };
+}
+
+export async function verifyProductionDatabaseWithPool(
+  pool: QueryablePool,
+  buildId: string,
+  tlsWarnings: readonly string[],
+): Promise<ProductionDatabaseEvidence> {
+  const selectOneResult = await runProductionDatabaseSmokeCheck(pool);
+  await verifyImmutablePredictionGuards(pool, buildId);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assertNoPostgresTlsCompatibilityWarnings(tlsWarnings);
+  return recordReleaseSecurityEvidence(pool, buildId, selectOneResult);
 }
 
 export async function verifyProductionDatabase(
@@ -211,11 +246,7 @@ export async function verifyProductionDatabase(
   try {
     const database = await import("@workspace/db");
     pool = database.pool;
-    const selectOneResult = await runProductionDatabaseSmokeCheck(pool);
-    await verifyImmutablePredictionGuards(pool, buildId);
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    assertNoPostgresTlsCompatibilityWarnings(tlsWarnings);
-    return await recordReleaseSecurityEvidence(pool, buildId, selectOneResult);
+    return await verifyProductionDatabaseWithPool(pool, buildId, tlsWarnings);
   } finally {
     process.off("warning", onWarning);
     console.warn = originalWarn;

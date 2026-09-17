@@ -5,6 +5,7 @@ import {
   isPostgresTlsCompatibilityWarning,
   recordReleaseSecurityEvidence,
   runProductionDatabaseSmokeCheck,
+  verifyProductionDatabaseWithPool,
   verifyImmutablePredictionGuards,
 } from "./production-database-smoke";
 
@@ -47,6 +48,12 @@ test("records only credential-free release security evidence", async () => {
             checked_at: checkedAt,
             select_one_result: 1,
             verify_full_passed: true,
+            connectivity_passed: true,
+            tls_passed: true,
+            snapshot_update_guard_passed: true,
+            snapshot_delete_guard_passed: true,
+            grade_update_guard_passed: true,
+            grade_delete_guard_passed: true,
           }],
         };
       },
@@ -57,17 +64,30 @@ test("records only credential-free release security evidence", async () => {
 
   assert.deepEqual(values, ["abc123-2026-09-15T12:00:00.000Z", 1]);
   assert.doesNotMatch(query, /database_url|hostname|username|password|credential/i);
+  assert.doesNotMatch(query, /snapshot_label|feature_version|training_cutoff|actual_home_score|actual_away_score|error/i);
   assert.deepEqual(evidence, {
     buildId: "abc123-2026-09-15T12:00:00.000Z",
     checkedAt,
     selectOneResult: 1,
     verifyFullPassed: true,
+    connectivityPassed: true,
+    tlsPassed: true,
+    snapshotUpdateGuardPassed: true,
+    snapshotDeleteGuardPassed: true,
+    gradeUpdateGuardPassed: true,
+    gradeDeleteGuardPassed: true,
   });
   assert.deepEqual(Object.keys(evidence), [
     "buildId",
     "checkedAt",
     "selectOneResult",
     "verifyFullPassed",
+    "connectivityPassed",
+    "tlsPassed",
+    "snapshotUpdateGuardPassed",
+    "snapshotDeleteGuardPassed",
+    "gradeUpdateGuardPassed",
+    "gradeDeleteGuardPassed",
   ]);
 });
 
@@ -187,4 +207,22 @@ test("fails closed when an immutable prediction guard returns an unexpected erro
     /unexpected error for grade_update_guard/,
   );
   assert.deepEqual(queries.slice(-2), ["ROLLBACK", "RELEASE CLIENT"]);
+});
+
+test("writes no release evidence unless every required guard passes", async () => {
+  const { pool: guardPool } = immutableGuardPool({ missingGuard: "grade_delete_guard" });
+  let evidenceWrites = 0;
+  const pool = {
+    ...guardPool,
+    async query(text: string) {
+      if (text.includes("INSERT INTO release_security_evidence")) evidenceWrites += 1;
+      return { rows: [{ connection_check: 1 }] };
+    },
+  };
+
+  await assert.rejects(
+    verifyProductionDatabaseWithPool(pool, "build-123", []),
+    /absent or ineffective for grade_delete_guard/,
+  );
+  assert.equal(evidenceWrites, 0);
 });

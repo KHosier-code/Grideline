@@ -37,11 +37,15 @@ replace a pending or warning result with an assumption.
   do not use a development preview as the production URL.
 - [ ] Confirm `release_security_evidence` contains one row for the published
   build before the API and worker start. The row records the build identifier,
-  check timestamp, `SELECT 1` result, and verify-full policy outcome only. A
+   check timestamp, `SELECT 1` result, verify-full policy outcome, and pass-only
+   results for connectivity, TLS, canonical snapshot update/delete, and grade
+   update/delete. Review that every per-guard `*_passed` column is `true`;
+   `NULL` means the historical build predates per-guard evidence and is not a
+   pass. A
   missing/disabled production TLS mode, PostgreSQL TLS compatibility warning,
   connectivity error, or evidence-write failure blocks startup and creates no
-  success row. Evidence never contains a database URL, hostname, username, or
-  credentials.
+   success row. Evidence never contains a database URL, hostname, username,
+   credentials, synthetic probe values, or raw errors.
 - [ ] Confirm the production URL, HTTPS, health endpoint, API routing, static
   assets, and an authenticated read-only page load.
 - [ ] Confirm the UI displays data-health and model/prediction safety states;
@@ -86,7 +90,10 @@ replace a pending or warning result with an assumption.
   and leaves the API and worker unavailable.
 - [ ] Confirm the successful published build has a
   `release_security_evidence` row only after all four immutable mutation probes
-  pass. The evidence row contains no probe data or database metadata.
+   pass. Review `snapshot_update_guard_passed`,
+   `snapshot_delete_guard_passed`, `grade_update_guard_passed`, and
+   `grade_delete_guard_passed` individually; each must be `true`. The evidence
+   row contains no probe data, raw errors, or database metadata.
 - [ ] Do not point the development migration runner at production. Production
   schema changes are owned by Replit Publish and its review/backup flow; never
   use a deploy-time schema push or startup migration against production.
