@@ -21,7 +21,7 @@ const markets: Array<{ value: Market; label: string }> = [
   { value: 'moneyline', label: 'Moneyline' },
 ];
 const books: BookFilter[] = ['All', 'DraftKings', 'FanDuel'];
-const colors = ['#ef7d32', '#2d9d87', '#397fb3', '#9a62ad', '#d2a72c', '#637083'];
+const colors = ['#ef7d32', '#172033', '#637083', '#9aa3b2', '#b85e28', '#424d61'];
 
 function price(value: number) {
   return value > 0 ? `+${value}` : String(value);

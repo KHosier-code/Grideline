@@ -61,13 +61,13 @@ export function ConsumerKeyPlayers({ players, away, home }: { players: ConsumerK
         <div className="pkp-team" data-testid="pkp-away">
           <h3>{away.name}</h3>
           <div className="pkp-cards">
-            {awayPlayers.length > 0 ? awayPlayers.map((p, index) => <PlayerUsageCard key={p.playerId} player={p} testId={`player-usage-away-${index}`} />) : <p className="pkp-empty text-muted-foreground text-sm">Recent usage is unavailable for this team.</p>}
+            {awayPlayers.length > 0 ? awayPlayers.map((p, index) => <PlayerUsageCard key={`away-${p.playerId}-${index}`} player={p} testId={`player-usage-away-${index}`} />) : <p className="pkp-empty text-muted-foreground text-sm">Recent usage is unavailable for this team.</p>}
           </div>
         </div>
         <div className="pkp-team" data-testid="pkp-home">
           <h3>{home.name}</h3>
           <div className="pkp-cards">
-            {homePlayers.length > 0 ? homePlayers.map((p, index) => <PlayerUsageCard key={p.playerId} player={p} testId={`player-usage-home-${index}`} />) : <p className="pkp-empty text-muted-foreground text-sm">Recent usage is unavailable for this team.</p>}
+            {homePlayers.length > 0 ? homePlayers.map((p, index) => <PlayerUsageCard key={`home-${p.playerId}-${index}`} player={p} testId={`player-usage-home-${index}`} />) : <p className="pkp-empty text-muted-foreground text-sm">Recent usage is unavailable for this team.</p>}
           </div>
         </div>
       </div>

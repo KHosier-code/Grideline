@@ -28,17 +28,31 @@ createRoot(document.getElementById('root')!, {
       options: {
         logoPlacement: 'inside',
         logoLinkUrl: import.meta.env.BASE_URL,
-        logoImageUrl: `${window.location.origin}${import.meta.env.BASE_URL}logo.svg`,
+        logoImageUrl: `${window.location.origin}${import.meta.env.BASE_URL}logo-icon.png`,
       },
       variables: {
-        colorPrimary: '#f47d30',
-        colorForeground: '#172033',
-        colorMutedForeground: '#667085',
-        colorBackground: '#ffffff',
-        colorInput: '#ffffff',
-        colorInputForeground: '#172033',
-        colorNeutral: '#d8dde7',
-        borderRadius: '0.75rem',
+        colorPrimary: 'hsl(26, 90%, 55%)',
+        colorForeground: 'hsl(224, 45%, 10%)',
+        colorMutedForeground: 'hsl(215, 15%, 45%)',
+        colorBackground: 'hsl(0, 0%, 100%)',
+        colorInput: 'hsl(0, 0%, 100%)',
+        colorInputForeground: 'hsl(224, 45%, 10%)',
+        colorNeutral: 'hsl(215, 16%, 85%)',
+        borderRadius: '0.5rem',
+      },
+    }}
+    localization={{
+      signIn: {
+        start: {
+          title: 'Sign in to Gridline',
+          subtitle: 'Welcome back. Continue to NFL analytics.',
+        },
+      },
+      signUp: {
+        start: {
+          title: 'Create your Gridline account',
+          subtitle: 'Set up access to NFL analytics.',
+        },
       },
     }}
   >

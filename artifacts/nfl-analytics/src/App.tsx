@@ -349,8 +349,7 @@ function Shell({ children }: { children: ReactNode }) {
       <aside className={cx('sidebar', mobileOpen && 'sidebar-open')}>
         <div className="sidebar-top">
           <Link href="/admin" className="brand" data-testid="link-home">
-            <span className="brand-mark"><Target className="h-4 w-4" /></span>
-            <span><strong>Gridline</strong><small>NFL ANALYTICS</small></span>
+            <span className="brand-wordmark-frame"><img src={`${import.meta.env.BASE_URL}logo-wordmark.png`} alt="Gridline NFL Analytics" /></span>
           </Link>
           <button type="button" className="mobile-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation" data-testid="button-close-navigation"><X className="h-5 w-5" /></button>
         </div>
@@ -384,12 +383,12 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-shell">
         <div className="mobile-topbar">
           <button type="button" className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation" data-testid="button-open-navigation"><Menu className="h-5 w-5" /></button>
-          <Link href="/admin" className="brand brand-mobile" data-testid="link-mobile-home"><span className="brand-mark"><Target className="h-4 w-4" /></span><strong>Gridline</strong></Link>
+          <Link href="/admin" className="brand brand-mobile" data-testid="link-mobile-home"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-5 w-5" /><strong>Gridline</strong></Link>
           <span className="ml-auto"><StatusPill status={isHealthy ? 'current' : 'unavailable'}>{isHealthy ? 'Live' : 'Offline'}</StatusPill></span>
         </div>
         <div className="topbar">
           <div className="topbar-context"><span className="live-kicker"><span className="live-pulse" />CONTROL ROOM</span><span className="topbar-divider" />{new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div>
-          <div className="topbar-actions"><Link href="/" className="button button-subtle">Consumer view</Link><button type="button" className="icon-button" aria-label="Notifications" data-testid="button-notifications"><Bell className="h-4 w-4" /><span className="notification-dot" /></button>{isSignedIn ? <UserButton /> : <Link href="/sign-in" className="button button-subtle" data-testid="link-sign-in">Sign in</Link>}<Link href="/admin/settings" className="avatar-link" aria-label="Open settings" data-testid="link-settings-quick"><span className="user-avatar user-avatar-small">A</span></Link></div>
+          <div className="topbar-actions"><Link href="/" className="button button-subtle">Consumer view</Link><button type="button" className="icon-button" aria-label="Notifications" data-testid="button-notifications"><Bell className="h-4 w-4" /><span className="notification-dot" /></button>{isSignedIn ? <UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} /> : <Link href="/sign-in" className="button button-subtle" data-testid="link-sign-in">Sign in</Link>}<Link href="/admin/settings" className="avatar-link" aria-label="Open settings" data-testid="link-settings-quick"><span className="user-avatar user-avatar-small">A</span></Link></div>
         </div>
         <div className="page-wrap">{children}</div>
       </main>
@@ -412,9 +411,9 @@ function ConsumerShell({ children }: { children: ReactNode }) {
   const admin = useAdminStatus();
   return <div className="consumer-shell">
     <header className="consumer-topbar">
-      <Link href="/" className="consumer-brand"><span className="brand-mark"><Target className="h-4 w-4" /></span><strong>Gridline</strong></Link>
+      <Link href="/" className="consumer-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-6 w-6" /><strong>Gridline</strong></Link>
       <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''}><Icon />{item.label}{item.href === '/props' && <small>Soon</small>}</Link>; })}{admin.data === true && <Link href="/admin"><ShieldCheck />Admin</Link>}</nav>
-      <div className="consumer-account"><UserButton /><button aria-label="Open navigation" onClick={() => setOpen(!open)}><Menu /></button></div>
+      <div className="consumer-account"><UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} /><button aria-label="Open navigation" onClick={() => setOpen(!open)}><Menu /></button></div>
     </header>
     {open && <nav className="consumer-mobile-nav" aria-label="Mobile navigation">{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</Link>}</nav>}
     <main className="consumer-main">{children}</main>
@@ -435,6 +434,17 @@ function ConsumerLoadingFallback() {
 function Dashboard() {
   const summary = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey(), staleTime: 30000 } });
   const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000, refetchInterval: 60000 } });
+  const scheduleParams = {
+    season: summary.data?.season ?? new Date().getFullYear(),
+    week: summary.data?.currentWeek ?? 1,
+  };
+  const upcoming = useListGames(scheduleParams, {
+    query: {
+      enabled: Boolean(summary.data?.currentWeek),
+      queryKey: getListGamesQueryKey(scheduleParams),
+      staleTime: 30000,
+    },
+  });
   if (summary.isLoading) return <><PageHeader eyebrow="Overview" title="The weekly read" detail="A clear view of the current market before you make a decision." /><div className="grid gap-4 md:grid-cols-3"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div><div className="mt-5"><LoadingPanel /></div></>;
   if (summary.isError || !summary.data) return <><PageHeader eyebrow="Overview" title="The weekly read" detail="A clear view of the current market before you make a decision." /><ErrorPanel /></>;
   const data = summary.data;
@@ -453,6 +463,9 @@ function Dashboard() {
         <MetricCard label="Average CLV" value={formatPercent(data.averageClv)} detail="Closing line value" icon={TrendingUp} />
         <MetricCard label="Model gate" value={data.modelStatus === 'not_trained' ? 'Locked' : 'Open'} detail="No fabricated probabilities" icon={ShieldCheck} />
       </div>
+      <Panel eyebrow="Schedule" title="Upcoming matchups" className="mt-5" action={<Link href="/admin/this-week" className="text-xs font-semibold text-accent hover:underline" data-testid="link-full-schedule">View full schedule</Link>}>
+        {upcoming.isLoading ? <div className="space-y-3"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : upcoming.isError ? <ErrorPanel message="The current week schedule is temporarily unavailable." /> : upcoming.data?.length ? <div className="game-list">{upcoming.data.slice(0, 4).map((game) => <GameRow key={game.gameId} game={game} />)}</div> : <EmptyPanel title="No upcoming matchups available" detail="The schedule will appear here when current-week games are available from the data service." icon={CalendarDays} />}
+      </Panel>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
         <Panel eyebrow="Signal queue" title="Top edges" action={<span className="section-meta">{topEdges.length} surfaced</span>}>
           {topEdges.length > 0 ? <div className="divide-y divide-border">{topEdges.map((edge, index) => <Link href={`/admin/games/${edge.gameId}`} key={edge.gameId} className="edge-row" data-testid={`link-edge-${edge.gameId}`}><div className="edge-index">0{index + 1}</div><div className="min-w-0 flex-1"><p className="font-semibold text-ink">{edge.label}</p><p className="mt-1 truncate text-xs text-muted-foreground">{edge.detail}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>)}</div> : <EmptyPanel title="No edges are being surfaced" detail="The model gate is closed. Once training completes, qualifying edges will appear here with a direct path to the game." icon={Target} />}
@@ -1853,7 +1866,8 @@ function EvaluationAudit() {
 
       {cumulative.isLoading ? <div className="mb-6"><LoadingPanel label="Calculating cumulative audit metrics" /></div> : cumulative.data?.rows?.length ? <AuditSummary rows={cumulative.data.rows} total={cumulative.data.total} /> : null}
 
-      <Panel className="overflow-hidden p-0" title="" eyebrow="">
+      <Panel className="overflow-x-auto p-0" title="" eyebrow="">
+        <div className="min-w-[840px]">
         <div className="audit-head hidden md:grid">
           <span>Game & Stage</span>
           <span>Model</span>
@@ -1919,6 +1933,7 @@ function EvaluationAudit() {
             </div>
           </div>
         )}
+        </div>
       </Panel>
     </>
   );
@@ -1932,7 +1947,35 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 const authBasePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 function AuthPageShell({ children }: { children: ReactNode }) {
-  return <div className="flex min-h-screen items-center justify-center bg-[#f4f1ea] p-4">{children}</div>;
+  return (
+    <div className="flex min-h-screen">
+      <div className="hidden lg:flex w-1/2 bg-sidebar relative overflow-hidden flex-col justify-between">
+        <div className="absolute inset-0 z-0 bg-sidebar">
+          <img src={`${import.meta.env.BASE_URL}control-room-hero.png`} alt="Gridline football analytics control room" className="h-full w-full object-cover opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-r from-sidebar/90 via-sidebar/50 to-transparent" />
+        </div>
+        <div className="relative z-10 p-12">
+          <Link href="/">
+            <span className="brand-wordmark-frame brand-wordmark-auth"><img src={`${import.meta.env.BASE_URL}logo-wordmark.png`} alt="Gridline NFL Analytics" /></span>
+          </Link>
+        </div>
+        <div className="relative z-10 p-12 mt-auto">
+          <h1 className="text-4xl md:text-5xl font-serif text-white tracking-tight leading-tight mb-4">Smarter<br/>football decisions.</h1>
+          <p className="text-sidebar-foreground text-lg max-w-md leading-relaxed">Advanced analytics, real-time signals, and model-driven insights for the modern NFL.</p>
+        </div>
+      </div>
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-background relative">
+        <div className="absolute top-6 left-6 lg:hidden">
+          <Link href="/">
+            <img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-8 w-8" />
+          </Link>
+        </div>
+        <div className="w-full max-w-[440px]">
+           {children}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function SignInPage() {
