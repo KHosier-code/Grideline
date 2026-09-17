@@ -309,6 +309,64 @@ test("completed database health work is not cancelled after the response finishe
   assert.equal(routeTimerCleared, true);
 });
 
+test("data-health clears its deadline timer when response validation fails after database work", async () => {
+  const timeoutMs = 149;
+  let databaseWorkCompleted = false;
+  let routeTimer: ReturnType<typeof setTimeout> | undefined;
+  let routeTimerCleared = false;
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const scheduleHealth = dataHealthDependencies?.getScheduleHealth;
+  assert.ok(scheduleHealth);
+
+  globalThis.setTimeout = ((...args: Parameters<typeof setTimeout>) => {
+    const timer = originalSetTimeout(...args);
+    if (args[1] === timeoutMs && !routeTimer) {
+      routeTimer = timer;
+    }
+    return timer;
+  }) as typeof setTimeout;
+  globalThis.clearTimeout = ((...args: Parameters<typeof clearTimeout>) => {
+    if (args[0] === routeTimer) {
+      routeTimerCleared = true;
+    }
+    return originalClearTimeout(...args);
+  }) as typeof clearTimeout;
+
+  try {
+    const handler = createDataHealthHandler(
+      {
+        ...dataHealthDependencies,
+        getEspnHealth: () => ({
+          lastSuccessfulRequest: null,
+          requestsToday: Number.NaN,
+          requestsThisMonth: 0,
+        }),
+        getScheduleHealth: async () => {
+          await db.execute(sql`SELECT 1`);
+          databaseWorkCompleted = true;
+          return scheduleHealth();
+        },
+      },
+      { timeoutMs },
+    ) as unknown as DataHealthHandler;
+
+    await assert.rejects(
+      readDataHealth(handler),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        return true;
+      },
+    );
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+
+  assert.equal(databaseWorkCompleted, true);
+  assert.equal(routeTimerCleared, true);
+});
+
 test("timed-out database health work cancels and releases its client without a live provider", async () => {
   const controller = new AbortController();
   const queryToken = {};
