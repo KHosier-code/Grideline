@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertRetainedPersonnelComparisonFingerprint,
   assertPersonnelChronology,
   buildPersonnelComparisonPreflight,
   buildPersonnelComparisonReport,
@@ -105,6 +106,11 @@ test("family-specific pairing is exact and deterministic report content is compl
     }),
   ));
   assert.equal(personnelComparisonFingerprint(report), personnelComparisonFingerprint(shuffledReport));
+  assert.equal(assertRetainedPersonnelComparisonFingerprint(shuffledReport, report), personnelComparisonFingerprint(report));
+  assert.throws(
+    () => assertRetainedPersonnelComparisonFingerprint({ ...report, baselineRunId: "changed" }, report),
+    /does not match retained report/,
+  );
   assert.equal(renderPersonnelComparisonMarkdown({ ...report, evidenceRows: 3, baselineEvidenceImmutable: true }),
     renderPersonnelComparisonMarkdown({ ...shuffledReport, evidenceRows: 3, baselineEvidenceImmutable: true }));
   assert.throws(() => buildPersonnelComparisonReport({

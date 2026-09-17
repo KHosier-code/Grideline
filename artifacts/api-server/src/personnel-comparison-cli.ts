@@ -1,8 +1,12 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pool } from "@workspace/db";
-import { prepare2025PersonnelComparison, run2025PersonnelComparison } from "./lib/personnel-comparison";
+import {
+  assertRetainedPersonnelComparisonFingerprint,
+  prepare2025PersonnelComparison,
+  run2025PersonnelComparison,
+} from "./lib/personnel-comparison";
 import { renderPersonnelComparisonMarkdown } from "./lib/personnel-comparison-markdown";
 
 /**
@@ -14,6 +18,8 @@ async function main() {
   const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
   const outputPath = resolve(process.argv[2] ?? repositoryRoot, process.argv[2] ? "" : "reports/gridline-2025-personnel-comparison.json");
   const markdownPath = resolve(process.argv[3] ?? outputPath.replace(/\.json$/, ".md"));
+  const retainedPath = resolve(repositoryRoot, "reports/gridline-2025-personnel-comparison.json");
+  const retainedReport = JSON.parse(await readFile(retainedPath, "utf8"));
   const preparation = await prepare2025PersonnelComparison();
   console.log(JSON.stringify({
     phase: "preflight",
@@ -24,6 +30,7 @@ async function main() {
   }));
   if (preparation.preflight.status === "block") throw new Error(preparation.preflight.message);
   const report = await run2025PersonnelComparison(preparation);
+  assertRetainedPersonnelComparisonFingerprint(report, retainedReport);
   await mkdir(resolve(outputPath, ".."), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   await writeFile(markdownPath, `${renderPersonnelComparisonMarkdown(report)}\n`, "utf8");

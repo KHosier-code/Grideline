@@ -24,7 +24,7 @@ import {
   type Algorithm,
   type Example,
 } from "./modeling";
-import { getPersonnelContextForGame } from "./personnel-context";
+import { loadPersonnelContextBatch } from "./personnel-context";
 import { personnelNumericFeatures, type PersonnelContext } from "./personnel-context-derivation";
 import { loadExamples } from "./modeling";
 
@@ -501,17 +501,13 @@ export function personnelComparisonFingerprint(report: unknown) {
   return createHash("sha256").update(JSON.stringify(report)).digest("hex");
 }
 
-async function bounded<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>) {
-  const result: R[] = [];
-  let cursor = 0;
-  const worker = async () => {
-    while (cursor < items.length) {
-      const index = cursor++;
-      result[index] = await fn(items[index]);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return result;
+export function assertRetainedPersonnelComparisonFingerprint(report: unknown, retainedReport: unknown) {
+  const actual = personnelComparisonFingerprint(report);
+  const expected = personnelComparisonFingerprint(retainedReport);
+  if (actual !== expected) {
+    throw new Error(`Optimized personnel comparison fingerprint ${actual} does not match retained report ${expected}`);
+  }
+  return actual;
 }
 
 const CHALLENGER_CONFIG = {
@@ -551,9 +547,10 @@ export async function prepare2025PersonnelComparison() {
     finalHomeScore: row.actualHomeScore,
     finalAwayScore: row.actualAwayScore,
   }));
-  const contexts = await bounded(allRows, 8, async (row) => {
+  const contextBatch = await loadPersonnelContextBatch(evaluationGames);
+  const contexts = allRows.map((row) => {
     const cutoff = new Date(Math.max(row.homeFeatureSourceCutoff.getTime(), row.awayFeatureSourceCutoff.getTime()) + 1);
-    const context = await getPersonnelContextForGame(row.gameId, cutoff, evaluationGames);
+    const context = contextBatch.get(row.gameId, cutoff);
     if (!context) throw new Error(`Personnel context unavailable for ${row.gameId} at its prediction cutoff`);
     const sourceCutoff = new Date(context.sourceCutoff);
     if (!(sourceCutoff < row.kickoffTime)) throw new Error(`Personnel chronology violation for ${row.gameId}`);

@@ -43,6 +43,143 @@ function contextGame(row: PersonnelGame) {
   };
 }
 
+type EvaluationGame = PersonnelGame & { finalHomeScore?: number | null; finalAwayScore?: number | null };
+
+const PERSONNEL_BATCH_SIZE = 500;
+
+async function selectInBatches<T>(
+  values: string[],
+  select: (batch: string[]) => Promise<T[]>,
+): Promise<T[]> {
+  const unique = [...new Set(values)];
+  const rows: T[] = [];
+  for (let index = 0; index < unique.length; index += PERSONNEL_BATCH_SIZE) {
+    rows.push(...await select(unique.slice(index, index + PERSONNEL_BATCH_SIZE)));
+  }
+  return rows;
+}
+
+export async function loadPersonnelContextBatch(evaluationGames: EvaluationGame[]) {
+  const requestedGameIds = evaluationGames.map((game) => game.gameId);
+  const requestedTeamIds = [...new Set(evaluationGames.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
+  const [allTeams, persistedRequestedGames, persistedGames] = await Promise.all([
+    db.select().from(teamsTable),
+    selectInBatches(requestedGameIds, (ids) => db.select().from(gamesTable).where(inArray(gamesTable.gameId, ids))),
+    db.select().from(gamesTable),
+  ]);
+  const teamById = new Map(allTeams.map((team) => [team.teamId, team]));
+  const teamByAbbreviation = new Map(allTeams.map((team) => [team.abbreviation.toUpperCase(), team.teamId]));
+  const sourceTeamIds = [...new Set(requestedTeamIds.flatMap((teamId) => {
+    const team = teamById.get(teamId);
+    return team ? [teamId, ...nflverseTeamCandidates(team.abbreviation)] : [teamId];
+  }))];
+  const [depth, historicalDepth, injuries, snaps, qbRows, playerRows, odds, weatherRows] = await Promise.all([
+    selectInBatches(sourceTeamIds, (ids) => db.select().from(depthChartSnapshotsTable).where(inArray(depthChartSnapshotsTable.teamId, ids))),
+    selectInBatches(sourceTeamIds, (ids) => db.select().from(historicalDepthChartTable).where(inArray(historicalDepthChartTable.teamId, ids))),
+    selectInBatches(requestedTeamIds, (ids) => db.select().from(injuriesTable).where(inArray(injuriesTable.teamId, ids))),
+    selectInBatches(sourceTeamIds, (ids) => db.select().from(snapCountsTable).where(inArray(snapCountsTable.teamId, ids))),
+    selectInBatches(sourceTeamIds, (ids) => db.select().from(qbGameStatsTable).where(inArray(qbGameStatsTable.teamId, ids))),
+    selectInBatches(sourceTeamIds, (ids) => db.select().from(playerGameStatsTable).where(inArray(playerGameStatsTable.teamId, ids))),
+    selectInBatches(requestedGameIds, (ids) => db.select().from(sportsbookOddsTable).where(inArray(sportsbookOddsTable.gameId, ids))),
+    selectInBatches(requestedGameIds, (ids) => db.select().from(weatherForecastSnapshotsTable).where(inArray(weatherForecastSnapshotsTable.gameId, ids))),
+  ]);
+  const canonicalDepth = depth.map((row) => ({ ...row, sourceTeamId: row.teamId, teamId: normalizeTeamId(row.teamId, teamByAbbreviation) }));
+  const canonicalHistoricalDepth = historicalDepth.map((row) => ({ ...row, sourceTeamId: row.teamId, teamId: normalizeTeamId(row.teamId, teamByAbbreviation) }));
+  const canonicalSnaps = snaps.map((row) => ({
+    ...row,
+    sourceTeamId: row.teamId,
+    teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
+  }));
+  const persistedRequestedById = new Map(persistedRequestedGames.map((game) => [game.gameId, game]));
+  const allPriorGames = [
+    ...persistedGames,
+    ...evaluationGames.filter((row) => !persistedGames.some((persisted) => persisted.gameId === row.gameId)),
+  ];
+  const gameById = new Map(allPriorGames.map((row) => [row.gameId, row]));
+  const depthByTeam = new Map<string, PersonnelDepthRow[]>();
+  for (const row of canonicalDepth) depthByTeam.set(row.teamId, [...(depthByTeam.get(row.teamId) ?? []), row as PersonnelDepthRow]);
+  const historicalDepthByTeam = new Map<string, PersonnelHistoricalDepthRow[]>();
+  for (const row of canonicalHistoricalDepth) {
+    historicalDepthByTeam.set(row.teamId, [...(historicalDepthByTeam.get(row.teamId) ?? []), row as PersonnelHistoricalDepthRow]);
+  }
+  const injuriesByTeam = new Map<string, PersonnelInjuryRow[]>();
+  for (const row of injuries) injuriesByTeam.set(row.teamId, [...(injuriesByTeam.get(row.teamId) ?? []), row as PersonnelInjuryRow]);
+  const snapsByTeam = new Map<string, PersonnelSnapRow[]>();
+  for (const row of canonicalSnaps) {
+    const withKickoff = { ...row, kickoffTime: gameById.get(row.gameId)?.kickoffTime } as PersonnelSnapRow;
+    snapsByTeam.set(row.teamId, [...(snapsByTeam.get(row.teamId) ?? []), withKickoff]);
+  }
+  const qbRowsByTeam = new Map<string, typeof qbRows>();
+  for (const row of qbRows) {
+    const canonicalTeamId = normalizeTeamId(row.teamId, teamByAbbreviation);
+    qbRowsByTeam.set(canonicalTeamId, [...(qbRowsByTeam.get(canonicalTeamId) ?? []), row]);
+  }
+  const playerRowsBySourceTeam = new Map<string, typeof playerRows>();
+  for (const row of playerRows) {
+    if (row.teamId) playerRowsBySourceTeam.set(row.teamId, [...(playerRowsBySourceTeam.get(row.teamId) ?? []), row]);
+  }
+  const priorGamesByTeam = new Map<string, PersonnelPriorGame[]>();
+  for (const row of allPriorGames) {
+    priorGamesByTeam.set(row.homeTeamId, [...(priorGamesByTeam.get(row.homeTeamId) ?? []), {
+      gameId: row.gameId, teamId: row.homeTeamId, kickoffTime: row.kickoffTime, isHome: true,
+      finalHomeScore: row.finalHomeScore, finalAwayScore: row.finalAwayScore,
+    }]);
+    priorGamesByTeam.set(row.awayTeamId, [...(priorGamesByTeam.get(row.awayTeamId) ?? []), {
+      gameId: row.gameId, teamId: row.awayTeamId, kickoffTime: row.kickoffTime, isHome: false,
+      finalHomeScore: row.finalHomeScore, finalAwayScore: row.finalAwayScore,
+    }]);
+  }
+  const oddsByGame = new Map<string, typeof odds>();
+  for (const row of odds) oddsByGame.set(row.gameId, [...(oddsByGame.get(row.gameId) ?? []), row]);
+  const weatherByGame = new Map<string, typeof weatherRows>();
+  for (const row of weatherRows) weatherByGame.set(row.gameId, [...(weatherByGame.get(row.gameId) ?? []), row]);
+
+  return {
+    get(gameId: string, now = new Date()): PersonnelContext | null {
+      const game = persistedRequestedById.get(gameId) ?? evaluationGames.find((row) => row.gameId === gameId);
+      if (!game) return null;
+      const cutoff = new Date(Math.min(now.getTime(), game.kickoffTime ? new Date(game.kickoffTime).getTime() - 1 : now.getTime()));
+      const teamIds = [game.homeTeamId, game.awayTeamId];
+      const sourceIds = teamIds.flatMap((teamId) => {
+        const team = teamById.get(teamId);
+        return team ? [teamId, ...nflverseTeamCandidates(team.abbreviation)] : [teamId];
+      });
+      const relevantPlayerRows = sourceIds.flatMap((teamId) => playerRowsBySourceTeam.get(teamId) ?? []);
+      const playerNameById = new Map(relevantPlayerRows
+        .filter((row) => row.sourceUpdatedAt.getTime() <= cutoff.getTime())
+        .map((row) => [`${row.teamId}:${row.playerId}`, row.playerName]));
+      const canonicalQbs: PersonnelQbRow[] = teamIds.flatMap((teamId) => qbRowsByTeam.get(teamId) ?? []).map((row) => ({
+        ...row,
+        playerName: playerNameById.get(`${row.teamId}:${row.playerId}`) ?? null,
+        sourceTeamId: row.teamId,
+        teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
+        kickoffTime: gameById.get(row.gameId)?.kickoffTime,
+      })).filter((row) =>
+        row.sourceUpdatedAt.getTime() <= cutoff.getTime()
+        && (row.season < game.season || Boolean(row.kickoffTime && new Date(row.kickoffTime).getTime() < cutoff.getTime())));
+      const prior = teamIds.flatMap((teamId) => priorGamesByTeam.get(teamId) ?? [])
+        .filter((row) => row.gameId !== gameId);
+      const context = derivePersonnelContext({
+        game: contextGame(game),
+        now,
+        depth: teamIds.flatMap((teamId) => depthByTeam.get(teamId) ?? []),
+        historicalDepth: teamIds.flatMap((teamId) => historicalDepthByTeam.get(teamId) ?? []),
+        injuries: teamIds.flatMap((teamId) => injuriesByTeam.get(teamId) ?? []),
+        snaps: teamIds.flatMap((teamId) => snapsByTeam.get(teamId) ?? []),
+        qbs: canonicalQbs,
+        priorGames: prior,
+        odds: (oddsByGame.get(gameId) ?? []) as PersonnelOddsRow[],
+        weather: weatherByGame.get(gameId) ?? [],
+      });
+      for (const [teamId, teamContext] of Object.entries(context.teams)) {
+        const team = teamById.get(teamId);
+        if (team) Object.assign(teamContext, { teamName: team.teamName, abbreviation: team.abbreviation });
+      }
+      return context;
+    },
+  };
+}
+
 export async function getPersonnelContextForGame(
   gameId: string,
   now = new Date(),
