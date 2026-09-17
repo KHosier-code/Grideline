@@ -87,6 +87,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
+  /analytics/usage-event:
+    post:
+      operationId: captureUsageAnalyticsEvent
+      tags: [dashboard]
+      summary: Capture a privacy-safe Player Usage Lab interaction
+      security: [{ clerk: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UsageAnalyticsEventInput"
+      responses:
+        "204": { description: Event captured }
+        "400": { description: Invalid event }
+        "401": { description: Authentication required }
+  /admin/usage-analytics:
+    get:
+      operationId: getUsageAnalyticsSummary
+      tags: [dashboard]
+      summary: Summarize Player Usage Lab interactions for administrators
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Seven-day Usage Lab interaction summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageAnalyticsSummary"
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
   /data-health:
     get:
       operationId: getDataHealth
@@ -639,6 +670,71 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    UsageAnalyticsEventInput:
+      type: object
+      additionalProperties: false
+      required: [eventName]
+      properties:
+        eventName:
+          type: string
+          enum: [usage_filter_changed, usage_sort_changed, usage_row_toggled, usage_filters_reset]
+        filter: { type: string, enum: [team, position, window, game] }
+        value: { type: string, maxLength: 32 }
+        column:
+          type: string
+          enum: [name, snapShare, targets, receptions, receivingYards, carries, rushingYards, totalTd, trend]
+        direction: { type: string, enum: [asc, desc] }
+        action: { type: string, enum: [expand, collapse] }
+        position: { type: string, enum: [QB, RB, WR, TE, unknown] }
+        trend: { type: string, enum: [up, down, flat, unavailable] }
+        coverage: { type: string, enum: [complete, partial] }
+        window: { type: string, enum: [last3, last5, last8, season] }
+        hadTeam: { type: boolean }
+        hadPosition: { type: boolean }
+        hadGame: { type: boolean }
+    UsageAnalyticsCount:
+      type: object
+      additionalProperties: false
+      required: [label, count]
+      properties:
+        label: { type: string }
+        count: { type: integer }
+    UsageAnalyticsChoiceCount:
+      type: object
+      additionalProperties: false
+      required: [label, choice, count]
+      properties:
+        label: { type: string }
+        choice: { type: string }
+        count: { type: integer }
+    UsageAnalyticsSummary:
+      type: object
+      additionalProperties: false
+      required: [periodStart, periodEnd, periodDays, totalEvents, filterChanges, sortChoices, expansionsByPosition, expansionsByTrend, expansionsByCoverage, expansionsByWindow, resets]
+      properties:
+        periodStart: { type: string, format: date-time }
+        periodEnd: { type: string, format: date-time }
+        periodDays: { type: integer }
+        totalEvents: { type: integer }
+        filterChanges:
+          type: array
+          items: { $ref: "#/components/schemas/UsageAnalyticsChoiceCount" }
+        sortChoices:
+          type: array
+          items: { $ref: "#/components/schemas/UsageAnalyticsChoiceCount" }
+        expansionsByPosition:
+          type: array
+          items: { $ref: "#/components/schemas/UsageAnalyticsCount" }
+        expansionsByTrend:
+          type: array
+          items: { $ref: "#/components/schemas/UsageAnalyticsCount" }
+        expansionsByCoverage:
+          type: array
+          items: { $ref: "#/components/schemas/UsageAnalyticsCount" }
+        expansionsByWindow:
+          type: array
+          items: { $ref: "#/components/schemas/UsageAnalyticsCount" }
+        resets: { type: integer }
     ConsumerError:
       type: object
       required: [error, code]

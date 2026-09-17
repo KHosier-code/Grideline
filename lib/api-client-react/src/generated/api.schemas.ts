@@ -5,6 +5,138 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+export type UsageAnalyticsEventInputEventName = typeof UsageAnalyticsEventInputEventName[keyof typeof UsageAnalyticsEventInputEventName];
+
+
+export const UsageAnalyticsEventInputEventName = {
+  usage_filter_changed: 'usage_filter_changed',
+  usage_sort_changed: 'usage_sort_changed',
+  usage_row_toggled: 'usage_row_toggled',
+  usage_filters_reset: 'usage_filters_reset',
+} as const;
+
+export type UsageAnalyticsEventInputFilter = typeof UsageAnalyticsEventInputFilter[keyof typeof UsageAnalyticsEventInputFilter];
+
+
+export const UsageAnalyticsEventInputFilter = {
+  team: 'team',
+  position: 'position',
+  window: 'window',
+  game: 'game',
+} as const;
+
+export type UsageAnalyticsEventInputColumn = typeof UsageAnalyticsEventInputColumn[keyof typeof UsageAnalyticsEventInputColumn];
+
+
+export const UsageAnalyticsEventInputColumn = {
+  name: 'name',
+  snapShare: 'snapShare',
+  targets: 'targets',
+  receptions: 'receptions',
+  receivingYards: 'receivingYards',
+  carries: 'carries',
+  rushingYards: 'rushingYards',
+  totalTd: 'totalTd',
+  trend: 'trend',
+} as const;
+
+export type UsageAnalyticsEventInputDirection = typeof UsageAnalyticsEventInputDirection[keyof typeof UsageAnalyticsEventInputDirection];
+
+
+export const UsageAnalyticsEventInputDirection = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
+
+export type UsageAnalyticsEventInputAction = typeof UsageAnalyticsEventInputAction[keyof typeof UsageAnalyticsEventInputAction];
+
+
+export const UsageAnalyticsEventInputAction = {
+  expand: 'expand',
+  collapse: 'collapse',
+} as const;
+
+export type UsageAnalyticsEventInputPosition = typeof UsageAnalyticsEventInputPosition[keyof typeof UsageAnalyticsEventInputPosition];
+
+
+export const UsageAnalyticsEventInputPosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+  unknown: 'unknown',
+} as const;
+
+export type UsageAnalyticsEventInputTrend = typeof UsageAnalyticsEventInputTrend[keyof typeof UsageAnalyticsEventInputTrend];
+
+
+export const UsageAnalyticsEventInputTrend = {
+  up: 'up',
+  down: 'down',
+  flat: 'flat',
+  unavailable: 'unavailable',
+} as const;
+
+export type UsageAnalyticsEventInputCoverage = typeof UsageAnalyticsEventInputCoverage[keyof typeof UsageAnalyticsEventInputCoverage];
+
+
+export const UsageAnalyticsEventInputCoverage = {
+  complete: 'complete',
+  partial: 'partial',
+} as const;
+
+export type UsageAnalyticsEventInputWindow = typeof UsageAnalyticsEventInputWindow[keyof typeof UsageAnalyticsEventInputWindow];
+
+
+export const UsageAnalyticsEventInputWindow = {
+  last3: 'last3',
+  last5: 'last5',
+  last8: 'last8',
+  season: 'season',
+} as const;
+
+export interface UsageAnalyticsEventInput {
+  eventName: UsageAnalyticsEventInputEventName;
+  filter?: UsageAnalyticsEventInputFilter;
+  /** @maxLength 32 */
+  value?: string;
+  column?: UsageAnalyticsEventInputColumn;
+  direction?: UsageAnalyticsEventInputDirection;
+  action?: UsageAnalyticsEventInputAction;
+  position?: UsageAnalyticsEventInputPosition;
+  trend?: UsageAnalyticsEventInputTrend;
+  coverage?: UsageAnalyticsEventInputCoverage;
+  window?: UsageAnalyticsEventInputWindow;
+  hadTeam?: boolean;
+  hadPosition?: boolean;
+  hadGame?: boolean;
+}
+
+export interface UsageAnalyticsCount {
+  label: string;
+  count: number;
+}
+
+export interface UsageAnalyticsChoiceCount {
+  label: string;
+  choice: string;
+  count: number;
+}
+
+export interface UsageAnalyticsSummary {
+  periodStart: string;
+  periodEnd: string;
+  periodDays: number;
+  totalEvents: number;
+  filterChanges: UsageAnalyticsChoiceCount[];
+  sortChoices: UsageAnalyticsChoiceCount[];
+  expansionsByPosition: UsageAnalyticsCount[];
+  expansionsByTrend: UsageAnalyticsCount[];
+  expansionsByCoverage: UsageAnalyticsCount[];
+  expansionsByWindow: UsageAnalyticsCount[];
+  resets: number;
+}
+
 export type ConsumerErrorCode = typeof ConsumerErrorCode[keyof typeof ConsumerErrorCode];
 
 
@@ -1959,4 +2091,3 @@ export const GetConsumerPlayerUsageWindow = {
   last8: 'last8',
   season: 'season',
 } as const;
-

@@ -62,7 +62,9 @@ import type {
   ScheduleSyncRequest,
   ScheduleSyncResult,
   SleeperIdentityReport,
-  Team
+  Team,
+  UsageAnalyticsEventInput,
+  UsageAnalyticsSummary
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -162,13 +164,6 @@ export function useGetConfidenceAudit<TData = Awaited<ReturnType<typeof getConfi
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getAppendConfidenceEvidenceUrl = (params?: AppendConfidenceEvidenceParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -321,13 +316,6 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getGetDashboardSummaryUrl = () => {
 
 
@@ -393,6 +381,164 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetDashboardSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+export const getCaptureUsageAnalyticsEventUrl = () => {
+
+
+
+
+  return `/api/analytics/usage-event`
+}
+
+/**
+ * @summary Capture a privacy-safe Player Usage Lab interaction
+ */
+export const captureUsageAnalyticsEvent = async (usageAnalyticsEventInput: UsageAnalyticsEventInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getCaptureUsageAnalyticsEventUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(usageAnalyticsEventInput)
+  }
+);}
+
+
+
+
+
+export const getCaptureUsageAnalyticsEventMutationKey = () => ['captureUsageAnalyticsEvent'] as const;
+
+export const getCaptureUsageAnalyticsEventMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof captureUsageAnalyticsEvent>>, TError,CaptureUsageAnalyticsEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof captureUsageAnalyticsEvent>>, TError,CaptureUsageAnalyticsEventMutationVariables, TContext> => {
+
+const mutationKey = getCaptureUsageAnalyticsEventMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof captureUsageAnalyticsEvent>>, CaptureUsageAnalyticsEventMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  captureUsageAnalyticsEvent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CaptureUsageAnalyticsEventMutationResult = NonNullable<Awaited<ReturnType<typeof captureUsageAnalyticsEvent>>>
+    export type CaptureUsageAnalyticsEventMutationBody = BodyType<UsageAnalyticsEventInput>
+    export type CaptureUsageAnalyticsEventMutationError = ErrorType<void>
+    export type CaptureUsageAnalyticsEventMutationVariables = {data: BodyType<UsageAnalyticsEventInput>}
+
+    /**
+ * @summary Capture a privacy-safe Player Usage Lab interaction
+ */
+export const useCaptureUsageAnalyticsEvent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof captureUsageAnalyticsEvent>>, TError,CaptureUsageAnalyticsEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof captureUsageAnalyticsEvent>>,
+        TError,
+        CaptureUsageAnalyticsEventMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCaptureUsageAnalyticsEventMutationOptions(options));
+    }
+
+export const getGetUsageAnalyticsSummaryUrl = () => {
+
+
+
+
+  return `/api/admin/usage-analytics`
+}
+
+/**
+ * @summary Summarize Player Usage Lab interactions for administrators
+ */
+export const getUsageAnalyticsSummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<UsageAnalyticsSummary> => {
+
+  return customFetch<UsageAnalyticsSummary>(getGetUsageAnalyticsSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUsageAnalyticsSummaryQueryKey = () => {
+    return [
+    `/api/admin/usage-analytics`
+    ] as const;
+    }
+
+
+export const getGetUsageAnalyticsSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsageAnalyticsSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>> = ({ signal }) => getUsageAnalyticsSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUsageAnalyticsSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>>
+export type GetUsageAnalyticsSummaryQueryError = ErrorType<void>
+
+
+/**
+ * @summary Summarize Player Usage Lab interactions for administrators
+ */
+
+export function useGetUsageAnalyticsSummary<TData = Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUsageAnalyticsSummaryQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -91,6 +91,70 @@ export const GetDashboardSummaryResponse = zod.object({
 
 
 /**
+ * @summary Capture a privacy-safe Player Usage Lab interaction
+ */
+export const captureUsageAnalyticsEventBodyValueMax = 32;
+
+
+
+export const CaptureUsageAnalyticsEventBody = zod.object({
+  "eventName": zod.enum(['usage_filter_changed', 'usage_sort_changed', 'usage_row_toggled', 'usage_filters_reset']),
+  "filter": zod.enum(['team', 'position', 'window', 'game']).optional(),
+  "value": zod.string().max(captureUsageAnalyticsEventBodyValueMax).optional(),
+  "column": zod.enum(['name', 'snapShare', 'targets', 'receptions', 'receivingYards', 'carries', 'rushingYards', 'totalTd', 'trend']).optional(),
+  "direction": zod.enum(['asc', 'desc']).optional(),
+  "action": zod.enum(['expand', 'collapse']).optional(),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'unknown']).optional(),
+  "trend": zod.enum(['up', 'down', 'flat', 'unavailable']).optional(),
+  "coverage": zod.enum(['complete', 'partial']).optional(),
+  "window": zod.enum(['last3', 'last5', 'last8', 'season']).optional(),
+  "hadTeam": zod.boolean().optional(),
+  "hadPosition": zod.boolean().optional(),
+  "hadGame": zod.boolean().optional()
+})
+
+export const CaptureUsageAnalyticsEventResponse = zod.void()
+
+
+/**
+ * @summary Summarize Player Usage Lab interactions for administrators
+ */
+export const GetUsageAnalyticsSummaryResponse = zod.object({
+  "periodStart": zod.coerce.date(),
+  "periodEnd": zod.coerce.date(),
+  "periodDays": zod.number().int(),
+  "totalEvents": zod.number().int(),
+  "filterChanges": zod.array(zod.object({
+  "label": zod.string(),
+  "choice": zod.string(),
+  "count": zod.number().int()
+})),
+  "sortChoices": zod.array(zod.object({
+  "label": zod.string(),
+  "choice": zod.string(),
+  "count": zod.number().int()
+})),
+  "expansionsByPosition": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number().int()
+})),
+  "expansionsByTrend": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number().int()
+})),
+  "expansionsByCoverage": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number().int()
+})),
+  "expansionsByWindow": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number().int()
+})),
+  "resets": zod.number().int()
+})
+
+
+/**
  * @summary Get freshness and availability for each data provider
  */
 export const GetDataHealthResponseItem = zod.object({
@@ -1719,5 +1783,3 @@ export const ListConsumerPlayerUsageGamesResponse = zod.object({
 })
 }))
 })
-
-

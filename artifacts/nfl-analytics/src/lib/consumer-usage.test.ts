@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { sortUsagePlayers, trendLabel, usageChartData } from "./consumer-usage.ts";
+import { trackEvent } from "./analytics.ts";
 
 test("usage chart transformation preserves unavailable values", () => {
   assert.deepEqual(usageChartData([
@@ -44,6 +45,44 @@ test("usage interactions emit bounded analytics without player or game identifie
   assert.match(source, /usage_filter_changed/);
   assert.match(source, /usage_sort_changed/);
   assert.match(source, /usage_row_toggled/);
-  assert.match(source, /value: game\.trim\(\) \? 'specific_game' : 'all'/);
+  assert.match(source, /value: value \? 'specific_game' : 'all'/);
   assert.doesNotMatch(source, /trackEvent\([^)]*playerId/s);
+});
+
+test("usage analytics copies bounded payloads without blocking interactions", async () => {
+  const requests: Array<{ url: string; body: string }> = [];
+  const originalWindow = globalThis.window;
+  const originalFetch = globalThis.fetch;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { umami: { track: () => undefined } },
+  });
+  Object.defineProperty(globalThis, "fetch", {
+    configurable: true,
+    value: (url: string, init: RequestInit) => {
+      requests.push({ url, body: String(init.body) });
+      return Promise.reject(new Error("analytics unavailable"));
+    },
+  });
+
+  try {
+    assert.doesNotThrow(() => trackEvent("usage_filters_reset", {
+      had_team: true,
+      had_position: false,
+      had_game: false,
+      window: "last5",
+    }));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(requests[0]?.url, "/api/analytics/usage-event");
+    assert.deepEqual(JSON.parse(requests[0]?.body ?? "{}"), {
+      eventName: "usage_filters_reset",
+      hadTeam: true,
+      hadPosition: false,
+      hadGame: false,
+      window: "last5",
+    });
+  } finally {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+    Object.defineProperty(globalThis, "fetch", { configurable: true, value: originalFetch });
+  }
 });

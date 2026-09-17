@@ -14,6 +14,7 @@ import {
   Database,
   Gauge,
   FileSearch,
+  ChartNoAxesColumnIncreasing,
   History,
   Home,
   LayoutDashboard,
@@ -75,6 +76,7 @@ import ConsumerPerformance from '@/pages/consumer/ConsumerPerformance';
 import ConsumerTrends from '@/pages/consumer/ConsumerTrends';
 import ConsumerProps from '@/pages/consumer/ConsumerProps';
 import ConsumerUsage from '@/pages/consumer/ConsumerUsage';
+import UsageAnalytics from '@/pages/admin/UsageAnalytics';
 import { useAdminStatus } from '@/hooks/use-admin-status';
 import './index.css';
 
@@ -111,6 +113,7 @@ const navGroups = [
       { href: '/feature-audit', label: 'Feature audit', icon: FileSearch },
       { href: '/evaluation-audit', label: 'Evaluation audit', icon: Microscope },
       { href: '/personnel-context', label: 'Personnel & context', icon: UserRound },
+      { href: '/usage-analytics', label: 'Usage analytics', icon: ChartNoAxesColumnIncreasing },
       { href: '/performance', label: 'Performance', icon: BarChart3 },
       { href: '/settings', label: 'Settings', icon: Settings2 },
     ],
@@ -2031,7 +2034,7 @@ function AdminRoutes() {
   return <AdminOnly><Switch>
     <Route path="/admin" component={Dashboard} /><Route path="/admin/this-week" component={ThisWeek} /><Route path="/admin/games/:gameId" component={GameDetail} /><Route path="/admin/live-predictions" component={LivePredictions} />
     <Route path="/admin/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route>
-    <Route path="/admin/feature-audit" component={FeatureAuditPage} /><Route path="/admin/evaluation-audit" component={EvaluationAudit} /><Route path="/admin/personnel-context" component={PersonnelContextPage} /><Route path="/admin/odds" component={OddsBoard} />
+    <Route path="/admin/feature-audit" component={FeatureAuditPage} /><Route path="/admin/evaluation-audit" component={EvaluationAudit} /><Route path="/admin/personnel-context" component={PersonnelContextPage} /><Route path="/admin/usage-analytics" component={UsageAnalytics} /><Route path="/admin/odds" component={OddsBoard} />
     <Route path="/admin/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices." preferred="odds" /></Route>
     <Route path="/admin/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route>
     <Route path="/admin/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route>

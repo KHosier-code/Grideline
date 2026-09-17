@@ -26,3 +26,4 @@
 - [Large batch result assembly](large-batch-result-assembly.md) — append large database result sets iteratively; variadic array spreading can overflow the stack.
 - [Confidence evidence identity](confidence-evidence-identity.md) — confidence is market-specific and immutable only when version and complete calculation evidence identify each result.
 - [Consumer personnel display boundary](consumer-personnel-display.md) — display season-bound current evidence; immutable model context may lag and must not repopulate stale starters.
+- [Runtime analytics reporting](runtime-analytics-reporting.md) — self-serve admin reports need a privacy-safe first-party event copy; injected analytics is agent-queryable, not app-queryable.

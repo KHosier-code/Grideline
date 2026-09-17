@@ -1,0 +1,220 @@
+import { useMemo } from 'react';
+import { useGetUsageAnalyticsSummary } from '@workspace/api-client-react';
+import {
+  Activity,
+  Calendar,
+  MousePointerClick,
+  RefreshCcw,
+  AlertTriangle,
+  Loader2,
+  Database,
+  ArrowRight,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+function formatDate(value?: string | null, includeTime = false) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    ...(includeTime ? { hour: 'numeric', minute: '2-digit' } : {}),
+  }).format(date);
+}
+
+function cx(...classes: (string | undefined | null | false)[]) {
+  return classes.filter(Boolean).join(' ');
+}
+
+interface UsageItem {
+  label: string;
+  count: number;
+  choice?: string;
+}
+
+function MetricCard({ label, value, detail, icon: Icon, accent = false }: { label: string; value: string; detail: string; icon: LucideIcon; accent?: boolean }) {
+  return (
+    <div className={cx('metric-card', accent && 'metric-card-accent')}>
+      <div className="flex items-start justify-between">
+        <span className="metric-label">{label}</span>
+        <Icon className="h-4 w-4 text-accent" />
+      </div>
+      <div className="mt-4 metric-value">{value}</div>
+      <div className="mt-2 text-xs text-muted-foreground">{detail}</div>
+    </div>
+  );
+}
+
+function Panel({ title, eyebrow, action, children, className = '' }: { title?: string; eyebrow?: string; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
+  return (
+    <section className={cx('panel', className)}>
+      {(title || eyebrow || action) && (
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+            {title && <h2 className="section-title">{title}</h2>}
+          </div>
+          {action}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
+function UsageList({ title, data, limit }: { title: string; data: UsageItem[]; limit?: number }) {
+  const displayData = useMemo(() => {
+    const sorted = [...data].sort((a, b) => b.count - a.count);
+    return limit ? sorted.slice(0, limit) : sorted;
+  }, [data, limit]);
+
+  if (displayData.length === 0) {
+    return (
+      <div className="rounded-xl border border-border bg-background p-5 flex flex-col items-center justify-center text-center min-h-[120px]">
+        <Database className="h-4 w-4 text-muted-foreground/50 mb-2" />
+        <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{title}</h3>
+        <p className="text-[10px] text-muted-foreground/70 mt-1">No records</p>
+      </div>
+    );
+  }
+
+  const maxCount = Math.max(...displayData.map(d => d.count));
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm flex flex-col">
+      <div className="bg-secondary/40 px-4 py-3 flex items-center justify-between border-b border-border">
+        <h3 className="text-[11px] font-bold text-ink uppercase tracking-wider">{title}</h3>
+        <span className="text-[9px] font-mono text-muted-foreground uppercase">Count</span>
+      </div>
+      <div className="p-2 flex flex-col gap-1 flex-1 bg-card">
+        {displayData.map((item, i) => {
+          const percentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+          return (
+            <div key={`${item.label}-${item.choice}-${i}`} className="relative flex items-center justify-between px-3 py-2.5 rounded-lg overflow-hidden bg-background border border-transparent transition-colors z-0">
+               <div
+                 className="absolute top-0 bottom-0 left-0 bg-secondary/80 pointer-events-none -z-10 transition-all duration-500 ease-out"
+                 style={{ width: `${percentage}%` }}
+               />
+               <div className="flex items-center gap-2.5">
+                 <span className="font-semibold text-xs text-ink">{item.label}</span>
+                 {item.choice && (
+                   <>
+                     <ArrowRight className="h-3 w-3 text-muted-foreground/40" />
+                     <span className="px-1.5 py-[2px] bg-card border border-border text-foreground rounded text-[9px] font-mono uppercase tracking-wider shadow-sm">
+                       {item.choice}
+                     </span>
+                   </>
+                 )}
+               </div>
+               <span className="font-mono text-xs text-ink relative font-medium">{item.count.toLocaleString()}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default function UsageAnalytics() {
+  const { data, isLoading, isError } = useGetUsageAnalyticsSummary();
+
+  if (isLoading) {
+    return (
+      <div>
+        <header className="page-header">
+          <div>
+            <p className="eyebrow">PLAYER USAGE LAB</p>
+            <h1 className="page-title">Usage Analytics</h1>
+            <p className="page-detail">Administrator-only summary of how analysts inspect player usage evidence.</p>
+          </div>
+        </header>
+        <div className="panel flex min-h-[400px] items-center justify-center">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-accent" />
+            Loading usage activity...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div>
+        <header className="page-header">
+          <div>
+            <p className="eyebrow">PLAYER USAGE LAB</p>
+            <h1 className="page-title">Usage Analytics</h1>
+            <p className="page-detail">Administrator-only summary of how analysts inspect player usage evidence.</p>
+          </div>
+        </header>
+        <div className="panel flex min-h-[400px] flex-col items-center justify-center gap-3 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-ink">Could not load analytics</p>
+            <p className="mt-1 text-sm text-muted-foreground">The analytics service did not respond.</p>
+          </div>
+          <button type="button" className="button button-subtle" onClick={() => window.location.reload()}>
+            <RefreshCcw className="h-4 w-4 mr-2" /> Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const hasActivity = data.totalEvents > 0;
+
+  return (
+    <div>
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">PLAYER USAGE LAB</p>
+          <h1 className="page-title">Usage Analytics</h1>
+          <p className="page-detail">Administrator-only summary of how analysts inspect player usage evidence.</p>
+        </div>
+      </header>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Total Events" value={data.totalEvents.toLocaleString()} detail="Captured interactions" icon={MousePointerClick} accent />
+        <MetricCard label="Filter Resets" value={data.resets.toLocaleString()} detail="Cleared all filters" icon={RefreshCcw} />
+        <MetricCard label="Reporting Period" value={`${data.periodDays} days`} detail="Rolling window" icon={Calendar} />
+        <MetricCard label="Date Range" value={`${formatDate(data.periodStart)}`} detail={`Until ${formatDate(data.periodEnd)}`} icon={Activity} />
+      </div>
+
+      {!hasActivity ? (
+        <div className="mt-5 panel">
+          <div className="empty-panel">
+            <div className="empty-icon"><Database className="h-5 w-5" /></div>
+            <div>
+              <p className="font-semibold text-ink">No recorded activity</p>
+              <p className="mt-1 max-w-lg text-sm leading-6 text-muted-foreground">
+                There are no usage lab interactions recorded in the current reporting period.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1.5fr]">
+          <Panel eyebrow="Discovery" title="Filter & Sort Usage">
+             <div className="flex flex-col gap-6">
+                <UsageList title="Filter Changes" data={data.filterChanges} limit={20} />
+                <UsageList title="Sort Choices" data={data.sortChoices} limit={20} />
+             </div>
+          </Panel>
+          <Panel eyebrow="Engagement" title="Row Expansions">
+             <div className="grid gap-6 sm:grid-cols-2">
+                <UsageList title="By Position" data={data.expansionsByPosition} limit={15} />
+                <UsageList title="By Trend" data={data.expansionsByTrend} limit={15} />
+                <UsageList title="By Coverage" data={data.expansionsByCoverage} limit={15} />
+                <UsageList title="By Window" data={data.expansionsByWindow} limit={15} />
+             </div>
+          </Panel>
+        </div>
+      )}
+    </div>
+  );
+}

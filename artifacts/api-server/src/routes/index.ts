@@ -9,6 +9,7 @@ import modelsRouter from "./models";
 import predictionsRouter from "./predictions";
 import consumerRouter from "./consumer";
 import confidenceRouter from "./confidence";
+import usageAnalyticsRouter from "./usage-analytics";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(modelsRouter);
 router.use(predictionsRouter);
 router.use(consumerRouter);
 router.use(confidenceRouter);
+router.use(usageAnalyticsRouter);
 
 export default router;
