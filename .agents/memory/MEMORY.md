@@ -29,3 +29,4 @@
 - [Runtime analytics reporting](runtime-analytics-reporting.md) — self-serve admin reports need a privacy-safe first-party event copy; injected analytics is agent-queryable, not app-queryable.
 - [Retention state validation](retention-state-validation.md) — worker persistence tests require the development retention migrations applied before state assertions are meaningful.
 - [Singleton integration-test isolation](singleton-integration-test-isolation.md) — PostgreSQL advisory locks serialize parallel test files that mutate shared singleton fixtures.
+- [Database health cancellation](database-health-cancellation.md) — route timeout races must cancel the driver query and discard its pool client, not only stop awaiting the result.

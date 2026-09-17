@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import dashboardRouter, { createDataHealthHandler } from "./dashboard";
 import { PREGAME_FEATURE_DEFINITION } from "../lib/features";
 import { requireAdmin } from "../middlewares/admin";
+import { executeCancellableDatabaseQuery } from "../lib/db";
 
 // node:test runs files in parallel, but the retention health fixture replaces
 // a database singleton. Hold the same session lock as the worker tests for
@@ -259,6 +260,55 @@ test("protected data-health returns a bounded unavailable result when a provider
   assert.ok(odds, "the data-health response should include Odds API");
   assert.equal(odds.status, "unavailable");
   assert.match(odds.detail, /did not complete within the admin route budget/);
+});
+
+test("timed-out database health work cancels and releases its client without a live provider", async () => {
+  const controller = new AbortController();
+  const queryToken = {};
+  let cancellationCount = 0;
+  let releaseCount = 0;
+  let releaseError: Error | undefined;
+
+  const fakeClient = {
+    _getActiveQuery: () => queryToken,
+    query(
+      _queryOrConfig: unknown,
+      _values: unknown[] | undefined,
+      _callback: (error: unknown, result?: unknown) => void,
+    ) {
+      return undefined;
+    },
+    cancel(_client: unknown, query: unknown) {
+      assert.equal(query, queryToken);
+      cancellationCount += 1;
+    },
+    release(error?: Error) {
+      releaseCount += 1;
+      releaseError = error;
+    },
+  };
+  const fakePool = {
+    connect: async () => fakeClient,
+  };
+
+  const query = executeCancellableDatabaseQuery(
+    fakePool,
+    { text: "select pg_sleep($1)" },
+    [60_000],
+    controller.signal,
+  );
+  const timeout = setTimeout(() => controller.abort(), 5);
+
+  await assert.rejects(query, (error: unknown) => {
+    assert.ok(error instanceof Error);
+    assert.equal(error.name, "AbortError");
+    return true;
+  });
+  clearTimeout(timeout);
+
+  assert.equal(cancellationCount, 1);
+  assert.equal(releaseCount, 1);
+  assert.equal(releaseError?.name, "AbortError");
 });
 
 test("protected data-health isolates a failed provider and keeps mixed provider states visible", async () => {

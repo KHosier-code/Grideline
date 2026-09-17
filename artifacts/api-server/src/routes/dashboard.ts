@@ -26,6 +26,7 @@ import { requireAdmin } from "../middlewares/admin";
 import { getModelArtifactImmutabilityStatus } from "../lib/phase61-release";
 import { getUsageAnalyticsRetentionHealth } from "../lib/usage-analytics-retention";
 import { logger } from "../lib/logger";
+import { withDatabaseQueryCancellation } from "../lib/db";
 
 type DataHealthDependencies = {
   getEspnHealth: typeof getEspnHealth;
@@ -79,6 +80,7 @@ function boundedHealthCheck<T>(
   operation: () => T | PromiseLike<T>,
   fallback: T,
   deadline: number,
+  signal?: AbortSignal,
 ): Promise<HealthCheckResult<T>> {
   const remaining = deadline - Date.now();
   if (remaining <= 0) {
@@ -97,7 +99,9 @@ function boundedHealthCheck<T>(
     }, remaining);
   });
   const completed = Promise.resolve()
-    .then(operation)
+    .then(() =>
+      signal ? withDatabaseQueryCancellation(signal, operation) : operation(),
+    )
     .then(
       (value) => ({ value, unavailable: false }),
       (error) => {
@@ -158,8 +162,20 @@ export function createDataHealthHandler(
     const routeAbort = new AbortController();
     const routeAbortTimer = setTimeout(() => routeAbort.abort(), timeoutMs);
     const now = new Date();
+    const bounded = <T>(
+      label: string,
+      operation: () => T | PromiseLike<T>,
+      fallback: T,
+    ): Promise<HealthCheckResult<T>> =>
+      boundedHealthCheck(
+        label,
+        operation,
+        fallback,
+        deadline,
+        routeAbort.signal,
+      );
     const espn = dependencies.getEspnHealth();
-    const scheduleCheck = boundedHealthCheck(
+    const scheduleCheck = bounded(
       "ESPN schedule health",
       dependencies.getScheduleHealth,
       {
@@ -169,9 +185,8 @@ export function createDataHealthHandler(
         latestRun: null,
         runs: [],
       } as Awaited<ReturnType<typeof getScheduleHealth>>,
-      deadline,
     );
-    const nflverseCheck = boundedHealthCheck(
+    const nflverseCheck = bounded(
       "NFLverse health",
       dependencies.getNflverseHealth,
       {
@@ -191,9 +206,8 @@ export function createDataHealthHandler(
           failures: [],
         },
       } as Awaited<ReturnType<typeof getNflverseHealth>>,
-      deadline,
     );
-    const availabilityCheck = boundedHealthCheck(
+    const availabilityCheck = bounded(
       "ESPN availability health",
       dependencies.getAvailabilityHealth,
       {
@@ -206,9 +220,8 @@ export function createDataHealthHandler(
         depth: { records: 0, teams: 0, lastUpdated: null, failures: [] },
         runs: [],
       } as Awaited<ReturnType<typeof getAvailabilityHealth>>,
-      deadline,
     );
-    const sleeperCheck = boundedHealthCheck(
+    const sleeperCheck = bounded(
       "Sleeper health",
       dependencies.getSleeperHealth,
       {
@@ -226,9 +239,8 @@ export function createDataHealthHandler(
         latestMetadata: {},
         cadenceHours: 24,
       } as Awaited<ReturnType<typeof getSleeperHealth>>,
-      deadline,
     );
-    const sleeperIdentityCheck = boundedHealthCheck(
+    const sleeperIdentityCheck = bounded(
       "Sleeper identity mapping health",
       dependencies.getSleeperIdentityHealth,
       {
@@ -245,27 +257,23 @@ export function createDataHealthHandler(
         durationMs: null,
         metadata: {},
       } as Awaited<ReturnType<typeof getSleeperIdentityHealth>>,
-      deadline,
     );
-    const scheduledInjuryRunsCheck = boundedHealthCheck(
+    const scheduledInjuryRunsCheck = bounded(
       "scheduled injury runs",
       () => dependencies.getRecentScheduledRuns("scheduled:injuries"),
       [],
-      deadline,
     );
-    const scheduledNflverseRunsCheck = boundedHealthCheck(
+    const scheduledNflverseRunsCheck = bounded(
       "scheduled NFLverse runs",
       () => dependencies.getRecentScheduledRuns("scheduled:nflverse"),
       [],
-      deadline,
     );
-    const scheduledWeatherRunsCheck = boundedHealthCheck(
+    const scheduledWeatherRunsCheck = bounded(
       "scheduled weather runs",
       () => dependencies.getRecentScheduledRuns("scheduled:weather"),
       [],
-      deadline,
     );
-    const oddsCheck = boundedHealthCheck(
+    const oddsCheck = bounded(
       "Odds API health",
       dependencies.getOddsApiHealth,
       {
@@ -277,9 +285,8 @@ export function createDataHealthHandler(
         remainingQuota: null,
         metadata: {},
       } as Awaited<ReturnType<typeof getOddsApiHealth>>,
-      deadline,
     );
-    const schedulerCheck = boundedHealthCheck(
+    const schedulerCheck = bounded(
       "scheduler health",
       dependencies.getSchedulerHealth,
       {
@@ -296,9 +303,8 @@ export function createDataHealthHandler(
         jobs: [],
         runs: [],
       } as Awaited<ReturnType<typeof getSchedulerHealth>>,
-      deadline,
     );
-    const featuresCheck = boundedHealthCheck(
+    const featuresCheck = bounded(
       "pregame feature health",
       dependencies.getPregameFeatureHealth,
       {
@@ -309,9 +315,8 @@ export function createDataHealthHandler(
         lowSampleRows: 0,
         latestGeneratedAt: null,
       } as Awaited<ReturnType<typeof getPregameFeatureHealth>>,
-      deadline,
     );
-    const modelImmutabilityCheck = boundedHealthCheck(
+    const modelImmutabilityCheck = bounded(
       "model artifact immutability health",
       dependencies.getModelArtifactImmutabilityStatus,
       {
@@ -324,9 +329,8 @@ export function createDataHealthHandler(
         verification: "unavailable",
         note: healthCheckUnavailable("model artifact immutability"),
       } as Awaited<ReturnType<typeof getModelArtifactImmutabilityStatus>>,
-      deadline,
     );
-    const usageAnalyticsRetentionCheck = boundedHealthCheck(
+    const usageAnalyticsRetentionCheck = bounded(
       "Usage Lab retention health",
       dependencies.getUsageAnalyticsRetentionHealth,
       {
@@ -348,15 +352,13 @@ export function createDataHealthHandler(
         alert: null,
         workerOwned: true,
       } as Awaited<ReturnType<typeof getUsageAnalyticsRetentionHealth>>,
-      deadline,
     );
-    const gameDaysCheck = boundedHealthCheck(
+    const gameDaysCheck = bounded(
       "ESPN game calendar",
       () => dependencies.getFeedGameDays(now, { signal: routeAbort.signal }),
       new Set<string>(),
-      deadline,
     );
-    const weatherCheck = boundedHealthCheck(
+    const weatherCheck = bounded(
       "NWS weather health",
       dependencies.weatherHealth,
       {
@@ -365,7 +367,6 @@ export function createDataHealthHandler(
         userAgentConfigured: false,
         lastRun: null,
       } as Awaited<ReturnType<typeof weatherHealth>>,
-      deadline,
     );
 
     const [
