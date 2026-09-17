@@ -1,0 +1,131 @@
+I have uploaded new Gridline brand assets into /public/brand/.
+
+Before making changes, inspect the entire existing website and understand the current component structure, navigation, routes, data sources, APIs, model logic, and responsive behavior.
+
+I want you to redesign the visual appearance of the website without changing or breaking any existing functionality, model calculations, API integrations, routes, data pipelines, or analytics logic.
+
+Use these files:
+
+/brand/gridline-logo.png — primary Gridline wordmark
+/brand/gridline-icon.png — compact app/sidebar/favicon mark
+/brand/gridline-hero.png — visual direction for premium NFL analytics branding
+/brand/gridline-dashboard-reference.png — UI/design inspiration only
+
+The current website screenshot/design system and these new Gridline assets should guide the redesign.
+
+The official Gridline visual system should be:
+
+Primary navy: #141A29
+Gridline orange: approximately #FF7A2F
+White/off-white: approximately #FAFAFA
+Muted slate gray for secondary text
+Light gray borders
+Minimal use of green only for genuine positive/status indicators
+Red only for genuine warnings/errors
+
+Do NOT introduce electric blue, purple, gold, green branding, neon effects, metallic gradients, or generic sportsbook styling.
+
+The desired aesthetic is:
+
+professional NFL analytics platform + institutional data terminal + premium sports technology
+
+Think more along the lines of a polished analytics product used by a professional bettor, analyst, front office employee, or quantitative researcher—not a flashy gambling website.
+
+Sidebar
+
+Replace the current temporary Gridline branding with the new /brand/gridline-logo.png and /brand/gridline-icon.png.
+
+Keep the dark navy sidebar.
+
+Refine spacing, typography, hover states, active navigation states, icon sizing, section labels, and visual hierarchy.
+
+The orange accent should clearly indicate the active page.
+
+Main application
+
+Preserve the light workspace because the contrast with the navy sidebar works well.
+
+Improve:
+
+typography hierarchy
+card styling
+spacing
+data density
+borders
+shadows
+metric presentation
+charts
+empty states
+status indicators
+hover states
+loading states
+
+Cards should feel slightly more premium while remaining restrained.
+
+Use orange for actionable or important information rather than decorating everything orange.
+
+Dashboard
+
+Redesign the Overview page into a stronger analytics command center.
+
+Maintain the current information, but improve presentation of:
+
+season/week header
+production model status
+games this week
+ATS record
+average CLV
+model gate
+top edges
+data freshness
+upcoming matchups
+model health
+
+Use the uploaded gridline-dashboard-reference.png for inspiration, but do not reproduce fake stats, fake teams, fake players, or text from the image.
+
+All live UI must continue using the application's actual data.
+
+Brand imagery
+
+The hero/control-room image can be used selectively on:
+
+login/onboarding
+landing/about page
+empty states
+marketing areas
+
+Do not place large photographic backgrounds behind normal analytics tables where they reduce readability.
+
+Components
+
+Create a consistent design system for:
+
+buttons
+cards
+tabs
+badges
+inputs
+dropdowns
+tables
+charts
+tooltips
+model-confidence displays
+injury statuses
+market movement
+positive/negative edges
+
+Use reusable components and CSS variables/design tokens instead of one-off styling.
+
+Critical requirement
+
+This is a front-end visual redesign, not a rebuild.
+
+Do not remove existing features.
+Do not alter model math.
+Do not fabricate probabilities.
+Do not substitute mock data for production data.
+Do not change existing APIs unless required strictly for UI integration.
+
+Make the visual redesign across the application, run the application, resolve any styling or responsive issues, and make sure all existing pages still work.
+
+Start by auditing the existing design/components, then implement the redesign systematically rather than changing random pages independently.
