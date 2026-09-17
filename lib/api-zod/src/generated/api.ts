@@ -896,9 +896,13 @@ export const GetConsumerGameParams = zod.object({
 
 export const getConsumerGameResponseTwoMovementMovementsMax = 24;
 
+export const getConsumerGameResponseTwoContextTeamsItemDepthMax = 30;
+
 export const getConsumerGameResponseTwoContextTeamsMax = 2;
 
 export const getConsumerGameResponseTwoContextDriversMax = 4;
+
+export const getConsumerGameResponseTwoContextProjectedMatchupsMax = 12;
 
 
 
@@ -1017,13 +1021,34 @@ export const GetConsumerGameResponse = zod.object({
   "dataConfidence": zod.number().nullable(),
   "teams": zod.array(zod.object({
   "side": zod.enum(['home', 'away']),
+  "name": zod.string(),
+  "abbreviation": zod.string(),
   "qbCertainty": zod.number().nullable(),
   "qbChange": zod.boolean().nullable(),
   "personnelCompleteness": zod.number().nullable(),
   "offenseInjuryImpact": zod.number().nullable(),
-  "defenseInjuryImpact": zod.number().nullable()
+  "defenseInjuryImpact": zod.number().nullable(),
+  "depth": zod.array(zod.object({
+  "name": zod.string(),
+  "position": zod.string(),
+  "unit": zod.enum(['offense', 'defense']),
+  "depthRank": zod.number().int().nullable(),
+  "role": zod.enum(['published_starter', 'published_backup', 'projected_starter', 'uncertain']),
+  "sourceLabel": zod.enum(['Published depth', 'Projected from recent participation', 'Evidence uncertain']),
+  "recentSnapShare": zod.number().nullable(),
+  "injuryStatus": zod.string().nullable(),
+  "practiceStatus": zod.string().nullable(),
+  "starterConfidence": zod.number().nullable(),
+  "evidenceSummary": zod.string().nullable()
+})).max(getConsumerGameResponseTwoContextTeamsItemDepthMax)
 })).max(getConsumerGameResponseTwoContextTeamsMax),
   "drivers": zod.array(zod.string()).max(getConsumerGameResponseTwoContextDriversMax),
+  "projectedMatchups": zod.array(zod.object({
+  "receiverName": zod.string(),
+  "defenderName": zod.string(),
+  "summary": zod.string()
+})).max(getConsumerGameResponseTwoContextProjectedMatchupsMax),
+  "matchupMessage": zod.string().nullable(),
   "message": zod.string().nullable()
 }),
   "analysis": zod.object({

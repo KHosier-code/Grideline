@@ -165,6 +165,21 @@ export function serializeMovement(rows: MovementRow[]) {
 type PersistedContext = {
   dataConfidence?: { overall?: unknown };
   teams?: Record<string, {
+    teamName?: unknown;
+    abbreviation?: unknown;
+    starters?: Array<{
+      playerName?: unknown;
+      position?: unknown;
+      unit?: unknown;
+      estimatedDepthPosition?: unknown;
+      classification?: unknown;
+      confidence?: unknown;
+      recentSnapShare?: unknown;
+      injuryStatus?: { gameStatus?: unknown; practiceStatus?: unknown };
+      recentStarterEvidence?: unknown;
+      evidence?: unknown;
+      unavailableReason?: unknown;
+    }>;
     qb?: { starterCertainty?: unknown; starterChange?: unknown };
     injuries?: Record<string, { impactScore?: unknown }>;
     personnelCompleteness?: unknown;
@@ -178,6 +193,8 @@ export function serializeContext(context: PersistedContext | null, homeTeamId: s
       dataConfidence: null,
       teams: [],
       drivers: [],
+      projectedMatchups: [],
+      matchupMessage: "Matchup projection not yet available.",
       message: "Player information temporarily unavailable",
     };
   }
@@ -186,13 +203,44 @@ export function serializeContext(context: PersistedContext | null, homeTeamId: s
     { side: "away" as const, teamId: awayTeamId },
   ].map(({ side, teamId }) => {
     const team = context.teams?.[teamId];
+    const depth = (team?.starters ?? []).slice(0, 30).flatMap((player) => {
+      if (typeof player.playerName !== "string" || typeof player.position !== "string") return [];
+      const position = player.position.toUpperCase();
+      const offense = ["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"].includes(position);
+      const defense = ["DL", "DE", "DT", "NT", "EDGE", "LB", "ILB", "OLB", "MLB", "CB", "S", "FS", "SS", "DB"].includes(position);
+      if (!offense && !defense) return [];
+      const depthRank = safeNumber(player.estimatedDepthPosition);
+      const published = player.classification === "official" || player.classification === "published_secondary";
+      const role = published
+        ? depthRank === 1 ? "published_starter" as const : "published_backup" as const
+        : depthRank === 1 ? "projected_starter" as const : "uncertain" as const;
+      const evidence = Array.isArray(player.recentStarterEvidence) && player.recentStarterEvidence.every((item) => typeof item === "string")
+        ? player.recentStarterEvidence
+        : Array.isArray(player.evidence) && player.evidence.every((item) => typeof item === "string") ? player.evidence : [];
+      return [{
+        name: player.playerName,
+        position,
+        unit: offense ? "offense" as const : "defense" as const,
+        depthRank: depthRank === null ? null : Math.max(1, Math.round(depthRank)),
+        role,
+        sourceLabel: published ? "Published depth" as const : player.classification === "inferred" ? "Projected from recent participation" as const : "Evidence uncertain" as const,
+        recentSnapShare: safeNumber(player.recentSnapShare),
+        injuryStatus: typeof player.injuryStatus?.gameStatus === "string" ? player.injuryStatus.gameStatus : null,
+        practiceStatus: typeof player.injuryStatus?.practiceStatus === "string" ? player.injuryStatus.practiceStatus : null,
+        starterConfidence: safeNumber(player.confidence),
+        evidenceSummary: evidence[0] ?? (typeof player.unavailableReason === "string" ? player.unavailableReason : null),
+      }];
+    });
     return {
       side,
+      name: typeof team?.teamName === "string" ? team.teamName : side === "home" ? "Home team" : "Away team",
+      abbreviation: typeof team?.abbreviation === "string" ? team.abbreviation : side === "home" ? "HOME" : "AWAY",
       qbCertainty: safeNumber(team?.qb?.starterCertainty),
       qbChange: typeof team?.qb?.starterChange === "boolean" ? team.qb.starterChange : null,
       personnelCompleteness: safeNumber(team?.personnelCompleteness),
       offenseInjuryImpact: safeNumber(team?.injuries?.offense?.impactScore),
       defenseInjuryImpact: safeNumber(team?.injuries?.defense?.impactScore),
+      depth,
     };
   });
   const drivers = teams.flatMap((team) => [
@@ -207,6 +255,8 @@ export function serializeContext(context: PersistedContext | null, homeTeamId: s
     dataConfidence: safeNumber(context.dataConfidence?.overall),
     teams,
     drivers,
+    projectedMatchups: [],
+    matchupMessage: "Matchup projection not yet available.",
     message: null,
   };
 }

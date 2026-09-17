@@ -77,6 +77,8 @@ import ConsumerProps from '@/pages/consumer/ConsumerProps';
 import { useAdminStatus } from '@/hooks/use-admin-status';
 import './index.css';
 
+import { AdminDepthChart } from '@/components/AdminDepthChart';
+
 const queryClient = new QueryClient();
 
 type IconType = typeof Activity;
@@ -1197,7 +1199,7 @@ function PersonnelContextPage() {
                 </div>
                 <div className="mt-5">
                   <div className="mb-2 flex items-center justify-between"><p className="eyebrow">Probable starters</p><span className="section-meta">Official and inferred kept separate</span></div>
-                  {team.starters?.length ? <div className="overflow-x-auto"><table className="w-full min-w-[980px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-2 py-2">Player</th><th className="px-2 py-2">Position</th><th className="px-2 py-2">Source status</th><th className="px-2 py-2">Confidence</th><th className="px-2 py-2">Recent participation</th><th className="px-2 py-2">Injury</th><th className="px-2 py-2">Evidence</th><th className="px-2 py-2">Source timestamp</th></tr></thead><tbody>{team.starters.map((starter: any) => <tr className="border-b border-border/60 align-top" key={`${team.teamId}-${starter.playerId}-${starter.position}`}><td className="px-2 py-2 font-semibold text-ink">{starter.playerName ?? starter.playerId}</td><td className="px-2 py-2">{starter.position ?? '—'}</td><td className="px-2 py-2"><StatusPill status={starter.classification === 'official' ? 'current' : 'stale'}>{starter.classification === 'official' ? 'Official' : starter.classification === 'published_secondary' ? 'Published secondary' : 'Inferred — not official'}</StatusPill><p className="mt-1 text-[10px] text-muted-foreground">{starter.source}</p></td><td className="px-2 py-2 font-mono">{score(starter.confidence) ?? '—'}/100</td><td className="px-2 py-2"><p>Snap share: {decimal(starter.recentSnapShare, 2)}</p><p className="mt-1 text-[10px] text-muted-foreground">{starter.priorWeekParticipation?.played === null || starter.priorWeekParticipation?.played === undefined ? 'Prior week unavailable' : starter.priorWeekParticipation.played ? 'Played prior week' : 'No prior-week participation'}</p></td><td className="px-2 py-2">{starter.injuryStatus?.gameStatus ?? starter.injuryStatus?.practiceStatus ?? 'No current row'} </td><td className="max-w-[240px] px-2 py-2 text-[10px] leading-4 text-muted-foreground">{starter.recentStarterEvidence?.length ? starter.recentStarterEvidence.join(' ') : starter.evidence?.join(' ') || starter.unavailableReason || 'No additional evidence.'}</td><td className="px-2 py-2">{starter.snapshotTimestamp ? formatDate(starter.snapshotTimestamp, true) : 'Unavailable'}<p className="mt-1 text-[10px] text-muted-foreground">{starter.dataFreshness ?? 'unknown freshness'}</p></td></tr>)}</tbody></table></div> : <EmptyPanel title="No supported starter evidence" detail={team.unavailableReasons?.join(' ') || 'No depth-chart or prior participation record is available before the source cutoff.'} icon={UserRound} />}
+                  <AdminDepthChart team={team} score={score} decimal={decimal} bool={bool} formatDate={formatDate} />
                 </div>
                 {team.sourceConflicts?.length > 0 && (
                   <div className="mt-4 callout callout-warn text-xs">

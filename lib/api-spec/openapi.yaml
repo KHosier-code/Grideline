@@ -713,17 +713,45 @@ components:
         message: { type: ["string", "null"] }
     ConsumerContextTeam:
       type: object
-      required: [side, qbCertainty, qbChange, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact]
+      required: [side, name, abbreviation, qbCertainty, qbChange, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, depth]
       properties:
         side: { type: string, enum: [home, away] }
+        name: { type: string }
+        abbreviation: { type: string }
         qbCertainty: { type: ["number", "null"] }
         qbChange: { type: ["boolean", "null"] }
         personnelCompleteness: { type: ["number", "null"] }
         offenseInjuryImpact: { type: ["number", "null"] }
         defenseInjuryImpact: { type: ["number", "null"] }
+        depth:
+          type: array
+          maxItems: 30
+          items: { $ref: "#/components/schemas/ConsumerDepthPlayer" }
+    ConsumerDepthPlayer:
+      type: object
+      required: [name, position, unit, depthRank, role, sourceLabel, recentSnapShare, injuryStatus, practiceStatus, starterConfidence, evidenceSummary]
+      properties:
+        name: { type: string }
+        position: { type: string }
+        unit: { type: string, enum: [offense, defense] }
+        depthRank: { type: ["integer", "null"] }
+        role: { type: string, enum: [published_starter, published_backup, projected_starter, uncertain] }
+        sourceLabel: { type: string, enum: [Published depth, Projected from recent participation, Evidence uncertain] }
+        recentSnapShare: { type: ["number", "null"] }
+        injuryStatus: { type: ["string", "null"] }
+        practiceStatus: { type: ["string", "null"] }
+        starterConfidence: { type: ["number", "null"] }
+        evidenceSummary: { type: ["string", "null"] }
+    ConsumerProjectedMatchup:
+      type: object
+      required: [receiverName, defenderName, summary]
+      properties:
+        receiverName: { type: string }
+        defenderName: { type: string }
+        summary: { type: string }
     ConsumerContext:
       type: object
-      required: [available, dataConfidence, teams, drivers, message]
+      required: [available, dataConfidence, teams, drivers, projectedMatchups, matchupMessage, message]
       properties:
         available: { type: boolean }
         dataConfidence: { type: ["number", "null"] }
@@ -732,6 +760,11 @@ components:
           maxItems: 2
           items: { $ref: "#/components/schemas/ConsumerContextTeam" }
         drivers: { type: array, maxItems: 4, items: { type: string } }
+        projectedMatchups:
+          type: array
+          maxItems: 12
+          items: { $ref: "#/components/schemas/ConsumerProjectedMatchup" }
+        matchupMessage: { type: ["string", "null"] }
         message: { type: ["string", "null"] }
     ConsumerPerformanceFamily:
       type: object

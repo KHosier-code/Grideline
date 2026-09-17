@@ -6,9 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ConsumerContextTeamSide } from './consumerContextTeamSide';
+import type { ConsumerDepthPlayer } from './consumerDepthPlayer';
 
 export interface ConsumerContextTeam {
   side: ConsumerContextTeamSide;
+  name: string;
+  abbreviation: string;
   /** @nullable */
   qbCertainty: number | null;
   /** @nullable */
@@ -19,4 +22,6 @@ export interface ConsumerContextTeam {
   offenseInjuryImpact: number | null;
   /** @nullable */
   defenseInjuryImpact: number | null;
+  /** @maxItems 30 */
+  depth: ConsumerDepthPlayer[];
 }

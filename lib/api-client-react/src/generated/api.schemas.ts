@@ -235,8 +235,57 @@ export const ConsumerContextTeamSide = {
   away: 'away',
 } as const;
 
+export type ConsumerDepthPlayerUnit = typeof ConsumerDepthPlayerUnit[keyof typeof ConsumerDepthPlayerUnit];
+
+
+export const ConsumerDepthPlayerUnit = {
+  offense: 'offense',
+  defense: 'defense',
+} as const;
+
+export type ConsumerDepthPlayerRole = typeof ConsumerDepthPlayerRole[keyof typeof ConsumerDepthPlayerRole];
+
+
+export const ConsumerDepthPlayerRole = {
+  published_starter: 'published_starter',
+  published_backup: 'published_backup',
+  projected_starter: 'projected_starter',
+  uncertain: 'uncertain',
+} as const;
+
+export type ConsumerDepthPlayerSourceLabel = typeof ConsumerDepthPlayerSourceLabel[keyof typeof ConsumerDepthPlayerSourceLabel];
+
+
+export const ConsumerDepthPlayerSourceLabel = {
+  Published_depth: 'Published depth',
+  Projected_from_recent_participation: 'Projected from recent participation',
+  Evidence_uncertain: 'Evidence uncertain',
+} as const;
+
+export interface ConsumerDepthPlayer {
+  name: string;
+  position: string;
+  unit: ConsumerDepthPlayerUnit;
+  /** @nullable */
+  depthRank: number | null;
+  role: ConsumerDepthPlayerRole;
+  sourceLabel: ConsumerDepthPlayerSourceLabel;
+  /** @nullable */
+  recentSnapShare: number | null;
+  /** @nullable */
+  injuryStatus: string | null;
+  /** @nullable */
+  practiceStatus: string | null;
+  /** @nullable */
+  starterConfidence: number | null;
+  /** @nullable */
+  evidenceSummary: string | null;
+}
+
 export interface ConsumerContextTeam {
   side: ConsumerContextTeamSide;
+  name: string;
+  abbreviation: string;
   /** @nullable */
   qbCertainty: number | null;
   /** @nullable */
@@ -247,6 +296,14 @@ export interface ConsumerContextTeam {
   offenseInjuryImpact: number | null;
   /** @nullable */
   defenseInjuryImpact: number | null;
+  /** @maxItems 30 */
+  depth: ConsumerDepthPlayer[];
+}
+
+export interface ConsumerProjectedMatchup {
+  receiverName: string;
+  defenderName: string;
+  summary: string;
 }
 
 export interface ConsumerContext {
@@ -257,6 +314,10 @@ export interface ConsumerContext {
   teams: ConsumerContextTeam[];
   /** @maxItems 4 */
   drivers: string[];
+  /** @maxItems 12 */
+  projectedMatchups: ConsumerProjectedMatchup[];
+  /** @nullable */
+  matchupMessage: string | null;
   /** @nullable */
   message: string | null;
 }

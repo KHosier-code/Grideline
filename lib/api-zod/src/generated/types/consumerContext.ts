@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ConsumerContextTeam } from './consumerContextTeam';
+import type { ConsumerProjectedMatchup } from './consumerProjectedMatchup';
 
 export interface ConsumerContext {
   available: boolean;
@@ -15,6 +16,10 @@ export interface ConsumerContext {
   teams: ConsumerContextTeam[];
   /** @maxItems 4 */
   drivers: string[];
+  /** @maxItems 12 */
+  projectedMatchups: ConsumerProjectedMatchup[];
+  /** @nullable */
+  matchupMessage: string | null;
   /** @nullable */
   message: string | null;
 }

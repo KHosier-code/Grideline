@@ -3,6 +3,7 @@ import { ChevronLeft, CloudRain, Gauge, ShieldCheck, Users } from 'lucide-react'
 import { useLocation, useParams, Link } from 'wouter';
 import { getConsumerPersonnelContent } from '../../lib/consumer-personnel';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } from './consumer-ui';
+import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -22,6 +23,7 @@ export default function ConsumerGameDetail() {
     typeof weather.precipitationProbability === 'number' ? `${weather.precipitationProbability.toFixed(0)}% precipitation` : null,
   ].filter(Boolean) : [];
   const personnelContent = getConsumerPersonnelContent(game.context);
+
   return <div className="consumer-page consumer-detail">
     <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
     <section className="consumer-matchup-hero">
@@ -47,5 +49,6 @@ export default function ConsumerGameDetail() {
         <details><summary><ShieldCheck /> Analysis drivers</summary><div>{game.analysis.drivers.length ? <ul>{game.analysis.drivers.map(driver => <li key={driver}>{driver}</li>)}</ul> : <p>No verified analysis drivers are available for this matchup.</p>}</div></details>
       </div>
     </section>
+    <ConsumerDepthChart context={game.context} />
   </div>;
 }

@@ -84,6 +84,8 @@ test("consumer movement and context use explicit unavailable states", () => {
     dataConfidence: null,
     teams: [],
     drivers: [],
+    projectedMatchups: [],
+    matchupMessage: "Matchup projection not yet available.",
     message: "Player information temporarily unavailable",
   });
 });
@@ -107,6 +109,19 @@ test("consumer context is concise and excludes raw personnel evidence", () => {
     dataConfidence: { overall: 72 },
     teams: {
       home: {
+        teamName: "Home Team",
+        abbreviation: "HOM",
+        starters: [{
+          playerName: "Safe Player",
+          position: "WR",
+          unit: "wide_receiver",
+          estimatedDepthPosition: 1,
+          classification: "published_secondary",
+          confidence: 82,
+          recentSnapShare: 0.72,
+          injuryStatus: { gameStatus: "Questionable", practiceStatus: "Limited" },
+          recentStarterEvidence: ["Listed first on the latest supported depth chart."],
+        }],
         qb: { starterCertainty: 81, starterChange: true },
         injuries: { offense: { impactScore: 30 }, defense: { impactScore: 8 } },
         personnelCompleteness: 90,
@@ -121,6 +136,10 @@ test("consumer context is concise and excludes raw personnel evidence", () => {
 
   assert.equal(serialized.available, true);
   assert.equal(serialized.teams.length, 2);
+  assert.equal(serialized.teams[0]?.depth[0]?.name, "Safe Player");
+  assert.equal(serialized.teams[0]?.depth[0]?.role, "published_starter");
+  assert.deepEqual(serialized.projectedMatchups, []);
+  assert.equal(serialized.matchupMessage, "Matchup projection not yet available.");
   assert.ok(serialized.drivers.length <= 4);
   assert.doesNotMatch(JSON.stringify(serialized), /playerId|sourceUrl|featureAudit|modelVersion|unavailableReasons/);
 });
