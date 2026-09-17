@@ -1,0 +1,554 @@
+TASK — P0 EMERGENCY PRODUCTION TRIGGER RESTORATION + TONIGHT TRACKING RECOVERY
+
+Priority:
+CRITICAL — production API and worker are currently offline.
+
+Context:
+
+The latest production build is:
+
+a108f70b-1aad-4bcc-b3d9-66ae0938a6a8
+
+Publish successfully created the Task #168:
+
+- tables
+- columns
+- indexes
+- constraints
+- uniqueness
+- foreign keys
+
+BUT Replit Publish omitted the custom PostgreSQL trigger functions and immutability/append-only triggers.
+
+The production startup gate correctly failed closed.
+
+DO NOT REPUBLISH.
+
+Republishing alone cannot solve this because managed Publish does not apply custom trigger DDL.
+
+The objective is to safely restore the approved production immutability triggers using the previously reviewed Task #158 trigger-only production Database-tool runbook.
+
+==================================================
+0. SAFETY RULES
+==================================================
+
+DO NOT:
+
+- change Phase 6.1
+- retrain models
+- promote challengers
+- change consumer recommendations
+- rewrite historical data
+- insert synthetic evaluation evidence
+- alter sportsbook history
+- modify table/schema DDL
+- run migrations manually
+- disable the startup safety gate
+- weaken immutability requirements
+- temporarily bypass trigger checks
+- invent new trigger definitions
+
+Use ONLY the already-reviewed trigger/function definitions corresponding to the merged code and Task #158 production runbook.
+
+If the exact approved SQL cannot be located and verified, STOP and recommend rollback rather than improvising.
+
+==================================================
+1. LOCATE THE APPROVED RUNBOOK
+==================================================
+
+Locate the exact trigger-only production Database-tool runbook created/reviewed in Task #158.
+
+Report:
+
+- runbook path
+- reviewed trigger-function inventory
+- reviewed trigger inventory
+- tables protected
+- expected function names
+- expected trigger names
+
+Compare this inventory against the latest merged development database.
+
+They must agree exactly.
+
+If they do not agree:
+
+STOP.
+
+Do not execute anything.
+
+==================================================
+2. BUILD EXPECTED PROTECTION INVENTORY
+==================================================
+
+Before changing production, print the expected protections for:
+
+Existing immutable evidence:
+- model training artifacts/runs where applicable
+- model evaluation predictions
+- market baseline runs/events/quotes
+- weather forecast snapshots
+- canonical snapshots
+- canonical grades
+
+Task #168 evidence:
+- shadow cutoff evidence
+- shadow grading evidence
+- any associated immutable model-family evidence
+
+For every protected table show:
+
+TABLE
+FUNCTION
+TRIGGER
+EVENTS PROTECTED
+EXPECTED BEHAVIOR
+
+Examples:
+
+UPDATE → blocked
+DELETE → blocked
+
+Do not expose credentials or sensitive database metadata.
+
+==================================================
+3. INSPECT CURRENT PRODUCTION STATE
+==================================================
+
+Read-only inspect production.
+
+Confirm:
+
+- Task #168 tables exist
+- expected constraints exist
+- expected indexes exist
+- custom trigger functions are missing
+- custom triggers are missing
+
+Do not modify anything yet.
+
+Return the difference:
+
+EXPECTED
+vs
+ACTUAL
+
+==================================================
+4. EXECUTE ONLY APPROVED TRIGGER DDL
+==================================================
+
+Using the production Database tool, execute ONLY the previously reviewed trigger/function SQL.
+
+Allowed:
+
+CREATE OR REPLACE FUNCTION
+CREATE TRIGGER
+
+only as present in the approved runbook.
+
+Do NOT execute:
+
+CREATE TABLE
+ALTER TABLE for schema changes
+DROP TABLE
+data UPDATE
+data DELETE
+data INSERT
+migration scripts
+
+Use the safest transactional execution supported by the production Database tool.
+
+If any trigger/function creation fails:
+
+STOP.
+
+Do not disable the startup gate.
+
+==================================================
+5. VERIFY ACTUAL PRODUCTION TRIGGERS
+==================================================
+
+After execution, independently inspect PostgreSQL catalogs.
+
+Verify every required:
+
+- trigger function
+- trigger
+- target table
+- UPDATE protection
+- DELETE protection
+
+Do not rely merely on successful SQL execution.
+
+Produce:
+
+EXPECTED TRIGGERS: N
+ACTUAL TRIGGERS: N
+MISSING: N
+UNEXPECTED: N
+
+Required result:
+
+MISSING = 0
+
+==================================================
+6. RUN IMMUTABILITY PROBES
+==================================================
+
+Run the established production-safe smoke tests.
+
+Use:
+
+SAVEPOINT
+test operation
+expected rejection
+ROLLBACK TO SAVEPOINT
+final transaction rollback
+
+Leave ZERO synthetic records.
+
+Verify:
+
+canonical snapshot update blocked
+canonical snapshot delete blocked
+
+canonical grade prohibited update blocked
+canonical grade delete blocked
+
+shadow cutoff update blocked
+shadow cutoff delete blocked
+
+shadow grade prohibited update blocked
+shadow grade delete blocked
+
+plus every existing Task #158 protected table.
+
+If even one required guard fails:
+
+FINAL VERDICT = NOT READY
+
+Do not start production services.
+
+==================================================
+7. VERIFY NO DATA WAS ALTERED
+==================================================
+
+Confirm the emergency repair changed only:
+
+- trigger functions
+- trigger definitions
+
+Confirm:
+
+- zero business rows inserted
+- zero business rows updated
+- zero business rows deleted
+- historical evidence unchanged
+- sportsbook evidence unchanged
+- predictions unchanged
+- grades unchanged
+
+==================================================
+8. RESTART PRODUCTION SERVICES
+==================================================
+
+Only after all trigger checks pass:
+
+restart/redeploy the existing production runtime as necessary WITHOUT performing another schema-changing Publish.
+
+Verify:
+
+API starts successfully
+worker starts successfully
+frontend is reachable
+startup gate passes
+
+If the platform requires a deployment restart to boot against the corrected database, use the minimum operational restart supported.
+
+Do not change code.
+
+==================================================
+9. VERIFY CONSUMER RECOVERY
+==================================================
+
+Verify:
+
+https://gridelineanalytics.com
+
+is operational.
+
+Check:
+
+Games
+DET @ BUF Game Detail
+
+Confirm:
+
+- consumer Phase 6.1 output restored
+- no challenger output exposed
+- no error pages
+- no raw startup/database errors
+- no Admin data exposed anonymously
+
+==================================================
+10. VERIFY ADMIN SHADOW API
+==================================================
+
+Now test the Task #168 Admin endpoint.
+
+Expected:
+
+authenticated Admin:
+200
+
+anonymous:
+401/403
+
+consumer:
+no challenger access
+
+Verify production endpoint is no longer 404.
+
+==================================================
+11. VERIFY MODEL STATUS
+==================================================
+
+For DET @ BUF:
+
+PHASE 6.1
+AVAILABLE
+
+ADVANCED FOOTBALL CHALLENGER
+Run artifact verification.
+
+Expected:
+AVAILABLE if checksum/schema/cutoff safety all pass.
+
+MARKET-RESIDUAL
+UNAVAILABLE — immutable_forward_artifact_not_approved
+
+ENSEMBLE
+UNAVAILABLE — immutable_forward_artifact_not_approved
+
+Do not attempt to unlock either unavailable model.
+
+==================================================
+12. RESTORE ODDS TRACKING
+==================================================
+
+Verify the adaptive odds worker resumed.
+
+Report:
+
+worker running
+lease healthy
+quota remaining
+last successful request
+DK latest timestamp
+FD latest timestamp
+
+Because the worker was offline, obtain a fresh market observation using the normal existing scheduler or one permitted immediate recovery sync if necessary.
+
+Do not perform unnecessary paid requests.
+
+Do not backfill the outage.
+
+The gap in observations must remain visible historically.
+
+==================================================
+13. CANONICAL CUTOFF PROTECTION
+==================================================
+
+Canonical DET @ BUF cutoff:
+
+6:45 PM Central
+2026-09-17 23:45 UTC
+
+Kickoff:
+
+7:15 PM Central
+
+Do NOT create canonical evidence early.
+
+Confirm scheduler is still enabled.
+
+At cutoff, require:
+
+Phase 6.1 state
+Advanced state
+Market-Residual unavailable state
+Ensemble unavailable state
+
+using the same:
+
+game
+cutoff
+market fingerprint
+kickoff reference
+grading framework
+
+==================================================
+14. CUTOFF MARKET FRESHNESS
+==================================================
+
+At the actual cutoff verify both books where available.
+
+Return:
+
+DRAFTKINGS
+spread
+price
+total
+prices
+moneyline
+observed_at
+age at cutoff
+
+FANDUEL
+spread
+price
+total
+prices
+moneyline
+observed_at
+age at cutoff
+
+Do not use observations after 6:45 PM CT for the canonical snapshot.
+
+If required market freshness cannot be achieved, fail closed for affected market evidence.
+
+==================================================
+15. EXACTLY-ONCE VERIFICATION
+==================================================
+
+After canonical capture:
+
+retry the cutoff path safely.
+
+Verify:
+
+one canonical evaluation event
+one state per model family
+no duplicate predictions
+no rewritten prediction
+no rewritten market fingerprint
+
+Return:
+
+PASS / FAIL
+
+==================================================
+16. POSTGAME GRADING READINESS
+==================================================
+
+Verify the recovered production system can grade tonight after authoritative FINAL status.
+
+Phase 6.1 and Advanced must use the same canonical market fingerprint.
+
+Unavailable challengers must remain ungraded.
+
+==================================================
+17. FALLBACK / ROLLBACK RULE
+==================================================
+
+If the approved Task #158 trigger SQL cannot be safely applied OR any production immutability probe fails:
+
+DO NOT bypass the gate.
+
+Instead:
+
+roll production back to the last known healthy deployment.
+
+Restore:
+
+consumer site
+Phase 6.1 worker
+existing odds capture
+
+Then explicitly report that Task #168 forward shadow comparison will not begin tonight.
+
+Protecting production truth is more important than forcing shadow tracking.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Return:
+
+Approved runbook located:
+YES / NO
+
+Production trigger functions:
+PASS / FAIL
+
+Production trigger inventory:
+PASS / FAIL
+
+Production immutability probes:
+PASS / FAIL
+
+Business-row mutation:
+ZERO / NONZERO
+
+API:
+HEALTHY / OFFLINE
+
+Worker:
+HEALTHY / OFFLINE
+
+Consumer site:
+HEALTHY / OFFLINE
+
+Admin shadow API:
+PASS / FAIL
+
+Phase 6.1:
+AVAILABLE / UNAVAILABLE
+
+Advanced:
+AVAILABLE / UNAVAILABLE + reason
+
+Market-Residual:
+UNAVAILABLE + reason
+
+Ensemble:
+UNAVAILABLE + reason
+
+Odds quota remaining:
+[value]
+
+Latest DK evidence:
+[timestamp]
+
+Latest FD evidence:
+[timestamp]
+
+Canonical cutoff:
+PENDING / CAPTURED / FAILED
+
+Exactly-once:
+PASS / FAIL / PENDING
+
+Postgame grading:
+READY / NOT READY
+
+FINAL VERDICT:
+
+READY FOR TONIGHT
+
+or
+
+ROLLED BACK — PHASE 6.1 ONLY
+
+or
+
+NOT READY
+
+Confirm explicitly:
+
+- Phase 6.1 unchanged
+- no challenger promoted
+- no startup guard bypassed
+- no historical evidence rewritten
+- no sportsbook history rewritten
+- no synthetic production records remain
