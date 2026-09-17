@@ -22,3 +22,4 @@
 - [Immutable evaluation run identity](immutable-evaluation-run-identity.md) — fingerprint all evaluation inputs and bind model evidence uniquely to each append-only run.
 - [Player usage windows](player-usage-windows.md) — define rolling usage by cutoff-safe team games, not player appearances; missing recent rows stay partial.
 - [Player usage source identities](player-usage-identities.md) — usage season, game, team, and player identities must be reconciled across independent persisted NFLverse datasets.
+- [Personnel audit preflight](personnel-audit-preflight.md) — missing or derived-zero evidence warns; absent contexts or non-pregame chronology blocks before fitting.

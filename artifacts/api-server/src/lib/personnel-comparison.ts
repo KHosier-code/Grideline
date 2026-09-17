@@ -289,10 +289,65 @@ function marketBenchmark(rows: PairedPrediction[]) {
   };
 }
 
+export type PersonnelPreflightRow = {
+  season: number;
+  kickoffTime: Date;
+  context: PersonnelContext;
+};
+
+export function buildPersonnelComparisonPreflight(rows: PersonnelPreflightRow[]) {
+  const chronologyViolations = rows.filter((row) =>
+    !(new Date(row.context.sourceCutoff).getTime() < row.kickoffTime.getTime()));
+  const seasons = [...new Set(rows.map((row) => row.season))].sort((a, b) => a - b);
+  const coverageBySeason = seasons.map((season) => ({
+    season,
+    ...personnelAvailability(rows.filter((row) => row.season === season).map((row) => row.context)),
+  }));
+  const missingCategories = coverageBySeason.flatMap((coverage) =>
+    Object.entries(coverage.categories)
+      .filter(([, category]) => category.status === "unavailable")
+      .map(([category]) => ({ season: coverage.season, category })));
+  const derivedZeroLimitations = coverageBySeason.flatMap((coverage) =>
+    Object.entries(coverage.categories)
+      .filter(([, category]) => category.derivedZeroWithoutSourceRows > 0)
+      .map(([category, detail]) => ({
+        season: coverage.season,
+        category,
+        observations: detail.derivedZeroWithoutSourceRows,
+      })));
+  const status = rows.length === 0 || chronologyViolations.length > 0
+    ? "block"
+    : missingCategories.length > 0 || derivedZeroLimitations.length > 0
+      ? "warn"
+      : "proceed";
+  return {
+    status,
+    readOnly: true,
+    modelFittingPerformed: false,
+    databaseWritesPerformed: false,
+    chronology: {
+      policy: "strictly-before-kickoff",
+      valid: chronologyViolations.length === 0,
+      violationGameIds: chronologyViolations.map((row) => row.context.gameId).sort(),
+    },
+    gamesChecked: rows.length,
+    coverageBySeason,
+    missingCategories,
+    derivedZeroLimitations,
+    message: status === "block"
+      ? rows.length === 0
+        ? "BLOCK: no historical personnel contexts were available for the audit."
+        : "BLOCK: personnel evidence failed the strict pre-kickoff chronology check."
+      : status === "warn"
+        ? "WARN: the audit can run, but one or more personnel categories lack source rows or contain derived zeroes without source support."
+        : "PROCEED: all requested personnel categories have source-backed pre-kickoff coverage.",
+  };
+}
+
 function personnelAvailability(contexts: PersonnelContext[]) {
   const teamRows = contexts.flatMap((context) => Object.values(context.teams));
   const category = (available: number, total: number, limitations: string[], derivedZeroWithoutRows = 0) => ({
-    status: available ? "partially_available" : "unavailable",
+    status: available === total && total > 0 ? "available" : available ? "partially_available" : "unavailable",
     availableObservations: available,
     totalObservations: total,
     availabilityRate: total ? available / total : null,
@@ -465,7 +520,9 @@ const CHALLENGER_CONFIG = {
   totals: { algorithm: "gradient_boosting" as const, classification: false, target: (row: any) => row.total },
 };
 
-export async function run2025PersonnelComparison() {
+type PersonnelComparisonPreparation = Awaited<ReturnType<typeof prepare2025PersonnelComparison>>;
+
+export async function prepare2025PersonnelComparison() {
   const [baseline] = await db.select().from(marketBaselineRunsTable)
     .where(and(eq(marketBaselineRunsTable.season, 2025), eq(marketBaselineRunsTable.status, "complete")))
     .orderBy(desc(marketBaselineRunsTable.createdAt)).limit(1);
@@ -507,6 +564,18 @@ export async function run2025PersonnelComparison() {
     personnel: personnelNumericFeatures(item.context),
     sourceCutoff: item.sourceCutoff,
   }]));
+  const preflight = buildPersonnelComparisonPreflight(contexts.map((item) => ({
+    season: item.row.season,
+    kickoffTime: item.row.kickoffTime,
+    context: item.context,
+  })));
+  return { baseline, events, quotes, baselineEvidence, examples, eligible, exampleById, contexts, enriched, preflight };
+}
+
+export async function run2025PersonnelComparison(prepared?: PersonnelComparisonPreparation) {
+  const preparation = prepared ?? await prepare2025PersonnelComparison();
+  const { baseline, quotes, baselineEvidence, examples, eligible, exampleById, contexts, enriched, preflight } = preparation;
+  if (preflight.status === "block") throw new Error(preflight.message);
   const predictions: PairedPrediction[] = [];
   const models: Record<string, unknown>[] = [];
   for (const family of Object.keys(CHALLENGER_CONFIG) as Array<keyof typeof CHALLENGER_CONFIG>) {
@@ -560,7 +629,7 @@ export async function run2025PersonnelComparison() {
     predictions,
     personnelContexts: contexts.filter((item) => eligible.includes(item.row.gameId)).map((item) => item.context),
   });
-  return { ...report, challengerArtifacts: models, evidenceRows: predictions.length, baselineEvidenceImmutable: true };
+  return { ...report, preflight, challengerArtifacts: models, evidenceRows: predictions.length, baselineEvidenceImmutable: true };
 }
 
 function enrichedFor(rows: any[], enriched: Map<string, any>) {

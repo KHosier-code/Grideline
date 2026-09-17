@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   assertPersonnelChronology,
+  buildPersonnelComparisonPreflight,
   buildPersonnelComparisonReport,
   pairedUncertainty,
   personnelComparisonFingerprint,
@@ -110,4 +111,43 @@ test("family-specific pairing is exact and deterministic report content is compl
     baselineRunId: "baseline", eligibleGameIds: ["wrong"], eligibleGameIdsByFamily: { spread: ["wrong"] },
     minimumRecordedLineEdge: 1, predictions: [predictions[0]],
   }), /exactly one row/);
+});
+
+test("preflight separates missing rows from derived zeroes and blocks chronology violations", () => {
+  const kickoffTime = new Date("2025-09-07T17:00:00Z");
+  const context = {
+    gameId: "g",
+    sourceCutoff: "2025-09-07T16:00:00Z",
+    teams: {
+      home: {
+        starters: [{ position: "QB" }],
+        qb: { projectedStarter: { playerId: "qb" } },
+        injuryPlayers: [],
+        injuries: { offense: { impactScore: 0 }, secondary: { impactScore: 0 } },
+        olContinuity: { olSnapContinuity: 0.8 },
+      },
+      away: {
+        starters: [],
+        qb: { projectedStarter: null },
+        injuryPlayers: [],
+        injuries: { offense: { impactScore: 0 }, secondary: { impactScore: 0 } },
+        olContinuity: { olSnapContinuity: null },
+      },
+    },
+  } as any;
+  const preflight = buildPersonnelComparisonPreflight([{ season: 2025, kickoffTime, context }]);
+  assert.equal(preflight.status, "warn");
+  assert.equal(preflight.coverageBySeason[0]!.categories.injury.availableObservations, 0);
+  assert.equal(preflight.coverageBySeason[0]!.categories.injury.derivedZeroWithoutSourceRows, 2);
+  assert.ok(preflight.missingCategories.some((row) => row.category === "rosterTrade"));
+  assert.equal(preflight.modelFittingPerformed, false);
+  assert.equal(preflight.databaseWritesPerformed, false);
+
+  const invalid = buildPersonnelComparisonPreflight([{
+    season: 2025,
+    kickoffTime,
+    context: { ...context, sourceCutoff: kickoffTime.toISOString() },
+  }]);
+  assert.equal(invalid.status, "block");
+  assert.equal(invalid.chronology.valid, false);
 });
