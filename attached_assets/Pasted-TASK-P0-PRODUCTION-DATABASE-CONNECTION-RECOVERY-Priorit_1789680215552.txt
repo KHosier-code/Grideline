@@ -1,0 +1,563 @@
+TASK — P0 PRODUCTION DATABASE CONNECTION RECOVERY
+
+Priority:
+CRITICAL
+
+Context:
+
+Production has successfully rolled back to the last known healthy build:
+
+579ed235d60f-2026-09-17T18:10:00.275Z
+
+This exact build previously passed its production startup gate and started the API successfully.
+
+It now fails closed with:
+
+database_connection_failed
+
+Current state:
+
+- API OFFLINE
+- Worker OFFLINE
+- Consumer site OFFLINE
+- Phase 6.1 artifacts valid
+- DET @ BUF features 27/27
+- 0 required model inputs missing
+- sportsbook quota remains available
+- Task #168 is DEFERRED
+
+Goal:
+
+Restore the existing production application's database connectivity WITHOUT modifying model logic, database evidence, schema, triggers, or historical records.
+
+This task must begin with READ-ONLY diagnosis.
+
+Do NOT:
+
+- publish another build
+- run migrations
+- add/drop triggers
+- alter tables
+- bypass the startup gate
+- disable TLS verification
+- weaken connection security
+- change Phase 6.1
+- promote challengers
+- insert/update/delete business data
+- fabricate odds observations
+- manually create a canonical cutoff record
+- expose DATABASE_URL or credentials in logs/output
+
+==================================================
+1. CONFIRM FAILURE CLASSIFICATION
+==================================================
+
+Inspect the current production startup logs.
+
+Determine the exact stage classified as:
+
+database_connection_failed
+
+Identify whether failure occurs during:
+
+A. environment/binding discovery
+B. connection-string parsing
+C. DNS resolution
+D. TCP connection
+E. TLS handshake
+F. authentication
+G. database selection
+H. SELECT/connectivity probe
+I. connection pool initialization
+J. timeout/provider availability
+K. connection limit/exhaustion
+L. another database-connectivity stage
+
+Do not print credentials, passwords, full connection strings, tokens, certificates, or raw secret values.
+
+Return only sanitized diagnostics.
+
+==================================================
+2. TEST DATABASE INDEPENDENTLY
+==================================================
+
+Using the authorized Replit production Database tool or equivalent safe read-only connection:
+
+test whether the production database itself is reachable.
+
+Perform only harmless reads such as:
+
+SELECT 1;
+SELECT current_database();
+SELECT current_user;
+
+Do not expose sensitive returned metadata unnecessarily.
+
+Return:
+
+DATABASE TOOL CONNECTION:
+PASS / FAIL
+
+If FAIL:
+classify whether this appears to be:
+- provider unavailable
+- database suspended
+- network issue
+- authentication/binding issue
+- unknown
+
+Do not change schema or data.
+
+==================================================
+3. COMPARE DATABASE TOOL VS APPLICATION RUNTIME
+==================================================
+
+This distinction is critical.
+
+CASE A:
+Database tool FAILS and application FAILS
+
+Likely database/provider/binding infrastructure issue.
+
+CASE B:
+Database tool PASSES but application FAILS
+
+Likely application runtime environment, secret binding, TLS, hostname, pool, or deployment configuration issue.
+
+Explicitly identify which case applies.
+
+==================================================
+4. VERIFY PRODUCTION DATABASE BINDING
+==================================================
+
+Verify the rolled-back deployment has access to the expected production database binding.
+
+Check only:
+
+- required environment variable exists
+- secret/binding is mounted
+- connection configuration points to the intended production database
+- database binding was not detached during Publish/Rollback
+- runtime environment has not switched to a development/preview database
+
+Do NOT print the value.
+
+You may report:
+
+DATABASE_URL_PRESENT = true/false
+
+EXPECTED_BINDING_PRESENT = true/false
+
+TARGET_DATABASE_IDENTITY_MATCH = true/false
+
+Use safe hashes/fingerprints only if needed.
+
+Do not expose raw connection material.
+
+==================================================
+5. COMPARE WITH LAST KNOWN HEALTHY RELEASE
+==================================================
+
+Use release/configuration metadata from when this build previously passed startup at approximately:
+
+2026-09-17 18:15 UTC
+
+Compare:
+
+- database binding identity
+- environment-variable presence
+- deployment environment
+- TLS mode
+- connection-pool configuration
+- runtime target
+- database host fingerprint if safely available
+
+Identify what changed between:
+
+LAST HEALTHY STARTUP
+
+and
+
+CURRENT FAILED STARTUP
+
+Do not change anything yet.
+
+==================================================
+6. DNS / NETWORK / TCP CHECK
+==================================================
+
+From the production runtime environment, safely test:
+
+- hostname resolves
+- database port reachable
+- connection attempt not timing out
+
+Do not expose the hostname if it is considered secret by the platform.
+
+Return:
+
+DNS:
+PASS / FAIL
+
+TCP:
+PASS / FAIL
+
+NETWORK TIMEOUT:
+YES / NO
+
+==================================================
+7. TLS VALIDATION
+==================================================
+
+Because Gridline intentionally validates TLS, determine whether the failure occurs during TLS negotiation.
+
+Check:
+
+- TLS is enabled
+- certificate validation succeeds
+- certificate is within validity period
+- server name validation succeeds
+- expected CA path/trust is available
+- rollback did not restore a runtime missing required CA/configuration
+
+DO NOT disable TLS verification as a workaround.
+
+Return:
+
+TLS:
+PASS / FAIL
+
+If FAIL:
+give sanitized reason.
+
+==================================================
+8. AUTHENTICATION CHECK
+==================================================
+
+If network/TLS succeeds, determine whether database authentication succeeds.
+
+Return:
+
+AUTH:
+PASS / FAIL
+
+Do not output:
+- username if sensitive
+- password
+- token
+- connection URL
+
+If credentials/binding appear stale or detached, restore ONLY through the existing authorized Replit database connection/binding mechanism.
+
+Do not manually paste or invent credentials.
+
+==================================================
+9. CONNECTION CAPACITY
+==================================================
+
+If authentication works intermittently, inspect safe connection-capacity indicators.
+
+Check for:
+
+- exhausted connection pool
+- database connection limit
+- abandoned/stale sessions
+- repeated crash-loop connections
+
+Do not terminate legitimate sessions unless clearly required and safe.
+
+Return:
+
+CONNECTION CAPACITY:
+HEALTHY / EXHAUSTED / UNKNOWN
+
+==================================================
+10. MINIMAL RECOVERY ACTION
+==================================================
+
+Only after identifying the cause, apply the smallest safe operational fix.
+
+Allowed examples:
+
+- restore/re-attach the existing authorized production database binding
+- restart the production runtime after binding recovery
+- restart an unhealthy connection pool/runtime
+- restore an existing required non-secret runtime configuration that was lost during rollback
+
+Not allowed:
+
+- model changes
+- schema changes
+- data mutations
+- migration execution
+- trigger changes
+- TLS bypass
+- startup-gate bypass
+- new database
+- swapping to development database
+
+If the cause cannot be identified confidently:
+
+STOP.
+
+Do not experiment in production.
+
+==================================================
+11. RESTART AND VERIFY
+==================================================
+
+After the minimal recovery action:
+
+restart the existing production runtime.
+
+Verify:
+
+STARTUP GATE:
+PASS
+
+API:
+HEALTHY
+
+WORKER:
+HEALTHY
+
+CONSUMER SITE:
+HEALTHY
+
+Check:
+
+https://gridelineanalytics.com
+
+/api/healthz
+
+Games
+
+DET @ BUF Game Detail
+
+==================================================
+12. VERIFY DATABASE SAFETY
+==================================================
+
+After recovery verify:
+
+- existing approved immutability checks pass
+- no schema changes occurred
+- no business rows were changed
+- no synthetic rows were created
+- Task #168 remains deferred
+- additive Task #168 tables, if still physically present, are not used by the rolled-back runtime
+
+Do not delete those additive tables tonight.
+
+==================================================
+13. RESTORE ODDS COLLECTION
+==================================================
+
+Once the worker is healthy:
+
+verify adaptive odds collection resumes.
+
+Report:
+
+- quota remaining
+- job enabled
+- lease healthy
+- latest request result
+
+If the normal schedule will not run soon enough, allow ONE existing supported immediate recovery sync.
+
+Do not backfill the outage.
+
+The outage gap must remain visible.
+
+For DET @ BUF specifically report fresh:
+
+DRAFTKINGS
+- spread
+- price
+- total
+- prices
+- moneyline
+- observed_at
+
+FANDUEL
+- spread
+- price
+- total
+- prices
+- moneyline
+- observed_at
+
+==================================================
+14. CANONICAL CUTOFF RULE
+==================================================
+
+Tonight:
+
+Kickoff:
+7:15 PM Central
+
+Canonical cutoff:
+6:45 PM Central
+2026-09-17 23:45 UTC
+
+If production is restored BEFORE the cutoff:
+
+allow the normal existing canonical Phase 6.1 workflow to run.
+
+Require market evidence that satisfies the configured freshness rule.
+
+If production is NOT restored until AFTER the cutoff:
+
+DO NOT fabricate a canonical 6:45 PM snapshot.
+
+DO NOT use post-cutoff sportsbook evidence.
+
+DO NOT pretend a late observation existed earlier.
+
+Instead record tonight as:
+
+CANONICAL CUTOFF MISSED — PRODUCTION OUTAGE
+
+If a valid immutable pre-cutoff prediction exists but no qualifying market evidence exists, preserve that distinction honestly.
+
+Forward-track integrity is more important than forcing tonight into the dataset.
+
+==================================================
+15. POSTGAME GRADING
+==================================================
+
+If a legitimate canonical snapshot is captured before cutoff:
+
+verify normal postgame grading readiness.
+
+If the canonical cutoff is missed:
+
+do not create a standard canonical betting grade retroactively.
+
+The game may still be retained for operational/model diagnostics, but must be excluded from the official canonical forward betting record.
+
+==================================================
+16. INVESTIGATE ODDS TIMESTAMP DISCREPANCY
+==================================================
+
+The latest successful odds request reportedly occurred at:
+
+2026-09-17 20:24:48.566 UTC
+
+and processed 384 observations.
+
+However DET @ BUF latest book evidence currently shown is approximately:
+
+DK 18:27 UTC
+FD 18:26 UTC
+
+Explain this discrepancy.
+
+Determine whether:
+
+- the later request contained no changed DET/BUF rows
+- unchanged snapshots intentionally did not create new observations
+- mapping failed
+- provider returned stale event timestamps
+- DET/BUF was excluded
+- another reason applies
+
+Do not modify historical rows.
+
+Return the explanation.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Return:
+
+ROOT CAUSE:
+[concise exact diagnosis]
+
+Database tool:
+PASS / FAIL
+
+Production DB binding:
+PASS / FAIL
+
+DNS:
+PASS / FAIL
+
+TCP:
+PASS / FAIL
+
+TLS:
+PASS / FAIL
+
+Authentication:
+PASS / FAIL
+
+Connection capacity:
+HEALTHY / EXHAUSTED / UNKNOWN
+
+Minimal recovery performed:
+[description or NONE]
+
+Startup gate:
+PASS / FAIL
+
+API:
+HEALTHY / OFFLINE
+
+Worker:
+HEALTHY / OFFLINE
+
+Consumer site:
+HEALTHY / OFFLINE
+
+Phase 6.1:
+AVAILABLE / UNAVAILABLE
+
+DET @ BUF features:
+[value]/27
+
+Odds ingestion:
+HEALTHY / UNHEALTHY
+
+Quota remaining:
+[value]
+
+Latest DK DET @ BUF:
+[value]
+
+Latest FD DET @ BUF:
+[value]
+
+Odds timestamp discrepancy:
+[explanation]
+
+Canonical cutoff:
+READY / MISSED / NOT READY
+
+Postgame grading:
+READY / NOT READY / NOT APPLICABLE FOR CANONICAL RECORD
+
+Task #168:
+DEFERRED
+
+FINAL VERDICT:
+
+RESTORED — READY TO TRACK TONIGHT
+
+or
+
+RESTORED — CANONICAL CUTOFF MISSED
+
+or
+
+NOT RESTORED
+
+Confirm:
+- no startup guard bypass
+- no TLS bypass
+- no schema changes
+- no model changes
+- no historical evidence rewritten
+- no sportsbook observations fabricated
