@@ -55,3 +55,16 @@ test("health reports pending, retry, running and next-slot times", () => {
   assert.equal(nextFeedUpdate("injuries", now, [{ ...failed, status: "success" }])?.toISOString(), "2026-09-18T01:00:00.000Z");
   assert.equal(nextFeedUpdate("injuries", now, Array(4).fill(failed))?.toISOString(), "2026-09-18T01:00:00.000Z");
 });
+test("a missing current-season NFLverse dataset waits for the next normal slot", () => {
+  const now = new Date("2026-09-24T23:50:00Z");
+  const failed = {
+    status: "failed",
+    startedAt: new Date("2026-09-24T23:44:00Z"),
+    completedAt: new Date("2026-09-24T23:46:00Z"),
+    errorMessage: "Attempt 1/4: Source returned partial: player_stats 2026: source contains no usable rows for the requested season",
+  };
+  assert.equal(shouldAttempt([failed], now, "nflverse"), false);
+  assert.equal(shouldAttempt([failed], now, "injuries"), false); // ordinary backoff still applies
+  assert.equal(shouldAttempt([failed], new Date("2026-09-25T00:00:00Z"), "injuries"), true);
+  assert.equal(nextFeedUpdate("nflverse", now, [failed])?.toISOString(), "2026-09-29T18:00:00.000Z");
+});

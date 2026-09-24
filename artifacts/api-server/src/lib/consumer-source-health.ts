@@ -156,6 +156,22 @@ function aggregateDate(value: Date | string | null | undefined): Date | null {
   return Number.isFinite(date.getTime()) ? date : null;
 }
 
+/** A complete Sleeper response is an observation even if no player changed. */
+export function playerObservationAt(
+  runs: Array<{ status: string; completedAt: Date | null; metadata: unknown }>,
+  snapshotTimestamp: Date | null,
+): Date | null {
+  const latest = runs.find((run) => run.status === "success");
+  if (!latest || !latest.metadata || typeof latest.metadata !== "object") return snapshotTimestamp;
+  const metadata = latest.metadata as Record<string, unknown>;
+  const count = metadata.playerCount;
+  const capture = metadata.sourceCapturedAt;
+  const observedAt = typeof capture === "string" ? aggregateDate(capture) : null;
+  if (typeof count !== "number" || count <= 0 || !Number.isInteger(count)
+    || !observedAt || !latest.completedAt || observedAt > latest.completedAt) return snapshotTimestamp;
+  return !snapshotTimestamp || observedAt > snapshotTimestamp ? observedAt : snapshotTimestamp;
+}
+
 /**
  * Read-only consumer-facing health summary for schedule, injury, odds, and
  * Sleeper player sources.
@@ -201,7 +217,7 @@ export async function getConsumerSourceHealth(now = new Date()): Promise<Consume
     db.select({ startedAt: dataSyncRunsTable.startedAt, completedAt: dataSyncRunsTable.completedAt, status: dataSyncRunsTable.status })
       .from(dataSyncRunsTable).where(eq(dataSyncRunsTable.provider, "espn-injuries"))
       .orderBy(desc(dataSyncRunsTable.startedAt), desc(dataSyncRunsTable.id)).limit(100),
-    db.select({ startedAt: dataSyncRunsTable.startedAt, completedAt: dataSyncRunsTable.completedAt, status: dataSyncRunsTable.status })
+    db.select({ startedAt: dataSyncRunsTable.startedAt, completedAt: dataSyncRunsTable.completedAt, status: dataSyncRunsTable.status, metadata: dataSyncRunsTable.metadata })
       .from(dataSyncRunsTable).where(eq(dataSyncRunsTable.provider, "sleeper-players"))
       .orderBy(desc(dataSyncRunsTable.startedAt), desc(dataSyncRunsTable.id)).limit(100),
     db.select({
@@ -254,7 +270,7 @@ export async function getConsumerSourceHealth(now = new Date()): Promise<Consume
     }),
     players: assessConsumerSource({
       ...playerTimes,
-      sourceTimestamp: aggregateDate(playerData?.sourceTimestamp ?? playerData?.capturedAt),
+      sourceTimestamp: playerObservationAt(playerRuns, aggregateDate(playerData?.sourceTimestamp ?? playerData?.capturedAt)),
       hasSource: Number(playerData?.count ?? 0) > 0,
       staleAfterMinutes: sleeperStaleAfterMinutes(),
       observationRequired: true,

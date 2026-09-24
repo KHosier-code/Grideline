@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assessConsumerSource, type ConsumerSourceStatus } from "./consumer-source-health";
+import { assessConsumerSource, playerObservationAt, type ConsumerSourceStatus } from "./consumer-source-health";
 
 const now = new Date("2026-10-12T18:00:00.000Z");
 const assessment = (overrides: Partial<Parameters<typeof assessConsumerSource>[0]> = {}) =>
@@ -100,4 +100,23 @@ test("attempt status alone never manufactures a successful timestamp", () => {
 test("consumer source status vocabulary remains constrained", () => {
   const allowed: ConsumerSourceStatus[] = ["healthy", "partial", "stale", "unavailable"];
   assert.ok(allowed.includes(assessment().status));
+});
+
+test("a complete unchanged player fetch is a fresh source observation", () => {
+  const old = new Date("2026-10-10T18:00:00Z");
+  const observed = "2026-10-12T17:59:00Z";
+  assert.equal(playerObservationAt([
+    { status: "success", completedAt: now, metadata: { playerCount: 12000, sourceCapturedAt: observed } },
+  ], old)?.toISOString(), observed.replace("Z", ".000Z"));
+});
+
+test("failed, empty, or future player fetches cannot refresh old evidence", () => {
+  const old = new Date("2026-10-10T18:00:00Z");
+  for (const run of [
+    { status: "failed", completedAt: now, metadata: { playerCount: 12000, sourceCapturedAt: now.toISOString() } },
+    { status: "success", completedAt: now, metadata: { playerCount: 0, sourceCapturedAt: now.toISOString() } },
+    { status: "success", completedAt: now, metadata: { playerCount: 12000, sourceCapturedAt: "2026-10-13T00:00:00Z" } },
+  ]) {
+    assert.equal(playerObservationAt([run], old), old);
+  }
 });

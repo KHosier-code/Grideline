@@ -40,16 +40,21 @@ export function latestFeedSlot(feed: Feed, now: Date, gameDates: ReadonlySet<str
 }
 
 export const retryDelays = [5, 15, 45].map(minutes => minutes * 60_000);
+function unavailableSeason(attempts: { status: string; errorMessage?: string | null }[]) {
+  return attempts.some(run => run.status === "failed"
+    && run.errorMessage?.includes("source contains no usable rows for the requested season"));
+}
 export function nextFeedUpdate(
   feed: Feed, now: Date,
-  runs: { status: string; completedAt: Date | null; startedAt: Date }[],
+  runs: { status: string; completedAt: Date | null; startedAt: Date; errorMessage?: string | null }[],
   gameDates: ReadonlySet<string> = new Set(),
 ): Date | null {
   const slot = latestFeedSlot(feed, now, gameDates);
   const attempts = runs.filter(run => +run.startedAt >= +slot);
   if (attempts.some(run => run.status === "running")) return null;
   if (!attempts.length) return now;
-  if (!attempts.some(run => run.status === "success") && attempts.length < 4) {
+  if (!attempts.some(run => run.status === "success") && attempts.length < 4
+    && !(feed === "nflverse" && unavailableSeason(attempts))) {
     return new Date(Math.max(+now, +(attempts[0].completedAt ?? attempts[0].startedAt) + retryDelays[attempts.length - 1]));
   }
   const next = new Date(now);
@@ -62,10 +67,12 @@ export function nextFeedUpdate(
 }
 
 export function shouldAttempt(
-  attempts: { status: string; completedAt: Date | null; startedAt: Date }[],
+  attempts: { status: string; completedAt: Date | null; startedAt: Date; errorMessage?: string | null }[],
   now: Date,
+  feed?: Feed,
 ) {
   if (attempts.some(a => a.status === "success") || attempts.length >= 4) return false;
+  if (feed === "nflverse" && unavailableSeason(attempts)) return false;
   if (!attempts.length) return true;
   const latest = attempts[0];
   return now.getTime() >= (latest.completedAt ?? latest.startedAt).getTime() + retryDelays[attempts.length - 1];

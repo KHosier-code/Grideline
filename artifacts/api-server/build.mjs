@@ -40,6 +40,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/confidence-persistence.test.ts"),
       path.resolve(artifactDir, "src/lib/game-state.test.ts"),
       path.resolve(artifactDir, "src/lib/consumer-source-health.test.ts"),
+      path.resolve(artifactDir, "src/lib/feed-schedule.test.ts"),
       path.resolve(artifactDir, "src/lib/consumer-player-eligibility.test.ts"),
       path.resolve(artifactDir, "src/lib/consumer-recommendation.test.ts"),
       path.resolve(artifactDir, "src/lib/odds.fixtures.test.ts"),

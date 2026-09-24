@@ -32,3 +32,4 @@
 - [Database health cancellation](database-health-cancellation.md) — route timeout races must cancel the driver query and discard its pool client, not only stop awaiting the result.
 - [Game completion semantics](game-completion-semantics.md) — scheduled ESPN rows may carry 0–0 score values; only final status proves a completed game.
 - [Aggregate timestamp decoding](aggregate-timestamp-decoding.md) — Drizzle SQL aggregate date generics do not decode runtime strings; normalize before date arithmetic or ISO serialization.
+- [Unchanged player fetches](unchanged-player-fetches.md) — a complete, successful provider fetch is fresh evidence even if change-only snapshots insert zero rows.

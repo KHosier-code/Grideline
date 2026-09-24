@@ -42,7 +42,7 @@ export async function runScheduledFeed(feed: Feed, now = new Date()) {
     const attempts = await db.select().from(dataSyncRunsTable)
       .where(and(eq(dataSyncRunsTable.provider, provider), gte(dataSyncRunsTable.startedAt, slot)))
       .orderBy(desc(dataSyncRunsTable.startedAt));
-    if (!shouldAttempt(attempts, now)) return;
+    if (!shouldAttempt(attempts, now, feed)) return;
     const attempt = attempts.length + 1;
     const [run] = await db.insert(dataSyncRunsTable)
       .values({ provider, status: "running", startedAt: now }).returning();

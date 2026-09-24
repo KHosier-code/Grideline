@@ -9,6 +9,12 @@ Treat a downloaded dataset as successful only when it contains usable rows for t
 
 **How to apply:** Preserve the source limitation as a failed or unavailable season entry with a clear message. Do not generate missing rows or carry older values forward.
 
+When the current-season file is valid but contains no usable rows for that season, avoid repeated large downloads within the same scheduled slot. Retry on the next normal slot, when the publisher may have updated the release; ordinary transient failures retain bounded backoff.
+
+**Why:** Repeated downloads of the same current-season archive cannot manufacture missing season rows and unnecessarily consume bandwidth and worker time.
+
+**How to apply:** Keep the original failed attempt visible, distinguish this source-availability failure from network errors, and do not disable future scheduled slots.
+
 Historical depth-chart releases use weekly season rows in older files and timestamped snapshot rows in newer files. Preserve the source timestamp in the newer format and use a stable source key to deduplicate exact snapshots.
 
 **Why:** Batch inserts exposed duplicate natural keys, and newer depth files changed columns rather than following the weekly schema.
