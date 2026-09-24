@@ -31,3 +31,4 @@
 - [Singleton integration-test isolation](singleton-integration-test-isolation.md) — PostgreSQL advisory locks serialize parallel test files that mutate shared singleton fixtures.
 - [Database health cancellation](database-health-cancellation.md) — route timeout races must cancel the driver query and discard its pool client, not only stop awaiting the result.
 - [Game completion semantics](game-completion-semantics.md) — scheduled ESPN rows may carry 0–0 score values; only final status proves a completed game.
+- [Aggregate timestamp decoding](aggregate-timestamp-decoding.md) — Drizzle SQL aggregate date generics do not decode runtime strings; normalize before date arithmetic or ISO serialization.

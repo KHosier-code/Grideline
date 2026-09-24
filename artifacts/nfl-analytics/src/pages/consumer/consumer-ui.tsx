@@ -1,6 +1,16 @@
 import type { ConsumerGame, ConsumerMarketQuote } from '@workspace/api-client-react';
 import { AlertTriangle, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
+import { useEffect, useState } from 'react';
+
+export function useConsumerNow() {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return now;
+}
 
 export function ConsumerLoading({ label = 'Loading the latest view…' }: { label?: string }) {
   return <div className="consumer-state"><Loader2 className="h-6 w-6 animate-spin" /><p>{label}</p></div>;
@@ -40,7 +50,7 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
       </div>
       {!compact && <div className="consumer-card-metrics">
         <span><small>Projection</small>{prediction ? `${score(prediction.projectedMargin)} margin` : game.availability.prediction ?? 'Updating'}</span>
-        <span><small>Market spread</small>{formatQuote(game.market.spread, 'spread')}</span>
+        <span><small>Market spread</small>{game.recommendation.markets.spread && (!game.kickoffTime || new Date(game.kickoffTime).getTime() > Date.now()) ? formatQuote(game.marketBoard.comparisons.find((comparison) => comparison.market === 'spread')?.selectedQuote ?? null, 'spread') : 'Current comparison unavailable'}</span>
       </div>}
       <div className="consumer-game-card-foot"><span>{game.dataConfidence.reason ?? `${game.dataConfidence.label} data confidence`}</span><ChevronRight className="h-4 w-4" /></div>
     </Link>

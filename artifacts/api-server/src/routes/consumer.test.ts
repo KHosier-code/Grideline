@@ -635,6 +635,14 @@ test("consumer performance is whitelisted and matches generated response contrac
 });
 
 test("generated contracts accept representative list, dashboard, detail, and unavailable payloads", () => {
+  const source = {
+    status: "unavailable" as const,
+    lastAttemptAt: null, lastSuccessAt: null, sourceTimestamp: null,
+    lastAttemptStatus: null, message: "No observations", staleAfterMinutes: 15,
+  };
+  const sourceHealth = { status: "unavailable" as const, sources: {
+    schedule: source, injuries: source, odds: source, players: source,
+  } };
   const game = {
     gameId: "game-1",
     season: 2026,
@@ -677,6 +685,9 @@ test("generated contracts accept representative list, dashboard, detail, and una
         freshnessLabel: "Sportsbook line updating",
       })),
     },
+    recommendation: { status: "unavailable" as const, reason: "No complete market", markets: {
+      spread: false, total: false, moneyline: false,
+    } },
     dataConfidence: { label: "Updating" as const, score: null, reason: "Prediction data is being refreshed" },
     confidence: {
       markets: (["spread", "moneyline", "total"] as const).map((market) => ({
@@ -746,12 +757,13 @@ test("generated contracts accept representative list, dashboard, detail, and una
   };
 
   const routesDirectory = path.join(fileURLToPath(new URL("../../", import.meta.url)), "src/routes");
-  const source = readFileSync(path.join(routesDirectory, "consumer.ts"), "utf8");
+  const routeSource = readFileSync(path.join(routesDirectory, "consumer.ts"), "utf8");
   const predictionSource = readFileSync(path.join(routesDirectory, "../lib/live-predictions.ts"), "utf8");
   assert.equal(ListConsumerGamesResponse.safeParse({
     status: "absent",
     coverage: { games: 1, gamesWithComparison: 0, DraftKings: 0, FanDuel: 0 },
     games: [game],
+    sourceHealth,
     teamRecords: [],
     recordVerification: {
       expectedTeamCount: 32,
@@ -765,32 +777,33 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.equal(GetConsumerDashboardResponse.safeParse({
     status: "available",
     games: [game],
+    sourceHealth,
     note: "Persisted snapshots only",
   }).success, true);
-  assert.equal(GetConsumerGameResponse.safeParse(detail).success, true);
+  assert.equal(GetConsumerGameResponse.safeParse({ ...detail, sourceHealth }).success, true);
   assert.equal(MAX_CONSUMER_GAMES, 100);
   assert.equal(MAX_CONSUMER_MOVEMENT_ROWS, 200);
   assert.equal(MAX_CONSUMER_SNAPSHOT_ROWS, 100);
   assert.equal(MAX_CONSUMER_PERFORMANCE_ROWS, 5_000);
-  assert.match(source, /\.limit\(MAX_CONSUMER_GAMES\)/);
-  assert.match(source, /inArray\(sportsbookOddsTable\.sportsbook, \["DraftKings", "FanDuel"\]\)/);
-  assert.match(source, /\.orderBy\(asc\(sportsbookOddsTable\.capturedAt\), asc\(sportsbookOddsTable\.id\)\)/);
-  assert.match(source, /preKickoffOnly:\s*true/);
-  assert.match(source, /snapshotDataConfidence\(\{[\s\S]*lowSample:\s*snapshot\.lowSample[\s\S]*inputMissingFeatureCount/);
-  assert.match(source, /dataAcceptable:\s*confidenceData\.acceptable/);
-  assert.match(source, /authoritativeGameKickoff:\s*true/);
-  assert.match(source, /new Date\(game\.kickoffTime\)\.getTime\(\) - 1/);
-  assert.match(source, /featureVersion,\s*PERSONNEL_CONTEXT_VERSION/);
-  assert.match(source, /maxRows:\s*MAX_CONSUMER_SNAPSHOT_ROWS/);
-  assert.match(source, /getPredictionPerformance\(MAX_CONSUMER_PERFORMANCE_ROWS\)/);
+  assert.match(routeSource, /\.limit\(MAX_CONSUMER_GAMES\)/);
+  assert.match(routeSource, /inArray\(sportsbookOddsTable\.sportsbook, \["DraftKings", "FanDuel"\]\)/);
+  assert.match(routeSource, /\.orderBy\(asc\(sportsbookOddsTable\.capturedAt\), asc\(sportsbookOddsTable\.id\)\)/);
+  assert.match(routeSource, /preKickoffOnly:\s*true/);
+  assert.match(routeSource, /snapshotDataConfidence\(\{[\s\S]*lowSample:\s*snapshot\.lowSample[\s\S]*inputMissingFeatureCount/);
+  assert.match(routeSource, /dataAcceptable:\s*confidenceData\.acceptable/);
+  assert.match(routeSource, /authoritativeGameKickoff:\s*true/);
+  assert.match(routeSource, /new Date\(game\.kickoffTime\)\.getTime\(\) - 1/);
+  assert.match(routeSource, /featureVersion,\s*PERSONNEL_CONTEXT_VERSION/);
+  assert.match(routeSource, /maxRows:\s*MAX_CONSUMER_SNAPSHOT_ROWS/);
+  assert.match(routeSource, /getPredictionPerformance\(MAX_CONSUMER_PERFORMANCE_ROWS\)/);
   assert.match(predictionSource, /predictionTimestamp\}\s*<\s*\$\{gamesTable\.kickoffTime/);
   assert.match(predictionSource, /selectDistinctOn/);
   assert.match(predictionSource, /PHASE6_PRODUCTION_VECTOR_WIDTH/);
   assert.match(predictionSource, /snapshotMatchesProductionModels/);
   assert.match(predictionSource, /input-integrity-v3/);
   assert.match(predictionSource, /options\.maxRows === undefined \? await query : await query\.limit\(options\.maxRows\)/);
-  assert.match(source, /\.limit\(1\)/);
-  assert.doesNotMatch(source, /\b(generateLivePredictions|gradeCompletedPredictions|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);
+  assert.match(routeSource, /\.limit\(1\)/);
+  assert.doesNotMatch(routeSource, /\b(generateLivePredictions|gradeCompletedPredictions|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);
 });
 
 test("consumer movement UI keeps honest terminology and responsive controls", () => {
@@ -813,7 +826,7 @@ test("consumer market board keeps neutral language and 320px responsive controls
   assert.match(component, /Model difference/);
   assert.match(component, /First observed by Gridline/);
   assert.match(component, /aria-expanded/);
-  assert.doesNotMatch(component, /\bbet\b|\bpick\b|\bedge\b|recommendation|expected return/i);
+  assert.doesNotMatch(component, /\bbet\b|\bpick\b|\bedge\b|expected return/i);
   assert.match(css, /@media \(max-width: 420px\)/);
   assert.match(css, /\.btn-icon \{[^}]*width: 44px;[^}]*height: 44px/);
 });

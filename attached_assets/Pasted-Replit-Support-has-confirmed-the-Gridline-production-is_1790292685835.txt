@@ -1,0 +1,15 @@
+Replit Support has confirmed the Gridline production issue is fixed. The recovery change freeze has ended. Continue development in the existing project; preserve the current models, saved predictions, and premium game-detail experience.
+
+Implement **GL-002: data freshness and game-state enforcement** end to end.
+
+1. Inspect the current feed schedules, status fields, recommendation endpoints, and caches. Set freshness rules appropriate to each source’s actual update cadence. Track last attempt, last success, source timestamp, and failure or partial status. Expose the status needed by the UI.
+2. Enforce game lifecycle consistently across the weekly board, game detail, APIs, and cached responses. Games that have started, finished, been postponed, or been canceled must not appear as current pregame betting recommendations. Preserve their saved projections and results for historical viewing.
+3. Enforce player eligibility for recommendation surfaces. Exclude confirmed inactive, IR, suspended, released, and completed-game players. If a required status is unknown or stale, show that uncertainty and suppress the affected recommendation.
+4. Handle markets independently. A game with a fresh total but no spread or moneyline can still display the total; it must not show a spread or moneyline pick or imply that its market coverage is complete. Preserve Gridline’s existing partial-market presentation.
+5. Display clear healthy, partial, stale, and unavailable states. Never silently substitute missing odds, injuries, or other required inputs with zero or a neutral value.
+
+Add meaningful tests for a game crossing kickoff, a final game left in cache, an inactive player, a stale feed, and a missing price for one market. Run the relevant tests, typecheck, and production build. Use additive, safe database changes only if the existing schema cannot support the requirements.
+
+Also **inspect the official-prediction creation policy**. Determine when Week 3 snapshots are supposed to become `official_final_prediction` records and whether the current absence is expected. Fix a confirmed forward-looking process bug if you find one, but do not retroactively label snapshots official or rewrite prediction history.
+
+Complete the implementation and give me a concise report: what changed, how each case behaves, test results, whether Week 3 official-prediction timing is correct, and any remaining issue. Follow the project’s normal release workflow once verification passes.

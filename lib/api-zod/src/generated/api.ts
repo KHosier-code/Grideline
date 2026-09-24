@@ -1056,6 +1056,15 @@ export const GetConsumerDashboardResponse = zod.object({
   "freshnessLabel": zod.string()
 })).min(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin).max(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax)
 }),
+  "recommendation": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable', 'historical']),
+  "reason": zod.string().nullable(),
+  "markets": zod.object({
+  "spread": zod.boolean(),
+  "total": zod.boolean(),
+  "moneyline": zod.boolean()
+})
+}),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
   "score": zod.number().nullable(),
@@ -1083,7 +1092,48 @@ export const GetConsumerDashboardResponse = zod.object({
   "market": zod.string().nullable()
 })
 })),
-  "note": zod.string()
+  "note": zod.string(),
+  "sourceHealth": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "sources": zod.object({
+  "schedule": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "injuries": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "odds": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "players": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+})
+})
+})
 })
 
 
@@ -1225,6 +1275,15 @@ export const ListConsumerGamesResponse = zod.object({
   "freshnessLabel": zod.string()
 })).min(listConsumerGamesResponseGamesItemMarketBoardComparisonsMin).max(listConsumerGamesResponseGamesItemMarketBoardComparisonsMax)
 }),
+  "recommendation": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable', 'historical']),
+  "reason": zod.string().nullable(),
+  "markets": zod.object({
+  "spread": zod.boolean(),
+  "total": zod.boolean(),
+  "moneyline": zod.boolean()
+})
+}),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
   "score": zod.number().nullable(),
@@ -1268,6 +1327,47 @@ export const ListConsumerGamesResponse = zod.object({
   "completedPriorGames": zod.number().int(),
   "complete": zod.boolean(),
   "discrepancies": zod.array(zod.string())
+}),
+  "sourceHealth": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "sources": zod.object({
+  "schedule": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "injuries": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "odds": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "players": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+})
+})
 })
 })
 
@@ -1413,6 +1513,15 @@ export const GetConsumerGameResponse = zod.object({
   "freshnessLabel": zod.string()
 })).min(getConsumerGameResponseOneMarketBoardComparisonsMin).max(getConsumerGameResponseOneMarketBoardComparisonsMax)
 }),
+  "recommendation": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable', 'historical']),
+  "reason": zod.string().nullable(),
+  "markets": zod.object({
+  "spread": zod.boolean(),
+  "total": zod.boolean(),
+  "moneyline": zod.boolean()
+})
+}),
   "dataConfidence": zod.object({
   "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
   "score": zod.number().nullable(),
@@ -1547,6 +1656,10 @@ export const GetConsumerGameResponse = zod.object({
   "name": zod.string(),
   "teamId": zod.string(),
   "position": zod.string().nullable(),
+  "eligibility": zod.object({
+  "status": zod.enum(['eligible', 'ineligible', 'unknown']),
+  "reason": zod.string().nullable()
+}),
   "recentUsage": zod.object({
   "snapShare": zod.number().nullable(),
   "targets": zod.number().nullable(),
@@ -1603,6 +1716,47 @@ export const GetConsumerGameResponse = zod.object({
   "coverage": zod.string(),
   "limitations": zod.array(zod.string())
 })).min(getConsumerGameResponseTwoMatchupBoardAssessmentsMin).max(getConsumerGameResponseTwoMatchupBoardAssessmentsMax)
+}),
+  "sourceHealth": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "sources": zod.object({
+  "schedule": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "injuries": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "odds": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+}),
+  "players": zod.object({
+  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastSuccessAt": zod.coerce.date().nullable(),
+  "sourceTimestamp": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.string().nullable(),
+  "message": zod.string().nullable(),
+  "staleAfterMinutes": zod.number()
+})
+})
 }),
   "analysis": zod.object({
   "drivers": zod.array(zod.string()),

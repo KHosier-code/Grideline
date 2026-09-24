@@ -7,9 +7,11 @@
  */
 import type { ConsumerDashboardStatus } from './consumerDashboardStatus';
 import type { ConsumerGame } from './consumerGame';
+import type { ConsumerSourceHealth } from './consumerSourceHealth';
 
 export interface ConsumerDashboard {
   status: ConsumerDashboardStatus;
   games: ConsumerGame[];
   note: string;
+  sourceHealth: ConsumerSourceHealth;
 }

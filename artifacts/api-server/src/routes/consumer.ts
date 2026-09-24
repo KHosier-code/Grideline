@@ -12,6 +12,7 @@ import {
   teamsTable,
   weatherForecastSnapshotsTable,
   modelTrainingRunsTable,
+  playersTable,
 } from "@workspace/db";
 import {
   gameSpecificSnapshot,
@@ -34,6 +35,9 @@ import { persistConfidenceMethodology, persistConfidenceResults } from "../lib/c
 import { getCurrentGamePersonnel } from "../lib/current-personnel";
 import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
 import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, interpretNflGameState, verifyTeamRecords } from "../lib/game-state";
+import { getConsumerSourceHealth } from "../lib/consumer-source-health";
+import { consumerRecommendation } from "../lib/consumer-recommendation";
+import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 export { consumerFinalScore } from "../lib/game-state";
 export { verifyTeamRecords } from "../lib/game-state";
 
@@ -862,6 +866,7 @@ export function serializePerformance(performance: Awaited<ReturnType<typeof getP
 
 export async function consumerGames(filters: ConsumerFilters = {}, persistConfidence = false) {
   const asOf = filters.asOf ?? new Date();
+  const sourceHealth = await getConsumerSourceHealth(asOf);
   const conditions = [
     filters.season === undefined ? undefined : eq(gamesTable.season, filters.season),
     filters.week === undefined ? undefined : eq(gamesTable.week, filters.week),
@@ -870,10 +875,13 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       ? gt(gamesTable.kickoffTime, asOf)
       : undefined,
   ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
-  const games = await db.select().from(gamesTable)
+  const queriedGames = await db.select().from(gamesTable)
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(asc(gamesTable.kickoffTime), asc(gamesTable.gameId))
     .limit(MAX_CONSUMER_GAMES);
+  const games = filters.season === undefined && filters.week === undefined && filters.gameId === undefined
+    ? queriedGames.filter((game) => ["scheduled", "pregame"].includes(interpretNflGameState(game, asOf)))
+    : queriedGames;
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
   const recordSeason = filters.season ?? games[0]?.season;
   const recordWeek = filters.week ?? games[0]?.week;
@@ -927,6 +935,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
   let persistedConfidenceResults = 0;
   if (persistConfidence) await persistConfidenceMethodology();
   const results = await Promise.all(games.map(async (game) => {
+    const gameState = interpretNflGameState(game, asOf);
     const snapshot = gameSpecificSnapshot(game.gameId, snapshots);
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
@@ -939,6 +948,13 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       game.kickoffTime,
       asOf,
     );
+    const recommendation = consumerRecommendation({
+      gameState, kickoffTime: game.kickoffTime, now: asOf, sourceHealth,
+      homeAbbreviation: home?.abbreviation ?? "", homeName: home?.teamName,
+      awayAbbreviation: away?.abbreviation ?? "", awayName: away?.teamName,
+      rows: marketRows.filter((row) => row.gameId === game.gameId),
+      comparisons: marketBoard.comparisons,
+    });
     const dataConfidence = confidence(snapshot);
     const confidenceData = snapshot ? snapshotDataConfidence({
       qbConfidence: snapshot.qbConfidence,
@@ -1072,7 +1088,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       week: game.week,
       kickoffTime: game.kickoffTime?.toISOString() ?? null,
       gameStatus: game.gameStatus,
-      gameState: interpretNflGameState(game, asOf),
+      gameState,
       venue: game.stadium,
       matchup: {
         home: { name: home?.teamName ?? "Team unavailable", abbreviation: home?.abbreviation ?? "—", logoUrl: home?.logoUrl ?? null },
@@ -1090,6 +1106,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       } : null,
       market,
       marketBoard,
+      recommendation,
       dataConfidence,
       confidence: calculatedConfidence,
       availability: {
@@ -1101,6 +1118,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
   const teamRecords = buildTeamRecords(recordTeams, recordGames, asOf);
   const completedPriorGames = recordGames.filter((game) => authoritativeFinalRegularSeasonGame(game, asOf)).length;
   return Object.assign(results, {
+    sourceHealth,
     persistedConfidenceResults,
     teamRecords,
     recordVerification: verifyTeamRecords(teamRecords, { targetWeek: recordWeek, completedPriorGames }),
@@ -1110,7 +1128,8 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
 router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   try {
     const games = await consumerGames();
-    res.json({ status: games.length ? "available" : "unavailable", games, note: "Persisted snapshots only; this endpoint never starts model computation or data synchronization." });
+    res.set("Cache-Control", "no-store");
+    res.json({ status: games.length ? "available" : "unavailable", games, sourceHealth: games.sourceHealth, note: "Persisted snapshots only; this endpoint never starts model computation or data synchronization." });
   } catch (error) {
     _req.log.error({ error }, "Consumer dashboard read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });
@@ -1128,9 +1147,11 @@ router.get("/consumer/games", async (req, res): Promise<void> => {
   try {
     const games = await consumerGames({ season, week });
     const summary = summarizeConsumerMarketBoards(games);
+    res.set("Cache-Control", "no-store");
     res.json({
       ...summary,
       games,
+      sourceHealth: games.sourceHealth,
       teamRecords: games.teamRecords,
       recordVerification: games.recordVerification,
     });
@@ -1142,7 +1163,8 @@ router.get("/consumer/games", async (req, res): Promise<void> => {
 
 router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
   try {
-    const game = (await consumerGames({ gameId: req.params.gameId }))[0];
+    const gameResults = await consumerGames({ gameId: req.params.gameId });
+    const game = gameResults[0];
     if (!game) {
       res.status(404).json({ error: "This game is not available.", code: "game_not_found" });
       return;
@@ -1267,13 +1289,32 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       .slice(0, 5);
     const detailHome = detailTeamMaps.scheduleToAbbreviation.get(gameRow.homeTeamId) ?? gameRow.homeTeamId;
     const detailAway = detailTeamMaps.scheduleToAbbreviation.get(gameRow.awayTeamId) ?? gameRow.awayTeamId;
+    const rosterRows = recent.length
+      ? await db.select({
+        playerId: playersTable.playerId, activeStatus: playersTable.activeStatus,
+        sourceUpdatedAt: playersTable.sourceUpdatedAt,
+      }).from(playersTable).where(inArray(playersTable.playerId, recent.map((player) => player.playerId)))
+      : [];
+    const rosterById = new Map(rosterRows.map((player) => [player.playerId, player]));
     const keyPlayers = [detailAway, detailHome]
       .flatMap(rankRecent)
       .map((player) => {
-        const contextTeams = (finalizedContext as { teams: Array<{ side: "home" | "away"; depth: Array<{ name: string; depthRank: number | null; injuryStatus: string | null }> }> }).teams;
+         const contextTeams = finalizedContext.teams;
         const team = contextTeams.find((candidate) => candidate.side === (player.teamId === detailHome ? "home" : "away"))
           ;
         const personnel = team?.depth.find((candidate) => candidate.name.toLowerCase() === player.playerName.toLowerCase());
+         const injury = team?.injuries.find((candidate) => candidate.name.toLowerCase() === player.playerName.toLowerCase());
+         const roster = rosterById.get(player.playerId);
+         const eligibility = classifyPlayerEligibility({
+           gameState: game.gameState,
+           injuryStatus: injury?.gameStatus ?? personnel?.injuryStatus,
+           rosterStatus: roster?.activeStatus,
+           statusAsOf: gameResults.sourceHealth.sources.players.status === "stale"
+             || gameResults.sourceHealth.sources.players.status === "unavailable"
+             || gameResults.sourceHealth.sources.injuries.status === "stale"
+             ? null : injury?.asOf ? new Date(injury.asOf) : roster?.sourceUpdatedAt ?? (personnel?.asOf ? new Date(personnel.asOf) : null),
+           maxAgeMs: 48 * 60 * 60_000,
+         });
         return {
           playerId: player.playerId, name: player.playerName, teamId: player.teamId ?? "",
           position: player.position, recentUsage: Object.fromEntries(Object.entries(player.aggregate)
@@ -1282,8 +1323,12 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
             depthRank: personnel?.depthRank ?? null, injuryStatus: personnel?.injuryStatus ?? null,
             source: personnel ? "cutoff-safe pregame personnel context" : "Current personnel evidence unavailable",
           },
+           eligibility,
         };
-      });
+      })
+      .filter((player) => game.gameState === "pregame" || game.gameState === "scheduled"
+        ? player.eligibility.status !== "ineligible"
+        : true);
     const movement = serializeMovement(movementRows, kickoff);
     const teamEvidence = (teamId: string) => {
       const row = contextRows.find((candidate) => candidate.teamId === teamId);
@@ -1297,8 +1342,10 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       awayName: game.matchup.away.abbreviation,
       sourceCutoff,
     });
+    res.set("Cache-Control", "no-store");
     res.json({
       ...game,
+      sourceHealth: gameResults.sourceHealth,
       weather: forecast ? {
         available: true,
         summary: forecast.weatherSummary,

@@ -13,9 +13,6 @@ export function interpretNflGameState(
   if (status.includes("postpon")) return "postponed";
   if (status.includes("cancel")) return "cancelled";
   if (status.includes("final") || status.includes("completed") || status === "closed") return "final";
-  if (status.includes("scheduled") || status.includes("pre game") || status === "status unknown") {
-    return game.kickoffTime ? "pregame" : "scheduled";
-  }
   if (
     status.includes("progress") ||
     status.includes("halftime") ||
@@ -24,6 +21,9 @@ export function interpretNflGameState(
     status.includes("quarter")
   ) return "live";
   if (game.kickoffTime && game.kickoffTime.getTime() <= now.getTime()) return "live";
+  if (status.includes("scheduled") || status.includes("pre game") || status === "status unknown") {
+    return game.kickoffTime ? "pregame" : "scheduled";
+  }
   return game.kickoffTime ? "pregame" : "scheduled";
 }
 

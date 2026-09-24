@@ -24,6 +24,8 @@ function PlayerUsageCard({ player, testId }: { player: ConsumerKeyPlayer; testId
               ? ` · ${player.currentPersonnel.injuryStatus}`
               : ''}
           </span>
+          <span className={`market-state market-state-${player.eligibility.status}`}>{player.eligibility.status === 'eligible' ? 'Status confirmed' : player.eligibility.status === 'ineligible' ? 'Unavailable for this game' : 'Status unconfirmed'}</span>
+          {player.eligibility.reason && <small>{player.eligibility.reason}</small>}
         </div>
       </header>
       <div className="puc-metrics">

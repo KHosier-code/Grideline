@@ -18,6 +18,8 @@ test("normalizes provider statuses and never treats scheduled 0-0 as a result", 
     finalAwayScore: 0,
   };
   assert.equal(interpretNflGameState(scheduled, now), "pregame");
+  assert.equal(interpretNflGameState(scheduled, scheduled.kickoffTime), "live");
+  assert.equal(interpretNflGameState({ ...scheduled, gameStatus: "STATUS_FINAL" }, now), "final");
   assert.equal(consumerFinalScore(scheduled, now), null);
   assert.equal(interpretNflGameState({ ...scheduled, gameStatus: "STATUS_IN_PROGRESS" }, now), "live");
   assert.equal(interpretNflGameState({ ...scheduled, gameStatus: "STATUS_POSTPONED" }, now), "postponed");

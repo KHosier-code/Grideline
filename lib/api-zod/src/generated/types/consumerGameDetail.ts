@@ -11,6 +11,7 @@ import type { ConsumerGameDetailAnalysis } from './consumerGameDetailAnalysis';
 import type { ConsumerKeyPlayer } from './consumerKeyPlayer';
 import type { ConsumerMatchupBoard } from './consumerMatchupBoard';
 import type { ConsumerMovement } from './consumerMovement';
+import type { ConsumerSourceHealth } from './consumerSourceHealth';
 import type { ConsumerWeather } from './consumerWeather';
 
 export type ConsumerGameDetail = ConsumerGame & {
@@ -20,5 +21,6 @@ export type ConsumerGameDetail = ConsumerGame & {
   /** @maxItems 20 */
   keyPlayers: ConsumerKeyPlayer[];
   matchupBoard: ConsumerMatchupBoard;
+  sourceHealth: ConsumerSourceHealth;
   analysis: ConsumerGameDetailAnalysis;
 };

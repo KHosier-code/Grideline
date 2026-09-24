@@ -272,6 +272,77 @@ export interface ConsumerMarketBoard {
   comparisons: ConsumerMarketComparison[];
 }
 
+export type ConsumerSourceHealthStatus = typeof ConsumerSourceHealthStatus[keyof typeof ConsumerSourceHealthStatus];
+
+
+export const ConsumerSourceHealthStatus = {
+  healthy: 'healthy',
+  partial: 'partial',
+  stale: 'stale',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerSourceStateStatus = typeof ConsumerSourceStateStatus[keyof typeof ConsumerSourceStateStatus];
+
+
+export const ConsumerSourceStateStatus = {
+  healthy: 'healthy',
+  partial: 'partial',
+  stale: 'stale',
+  unavailable: 'unavailable',
+} as const;
+
+export interface ConsumerSourceState {
+  status: ConsumerSourceStateStatus;
+  /** @nullable */
+  lastAttemptAt: string | null;
+  /** @nullable */
+  lastSuccessAt: string | null;
+  /** @nullable */
+  sourceTimestamp: string | null;
+  /** @nullable */
+  lastAttemptStatus: string | null;
+  /** @nullable */
+  message: string | null;
+  staleAfterMinutes: number;
+}
+
+export type ConsumerSourceHealthSources = {
+  schedule: ConsumerSourceState;
+  injuries: ConsumerSourceState;
+  odds: ConsumerSourceState;
+  players: ConsumerSourceState;
+};
+
+export interface ConsumerSourceHealth {
+  status: ConsumerSourceHealthStatus;
+  sources: ConsumerSourceHealthSources;
+}
+
+export type ConsumerRecommendationStatus = typeof ConsumerRecommendationStatus[keyof typeof ConsumerRecommendationStatus];
+
+
+export const ConsumerRecommendationStatus = {
+  healthy: 'healthy',
+  partial: 'partial',
+  stale: 'stale',
+  unavailable: 'unavailable',
+  historical: 'historical',
+} as const;
+
+export type ConsumerRecommendationMarkets = {
+  spread: boolean;
+  total: boolean;
+  moneyline: boolean;
+};
+
+export interface ConsumerRecommendation {
+  status: ConsumerRecommendationStatus;
+  /** @nullable */
+  reason: string | null;
+  markets: ConsumerRecommendationMarkets;
+}
+
 export type ConsumerConfidenceComponentKey = typeof ConsumerConfidenceComponentKey[keyof typeof ConsumerConfidenceComponentKey];
 
 
@@ -435,6 +506,7 @@ export interface ConsumerGame {
   prediction: ConsumerGamePrediction;
   market: ConsumerGameMarket;
   marketBoard: ConsumerMarketBoard;
+  recommendation: ConsumerRecommendation;
   dataConfidence: ConsumerGameDataConfidence;
   confidence: ConsumerConfidence;
   availability: ConsumerGameAvailability;
@@ -483,6 +555,7 @@ export interface ConsumerGames {
   games: ConsumerGame[];
   teamRecords: ConsumerTeamRecord[];
   recordVerification: ConsumerRecordVerification;
+  sourceHealth: ConsumerSourceHealth;
 }
 
 export type ConsumerPlayerUsageGameMatchup = {
@@ -525,6 +598,7 @@ export interface ConsumerDashboard {
   status: ConsumerDashboardStatus;
   games: ConsumerGame[];
   note: string;
+  sourceHealth: ConsumerSourceHealth;
 }
 
 export type ConsumerGameDetailAnalysisAvailability = {
@@ -784,6 +858,21 @@ export interface ConsumerContext {
   message: string | null;
 }
 
+export type ConsumerKeyPlayerEligibilityStatus = typeof ConsumerKeyPlayerEligibilityStatus[keyof typeof ConsumerKeyPlayerEligibilityStatus];
+
+
+export const ConsumerKeyPlayerEligibilityStatus = {
+  eligible: 'eligible',
+  ineligible: 'ineligible',
+  unknown: 'unknown',
+} as const;
+
+export type ConsumerKeyPlayerEligibility = {
+  status: ConsumerKeyPlayerEligibilityStatus;
+  /** @nullable */
+  reason: string | null;
+};
+
 export type ConsumerKeyPlayerRecentUsage = {
   /** @nullable */
   snapShare: number | null;
@@ -827,6 +916,7 @@ export interface ConsumerKeyPlayer {
   teamId: string;
   /** @nullable */
   position: string | null;
+  eligibility: ConsumerKeyPlayerEligibility;
   recentUsage: ConsumerKeyPlayerRecentUsage;
   currentPersonnel: ConsumerKeyPlayerCurrentPersonnel;
 }
@@ -937,6 +1027,7 @@ export type ConsumerGameDetail = ConsumerGame & {
   /** @maxItems 20 */
   keyPlayers: ConsumerKeyPlayer[];
   matchupBoard: ConsumerMatchupBoard;
+  sourceHealth: ConsumerSourceHealth;
   analysis: ConsumerGameDetailAnalysis;
 };
 

@@ -12,27 +12,28 @@ export function formatDifference(comparison: ConsumerMarketComparison) {
   return `${comparison.difference > 0 ? '+' : ''}${comparison.difference.toFixed(1)}${suffix}`;
 }
 
-export function ConsumerMarketComparisonCell({ comparison, className = '' }: { comparison: ConsumerMarketComparison, className?: string }) {
+export function ConsumerMarketComparisonCell({ comparison, className = '', eligible = false }: { comparison: ConsumerMarketComparison, className?: string, eligible?: boolean }) {
+  const usable = eligible && comparison.state === 'available';
   return (
     <div className={`market-comparison-cell ${className}`.trim()} data-testid={`market-comparison-${comparison.market}`}>
       <div className="tc-quote-label">
         <span>{comparison.label}</span>
         <span className={`market-state market-state-${comparison.state}`}>
-          {comparison.state === 'absent' ? 'No market' : comparison.state}
+          {usable ? 'Ready' : comparison.state === 'absent' ? 'No market' : comparison.state === 'stale' ? 'Stale' : 'Not eligible'}
         </span>
       </div>
       <dl className="comparison-values">
         <div><dt>Gridline</dt><dd>{formatComparisonValue(comparison, comparison.modelValue)}</dd></div>
         <div><dt>Market</dt><dd>{formatComparisonValue(comparison, comparison.marketValue)}</dd></div>
-        <div><dt>Model difference</dt><dd>{formatDifference(comparison)}</dd></div>
+        <div><dt>Model difference</dt><dd>{usable ? formatDifference(comparison) : 'Unavailable'}</dd></div>
       </dl>
-      {comparison.selectedQuote && (
+      {usable && comparison.selectedQuote && (
         <p className="selected-book">
           {comparison.selectedQuote.sportsbook} · {comparison.selectedQuote.price > 0 ? '+' : ''}
           {comparison.selectedQuote.price}
         </p>
       )}
-      <p className="consumer-note">{comparison.freshnessLabel}</p>
+      <p className="consumer-note">{usable ? comparison.freshnessLabel : 'Current comparison suppressed: complete, fresh evidence is required.'}</p>
     </div>
   );
 }

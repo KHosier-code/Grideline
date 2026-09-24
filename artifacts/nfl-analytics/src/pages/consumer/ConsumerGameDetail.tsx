@@ -1,7 +1,7 @@
 import { getGetConsumerGameQueryKey, useGetConsumerGame } from '@workspace/api-client-react';
 import { ChevronLeft, CloudRain, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useLocation, useParams, Link } from 'wouter';
-import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric } from './consumer-ui';
+import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric, useConsumerNow } from './consumer-ui';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { LineMovementExperience } from '../../components/LineMovementExperience';
@@ -9,17 +9,21 @@ import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
 import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { MarketConfidenceSummary } from '../../components/MarketConfidence';
+import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
   const [location] = useLocation();
   const detailSearch = location.includes('?') ? location.slice(location.indexOf('?')) : '';
   const backHref = detailSearch ? `/games${detailSearch}` : '/games';
-  const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 30_000 } });
+   const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
+  const now = useConsumerNow();
   if (query.isLoading) return <ConsumerLoading label="Loading matchup details…" />;
   if (query.isError || !query.data) return <ConsumerMessage error title="This matchup is unavailable" detail="We couldn’t load this game right now. Return to Games and try again shortly." />;
   const game = query.data;
   const prediction = game.prediction;
+  const beforeKickoff = Boolean(game.kickoffTime && new Date(game.kickoffTime).getTime() > now
+    && (game.gameState === 'pregame' || game.gameState === 'scheduled'));
   const weather = game.weather as { summary?: unknown; temperature?: unknown; sustainedWind?: unknown; precipitationProbability?: unknown } | null;
   const weatherParts = weather ? [
     typeof weather.summary === 'string' ? weather.summary : null,
@@ -30,6 +34,7 @@ export default function ConsumerGameDetail() {
 
   return <div className="consumer-page consumer-detail">
     <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
+    <ConsumerSourceHealth health={game.sourceHealth} />
 
     <section className="premium-hero" data-section="game-header" data-testid="premium-hero" aria-label="Game summary">
       <div className="premium-hero-context">
@@ -57,22 +62,22 @@ export default function ConsumerGameDetail() {
       </div>
 
       <div className="premium-current-market">
-        <span className="premium-eyebrow">Current Market</span>
+         <span className="premium-eyebrow">{beforeKickoff ? 'Current market' : 'Pregame market history'}</span>
         <div className="premium-market-quotes">
           <div className="premium-market-quote">
             <small>Spread</small>
-            <span>{formatQuote(game.market.spread, 'spread')}</span>
+             <span>{beforeKickoff && game.recommendation.markets.spread ? formatQuote(game.marketBoard.comparisons.find(c => c.market === 'spread')?.selectedQuote ?? null, 'spread') : 'Unavailable'}</span>
           </div>
           <div className="premium-market-quote">
             <small>Moneyline</small>
-            <span>{formatQuote(game.market.moneyline, 'moneyline')}</span>
+             <span>{beforeKickoff && game.recommendation.markets.moneyline ? formatQuote(game.marketBoard.comparisons.find(c => c.market === 'moneyline')?.selectedQuote ?? null, 'moneyline') : 'Unavailable'}</span>
           </div>
           <div className="premium-market-quote">
             <small>Total</small>
-            <span>{formatQuote(game.market.total, 'total')}</span>
+             <span>{beforeKickoff && game.recommendation.markets.total ? formatQuote(game.marketBoard.comparisons.find(c => c.market === 'total')?.selectedQuote ?? null, 'total') : 'Unavailable'}</span>
           </div>
         </div>
-        {game.availability.market && <p className="premium-market-note">{game.availability.market}</p>}
+         <p className="premium-market-note">{beforeKickoff ? game.recommendation.reason ?? 'All three markets have fresh complete evidence.' : 'Historical projections remain available; no current recommendations after kickoff.'}</p>
       </div>
     </section>
 
@@ -120,17 +125,17 @@ export default function ConsumerGameDetail() {
       <section className="premium-comparison-section" data-section="market-comparison" data-testid="premium-comparison" aria-labelledby="market-comparison-heading">
         <div className="consumer-section-heading">
           <div>
-            <p className="consumer-eyebrow">Current market context</p>
+             <p className="consumer-eyebrow">{beforeKickoff ? 'Current market context' : 'Historical market context'}</p>
             <h2 id="market-comparison-heading">Gridline vs. market</h2>
           </div>
           <span className={`market-state market-state-${game.marketBoard.status}`}>
             {game.marketBoard.status === 'absent' ? 'Unavailable' : game.marketBoard.status}
           </span>
         </div>
-        <p className="consumer-note">Differences are informational and compare Gridline with available market lines. Market context does not change the Gridline projection.</p>
+         <p className="consumer-note">Differences are informational and appear only with fresh complete price evidence. Market context does not change the saved Gridline projection.</p>
         <div className="premium-comparison-grid">
           {game.marketBoard.comparisons.map((comparison) => (
-            <ConsumerMarketComparisonCell key={comparison.market} comparison={comparison} />
+             <ConsumerMarketComparisonCell key={comparison.market} comparison={comparison} eligible={beforeKickoff && game.recommendation.markets[comparison.market]} />
           ))}
         </div>
       </section>

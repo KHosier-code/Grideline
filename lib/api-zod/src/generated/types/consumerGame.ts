@@ -14,6 +14,7 @@ import type { ConsumerGameMarket } from './consumerGameMarket';
 import type { ConsumerGameMatchup } from './consumerGameMatchup';
 import type { ConsumerGamePrediction } from './consumerGamePrediction';
 import type { ConsumerMarketBoard } from './consumerMarketBoard';
+import type { ConsumerRecommendation } from './consumerRecommendation';
 
 export interface ConsumerGame {
   gameId: string;
@@ -32,6 +33,7 @@ export interface ConsumerGame {
   prediction: ConsumerGamePrediction;
   market: ConsumerGameMarket;
   marketBoard: ConsumerMarketBoard;
+  recommendation: ConsumerRecommendation;
   dataConfidence: ConsumerGameDataConfidence;
   confidence: ConsumerConfidence;
   availability: ConsumerGameAvailability;

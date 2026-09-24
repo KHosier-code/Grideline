@@ -7,9 +7,10 @@ import {
 import { ChevronDown, ChevronRight, Clock3 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { Link } from 'wouter';
-import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote } from './consumer-ui';
+import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, useConsumerNow } from './consumer-ui';
 import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
 import { MarketConfidenceSummary } from '../../components/MarketConfidence';
+import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 
 function readPositiveInteger(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -38,9 +39,12 @@ function EvidenceQuote({
 
 function GameRow({ game, season, week }: { game: ConsumerGame; season: number; week: number }) {
   const [expanded, setExpanded] = useState(false);
+  const now = useConsumerNow();
   const evidenceId = useId();
   const final = game.finalScore;
   const prediction = game.prediction;
+  const beforeKickoff = Boolean(game.kickoffTime && new Date(game.kickoffTime).getTime() > now
+    && (game.gameState === 'pregame' || game.gameState === 'scheduled'));
 
   return (
     <article className="tb-row" aria-label={`Model difference for ${game.matchup.away.abbreviation} at ${game.matchup.home.abbreviation}`}>
@@ -53,7 +57,7 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
           <div className="tc-team"><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span><b>{final ? final.away : prediction?.projectedAwayScore?.toFixed(1) ?? '—'}</b></div>
           <div className="tc-team"><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span><b>{final ? final.home : prediction?.projectedHomeScore?.toFixed(1) ?? '—'}</b></div>
         </div>
-        {game.marketBoard.comparisons.map((comparison) => <ConsumerMarketComparisonCell className="tb-cell" key={comparison.market} comparison={comparison} />)}
+        {game.marketBoard.comparisons.map((comparison) => <ConsumerMarketComparisonCell className="tb-cell" key={comparison.market} comparison={comparison} eligible={beforeKickoff && game.recommendation.markets[comparison.market]} />)}
         <div className="tc-action">
           <button
             type="button"
@@ -71,6 +75,7 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
         </div>
       </div>
       <MarketConfidenceSummary value={game} compact />
+      <p className="consumer-note">{beforeKickoff ? game.recommendation.reason ?? 'Fresh complete market evidence is available.' : 'Historical game: no current recommendations.'}</p>
       {expanded && (
         <div className="tb-evidence" id={evidenceId}>
           <MarketConfidenceSummary value={game} />
@@ -105,7 +110,7 @@ export default function ConsumerGames() {
     window.history.replaceState(window.history.state, '', `/games?${search.toString()}`);
   }, [season, week]);
   const params = { season, week };
-  const query = useListConsumerGames(params, { query: { queryKey: getListConsumerGamesQueryKey(params), staleTime: 30_000 } });
+   const query = useListConsumerGames(params, { query: { queryKey: getListConsumerGamesQueryKey(params), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
 
   return (
     <div className="terminal-page">
@@ -116,6 +121,7 @@ export default function ConsumerGames() {
           <label className="terminal-select">Week<select aria-label="Week" value={week} onChange={(event) => setWeek(Number(event.target.value))}>{Array.from({ length: 22 }, (_, index) => <option key={index + 1} value={index + 1}>{index < 18 ? `Week ${index + 1}` : `Postseason ${index - 17}`}</option>)}</select></label>
         </div>
       </header>
+       {query.data && !query.isError && <ConsumerSourceHealth health={query.data.sourceHealth} />}
 
       {query.data && !query.isError && (
         <section className="terminal-summary-bar" aria-label="Board coverage">

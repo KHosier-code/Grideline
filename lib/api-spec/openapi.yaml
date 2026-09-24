@@ -827,6 +827,43 @@ components:
           minItems: 3
           maxItems: 3
           items: { $ref: "#/components/schemas/ConsumerMarketComparison" }
+    ConsumerSourceHealth:
+      type: object
+      required: [status, sources]
+      properties:
+        status: { type: string, enum: [healthy, partial, stale, unavailable] }
+        sources:
+          type: object
+          required: [schedule, injuries, odds, players]
+          properties:
+            schedule: { $ref: "#/components/schemas/ConsumerSourceState" }
+            injuries: { $ref: "#/components/schemas/ConsumerSourceState" }
+            odds: { $ref: "#/components/schemas/ConsumerSourceState" }
+            players: { $ref: "#/components/schemas/ConsumerSourceState" }
+    ConsumerSourceState:
+      type: object
+      required: [status, lastAttemptAt, lastSuccessAt, sourceTimestamp, lastAttemptStatus, message, staleAfterMinutes]
+      properties:
+        status: { type: string, enum: [healthy, partial, stale, unavailable] }
+        lastAttemptAt: { type: ["string", "null"], format: date-time }
+        lastSuccessAt: { type: ["string", "null"], format: date-time }
+        sourceTimestamp: { type: ["string", "null"], format: date-time }
+        lastAttemptStatus: { type: ["string", "null"] }
+        message: { type: ["string", "null"] }
+        staleAfterMinutes: { type: number }
+    ConsumerRecommendation:
+      type: object
+      required: [status, reason, markets]
+      properties:
+        status: { type: string, enum: [healthy, partial, stale, unavailable, historical] }
+        reason: { type: ["string", "null"] }
+        markets:
+          type: object
+          required: [spread, total, moneyline]
+          properties:
+            spread: { type: boolean }
+            total: { type: boolean }
+            moneyline: { type: boolean }
     ConsumerConfidenceComponent:
       type: object
       required: [key, label, score, summary]
@@ -870,7 +907,7 @@ components:
         results: { type: array, items: { type: object, additionalProperties: true } }
     ConsumerGame:
       type: object
-      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, market, marketBoard, dataConfidence, confidence, availability]
+      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, market, marketBoard, recommendation, dataConfidence, confidence, availability]
       properties:
         gameId: { type: string }
         season: { type: integer }
@@ -904,6 +941,7 @@ components:
             awayWinProbability: { type: ["number", "null"] }
         market: { $ref: "#/components/schemas/ConsumerGameMarket" }
         marketBoard: { $ref: "#/components/schemas/ConsumerMarketBoard" }
+        recommendation: { $ref: "#/components/schemas/ConsumerRecommendation" }
         dataConfidence:
           type: object
           required: [label, score, reason]
@@ -920,7 +958,7 @@ components:
             market: { type: ["string", "null"] }
     ConsumerGames:
       type: object
-      required: [status, coverage, games, teamRecords, recordVerification]
+      required: [status, coverage, games, teamRecords, recordVerification, sourceHealth]
       properties:
         status: { type: string, enum: [available, partial, stale, absent] }
         coverage:
@@ -938,6 +976,7 @@ components:
           type: array
           items: { $ref: "#/components/schemas/ConsumerTeamRecord" }
         recordVerification: { $ref: "#/components/schemas/ConsumerRecordVerification" }
+        sourceHealth: { $ref: "#/components/schemas/ConsumerSourceHealth" }
     ConsumerTeamRecord:
       type: object
       required: [teamId, abbreviation, teamName, wins, losses, ties, games]
@@ -984,18 +1023,19 @@ components:
           items: { $ref: "#/components/schemas/ConsumerPlayerUsageGame" }
     ConsumerDashboard:
       type: object
-      required: [status, games, note]
+      required: [status, games, note, sourceHealth]
       properties:
         status: { type: string, enum: [available, unavailable] }
         games:
           type: array
           items: { $ref: "#/components/schemas/ConsumerGame" }
         note: { type: string }
+        sourceHealth: { $ref: "#/components/schemas/ConsumerSourceHealth" }
     ConsumerGameDetail:
       allOf:
         - $ref: "#/components/schemas/ConsumerGame"
         - type: object
-          required: [weather, movement, context, keyPlayers, matchupBoard, analysis]
+          required: [weather, movement, context, keyPlayers, matchupBoard, analysis, sourceHealth]
           properties:
             weather: { $ref: "#/components/schemas/ConsumerWeather" }
             movement: { $ref: "#/components/schemas/ConsumerMovement" }
@@ -1005,6 +1045,7 @@ components:
               maxItems: 20
               items: { $ref: "#/components/schemas/ConsumerKeyPlayer" }
             matchupBoard: { $ref: "#/components/schemas/ConsumerMatchupBoard" }
+            sourceHealth: { $ref: "#/components/schemas/ConsumerSourceHealth" }
             analysis:
               type: object
               required: [drivers, availability]
@@ -1204,12 +1245,18 @@ components:
         message: { type: ["string", "null"] }
     ConsumerKeyPlayer:
       type: object
-      required: [playerId, name, teamId, position, recentUsage, currentPersonnel]
+      required: [playerId, name, teamId, position, recentUsage, currentPersonnel, eligibility]
       properties:
         playerId: { type: string }
         name: { type: string }
         teamId: { type: string }
         position: { type: ["string", "null"] }
+        eligibility:
+          type: object
+          required: [status, reason]
+          properties:
+            status: { type: string, enum: [eligible, ineligible, unknown] }
+            reason: { type: ["string", "null"] }
         recentUsage:
           type: object
           required: [snapShare, targets, targetShare, receptions, receivingYards, carries, rushingYards, totalTd, yardsPerTarget, yardsPerCarry, redZoneTouches, redZoneTargets, explosiveRate]

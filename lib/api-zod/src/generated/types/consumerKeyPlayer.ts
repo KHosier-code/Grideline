@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ConsumerKeyPlayerCurrentPersonnel } from './consumerKeyPlayerCurrentPersonnel';
+import type { ConsumerKeyPlayerEligibility } from './consumerKeyPlayerEligibility';
 import type { ConsumerKeyPlayerRecentUsage } from './consumerKeyPlayerRecentUsage';
 
 export interface ConsumerKeyPlayer {
@@ -14,6 +15,7 @@ export interface ConsumerKeyPlayer {
   teamId: string;
   /** @nullable */
   position: string | null;
+  eligibility: ConsumerKeyPlayerEligibility;
   recentUsage: ConsumerKeyPlayerRecentUsage;
   currentPersonnel: ConsumerKeyPlayerCurrentPersonnel;
 }
