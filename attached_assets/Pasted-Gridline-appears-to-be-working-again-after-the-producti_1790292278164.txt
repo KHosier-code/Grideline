@@ -1,0 +1,14 @@
+Gridline appears to be working again after the production database issue. Please inspect the existing project and continue from its current state. Preserve the completed premium game-detail experience and the active production models.
+
+**First, verify recovery using read-only checks.** Do not deploy, roll back, change a database binding or secret, run a migration, or alter production data while the Replit Support investigation remains open.
+
+1. Determine whether the production app and scheduled jobs point to the same intended database branch. If you cannot establish this safely, say so.
+2. Check that upcoming games, current injuries, DraftKings/FanDuel odds, active models, and saved official predictions are present and current. Look for gaps, duplicates, and stale records.
+3. Use the checkpoint previously supplied to Support: Lions at Bills on September 17, 2026, with a pregame sportsbook snapshot around 1:27 PM Central containing both DraftKings and FanDuel lines. Check whether that record and later legitimate writes are present.
+4. Smoke-test the live pages and read endpoints, including the weekly board and game detail. Confirm that saved projections are distinct from final results.
+
+Give me a short **pass/fail recovery report** with the evidence for each check. Do not describe recovery as complete solely because the website loads. If the correct database branch or Support’s clearance is still uncertain, stop after the read-only report and identify exactly what needs confirmation.
+
+**Once recovery is verified and Support’s change freeze has ended, implement the next focused Gridline task: data freshness and game-state enforcement (GL-002).** Add visible source-health status for critical feeds; remove games that have started or finished from current recommendation endpoints and cached boards; exclude ineligible players; and suppress recommendations when required odds or inputs are stale or missing. Show clear stale, partial, and unavailable states in the existing UI.
+
+Add meaningful tests for a completed game, an inactive player, a stale feed, and a missing price. Run the relevant typecheck, tests, and build. Report the files changed, test results, remaining risks, and any production release step separately. Do not promote a model or republish production as part of this task.
