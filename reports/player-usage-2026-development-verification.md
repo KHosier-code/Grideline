@@ -1,0 +1,11 @@
+# 2026 player usage recovery: development verification
+
+**Date:** 2026-09-25. **Environment:** development only. No production import, backfill, migration, or publish was performed.
+
+The old `player_stats/player_stats.csv.gz` release was last updated in May 2025 and has no requested-season rows for 2025 or 2026. Its similarly named `player_stats_2026.csv.gz` does not exist (404). The maintained `stats_player/stats_player_week_2026.csv.gz` release was updated September 25, 2026 and contains 2026 weekly rows. The importer now selects the season-specific `stats_player_week_<season>.csv.gz` for seasons from 2025 onward, keeping the legacy release for 2024 and earlier. The new release uses `team`, `passing_interceptions`, and `sacks_suffered` where the older file used `recent_team`, `interceptions`, and `sacks`.
+
+Only the 2026 player-stat dataset was imported into development, using `NODE_ENV=development pnpm --filter @workspace/api-server run import:player-stats:dev 2026`. The resulting source-file and sync ledgers reported success with **2,291** rows: week 1 **1,117**, week 2 **1,106**, and week 3 **68** (only two completed matchups were present in the source at verification). No earlier-season rows were used as replacements.
+
+The development consumer API resolved GSIS player IDs, source team/opponent and season/week to canonical schedule games. The matchup-filtered SEA WR request for game `401872955` returned four players from the two prior SEA games, not the future game. Unfiltered SEA WR/QB, CLE RB and KC QB requests returned 2026 players; KC QB returned Patrick Mahomes for both prior KC games with status `available`. Sparse players or missing snap crosswalk evidence still produce `partial` with explicit reasons rather than invented metrics. SEA WR snap records retain PFR identifiers; the existing persisted GSIS-to-PFR crosswalk provides snap matching when available.
+
+This verifies the development API only. The published app remains on its previous data and cannot be described as repaired until a separately approved production import and post-import verification occur.

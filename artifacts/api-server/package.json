@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "worker": "node --enable-source-maps ./dist/worker.mjs",
+    "import:player-stats:dev": "node --enable-source-maps ./dist/player-stats-dev-cli.mjs",
     "personnel-comparison": "export NODE_ENV=development && node --enable-source-maps ./dist/personnel-comparison-cli.mjs",
     "test:personnel-comparison": "pnpm run build && node --test ./dist/lib/personnel-comparison.test.mjs",
     "test:personnel-comparison-performance": "pnpm run build && node --test ./dist/lib/personnel-comparison-performance.test.mjs",

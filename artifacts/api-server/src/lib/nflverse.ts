@@ -181,9 +181,9 @@ function ratio(numerator: number, denominator: number) {
   return denominator > 0 ? numerator / denominator : null;
 }
 
-function datasetUrl(dataset: NflverseDataset, season: number) {
+export function datasetUrl(dataset: NflverseDataset, season: number) {
   if (dataset === "player_stats" && season >= 2025) {
-    return `${nflverseBaseUrl}/player_stats/player_stats.csv.gz`;
+    return `${nflverseBaseUrl}/stats_player/stats_player_week_${season}.csv.gz`;
   }
   if (dataset === "depth_charts") {
     const extension = season >= 2024 ? "csv.gz" : "csv";
@@ -622,37 +622,47 @@ async function ingestPlayerStats(season: number, filePath: string) {
     inserted += batch.length;
   };
   const rows = await forEachCsvRow(filePath, async (row) => {
-    if (!row.player_id || !row.week || row.season_type === "PRE" || integerValue(row.season) !== season) return;
-    values.push({
-      playerId: row.player_id,
-      playerName: row.player_display_name || row.player_name || row.player_id,
-      position: row.position || null,
-      teamId: row.recent_team || null,
-      opponentTeamId: row.opponent_team || null,
-      season: integerValue(row.season) ?? season,
-      week: integerValue(row.week) ?? 0,
-      seasonType: row.season_type || "REG",
-      completions: integerValue(row.completions),
-      attempts: integerValue(row.attempts),
-      passingYards: numberValue(row.passing_yards),
-      passingTds: integerValue(row.passing_tds),
-      interceptions: integerValue(row.interceptions),
-      sacks: integerValue(row.sacks),
-      carries: integerValue(row.carries),
-      rushingYards: numberValue(row.rushing_yards),
-      rushingTds: integerValue(row.rushing_tds),
-      targets: integerValue(row.targets),
-      receptions: integerValue(row.receptions),
-      receivingYards: numberValue(row.receiving_yards),
-      receivingTds: integerValue(row.receiving_tds),
-      receivingEpa: numberValue(row.receiving_epa),
-      rushingEpa: numberValue(row.rushing_epa),
-      passingEpa: numberValue(row.passing_epa),
-    });
+    const parsed = parsePlayerStatsRow(row, season);
+    if (!parsed) return;
+    values.push(parsed);
     if (values.length >= 500) await flush();
   });
   await flush();
   return { sourceRows: rows, records: inserted };
+}
+
+export function parsePlayerStatsRow(row: CsvRow, season: number): typeof playerGameStatsTable.$inferInsert | null {
+  if (!("player_id" in row && "season" in row && "week" in row
+    && "opponent_team" in row && ("team" in row || "recent_team" in row))) {
+    throw new Error(`player_stats ${season}: missing required player, season, week or team columns`);
+  }
+  if (!row.player_id || !row.week || row.season_type === "PRE" || integerValue(row.season) !== season) return null;
+  return {
+    playerId: row.player_id,
+    playerName: row.player_display_name || row.player_name || row.player_id,
+    position: row.position || null,
+    teamId: row.team || row.recent_team || null,
+    opponentTeamId: row.opponent_team || null,
+    season: season,
+    week: integerValue(row.week) ?? 0,
+    seasonType: row.season_type || "REG",
+    completions: integerValue(row.completions),
+    attempts: integerValue(row.attempts),
+    passingYards: numberValue(row.passing_yards),
+    passingTds: integerValue(row.passing_tds),
+    interceptions: integerValue(row.passing_interceptions ?? row.interceptions),
+    sacks: integerValue(row.sacks_suffered ?? row.sacks),
+    carries: integerValue(row.carries),
+    rushingYards: numberValue(row.rushing_yards),
+    rushingTds: integerValue(row.rushing_tds),
+    targets: integerValue(row.targets),
+    receptions: integerValue(row.receptions),
+    receivingYards: numberValue(row.receiving_yards),
+    receivingTds: integerValue(row.receiving_tds),
+    receivingEpa: numberValue(row.receiving_epa),
+    rushingEpa: numberValue(row.rushing_epa),
+    passingEpa: numberValue(row.passing_epa),
+  };
 }
 
 async function ingestSnapCounts(season: number, filePath: string) {
@@ -757,7 +767,7 @@ async function ingestHistoricalDepthCharts(season: number, filePath: string) {
 
 export async function syncNflverseHistory(
   seasons = defaultSeasons,
-  options?: { jobKey?: string; scheduledFor?: Date; refresh?: boolean; completedWindow?: string },
+  options?: { jobKey?: string; scheduledFor?: Date; refresh?: boolean; completedWindow?: string; datasets?: NflverseDataset[] },
 ) {
   const [run] = await db
     .insert(dataSyncRunsTable)
@@ -773,7 +783,7 @@ export async function syncNflverseHistory(
   let recordsProcessed = 0;
   try {
     for (const season of seasons) {
-      for (const dataset of ["pbp", "player_stats", "snap_counts", "depth_charts"] as const) {
+      for (const dataset of options?.datasets ?? (["pbp", "player_stats", "snap_counts", "depth_charts"] as const)) {
         try {
           const source = await acquireDataset(dataset, season, { refresh: options?.refresh });
           const result =
