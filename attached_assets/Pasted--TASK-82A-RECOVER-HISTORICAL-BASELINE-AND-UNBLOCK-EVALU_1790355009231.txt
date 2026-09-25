@@ -1,0 +1,143 @@
+# TASK 82A — RECOVER HISTORICAL BASELINE AND UNBLOCK EVALUATION
+
+## OBJECTIVE
+
+Task 82 could not reproduce the personnel-aware challenger comparison because the accepted 2025 market baseline is missing from the current development database.
+
+Investigate the missing baseline, identify the authoritative source, and establish a safe, reproducible way to restore evaluation access.
+
+Do not retrain, modify models, recreate missing historical evidence through assumptions, or alter production.
+
+This is a development-only recovery investigation.
+
+## 1. BASELINE INVENTORY
+
+Locate every existing reference to the previously accepted 2025 market baseline.
+
+Inspect:
+- Repository reports.
+- Historical evaluation artifacts.
+- Database migration and seed procedures.
+- Baseline-generation code.
+- Existing baseline checksums and dataset fingerprints.
+- Task #63 baseline methodology.
+- Task #69 baseline-source qualification.
+- Task #68 comparison runner.
+- Development database records.
+
+Identify the exact baseline run required by Task 82.
+
+Explain why the comparison runner currently finds no eligible records in market_baseline_runs.
+
+Do not assume the missing records were deleted. They may be absent because of environment differences or because generated artifacts were not merged.
+
+## 2. AUTHORITATIVE EVIDENCE
+
+Determine whether the original accepted baseline can be recovered exactly.
+
+Check:
+- Source dataset identity.
+- Source checksum.
+- Evaluation configuration.
+- Training years.
+- Holdout year.
+- Eligible games.
+- Market-family eligibility.
+- Recorded-market definitions.
+- Baseline model configuration.
+- Historical evaluation results.
+
+Never substitute newly generated numbers for previously accepted evidence without identifying them as a separate reproduction.
+
+## 3. SAFE RECOVERY PLAN
+
+If the original baseline exists in a verified artifact or an authorized development database, propose a reproducible restoration procedure.
+
+If restoration requires generating a new baseline:
+- Use the original approved methodology.
+- Verify source fingerprints.
+- Verify the historical eligibility rules.
+- Reconstruct the original training and evaluation boundaries.
+- Compare reproduced summary metrics against retained evidence.
+- Assign the reproduction its own run identity.
+- Preserve the original accepted evidence unchanged.
+
+Do not perform production restoration or database-binding changes.
+
+Do not write reconstructed records into the accepted baseline tables until their compatibility and authorization have been established.
+
+## 4. COMPARISON RUNNER
+
+Inspect the Task #68 comparison runner.
+
+Determine whether it requires:
+- Specific baseline database rows.
+- Historical game-level predictions.
+- Immutable evaluation artifacts.
+- Source dataset files.
+- Configuration metadata.
+
+Identify the minimum verified evidence required to reproduce the complete paired comparison.
+
+Do not bypass the baseline preflight or weaken its validation.
+
+## 5. HISTORICAL PERSONNEL COVERAGE
+
+Investigate the reported historical availability:
+
+- Injuries: 0/554.
+- Offensive-line context: 0/554.
+- Secondary context: 0/554.
+- Projected QB/depth context: 538/554.
+
+Determine whether these figures represent actual source unavailability, failed identity mapping, unavailable historical cutoffs, or feature-generation limitations.
+
+Do not introduce retrospective data into pregame features unless its historical availability can be proven.
+
+Report whether additional legitimate historical personnel sources could materially change the next evaluation.
+
+## 6. DELIVERABLE
+
+Generate:
+
+reports/gridline-task82-baseline-recovery.md
+
+Include:
+- Root cause.
+- Original baseline identity.
+- Available verified artifacts.
+- Missing evidence.
+- Exact recovery procedure.
+- Whether reproduction is possible.
+- Historical personnel coverage findings.
+- Required approval before any database writes.
+
+If safe and supported, implement evaluation-only tooling and tests needed for reproduction, without executing destructive operations.
+
+## 7. RESTRICTIONS
+
+Do not:
+- Change Phase 6.1.
+- Promote models.
+- Tune challengers.
+- Rewrite the accepted baseline.
+- Modify production databases.
+- Change database bindings.
+- Alter sportsbook history.
+- Deploy or publish.
+
+FINAL RESPONSE
+
+Provide one clear status:
+
+BASELINE RECOVERABLE
+
+BASELINE REPRODUCIBLE BUT ORIGINAL UNAVAILABLE
+
+or
+
+BASELINE RECOVERY BLOCKED
+
+Identify the precise next action and include test results.
+
+Stop before any operation requiring production access or modifying accepted evidence.

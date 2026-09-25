@@ -252,3 +252,17 @@ mtime_ms = 1790354777915
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/f6cda5bc-0905-42d8-90cc-0e1d2e259b55/a2b3b609-6a32-4310-aaa2-b0a9ccb1b212"
 storage_version_token = "1790354798832059"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "yHHCsEb2DzDHGncRvMEUb"
+uri = "file://reports/gridline-task82-baseline-recovery.md"
+type = "text"
+title = "Task 82A baseline recovery investigation"
+description = "Read-only findings, exact baseline identity, missing evidence, coverage analysis, and approval-gated recovery steps."
+logical_id = "61ec2781-9c15-4622-bb09-d4c675398b52"
+content_hash = "sha256:a7f1a399c947050a4a931decf52f2d19d374e2310e741a4165e2ad8ea0f356fe"
+size = 11987
+mtime_ms = 1790355527830
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/61ec2781-9c15-4622-bb09-d4c675398b52/5fc596da-f99d-4a4c-a490-64788db1a5e4"
+storage_version_token = "1790355547234138"
+content_type = "text/markdown"

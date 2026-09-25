@@ -14,3 +14,9 @@ Schema baselines must verify non-column objects that carry safety guarantees, in
 **Why:** Schema-driven creation can make a migration appear structurally present even though an immutability trigger was never installed.
 
 **How to apply:** Extend migration requirement extraction and baseline checks whenever a migration depends on triggers, policies, functions, or other database objects beyond tables, columns, indexes, and constraints.
+
+Migration history can outlive a branch rollback. Restore missing, byte-identical migration files from repository history when their checksums match the development ledger; do not delete ledger entries or teach post-merge setup to ignore unknown migrations.
+
+**Why:** A restored code checkpoint omitted later migration files while the development database still recorded them. Strict reconciliation correctly stopped the next merge even though the newly merged task itself did not change those migrations.
+
+**How to apply:** Compare every unknown ledger name and checksum against historical source blobs before restoring them. Keep the runner's unknown-name and checksum checks intact, then rerun the normal post-merge setup.
