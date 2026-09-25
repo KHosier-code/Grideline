@@ -1,5 +1,5 @@
 import { getGetConsumerGameQueryKey, useGetConsumerGame } from '@workspace/api-client-react';
-import { ChevronLeft, CloudRain, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, CloudRain, ShieldCheck, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { useLocation, useParams, Link } from 'wouter';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, metric, useConsumerNow } from './consumer-ui';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
@@ -22,6 +22,7 @@ export default function ConsumerGameDetail() {
   if (query.isError || !query.data) return <ConsumerMessage error title="This matchup is unavailable" detail="We couldn’t load this game right now. Return to Games and try again shortly." />;
   const game = query.data;
   const prediction = game.prediction;
+  const personnelLimitation = game.context.modelPersonnelLimitation;
   const beforeKickoff = Boolean(game.kickoffTime && new Date(game.kickoffTime).getTime() > now
     && (game.gameState === 'pregame' || game.gameState === 'scheduled'));
   const weather = game.weather as { summary?: unknown; temperature?: unknown; sustainedWind?: unknown; precipitationProbability?: unknown } | null;
@@ -80,6 +81,16 @@ export default function ConsumerGameDetail() {
          <p className="premium-market-note">{beforeKickoff ? game.recommendation.reason ?? 'All three markets have fresh complete evidence.' : 'Historical projections remain available; no current recommendations after kickoff.'}</p>
       </div>
     </section>
+
+    {personnelLimitation.active && (
+      <aside className="premium-personnel-warning" role="status" data-testid="qb-model-limitation">
+        <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+        <div>
+          <strong>{personnelLimitation.recommendationSuppressed ? 'Expected QB changed since this projection' : 'Saved model does not identify its quarterback'}</strong>
+          <p>{personnelLimitation.reason ?? 'This saved model does not retain a named quarterback identity.'} The score and saved history are unchanged.{personnelLimitation.recommendationSuppressed ? ' An official betting recommendation is withheld.' : ''}</p>
+        </div>
+      </aside>
+    )}
 
     <section className="premium-projection-section" data-section="gridline-projection" data-testid="premium-projection" aria-labelledby="projection-heading">
       <div className="consumer-section-heading">

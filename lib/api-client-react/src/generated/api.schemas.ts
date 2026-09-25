@@ -717,6 +717,96 @@ export const ConsumerContextTeamInjuryReportStatus = {
   unavailable: 'unavailable',
 } as const;
 
+export type ConsumerExpectedQbStatus = typeof ConsumerExpectedQbStatus[keyof typeof ConsumerExpectedQbStatus];
+
+
+export const ConsumerExpectedQbStatus = {
+  available: 'available',
+  unconfirmed: 'unconfirmed',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerExpectedQbAvailability = typeof ConsumerExpectedQbAvailability[keyof typeof ConsumerExpectedQbAvailability];
+
+
+export const ConsumerExpectedQbAvailability = {
+  available: 'available',
+  questionable: 'questionable',
+  unavailable: 'unavailable',
+  unknown: 'unknown',
+} as const;
+
+export interface ConsumerExpectedQb {
+  /** @nullable */
+  name: string | null;
+  status: ConsumerExpectedQbStatus;
+  availability: ConsumerExpectedQbAvailability;
+  /** @nullable */
+  confidence: number | null;
+  /** @nullable */
+  asOf: string | null;
+  confirmed: boolean;
+}
+
+export type ConsumerCurrentOffenseRolesRunningBackCommitteeStatus = typeof ConsumerCurrentOffenseRolesRunningBackCommitteeStatus[keyof typeof ConsumerCurrentOffenseRolesRunningBackCommitteeStatus];
+
+
+export const ConsumerCurrentOffenseRolesRunningBackCommitteeStatus = {
+  confirmed: 'confirmed',
+  unconfirmed: 'unconfirmed',
+} as const;
+
+export type ConsumerCurrentRolePlayerAvailability = typeof ConsumerCurrentRolePlayerAvailability[keyof typeof ConsumerCurrentRolePlayerAvailability];
+
+
+export const ConsumerCurrentRolePlayerAvailability = {
+  available: 'available',
+  questionable: 'questionable',
+  unavailable: 'unavailable',
+  unknown: 'unknown',
+} as const;
+
+export interface ConsumerCurrentRolePlayer {
+  /** @nullable */
+  name: string | null;
+  availability: ConsumerCurrentRolePlayerAvailability;
+  /** @nullable */
+  confidence: number | null;
+  /** @nullable */
+  asOf: string | null;
+  confirmed: boolean;
+}
+
+export type ConsumerCurrentOffenseRolesRunningBackCommittee = {
+  status: ConsumerCurrentOffenseRolesRunningBackCommitteeStatus;
+  /** @maxItems 3 */
+  players: ConsumerCurrentRolePlayer[];
+};
+
+export interface ConsumerCurrentOffenseRoles {
+  runningBackCommittee: ConsumerCurrentOffenseRolesRunningBackCommittee;
+  primaryTe: ConsumerCurrentRolePlayer;
+  wr1: ConsumerCurrentRolePlayer;
+  wr2: ConsumerCurrentRolePlayer;
+}
+
+export type ConsumerDefensivePlayer = ConsumerCurrentRolePlayer & ({
+  position: string;
+  /** @nullable */
+  role?: string | null;
+});
+
+export interface ConsumerDefensiveGroupings {
+  /** @maxItems 16 */
+  front: ConsumerDefensivePlayer[];
+  /** @maxItems 12 */
+  linebackers: ConsumerDefensivePlayer[];
+  /** @maxItems 12 */
+  corners: ConsumerDefensivePlayer[];
+  /** @maxItems 8 */
+  safeties: ConsumerDefensivePlayer[];
+}
+
 export type ConsumerInjuryPlayerSourceLabel = typeof ConsumerInjuryPlayerSourceLabel[keyof typeof ConsumerInjuryPlayerSourceLabel];
 
 
@@ -827,6 +917,9 @@ export interface ConsumerContextTeam {
   defenseInjuryImpact: number | null;
   injuryEvidenceAvailable: boolean;
   injuryReportStatus: ConsumerContextTeamInjuryReportStatus;
+  expectedQb: ConsumerExpectedQb;
+  currentOffenseRoles: ConsumerCurrentOffenseRoles;
+  defensiveGroupings: ConsumerDefensiveGroupings;
   /** @maxItems 25 */
   injuries: ConsumerInjuryPlayer[];
   /** @nullable */
@@ -842,6 +935,13 @@ export interface ConsumerProjectedMatchup {
   summary: string;
 }
 
+export type ConsumerContextModelPersonnelLimitation = {
+  active: boolean;
+  /** @nullable */
+  reason: string | null;
+  recommendationSuppressed: boolean;
+};
+
 export interface ConsumerContext {
   available: boolean;
   /** @nullable */
@@ -856,6 +956,7 @@ export interface ConsumerContext {
   matchupMessage: string | null;
   /** @nullable */
   message: string | null;
+  modelPersonnelLimitation: ConsumerContextModelPersonnelLimitation;
 }
 
 export type ConsumerKeyPlayerEligibilityStatus = typeof ConsumerKeyPlayerEligibilityStatus[keyof typeof ConsumerKeyPlayerEligibilityStatus];

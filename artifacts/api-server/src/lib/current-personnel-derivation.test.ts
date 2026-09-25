@@ -297,3 +297,43 @@ test("matchup season leaves a missing position unavailable instead of using prio
   assert.equal(result.depth.offense.some((row) => row.position === "RB"), false);
   assert.ok(result.unavailableReasons.includes("RB depth is unavailable."));
 });
+
+test("current available QB2 replaces an unavailable QB1 without changing saved model inputs", () => {
+  const result = deriveCurrentTeamDepth({
+    teamId: "team", cutoff, season: 2026,
+    publishedDepth: [
+      sleeper({ playerId: "daniels", playerName: "Jayden Daniels", depthOrder: 1 }),
+      sleeper({ playerId: "mariota", playerName: "Marcus Mariota", depthOrder: 2 }),
+    ],
+    snaps: [], historicalDepth: [],
+    qbs: [{
+      gameId: "recent-daniels", season: 2026, playerId: "daniels", playerName: "Jayden Daniels",
+      teamId: "team", week: 2, dropbacks: 28, passAttempts: 0, passEpa: 0, passSuccesses: 0,
+      interceptions: 0, sacks: 0, rushAttempts: 0, rushEpa: 0, kickoffTime: "2026-09-10T00:00:00.000Z",
+      sourceUpdatedAt: "2026-09-11T00:00:00.000Z",
+    }],
+    injuries: [{
+      playerId: "daniels", teamId: "team", position: "QB", gameStatus: "Out",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }, {
+      playerId: "mariota", teamId: "team", position: "QB", gameStatus: "Active",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }],
+  });
+  assert.equal(result.qbStarter.status, "available");
+  assert.equal(result.qbStarter.player?.playerId, "mariota");
+  assert.equal(result.conflicts.some((conflict) => conflict.type === "participation"), false);
+  assert.equal(result.depth.offense.find((player) => player.playerId === "daniels")?.starter, false);
+});
+
+test("unseasoned stale historical identity cannot be promoted into current depth", () => {
+  const result = deriveCurrentTeamDepth({
+    teamId: "team", cutoff, season: 2026, publishedDepth: [], snaps: [], injuries: [],
+    historicalDepth: [{
+      playerId: "stale-qb", playerName: "Historical QB", teamId: "team", position: "QB",
+      depthPosition: 1, sourceUpdatedAt: "2021-09-10T12:00:00.000Z",
+    }],
+  });
+  assert.equal(result.qbStarter.player, null);
+  assert.equal(result.depth.offense.some((player) => player.playerId === "stale-qb"), false);
+});

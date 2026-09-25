@@ -1387,6 +1387,16 @@ export const getConsumerGameResponseOneConfidenceMarketsMax = 3;
 
 export const getConsumerGameResponseTwoMovementStreamsMax = 24;
 
+export const getConsumerGameResponseTwoContextTeamsItemCurrentOffenseRolesRunningBackCommitteePlayersMax = 3;
+
+export const getConsumerGameResponseTwoContextTeamsItemDefensiveGroupingsFrontMax = 16;
+
+export const getConsumerGameResponseTwoContextTeamsItemDefensiveGroupingsLinebackersMax = 12;
+
+export const getConsumerGameResponseTwoContextTeamsItemDefensiveGroupingsCornersMax = 12;
+
+export const getConsumerGameResponseTwoContextTeamsItemDefensiveGroupingsSafetiesMax = 8;
+
 export const getConsumerGameResponseTwoContextTeamsItemInjuriesMax = 25;
 
 export const getConsumerGameResponseTwoContextTeamsItemDepthMax = 30;
@@ -1614,6 +1624,89 @@ export const GetConsumerGameResponse = zod.object({
   "defenseInjuryImpact": zod.number().nullable(),
   "injuryEvidenceAvailable": zod.boolean(),
   "injuryReportStatus": zod.enum(['available', 'partial', 'unavailable']),
+  "expectedQb": zod.object({
+  "name": zod.string().nullable(),
+  "status": zod.enum(['available', 'unconfirmed', 'unavailable']),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+}),
+  "currentOffenseRoles": zod.object({
+  "runningBackCommittee": zod.object({
+  "status": zod.enum(['confirmed', 'unconfirmed']),
+  "players": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+})).max(getConsumerGameResponseTwoContextTeamsItemCurrentOffenseRolesRunningBackCommitteePlayersMax)
+}),
+  "primaryTe": zod.object({
+  "name": zod.string().nullable(),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+}),
+  "wr1": zod.object({
+  "name": zod.string().nullable(),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+}),
+  "wr2": zod.object({
+  "name": zod.string().nullable(),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+})
+}),
+  "defensiveGroupings": zod.object({
+  "front": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+}).and(zod.object({
+  "position": zod.string(),
+  "role": zod.string().nullish()
+}))).max(getConsumerGameResponseTwoContextTeamsItemDefensiveGroupingsFrontMax),
+  "linebackers": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+}).and(zod.object({
+  "position": zod.string(),
+  "role": zod.string().nullish()
+}))).max(getConsumerGameResponseTwoContextTeamsItemDefensiveGroupingsLinebackersMax),
+  "corners": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+}).and(zod.object({
+  "position": zod.string(),
+  "role": zod.string().nullish()
+}))).max(getConsumerGameResponseTwoContextTeamsItemDefensiveGroupingsCornersMax),
+  "safeties": zod.array(zod.object({
+  "name": zod.string().nullable(),
+  "availability": zod.enum(['available', 'questionable', 'unavailable', 'unknown']),
+  "confidence": zod.number().nullable(),
+  "asOf": zod.coerce.date().nullable(),
+  "confirmed": zod.boolean()
+}).and(zod.object({
+  "position": zod.string(),
+  "role": zod.string().nullish()
+}))).max(getConsumerGameResponseTwoContextTeamsItemDefensiveGroupingsSafetiesMax)
+}),
   "injuries": zod.array(zod.object({
   "name": zod.string(),
   "position": zod.string().nullable(),
@@ -1649,7 +1742,12 @@ export const GetConsumerGameResponse = zod.object({
   "summary": zod.string()
 })).max(getConsumerGameResponseTwoContextProjectedMatchupsMax),
   "matchupMessage": zod.string().nullable(),
-  "message": zod.string().nullable()
+  "message": zod.string().nullable(),
+  "modelPersonnelLimitation": zod.object({
+  "active": zod.boolean(),
+  "reason": zod.string().nullable(),
+  "recommendationSuppressed": zod.boolean()
+})
 }),
   "keyPlayers": zod.array(zod.object({
   "playerId": zod.string(),

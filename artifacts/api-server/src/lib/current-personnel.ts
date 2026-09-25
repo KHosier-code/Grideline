@@ -18,11 +18,28 @@ import {
   type CurrentDepthSource,
   type InterpretedTeamDepth,
 } from "./current-personnel-derivation";
-import { normalizeTeamId, nflverseTeamCandidates } from "./personnel-context-derivation";
+import { normalizePosition, normalizeTeamId, nflverseTeamCandidates } from "./personnel-context-derivation";
 import { reconstructLatestSleeperState } from "./sleeper-identity";
 
 const QUERY_CONCURRENCY = 4;
 const TEN_TEAM_SAMPLE = 10;
+const OFFENSIVE_LINE_POSITIONS = new Set(["OL", "OT", "T", "LT", "RT", "OG", "G", "LG", "RG", "C"]);
+const LINEBACKER_POSITIONS = new Set(["LB", "ILB", "OLB", "MLB", "WLB", "SLB"]);
+const DEFENSIVE_BACK_POSITIONS = new Set(["CB", "S", "FS", "SS", "DB"]);
+
+function positionIdentityCompatible(sourcePosition: string | null, rosterPosition: string | null) {
+  if (!sourcePosition || !rosterPosition) return true;
+  const sourceRaw = sourcePosition.trim().toUpperCase();
+  const rosterRaw = rosterPosition.trim().toUpperCase();
+  const source = normalizePosition(sourceRaw);
+  const roster = normalizePosition(rosterRaw);
+  if (!source || !roster || source === roster) return true;
+  if (OFFENSIVE_LINE_POSITIONS.has(sourceRaw) && OFFENSIVE_LINE_POSITIONS.has(rosterRaw)) return true;
+  if (LINEBACKER_POSITIONS.has(sourceRaw) && LINEBACKER_POSITIONS.has(rosterRaw)) return true;
+  if ((sourceRaw === "DB" || rosterRaw === "DB")
+    && DEFENSIVE_BACK_POSITIONS.has(sourceRaw) && DEFENSIVE_BACK_POSITIONS.has(rosterRaw)) return true;
+  return false;
+}
 
 export function currentGamePersonnelCutoff(kickoffTime: Date | null, now: Date) {
   return new Date(Math.min(now.getTime(), kickoffTime ? kickoffTime.getTime() - 1 : now.getTime()));
@@ -48,9 +65,25 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
   const teams = await db.select().from(teamsTable);
   const requested = teamIdentities?.map((value) => value.trim().toUpperCase());
   const selectedTeams = requested?.length
-    ? teams.filter((team) => requested.includes(team.teamId.toUpperCase()) || requested.includes(team.abbreviation.toUpperCase()))
+    ? teams.filter((team) => requested.includes(team.teamId.toUpperCase())
+      || requested.some((value) => nflverseTeamCandidates(value).includes(team.abbreviation.toUpperCase())))
     : teams;
   const teamByAbbreviation = new Map(teams.map((team) => [team.abbreviation.toUpperCase(), team.teamId]));
+  const canonicalTeamId = (sourceId: string | null | undefined) => {
+    if (!sourceId?.trim()) return null;
+    const normalized = sourceId.trim().toUpperCase();
+    const byId = teams.find((team) => team.teamId.toUpperCase() === normalized);
+    if (byId) return byId.teamId;
+    const mapped = nflverseTeamCandidates(normalized)
+      .map((code) => teamByAbbreviation.get(code))
+      .find((teamId) => Boolean(teamId))
+      ?? normalizeTeamId(sourceId, teamByAbbreviation);
+    return teams.some((team) => team.teamId === mapped) ? mapped : null;
+  };
+  const canonicalNflCode = (sourceId: string | null | undefined) => {
+    const teamId = canonicalTeamId(sourceId);
+    return teams.find((team) => team.teamId === teamId)?.abbreviation.toUpperCase() ?? null;
+  };
   const canonicalTeamIds = selectedTeams.map((team) => team.teamId);
   const abbreviations = [...new Set(selectedTeams.flatMap((team) => nflverseTeamCandidates(team.abbreviation)))];
   const sourceTeamIds = [...new Set([...canonicalTeamIds, ...abbreviations])];
@@ -117,6 +150,19 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
     ? await db.select().from(gamesTable).where(inArray(gamesTable.gameId, evidenceGameIds))
     : [];
   const mappingBySleeperId = new Map(mappings.map((mapping) => [mapping.sleeperPlayerId, mapping]));
+  const mappedPlayerIds = [...new Set([
+    ...mappings.flatMap((mapping) => mapping.mappedGridlinePlayerId ? [mapping.mappedGridlinePlayerId] : []),
+    ...publishedDepth.map((row) => row.playerId),
+    ...snaps.map((row) => row.playerId),
+    ...historicalDepth.map((row) => row.playerId),
+    ...qbs.map((row) => row.playerId),
+  ])];
+  const mappedPlayers = mappedPlayerIds.length
+    ? await db.select({
+      playerId: playersTable.playerId, teamId: playersTable.teamId, position: playersTable.position,
+    }).from(playersTable).where(inArray(playersTable.playerId, mappedPlayerIds))
+    : [];
+  const playerById = new Map(mappedPlayers.map((player) => [player.playerId, player]));
   const reconstructedSleeperRows = reconstructLatestSleeperState(
     sleeperRows,
     mappingRun?.sourceCapturedAt ?? cutoff,
@@ -126,8 +172,16 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
     .flatMap((row) => {
       const mapping = mappingBySleeperId.get(row.sleeperPlayerId);
       if (!mapping?.mappedGridlinePlayerId || mapping.mappingStatus === "ambiguous" || mapping.mappingStatus === "unmatched") return [];
-      const teamId = mapping.normalizedTeam ? normalizeTeamId(mapping.normalizedTeam, teamByAbbreviation) : null;
-      if (!teamId) return [];
+      const player = playerById.get(mapping.mappedGridlinePlayerId);
+      const teamId = canonicalTeamId(mapping.normalizedTeam);
+      const sourceTeam = canonicalNflCode(row.team);
+      const mappedTeam = canonicalNflCode(mapping.normalizedTeam);
+      const playerTeamId = canonicalTeamId(player?.teamId);
+      // Validate source team and mapped player identity before joining provider
+      // depth. Unknown source codes and incompatible mappings are not usable.
+      if (!player || !teamId || !sourceTeam || sourceTeam !== mappedTeam
+        || (playerTeamId && playerTeamId !== teamId)
+        || mapping.positionCompatibility === "incompatible") return [];
       return [{
         playerId: mapping.mappedGridlinePlayerId,
         playerName: row.fullName,
@@ -143,7 +197,7 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
         mappingStatus: mapping.mappingStatus,
         mappingConfidence: mapping.mappingConfidence,
         sourcePlayerId: row.sleeperPlayerId,
-        sourceTeamConflict: Boolean(mapping.teamChangeEvidence),
+        sourceTeamConflict: false,
         mappingConflictReason: mapping.positionCompatibility === "incompatible"
           ? "Mapped identity has an incompatible position."
           : null,
@@ -154,36 +208,43 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
     });
   const verifiedDepth: CurrentDepthSource[] = publishedDepth
     .filter((row) => row.source === "official_depth_chart" && row.classification === "official")
-    .map((row) => ({
-      playerId: row.playerId, playerName: row.playerName, teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
-      sourceTeamId: row.teamId, position: row.position, role: row.role, depthOrder: row.depthPosition,
-      source: "verified_published_depth", classification: "official", capturedAt: row.snapshotTimestamp,
-      sourceUpdatedAt: row.sourceUpdatedAt, mappingStatus: null, mappingConfidence: null,
-    }));
+    .flatMap((row) => {
+      const teamId = canonicalTeamId(row.teamId);
+      const identity = playerById.get(row.playerId);
+      if (!teamId || !row.playerId?.trim() || !identity
+        || !positionIdentityCompatible(row.position ?? row.role, identity.position)) return [];
+      return [{
+        playerId: row.playerId, playerName: row.playerName, teamId,
+        sourceTeamId: row.teamId, position: row.position, role: row.role, depthOrder: row.depthPosition,
+        source: "verified_published_depth" as const, classification: "official" as const, capturedAt: row.snapshotTimestamp,
+        sourceUpdatedAt: row.sourceUpdatedAt, mappingStatus: null, mappingConfidence: null,
+      }];
+    });
   const kickoffByGame = new Map(games.map((game) => [game.gameId, game.kickoffTime]));
   return {
     teams: selectedTeams,
     mappingRun,
     publishedDepth: [...verifiedDepth, ...sleeperDepth],
-    snaps: snaps.map((row) => ({
-      ...row,
-      sourceTeamId: row.teamId,
-      teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
-      kickoffTime: kickoffByGame.get(row.gameId),
-    })),
-    historicalDepth: historicalDepth.map((row) => ({
-      ...row,
-      sourceTeamId: row.teamId,
-      teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
-    })),
+    snaps: snaps.flatMap((row) => {
+      const teamId = canonicalTeamId(row.teamId);
+      return teamId && playerById.has(row.playerId) ? [{
+        ...row, sourceTeamId: row.teamId, teamId, kickoffTime: kickoffByGame.get(row.gameId),
+      }] : [];
+    }),
+    historicalDepth: historicalDepth.flatMap((row) => {
+      const teamId = canonicalTeamId(row.teamId);
+      return teamId && playerById.has(row.playerId) ? [{
+        ...row, sourceTeamId: row.teamId, teamId,
+      }] : [];
+    }),
     injuries,
     playerNames: Object.fromEntries(injuryPlayers.map((player) => [player.playerId, player.name])),
-    qbs: qbs.map((row) => ({
-      ...row,
-      sourceTeamId: row.teamId,
-      teamId: normalizeTeamId(row.teamId, teamByAbbreviation),
-      kickoffTime: kickoffByGame.get(row.gameId),
-    })),
+    qbs: qbs.flatMap((row) => {
+      const teamId = canonicalTeamId(row.teamId);
+      return teamId && playerById.has(row.playerId) ? [{
+        ...row, sourceTeamId: row.teamId, teamId, kickoffTime: kickoffByGame.get(row.gameId),
+      }] : [];
+    }),
   };
 }
 

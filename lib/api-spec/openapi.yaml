@@ -1167,7 +1167,7 @@ components:
         message: { type: ["string", "null"] }
     ConsumerContextTeam:
       type: object
-      required: [side, name, abbreviation, qbCertainty, qbChange, qbEvidenceAvailable, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, injuryEvidenceAvailable, injuryReportStatus, injuries, asOf, depthFreshness, depth]
+      required: [side, name, abbreviation, qbCertainty, qbChange, qbEvidenceAvailable, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, injuryEvidenceAvailable, injuryReportStatus, injuries, expectedQb, currentOffenseRoles, defensiveGroupings, asOf, depthFreshness, depth]
       properties:
         side: { type: string, enum: [home, away] }
         name: { type: string }
@@ -1180,6 +1180,9 @@ components:
         defenseInjuryImpact: { type: ["number", "null"] }
         injuryEvidenceAvailable: { type: boolean }
         injuryReportStatus: { type: string, enum: [available, partial, unavailable] }
+        expectedQb: { $ref: "#/components/schemas/ConsumerExpectedQb" }
+        currentOffenseRoles: { $ref: "#/components/schemas/ConsumerCurrentOffenseRoles" }
+        defensiveGroupings: { $ref: "#/components/schemas/ConsumerDefensiveGroupings" }
         injuries:
           type: array
           maxItems: 25
@@ -1190,6 +1193,69 @@ components:
           type: array
           maxItems: 30
           items: { $ref: "#/components/schemas/ConsumerDepthPlayer" }
+    ConsumerExpectedQb:
+      type: object
+      required: [name, status, availability, confidence, asOf, confirmed]
+      properties:
+        name: { type: ["string", "null"] }
+        status: { type: string, enum: [available, unconfirmed, unavailable] }
+        availability: { type: string, enum: [available, questionable, unavailable, unknown] }
+        confidence: { type: ["number", "null"] }
+        asOf: { type: ["string", "null"], format: date-time }
+        confirmed: { type: boolean }
+    ConsumerCurrentRolePlayer:
+      type: object
+      required: [name, availability, confidence, asOf, confirmed]
+      properties:
+        name: { type: ["string", "null"] }
+        availability: { type: string, enum: [available, questionable, unavailable, unknown] }
+        confidence: { type: ["number", "null"] }
+        asOf: { type: ["string", "null"], format: date-time }
+        confirmed: { type: boolean }
+    ConsumerCurrentOffenseRoles:
+      type: object
+      required: [runningBackCommittee, primaryTe, wr1, wr2]
+      properties:
+        runningBackCommittee:
+          type: object
+          required: [status, players]
+          properties:
+            status: { type: string, enum: [confirmed, unconfirmed] }
+            players:
+              type: array
+              maxItems: 3
+              items: { $ref: "#/components/schemas/ConsumerCurrentRolePlayer" }
+        primaryTe: { $ref: "#/components/schemas/ConsumerCurrentRolePlayer" }
+        wr1: { $ref: "#/components/schemas/ConsumerCurrentRolePlayer" }
+        wr2: { $ref: "#/components/schemas/ConsumerCurrentRolePlayer" }
+    ConsumerDefensivePlayer:
+      allOf:
+        - $ref: "#/components/schemas/ConsumerCurrentRolePlayer"
+        - type: object
+          required: [position]
+          properties:
+            position: { type: string }
+            role: { type: ["string", "null"] }
+    ConsumerDefensiveGroupings:
+      type: object
+      required: [front, linebackers, corners, safeties]
+      properties:
+        front:
+          type: array
+          maxItems: 16
+          items: { $ref: "#/components/schemas/ConsumerDefensivePlayer" }
+        linebackers:
+          type: array
+          maxItems: 12
+          items: { $ref: "#/components/schemas/ConsumerDefensivePlayer" }
+        corners:
+          type: array
+          maxItems: 12
+          items: { $ref: "#/components/schemas/ConsumerDefensivePlayer" }
+        safeties:
+          type: array
+          maxItems: 8
+          items: { $ref: "#/components/schemas/ConsumerDefensivePlayer" }
     ConsumerDepthPlayer:
       type: object
       required: [name, position, unit, depthRank, role, sourceLabel, recentSnapShare, injuryStatus, practiceStatus, starterConfidence, evidenceSummary, lineupSlot, freshness, asOf]
@@ -1228,7 +1294,7 @@ components:
         summary: { type: string }
     ConsumerContext:
       type: object
-      required: [available, dataConfidence, teams, drivers, projectedMatchups, matchupMessage, message]
+      required: [available, dataConfidence, teams, drivers, projectedMatchups, matchupMessage, message, modelPersonnelLimitation]
       properties:
         available: { type: boolean }
         dataConfidence: { type: ["number", "null"] }
@@ -1243,6 +1309,13 @@ components:
           items: { $ref: "#/components/schemas/ConsumerProjectedMatchup" }
         matchupMessage: { type: ["string", "null"] }
         message: { type: ["string", "null"] }
+        modelPersonnelLimitation:
+          type: object
+          required: [active, reason, recommendationSuppressed]
+          properties:
+            active: { type: boolean }
+            reason: { type: ["string", "null"] }
+            recommendationSuppressed: { type: boolean }
     ConsumerKeyPlayer:
       type: object
       required: [playerId, name, teamId, position, recentUsage, currentPersonnel, eligibility]

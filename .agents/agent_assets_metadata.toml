@@ -168,3 +168,59 @@ mtime_ms = 1789663796927
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/0362074f-4e26-48fe-b0b1-5f1e5b8af115/cc7406ee-17c1-4c88-8736-fdc183ce2830"
 storage_version_token = "1789663968727472"
 content_type = "image/png"
+
+[[outputs]]
+id = "wbH_nqLvug6CbJI2ztPvO"
+uri = "file://screenshots/gl002-personnel-published-before-desktop-roles.png"
+type = "image"
+title = "Before · desktop"
+description = "Published GL-002 personnel section, live public data."
+logical_id = "af135bf4-60cd-4f50-980e-986efdc9696d"
+content_hash = "sha256:3d04be700d68e2d5244726f47c33f075ee20ac687c9ce1bb7a1a4272efec4e51"
+size = 101857
+mtime_ms = 1790300811623
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/af135bf4-60cd-4f50-980e-986efdc9696d/916a9faf-976f-4d8c-a0ff-5298907191cd"
+storage_version_token = "1790301075160147"
+content_type = "image/png"
+
+[[outputs]]
+id = "X_-qj7fiHdYjq2_mjAPI8"
+uri = "file://screenshots/gl002-personnel-development-after-fixture-desktop-roles.png"
+type = "image"
+title = "After · desktop preview"
+description = "Revised development component with an illustrative browser-only adapter of the public game payload, not live development data."
+logical_id = "7724f2eb-4d09-479c-81e8-6ea46f0c582f"
+content_hash = "sha256:c4d0579bfa5146c437780e5e615be663ea63e21cf19ac7538134519dc00341f6"
+size = 131621
+mtime_ms = 1790300831659
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/7724f2eb-4d09-479c-81e8-6ea46f0c582f/84035b55-9ca0-469b-a579-aac8dfc3a3ff"
+storage_version_token = "1790301075768468"
+content_type = "image/png"
+
+[[outputs]]
+id = "Ow02aTLelNFESxWGR0GU6"
+uri = "file://screenshots/gl002-personnel-published-before-mobile-roles.png"
+type = "image"
+title = "Before · mobile"
+description = "Published GL-002 personnel section, live public data."
+logical_id = "5aadf405-6365-4170-ab98-c0ee746a20f7"
+content_hash = "sha256:4c1fd2404f088424d2f0699f345a70d7a0de02e0b7563d5e4b1a094c8029fc09"
+size = 46192
+mtime_ms = 1790300821691
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/5aadf405-6365-4170-ab98-c0ee746a20f7/84867982-df11-4dee-93fb-8d7942277547"
+storage_version_token = "1790301076312976"
+content_type = "image/png"
+
+[[outputs]]
+id = "yEppQrmulkwgK2BHMRvz-"
+uri = "file://screenshots/gl002-personnel-development-after-fixture-mobile-roles.png"
+type = "image"
+title = "After · mobile preview"
+description = "Revised development component with an illustrative browser-only adapter of the public game payload, not live development data."
+logical_id = "d57f8fd1-47bf-420e-b803-500f83783586"
+content_hash = "sha256:e3db4d315167af7817e449d273950ac5dc59fb4978cddcb9e743c6e39af13784"
+size = 63803
+mtime_ms = 1790300841655
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/d57f8fd1-47bf-420e-b803-500f83783586/9e6fdf14-4538-4f89-9bd1-f19ec6eb887e"
+storage_version_token = "1790301076882658"
+content_type = "image/png"

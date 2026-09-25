@@ -8,7 +8,10 @@
 import type { ConsumerContextTeamDepthFreshness } from './consumerContextTeamDepthFreshness';
 import type { ConsumerContextTeamInjuryReportStatus } from './consumerContextTeamInjuryReportStatus';
 import type { ConsumerContextTeamSide } from './consumerContextTeamSide';
+import type { ConsumerCurrentOffenseRoles } from './consumerCurrentOffenseRoles';
+import type { ConsumerDefensiveGroupings } from './consumerDefensiveGroupings';
 import type { ConsumerDepthPlayer } from './consumerDepthPlayer';
+import type { ConsumerExpectedQb } from './consumerExpectedQb';
 import type { ConsumerInjuryPlayer } from './consumerInjuryPlayer';
 
 export interface ConsumerContextTeam {
@@ -28,6 +31,9 @@ export interface ConsumerContextTeam {
   defenseInjuryImpact: number | null;
   injuryEvidenceAvailable: boolean;
   injuryReportStatus: ConsumerContextTeamInjuryReportStatus;
+  expectedQb: ConsumerExpectedQb;
+  currentOffenseRoles: ConsumerCurrentOffenseRoles;
+  defensiveGroupings: ConsumerDefensiveGroupings;
   /** @maxItems 25 */
   injuries: ConsumerInjuryPlayer[];
   /** @nullable */
