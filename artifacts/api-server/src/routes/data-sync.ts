@@ -7,13 +7,40 @@ import {
   SyncScheduleResponse,
 } from "@workspace/api-zod";
 import { syncEspnDepthCharts, syncEspnInjuries } from "../lib/availability";
-import { syncNflverseHistory } from "../lib/nflverse";
+import { datasetUrl, syncNflverseHistory } from "../lib/nflverse";
 import { captureOddsSnapshots, getOddsEventAudits } from "../lib/odds";
 import { syncEspnScheduleCoverage } from "../lib/schedule";
 import { requireAdmin } from "../middlewares/admin";
 import { withFeedLock } from "../lib/feed-scheduler";
 
 const router: IRouter = Router();
+
+const playerStats2026Url = datasetUrl("player_stats", 2026);
+
+router.get("/data-sync/player-stats-2026", requireAdmin, (_req, res) => {
+  res.json({ season: 2026, dataset: "player_stats", sourceUrl: playerStats2026Url });
+});
+
+router.post("/data-sync/player-stats-2026", requireAdmin, async (req, res): Promise<void> => {
+  if (req.body?.sourceUrl !== playerStats2026Url || req.body?.confirmation !== "IMPORT_2026_PLAYER_STATS") {
+    res.status(400).json({ error: "Confirm the exact 2026 weekly player-stat source before importing." });
+    return;
+  }
+  try {
+    req.log.info({ season: 2026, dataset: "player_stats", sourceUrl: playerStats2026Url }, "Scoped NFLverse import started");
+    const result = await withFeedLock("nflverse", () =>
+      syncNflverseHistory([2026], { datasets: ["player_stats"], refresh: true }));
+    if (result === null) {
+      res.status(409).json({ error: "NFLverse sync already running." });
+      return;
+    }
+    req.log.info({ season: 2026, dataset: "player_stats", result }, "Scoped NFLverse import finished");
+    res.status(result.status === "success" ? 200 : 502).json(result);
+  } catch (error) {
+    req.log.error({ error, season: 2026, dataset: "player_stats" }, "Scoped NFLverse import failed");
+    res.status(502).json({ error: "2026 player-stat import failed; check the sync ledger." });
+  }
+});
 
 router.post("/data-sync/nflverse", requireAdmin, async (req, res): Promise<void> => {
   try {
