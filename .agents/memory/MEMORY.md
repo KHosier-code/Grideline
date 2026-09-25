@@ -33,3 +33,4 @@
 - [Game completion semantics](game-completion-semantics.md) — scheduled ESPN rows may carry 0–0 score values; only final status proves a completed game.
 - [Aggregate timestamp decoding](aggregate-timestamp-decoding.md) — Drizzle SQL aggregate date generics do not decode runtime strings; normalize before date arithmetic or ISO serialization.
 - [Unchanged player fetches](unchanged-player-fetches.md) — a complete, successful provider fetch is fresh evidence even if change-only snapshots insert zero rows.
+- [Function migration baselines](function-migration-baselines.md) — trigger-name checks cannot prove a replaced PL/pgSQL function body is installed; force one-time execution for behavior changes.

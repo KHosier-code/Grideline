@@ -1094,20 +1094,19 @@ export async function freezeOfficialFinalPredictions(
         name: home.teamName,
         abbreviation: home.abbreviation,
       }, false);
-      if (!canonicalSnapshotReady(candidate.predictionTimestamp, evaluationCutoffAt, canonicalMarket)) {
-        missingMarketEvidence += 1;
-        continue;
-      }
+      if (!canonicalSnapshotReady(candidate.predictionTimestamp, evaluationCutoffAt, canonicalMarket)) continue;
+      if (!hasCompleteCanonicalMarketEvidence(canonicalMarket, evaluationCutoffAt)) missingMarketEvidence += 1;
       recordCanonicalFreezeCandidate(latest, candidate.gameId, { candidate, canonicalMarket, evaluationCutoffAt });
     }
   }
   let frozen = 0;
   for (const { candidate, canonicalMarket, evaluationCutoffAt } of latest.values()) {
-    const canonicalComparison = comparisonData(
+    const canonicalComparison = canonicalOfficialComparison(
       canonicalMarket,
       candidate.projectedMargin,
       candidate.projectedTotal,
       candidate.homeWinProbability,
+      evaluationCutoffAt,
     );
     const result = await db.update(predictionSnapshotsTable).set({
       marketSnapshot: canonicalMarketEvidenceSnapshot(
@@ -1219,7 +1218,7 @@ export function canonicalMarketEvidenceSnapshot(
         homeWinProbability: details.candidate.homeWinProbability,
         awayWinProbability: details.candidate.awayWinProbability,
       },
-      explanation: "Official prediction selected at or before the fixed 30-minute pre-kickoff cutoff; complete DraftKings and FanDuel spread, moneyline, and total evidence was observed no later than that cutoff.",
+      explanation: "Official model projection selected at or before the fixed 30-minute pre-kickoff cutoff. Betting-market eligibility is assessed independently for each market using fresh paired DraftKings and FanDuel outcomes captured no later than that cutoff.",
     },
   };
 }
@@ -1241,30 +1240,110 @@ export function hasCompleteCanonicalMarketEvidence(
     const marketRow = row as Record<string, unknown>;
     if (!Array.isArray(marketRow.quotes)) return false;
     for (const [book, sportsbook] of [["draftKings", "DraftKings"], ["fanDuel", "FanDuel"]] as const) {
-      const quote = marketRow[book];
-      if (!quote || typeof quote !== "object") return false;
-      const value = quote as Record<string, unknown>;
-      if (value.market !== market || value.sportsbook !== sportsbook
-        || typeof value.price !== "number" || !Number.isFinite(value.price)
-        || typeof value.capturedAt !== "string") return false;
-      if (!canonicalQuoteFreshAt(value, cutoff)) return false;
-      if (market !== "moneyline" && (typeof value.point !== "number" || !Number.isFinite(value.point))) return false;
-      const outcomes = new Set<string>();
-      for (const quote of marketRow.quotes) {
-        if (!quote || typeof quote !== "object") continue;
-        const rawQuote = quote as Record<string, unknown>;
-        if (rawQuote.sportsbook !== sportsbook) continue;
-        if (rawQuote.market !== market || typeof rawQuote.selection !== "string" || !rawQuote.selection
-          || typeof rawQuote.price !== "number" || !Number.isFinite(rawQuote.price)
-          || typeof rawQuote.capturedAt !== "string" || !canonicalQuoteFreshAt(rawQuote, cutoff)
-          || (market !== "moneyline"
-            && (typeof rawQuote.point !== "number" || !Number.isFinite(rawQuote.point)))) return false;
-        outcomes.add(rawQuote.selection);
-      }
-      if (market === "moneyline" && outcomes.size < 2) return false;
+      const outcomes = marketRow.quotes
+        .filter((quote): quote is Record<string, unknown> =>
+          Boolean(quote && typeof quote === "object"
+            && (quote as Record<string, unknown>).sportsbook === sportsbook))
+        .filter((quote) => quote.market === market
+          && typeof quote.selection === "string" && Boolean(quote.selection)
+          && typeof quote.price === "number" && Number.isFinite(quote.price)
+          && typeof quote.capturedAt === "string" && canonicalQuoteFreshAt(quote, cutoff)
+          && (market === "moneyline" || (typeof quote.point === "number" && Number.isFinite(quote.point))));
+      if (!hasPairedMarketOutcomes(market, outcomes)) return false;
     }
   }
   return true;
+}
+
+export function canonicalMarketEligibility(snapshot: Record<string, unknown>, cutoff: Date) {
+  const markets = (snapshot.markets && typeof snapshot.markets === "object")
+    ? snapshot.markets as Record<string, unknown>
+    : {};
+  return Object.fromEntries((["spread", "total", "moneyline"] as const).map((market) => {
+    const marketRow = markets[market] && typeof markets[market] === "object"
+      ? markets[market] as Record<string, unknown>
+      : {};
+    const quotes = Array.isArray(marketRow.quotes)
+      ? marketRow.quotes.filter((quote): quote is Record<string, unknown> =>
+        Boolean(quote && typeof quote === "object"))
+      : [];
+    const eligible = (["DraftKings", "FanDuel"] as const).every((sportsbook) => {
+      const outcomes = quotes.filter((quote) => quote.sportsbook === sportsbook
+        && quote.market === market
+        && typeof quote.selection === "string" && Boolean(quote.selection)
+        && typeof quote.price === "number" && Number.isInteger(quote.price)
+        && (quote.price <= -100 || quote.price >= 100)
+        && typeof quote.capturedAt === "string" && canonicalQuoteFreshAt(quote, cutoff)
+        && (market === "moneyline" || (typeof quote.point === "number" && Number.isFinite(quote.point))));
+      return hasPairedMarketOutcomes(market, outcomes);
+    });
+    return [market, {
+      eligible,
+      cutoffAt: cutoff.toISOString(),
+      reason: eligible ? null : "Requires fresh paired outcomes from DraftKings and FanDuel captured by the official cutoff.",
+    }];
+  }));
+}
+
+export function canonicalOfficialComparison(
+  snapshot: Record<string, unknown>,
+  projectedMargin: number | null,
+  projectedTotal: number | null,
+  homeWinProbability: number | null,
+  cutoff: Date,
+) {
+  const comparison = comparisonData(snapshot, projectedMargin, projectedTotal, homeWinProbability);
+  const eligibility = canonicalMarketEligibility(snapshot, cutoff) as Record<string, { eligible: boolean }>;
+  if (!eligibility.spread.eligible) {
+    comparison.spread.marketLine = null;
+    comparison.spread.pointEdge = null;
+    comparison.spread.marketAvailable = false;
+  }
+  if (!eligibility.total.eligible) {
+    comparison.totals.marketTotal = null;
+    comparison.totals.pointEdge = null;
+    comparison.totals.marketAvailable = false;
+  }
+  if (!eligibility.moneyline.eligible) {
+    comparison.moneyline.noVigHomeProbability = null;
+    comparison.moneyline.noVigAwayProbability = null;
+    comparison.moneyline.homeProbabilityEdge = null;
+    comparison.moneyline.marketAvailable = false;
+  }
+  return comparison;
+}
+
+function hasPairedMarketOutcomes(
+  market: string,
+  quotes: Array<Record<string, unknown>>,
+) {
+  const validPrices = quotes.filter((quote) => typeof quote.price === "number"
+    && Number.isInteger(quote.price) && ((quote.price as number) <= -100 || (quote.price as number) >= 100));
+  if (market === "total") {
+    const over = validPrices.find((quote) => /\bover\b/i.test(String(quote.selection)));
+    const under = validPrices.find((quote) => /\bunder\b/i.test(String(quote.selection)));
+    return Boolean(over && under && typeof over.point === "number" && typeof under.point === "number"
+      && over.point === under.point);
+  }
+  const selections = new Set(validPrices.map((quote) => String(quote.selection).trim().toLowerCase()));
+  if (selections.size < 2) return false;
+  if (market === "moneyline") return true;
+  const first = validPrices[0];
+  const counterpart = validPrices.find((quote) => quote.selection !== first?.selection);
+  return Boolean(first && counterpart && typeof first.point === "number" && typeof counterpart.point === "number"
+    && Math.abs(first.point + counterpart.point) <= 0.01);
+}
+
+function canonicalEvidenceCapturedByCutoff(value: unknown, cutoff: Date): boolean {
+  if (Array.isArray(value)) return value.every((item) => canonicalEvidenceCapturedByCutoff(item, cutoff));
+  if (!value || typeof value !== "object") return true;
+  const record = value as Record<string, unknown>;
+  if ("capturedAt" in record) {
+    if (typeof record.capturedAt !== "string") return false;
+    const capturedAt = new Date(record.capturedAt);
+    if (!Number.isFinite(capturedAt.getTime()) || capturedAt > cutoff) return false;
+  }
+  return Object.values(record).every((item) => canonicalEvidenceCapturedByCutoff(item, cutoff));
 }
 
 function canonicalQuoteFreshAt(quote: Record<string, unknown>, cutoff: Date) {
@@ -1288,7 +1367,7 @@ export function canonicalSnapshotReady(
   return Number.isFinite(predictionTimestamp.getTime())
     && Number.isFinite(cutoff.getTime())
     && predictionTimestamp <= cutoff
-    && hasCompleteCanonicalMarketEvidence(marketSnapshot, cutoff);
+    && canonicalEvidenceCapturedByCutoff(marketSnapshot, cutoff);
 }
 
 export function isCanonicalOfficialPrediction(
@@ -1304,7 +1383,7 @@ export function isCanonicalOfficialPrediction(
       - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000)
     || snapshot.predictionTimestamp > snapshot.evaluationCutoffAt
     || !isEligiblePredictionSnapshot(snapshot)
-    || !hasCompleteCanonicalMarketEvidence(snapshot.marketSnapshot, snapshot.evaluationCutoffAt)) return false;
+    || !canonicalEvidenceCapturedByCutoff(snapshot.marketSnapshot, snapshot.evaluationCutoffAt)) return false;
   const meta = snapshot.marketSnapshot.canonicalEvaluation as Record<string, unknown> | undefined;
   const predictionTime = snapshot.marketSnapshot.predictionTimeEvidence;
   return Boolean(meta && predictionTime && typeof predictionTime === "object"
@@ -1325,13 +1404,26 @@ async function gradeSnapshot(snapshot: typeof predictionSnapshotsTable.$inferSel
   const actualMargin = game.finalHomeScore - game.finalAwayScore;
   const actualTotal = game.finalHomeScore + game.finalAwayScore;
   const comparison = snapshot.marketComparison as Record<string, any>;
+  const officialMarketEligibility = canonicalMarketEligibility(
+    snapshot.marketSnapshot,
+    snapshot.evaluationCutoffAt ?? new Date(0),
+  );
   const marketResults = {
-    spread: resultForLine(actualMargin, comparison.spread?.marketLine ?? null, "spread"),
-    totals: resultForLine(actualTotal, comparison.totals?.marketTotal ?? null, "total"),
-    moneyline: comparison.moneyline?.marketAvailable ? {
+    projectionError: {
+      marginError: snapshot.projectedMargin === null ? null : snapshot.projectedMargin - actualMargin,
+      totalError: snapshot.projectedTotal === null ? null : snapshot.projectedTotal - actualTotal,
+      homeWinProbability: snapshot.homeWinProbability,
+      actualHomeWin: actualMargin > 0 ? 1 : actualMargin < 0 ? 0 : null,
+    },
+    spread: (officialMarketEligibility.spread as { eligible: boolean }).eligible
+      ? resultForLine(actualMargin, comparison.spread?.marketLine ?? null, "spread")
+      : { status: "unavailable", eligibility: officialMarketEligibility.spread },
+    totals: (officialMarketEligibility.total as { eligible: boolean }).eligible
+      ? resultForLine(actualTotal, comparison.totals?.marketTotal ?? null, "total")
+      : { status: "unavailable", eligibility: officialMarketEligibility.total },
+    moneyline: (officialMarketEligibility.moneyline as { eligible: boolean }).eligible ? {
       status: actualMargin > 0 ? "home_win" : actualMargin < 0 ? "away_win" : "push",
-      modelHomeProbability: snapshot.homeWinProbability,
-    } : { status: "unavailable" },
+    } : { status: "unavailable", eligibility: officialMarketEligibility.moneyline },
   };
   const [home] = await db.select({
     teamId: teamsTable.teamId,
@@ -1350,14 +1442,19 @@ async function gradeSnapshot(snapshot: typeof predictionSnapshotsTable.$inferSel
     snapshot.projectedTotal,
     snapshot.homeWinProbability,
   ) as Record<string, any>;
+  const closingEligibility = canonicalMarketEligibility(closingMarkets, game.kickoffTime!);
+  const eligibleSpreadClose = (officialMarketEligibility.spread as { eligible: boolean }).eligible
+    && (closingEligibility.spread as { eligible: boolean }).eligible;
+  const eligibleTotalClose = (officialMarketEligibility.total as { eligible: boolean }).eligible
+    && (closingEligibility.total as { eligible: boolean }).eligible;
   const clv = {
-    spreadPoints: typeof comparison.spread?.marketLine === "number" && Number.isFinite(comparison.spread.marketLine)
+    spreadPoints: eligibleSpreadClose && typeof comparison.spread?.marketLine === "number" && Number.isFinite(comparison.spread.marketLine)
       && typeof closingComparison.spread?.marketLine === "number" && Number.isFinite(closingComparison.spread.marketLine)
       ? comparison.spread.marketLine - closingComparison.spread.marketLine : null,
-    totalPoints: typeof comparison.totals?.marketTotal === "number" && Number.isFinite(comparison.totals.marketTotal)
+    totalPoints: eligibleTotalClose && typeof comparison.totals?.marketTotal === "number" && Number.isFinite(comparison.totals.marketTotal)
       && typeof closingComparison.totals?.marketTotal === "number" && Number.isFinite(closingComparison.totals.marketTotal)
       ? closingComparison.totals.marketTotal - comparison.totals.marketTotal : null,
-    status: comparison.spread?.marketAvailable || comparison.totals?.marketAvailable ? "measured" : "unavailable",
+    status: eligibleSpreadClose || eligibleTotalClose ? "measured" : "unavailable",
   };
   const marginError = snapshot.projectedMargin === null ? null : snapshot.projectedMargin - actualMargin;
   const totalError = snapshot.projectedTotal === null ? null : snapshot.projectedTotal - actualTotal;

@@ -48,6 +48,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/canonical-evaluation.test.ts"),
       path.resolve(artifactDir, "src/lib/official-corrections.test.ts"),
       path.resolve(artifactDir, "src/lib/official-immutability.test.ts"),
+      path.resolve(artifactDir, "src/lib/gl003-freeze-e2e.test.ts"),
       path.resolve(artifactDir, "src/lib/scheduler.test.ts"),
       path.resolve(artifactDir, "src/lib/usage-analytics-retention.test.ts"),
       path.resolve(artifactDir, "src/routes/authorization.test.ts"),

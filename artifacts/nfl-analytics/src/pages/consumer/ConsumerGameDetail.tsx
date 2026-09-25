@@ -129,6 +129,7 @@ export default function ConsumerGameDetail() {
         </div>
       </div>
       {officialPrediction ? (
+        <>
         <div className="premium-projection-grid">
           <div className="ppg-score">
             <small>Official predicted score</small>
@@ -141,6 +142,21 @@ export default function ConsumerGameDetail() {
             <div><small>{game.matchup.home.abbreviation} Win %</small><span>{metric(officialPrediction.homeWinProbability, true)}</span></div>
           </div>
         </div>
+        <div className="consumer-note" aria-label="Official betting recommendation eligibility">
+          <strong>Official betting recommendation evidence at cutoff</strong>
+          <div className="ppg-metrics">
+            {(["spread", "total", "moneyline"] as const).map((market) => (
+              <div key={market} data-testid={`official-${market}-eligibility`}>
+                <small>{market === "moneyline" ? "Moneyline" : market === "spread" ? "Spread" : "Total"}</small>
+                <span>{officialPrediction.marketEligibility[market].eligible
+                  ? "Price evidence eligible at cutoff"
+                  : "Unavailable — no eligible cutoff price"}</span>
+              </div>
+            ))}
+          </div>
+          <small>Saved cutoff evidence only. Prices cannot become official after the cutoff.</small>
+        </div>
+        </>
       ) : (
         <p className="consumer-note" role="status">Official prediction not created</p>
       )}

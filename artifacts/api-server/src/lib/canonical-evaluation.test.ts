@@ -8,6 +8,8 @@ import {
   canonicalMarketEvidenceSnapshot,
   canonicalSnapshotReady,
   hasCompleteCanonicalMarketEvidence,
+  canonicalMarketEligibility,
+  canonicalOfficialComparison,
   recordCanonicalFreezeCandidate,
 } from "./live-predictions";
 
@@ -44,7 +46,9 @@ const quote = (
 function evidence(capturedAt = "2026-09-10T15:20:00.000Z") {
   const spread = [
     quote(capturedAt, "spread", "DraftKings", "Home", -3),
+    quote(capturedAt, "spread", "DraftKings", "Away", 3),
     quote(capturedAt, "spread", "FanDuel", "Home", -3),
+    quote(capturedAt, "spread", "FanDuel", "Away", 3),
   ];
   const moneyline = [
     quote(capturedAt, "moneyline", "DraftKings", "Home", null),
@@ -54,13 +58,15 @@ function evidence(capturedAt = "2026-09-10T15:20:00.000Z") {
   ];
   const total = [
     quote(capturedAt, "total", "DraftKings", "Over", 44.5),
+    quote(capturedAt, "total", "DraftKings", "Under", 44.5),
     quote(capturedAt, "total", "FanDuel", "Over", 44.5),
+    quote(capturedAt, "total", "FanDuel", "Under", 44.5),
   ];
   return {
     markets: {
       spread: { draftKings: spread[0], fanDuel: spread[1], quotes: spread },
       moneyline: { draftKings: moneyline[0], fanDuel: moneyline[2], quotes: moneyline },
-      total: { draftKings: total[0], fanDuel: total[1], quotes: total },
+      total: { draftKings: total[0], fanDuel: total[1], bestAvailable: total[0], quotes: total },
     },
   };
 }
@@ -69,7 +75,9 @@ test("canonical market evidence requires every supported book and market before 
   const cutoff = new Date("2026-09-10T15:30:00.000Z");
   assert.equal(hasCompleteCanonicalMarketEvidence(evidence(), cutoff), true);
   const missingBook = evidence();
-  delete (missingBook.markets.spread as Record<string, unknown>).fanDuel;
+  (missingBook.markets.spread as Record<string, any>).quotes =
+    (missingBook.markets.spread as Record<string, any>).quotes
+      .filter((row: { sportsbook: string }) => row.sportsbook !== "FanDuel");
   assert.equal(hasCompleteCanonicalMarketEvidence(missingBook, cutoff), false);
   const missingMoneylineOutcome = evidence();
   (missingMoneylineOutcome.markets.moneyline as Record<string, unknown>).quotes =
@@ -93,16 +101,45 @@ test("canonical cutoff remains a fixed 30-minute pre-kickoff boundary", () => {
   assert.equal(cutoff.toISOString(), "2026-09-10T15:30:00.000Z");
 });
 
-test("canonical readiness rejects an old model row and accepts an exact cutoff", () => {
+test("official projection freezes at cutoff despite missing or stale odds, never post-cutoff odds", () => {
   const cutoff = new Date("2026-09-10T15:30:00.000Z");
   assert.equal(
     canonicalSnapshotReady(new Date("2026-09-10T15:30:00.001Z"), cutoff, evidence()),
     false,
   );
   assert.equal(
-    canonicalSnapshotReady(new Date("2026-09-10T15:00:00.000Z"), cutoff, evidence("2026-09-10T15:30:00.000Z")),
+    canonicalSnapshotReady(new Date("2026-09-10T15:00:00.000Z"), cutoff, {}),
     true,
   );
+  assert.equal(
+    canonicalSnapshotReady(new Date("2026-09-10T15:00:00.000Z"), cutoff, evidence("2026-09-10T15:30:00.001Z")),
+    false,
+  );
+  assert.equal(
+    canonicalSnapshotReady(new Date("2026-09-10T15:00:00.000Z"), cutoff, evidence("2026-09-10T15:14:59.999Z")),
+    true,
+  );
+});
+
+test("each official market requires its own fresh paired DraftKings and FanDuel outcomes", () => {
+  const cutoff = new Date("2026-09-10T15:30:00.000Z");
+  const partial = evidence();
+  const markets = partial.markets as Record<string, any>;
+  markets.spread.quotes = markets.spread.quotes.filter((row: { sportsbook: string; selection: string }) =>
+    row.sportsbook !== "FanDuel" || row.selection !== "Away");
+  markets.moneyline.quotes = markets.moneyline.quotes.filter((row: { sportsbook: string }) =>
+    row.sportsbook !== "DraftKings");
+  const eligibility = canonicalMarketEligibility(partial, cutoff) as Record<string, { eligible: boolean }>;
+  assert.equal(eligibility.spread.eligible, false);
+  assert.equal(eligibility.total.eligible, true);
+  assert.equal(eligibility.moneyline.eligible, false);
+  assert.equal(hasCompleteCanonicalMarketEvidence(partial, cutoff), false);
+  assert.equal(canonicalMarketEligibility({}, cutoff).spread.eligible, false);
+  const comparison = canonicalOfficialComparison(partial, 4, 45, 0.6, cutoff);
+  assert.equal(comparison.spread.marketLine, null);
+  assert.equal(comparison.spread.marketAvailable, false);
+  assert.equal(comparison.moneyline.noVigHomeProbability, null);
+  assert.equal(comparison.totals.marketAvailable, true);
 });
 
 test("freeze timing allows only a pre-kickoff prediction at or before the fixed cutoff", () => {

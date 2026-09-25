@@ -21,6 +21,7 @@ import {
   getLatestValidPredictionSnapshots,
   getPredictionPerformance,
   isCanonicalOfficialPrediction,
+  canonicalMarketEligibility,
 } from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
 import { buildConsumerMatchupBoard } from "../lib/consumer-matchups";
@@ -1187,6 +1188,10 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
         },
         inputSourceEvidence: officialSnapshot.inputSourceEvidence,
         marketSnapshot: officialSnapshot.marketSnapshot,
+        marketEligibility: canonicalMarketEligibility(
+          officialSnapshot.marketSnapshot,
+          officialSnapshot.evaluationCutoffAt!,
+        ),
       } : null,
       market,
       marketBoard,

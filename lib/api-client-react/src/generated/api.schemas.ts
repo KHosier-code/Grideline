@@ -496,6 +496,19 @@ export type ConsumerGameOfficialPredictionInputSourceEvidence = { [key: string]:
 
 export type ConsumerGameOfficialPredictionMarketSnapshot = { [key: string]: unknown };
 
+export interface OfficialMarketEligibility {
+  eligible: boolean;
+  cutoffAt: string;
+  /** @nullable */
+  reason: string | null;
+}
+
+export type ConsumerGameOfficialPredictionMarketEligibility = {
+  spread: OfficialMarketEligibility;
+  total: OfficialMarketEligibility;
+  moneyline: OfficialMarketEligibility;
+};
+
 /**
  * @nullable
  */
@@ -522,6 +535,7 @@ export type ConsumerGameOfficialPrediction = {
   /** @nullable */
   inputSourceEvidence: ConsumerGameOfficialPredictionInputSourceEvidence;
   marketSnapshot: ConsumerGameOfficialPredictionMarketSnapshot;
+  marketEligibility: ConsumerGameOfficialPredictionMarketEligibility;
 } | null;
 
 export type ConsumerGameDataConfidenceLabel = typeof ConsumerGameDataConfidenceLabel[keyof typeof ConsumerGameDataConfidenceLabel];

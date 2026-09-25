@@ -297,6 +297,10 @@ async function hasTrigger(client: pg.Client, name: string) {
 }
 
 async function verifyExistingSchema(client: pg.Client, sql: string) {
+  // A replacement function can change behavior while every table, index and
+  // trigger name remains present. Such migrations must execute once rather
+  // than being incorrectly recorded as an existing-schema baseline.
+  if (/^--\s*@execute-once\s*$/im.test(sql)) return false;
   const requirements = extractRequirements(sql);
   for (const table of requirements.tables) {
     if (!(await hasTable(client, table))) return false;

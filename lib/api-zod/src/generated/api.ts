@@ -1007,7 +1007,24 @@ export const GetConsumerDashboardResponse = zod.object({
   "inputMissingFeatureCount": zod.number().int()
 }),
   "inputSourceEvidence": zod.record(zod.string(), zod.unknown()).nullable(),
-  "marketSnapshot": zod.record(zod.string(), zod.unknown())
+  "marketSnapshot": zod.record(zod.string(), zod.unknown()),
+  "marketEligibility": zod.object({
+  "spread": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+}),
+  "total": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+}),
+  "moneyline": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+})
+})
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
@@ -1253,7 +1270,24 @@ export const ListConsumerGamesResponse = zod.object({
   "inputMissingFeatureCount": zod.number().int()
 }),
   "inputSourceEvidence": zod.record(zod.string(), zod.unknown()).nullable(),
-  "marketSnapshot": zod.record(zod.string(), zod.unknown())
+  "marketSnapshot": zod.record(zod.string(), zod.unknown()),
+  "marketEligibility": zod.object({
+  "spread": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+}),
+  "total": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+}),
+  "moneyline": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+})
+})
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
@@ -1518,7 +1552,24 @@ export const GetConsumerGameResponse = zod.object({
   "inputMissingFeatureCount": zod.number().int()
 }),
   "inputSourceEvidence": zod.record(zod.string(), zod.unknown()).nullable(),
-  "marketSnapshot": zod.record(zod.string(), zod.unknown())
+  "marketSnapshot": zod.record(zod.string(), zod.unknown()),
+  "marketEligibility": zod.object({
+  "spread": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+}),
+  "total": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+}),
+  "moneyline": zod.object({
+  "eligible": zod.boolean(),
+  "cutoffAt": zod.coerce.date(),
+  "reason": zod.string().nullable()
+})
+})
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({

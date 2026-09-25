@@ -7,6 +7,7 @@
  */
 import type { ConsumerGameOfficialPredictionConfidence } from './consumerGameOfficialPredictionConfidence';
 import type { ConsumerGameOfficialPredictionInputSourceEvidence } from './consumerGameOfficialPredictionInputSourceEvidence';
+import type { ConsumerGameOfficialPredictionMarketEligibility } from './consumerGameOfficialPredictionMarketEligibility';
 import type { ConsumerGameOfficialPredictionMarketSnapshot } from './consumerGameOfficialPredictionMarketSnapshot';
 import type { ConsumerGameOfficialPredictionModelVersions } from './consumerGameOfficialPredictionModelVersions';
 
@@ -36,4 +37,5 @@ export type ConsumerGameOfficialPrediction = {
   /** @nullable */
   inputSourceEvidence: ConsumerGameOfficialPredictionInputSourceEvidence;
   marketSnapshot: ConsumerGameOfficialPredictionMarketSnapshot;
+  marketEligibility: ConsumerGameOfficialPredictionMarketEligibility;
 } | null;
