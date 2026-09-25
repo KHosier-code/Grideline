@@ -266,3 +266,17 @@ mtime_ms = 1790355527830
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/61ec2781-9c15-4622-bb09-d4c675398b52/5fc596da-f99d-4a4c-a490-64788db1a5e4"
 storage_version_token = "1790355547234138"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "sHI9QVVOQnNu_00kJWKVs"
+uri = "file://reports/gridline-task82b-recovery-readiness.md"
+type = "text"
+title = "Task 82B recovery readiness"
+description = "Archive verification procedure, separate reconstruction requirements, safeguards, tests, and approval gates."
+logical_id = "08d3c1c9-71e9-4985-aaf1-606385c2bb26"
+content_hash = "sha256:914f3eac6b0ea5b39e334266a7a3b6a2d84f7f343e7cd4bea2d15ba62271249c"
+size = 10272
+mtime_ms = 1790356165210
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/08d3c1c9-71e9-4985-aaf1-606385c2bb26/5eeceebb-27f7-49d8-b9f5-1207c7a9808f"
+storage_version_token = "1790356172143735"
+content_type = "text/markdown"

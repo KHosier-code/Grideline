@@ -1,0 +1,93 @@
+# TASK 82B — HISTORICAL EVALUATION RECOVERY PREPARATION
+
+OBJECTIVE
+
+Prepare a safe recovery or independent reconstruction of Gridline's missing 2025 market-baseline evaluation.
+
+Task 82A established that the original accepted baseline rows and game-level evidence are absent from the current development database.
+
+Do not assume that the missing original evidence can be recreated exactly.
+
+STRICT RESTRICTIONS
+
+- No production access or modifications.
+- No database writes.
+- No migrations.
+- No database-binding changes.
+- No model promotions or production refitting.
+- No changes to accepted historical reports.
+- No deployment.
+- No paid API requests.
+
+PART A — ARCHIVED EXPORT VALIDATION
+
+Build a read-only validation tool capable of inspecting an authorized archived development export if Replit Support provides one.
+
+Validate:
+- Original evaluation run identity.
+- Expected database schema.
+- Source dataset fingerprints.
+- Historical game identities.
+- Recorded sportsbook observations.
+- Game-level baseline predictions.
+- Model configurations and artifact checksums.
+- Evaluation sample counts.
+- Retained aggregate results.
+
+Generate a detailed mismatch report.
+
+Never import an archive merely because its run ID matches.
+
+PART B — INDEPENDENT RECONSTRUCTION READINESS
+
+Inspect the previously accepted baseline-generation methodology.
+
+Determine whether the exact approved source dataset, training configuration, model artifacts and evaluation rules remain available.
+
+Prepare a development-only reconstruction procedure that:
+- Uses the original historical cutoff rules.
+- Preserves the 2021–2024 training boundary.
+- Evaluates eligible 2025 games.
+- Verifies market-family eligibility.
+- Uses the qualified recorded-market source.
+- Preserves all game-level outputs.
+- Produces reproducible dataset and artifact fingerprints.
+
+Do not execute the reconstruction in this task.
+
+PART C — EVIDENCE CLASSIFICATION
+
+Clearly distinguish:
+
+1. Original historical evidence recovered from a verified archive.
+2. Newly reproduced historical evidence using the approved methodology.
+3. Retained aggregate results that cannot be independently reproduced.
+
+Do not combine these evidence categories.
+
+PART D — RECOVERY REQUIREMENTS
+
+Specify the exact conditions under which:
+- An original archive can be safely accepted.
+- A separate reconstructed baseline can be generated.
+- The personnel-aware challenger comparison can be rerun.
+
+Identify required approvals for any development database writes.
+
+DELIVERABLE
+
+Generate:
+
+reports/gridline-task82b-recovery-readiness.md
+
+Include:
+- Archive verification procedure.
+- Reconstruction requirements.
+- Missing dependencies.
+- Evidence-integrity safeguards.
+- Tests.
+- Exact next action for each recovery path.
+
+Do not execute recovery or reconstruction automatically.
+
+Confirm production remains untouched.
