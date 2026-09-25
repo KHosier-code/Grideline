@@ -34,3 +34,4 @@
 - [Aggregate timestamp decoding](aggregate-timestamp-decoding.md) — Drizzle SQL aggregate date generics do not decode runtime strings; normalize before date arithmetic or ISO serialization.
 - [Unchanged player fetches](unchanged-player-fetches.md) — a complete, successful provider fetch is fresh evidence even if change-only snapshots insert zero rows.
 - [Function migration baselines](function-migration-baselines.md) — trigger-name checks cannot prove a replaced PL/pgSQL function body is installed; force one-time execution for behavior changes.
+- [Managed production custom DDL](managed-production-custom-ddl.md) — general SQL-runner documentation does not establish PL/pgSQL/trigger support or transaction semantics; require operator confirmation.
