@@ -1,0 +1,176 @@
+# GRIDLINE — FIX PLAYER USAGE ON PUBLISHED WEBSITE
+
+## OBJECTIVE
+
+Player Usage is not appearing on my published Gridline website.
+
+Previous verification established:
+- Two successful 2026 player-stat imports.
+- 2,291 expected player-stat row keys in the production replica.
+- Sampled player statistics match the available source.
+- Four public Player Usage API queries return consistent 2026 data.
+
+Despite these results, I cannot see Player Usage on the published website.
+
+Investigate and identify the exact reason.
+
+Do not repeat the import or assume the database is missing records.
+
+## PHASE 1 — VERIFY DEPLOYED VERSION
+
+Identify the latest production deployment.
+
+Compare:
+- Current main-project commit.
+- Expected Player Usage frontend commit.
+- Expected Player Usage API commit.
+- Actual deployed build identity.
+
+Confirm that the published deployment contains the Player Usage interface and relevant API integration.
+
+Do not rely solely on successful build logs or the health endpoint.
+
+If deployment identity cannot be proven, stop and report what evidence is missing.
+
+## PHASE 2 — INSPECT THE PUBLISHED WEBSITE
+
+Inspect the actual published Gridline website rather than relying exclusively on development previews.
+
+Check:
+- Games page.
+- Game Detail page.
+- Player Usage section.
+- Desktop presentation.
+- Mobile presentation.
+
+Determine whether Player Usage is:
+- Missing entirely.
+- Hidden behind a collapsed section.
+- Not receiving API data.
+- Receiving data but failing to render.
+- Suppressed because the selected game has insufficient data.
+- Pointing to an incorrect API route.
+- Absent because the published version contains older frontend code.
+
+Inspect browser console and network errors where access permits.
+
+Do not bypass authentication.
+
+## PHASE 3 — TRACE API TO FRONTEND
+
+Select the same Seattle WR/QB, Cleveland RB and Kansas City QB examples verified in the previous production audit.
+
+Trace each example through:
+
+1. Existing production database.
+2. Consumer API.
+3. Generated API client.
+4. React query or data-fetching hook.
+5. Player Usage component.
+6. Game Detail rendering.
+
+Inspect season and week selection, player identity mapping and response transformation.
+
+Determine precisely where the data stops reaching the user.
+
+If these examples cannot be matched to available Game Detail pages, explain why and use another verified example.
+
+## PHASE 4 — VERIFY COMPONENT INTEGRATION
+
+Inspect:
+- Player Usage component exports.
+- Game Detail imports.
+- Route registration.
+- Feature flags.
+- Authentication requirements.
+- Loading states.
+- Empty states.
+- Responsive visibility.
+- Conditional rendering.
+
+Confirm that Player Usage is mounted in the current Game Detail component.
+
+Check whether finalized games, upcoming games or missing projection snapshots unintentionally suppress otherwise available historical player usage.
+
+Player Usage should not disappear solely because a valid game projection or sportsbook market is unavailable.
+
+## PHASE 5 — IDENTIFY THE SMALLEST FIX
+
+Determine the root cause before modifying code.
+
+If a frontend integration defect is found, implement the smallest development-only correction.
+
+If the problem is simply an outdated published deployment, do not make unnecessary code changes.
+
+If the issue involves a missing consumer API endpoint, identify the exact deployment or API-contract problem.
+
+Do not modify production records.
+
+## PHASE 6 — VALIDATION
+
+Verify the corrected development implementation using existing verified player statistics.
+
+Test:
+- Populated Player Usage.
+- Missing player statistics.
+- Partial statistics.
+- Different player positions.
+- Upcoming games.
+- Completed games.
+- Missing projections.
+- Missing sportsbook markets.
+- Desktop.
+- Mobile.
+
+Run:
+- Frontend typecheck.
+- Applicable API tests.
+- Consumer presentation tests.
+- Production build.
+
+Do not fabricate data to make the live interface appear populated.
+
+## PHASE 7 — RELEASE PREPARATION
+
+Identify the exact changes that must be applied to the main Replit project.
+
+Provide:
+- Expected commit.
+- Changed files.
+- Test results.
+- Required deployment actions.
+- Post-publish verification instructions.
+
+Do not automatically publish or deploy.
+
+If the existing deployment is simply outdated, identify the correct commit and provide the required publish procedure.
+
+## STRICT RESTRICTIONS
+
+- No production data imports.
+- No production database writes.
+- No database-binding changes.
+- No migrations unless separately justified and approved.
+- No model refitting or promotion.
+- No Phase 6.1 changes.
+- No sportsbook-history modifications.
+
+## FINAL REPORT
+
+Generate:
+
+reports/gridline-player-usage-website-repair.md
+
+Identify the root cause and finish with one of these statuses:
+
+FRONTEND FIX READY
+
+REPUBLISH REQUIRED — NO CODE FIX
+
+API INTEGRATION FIX READY
+
+BLOCKED — ADDITIONAL EVIDENCE REQUIRED
+
+Report exactly what I need to do next.
+
+Do not claim the production website is fixed until the updated build has actually been published and verified.

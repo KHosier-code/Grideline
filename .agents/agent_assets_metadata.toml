@@ -294,3 +294,17 @@ mtime_ms = 1790367180328
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/531f24db-2951-4a81-8443-3b2dd7d418f1/2af620f3-8e29-4df2-98a6-a99442f69dd6"
 storage_version_token = "1790367206027440"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "YDL5X7uM39pxXZ__Rcg09"
+uri = "file://reports/gridline-player-usage-website-repair.md"
+type = "text"
+title = "Gridline Player Usage Website Repair"
+description = "Root cause, development fix, validation results, and post-publish checklist."
+logical_id = "7fb88ee9-6542-412e-acc8-2a6651a042c9"
+content_hash = "sha256:037016342de6a251f60d4fa0fd7321514cc2c0b9db258d84f7a1d6cbeca04643"
+size = 9750
+mtime_ms = 1790368514472
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/7fb88ee9-6542-412e-acc8-2a6651a042c9/388bfafb-a3b2-4d97-9018-d50f70cda9bd"
+storage_version_token = "1790368566975565"
+content_type = "text/markdown"
