@@ -1362,6 +1362,10 @@ components:
           required: [snapShare, targets, targetShare, receptions, receivingYards, carries, rushingYards, totalTd, yardsPerTarget, yardsPerCarry, redZoneTouches, redZoneTargets, explosiveRate]
           properties:
             snapShare: { type: ["number", "null"] }
+            attempts: { type: ["number", "null"] }
+            completions: { type: ["number", "null"] }
+            passingYards: { type: ["number", "null"] }
+            passingTds: { type: ["number", "null"] }
             targets: { type: ["number", "null"] }
             targetShare: { type: ["number", "null"] }
             receptions: { type: ["number", "null"] }

@@ -4,7 +4,8 @@ import { USAGE_METRIC_LABELS, formatUsageMetric } from '../lib/consumer-presenta
 
 function PlayerUsageCard({ player, testId }: { player: ConsumerKeyPlayer; testId: string }) {
   const entries = Object.entries(player.recentUsage || {})
-    .filter(([key, value]) => key in USAGE_METRIC_LABELS && value !== null)
+    .filter(([key, value]) => key in USAGE_METRIC_LABELS && value !== null
+      && (player.position === 'QB' || !['attempts', 'completions', 'passingYards', 'passingTds'].includes(key)))
     .map(([key, value]) => ({
       key,
       label: USAGE_METRIC_LABELS[key],

@@ -1005,6 +1005,14 @@ export type ConsumerKeyPlayerRecentUsage = {
   /** @nullable */
   snapShare: number | null;
   /** @nullable */
+  attempts?: number | null;
+  /** @nullable */
+  completions?: number | null;
+  /** @nullable */
+  passingYards?: number | null;
+  /** @nullable */
+  passingTds?: number | null;
+  /** @nullable */
   targets: number | null;
   /** @nullable */
   targetShare: number | null;

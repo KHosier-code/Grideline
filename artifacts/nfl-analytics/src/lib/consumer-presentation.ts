@@ -55,6 +55,10 @@ export function formatUsageMetric(key: string, value: number | null): string | n
 
 export const USAGE_METRIC_LABELS: Record<string, string> = {
   snapShare: 'Snap share',
+  attempts: 'Pass att',
+  completions: 'Completions',
+  passingYards: 'Pass yards',
+  passingTds: 'Pass TD',
   targets: 'Targets',
   targetShare: 'Target share',
   receptions: 'Receptions',

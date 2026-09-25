@@ -10,8 +10,8 @@ test("usage chart transformation preserves unavailable values", () => {
     { week: 1, metrics: { targets: { value: 4 }, carries: { value: null } } },
     { week: 2, metrics: { targets: { value: 0 }, carries: { value: 3 } } },
   ]), [
-    { name: "W1", targets: 4, carries: undefined },
-    { name: "W2", targets: 0, carries: 3 },
+    { name: "W1", targets: 4, carries: undefined, passingYards: undefined },
+    { name: "W2", targets: 0, carries: 3, passingYards: undefined },
   ]);
 });
 
@@ -38,6 +38,20 @@ test("public navigation and signed-out routing expose player usage", () => {
   assert.match(source, /\{ href: '\/usage', label: 'Player Usage'/);
 });
 
+test("player usage displays passing evidence and sorts quarterbacks by passing yards", () => {
+  const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
+  for (const name of ["attempts", "completions", "passingYards", "passingTds"]) {
+    assert.match(source, new RegExp(`player\\.aggregate\\.${name}`));
+  }
+  assert.match(source, /value === 'QB' \? 'passingYards' : 'targets'/);
+  const players = [
+    { playerName: "No record", aggregate: { passingYards: { value: null } } },
+    { playerName: "Lower", aggregate: { passingYards: { value: 184 } } },
+    { playerName: "Higher", aggregate: { passingYards: { value: 566 } } },
+  ];
+  assert.deepEqual(sortUsagePlayers(players, "passingYards", "desc").map((p) => p.playerName), ["Higher", "Lower", "No record"]);
+});
+
 test("usage page renders server-validated filters and responsive expandable table evidence", () => {
   const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
   assert.match(source, /availableTeams\.map/);
@@ -45,7 +59,7 @@ test("usage page renders server-validated filters and responsive expandable tabl
   assert.match(source, /overflow-x-auto/);
   assert.match(source, /Situational Context/);
   assert.match(source, /sourceCoverage\.includedGames/);
-  assert.match(source, /colSpan=\{11\}/);
+  assert.match(source, /colSpan=\{15\}/);
 });
 
 test("usage interactions emit bounded analytics without player or game identifiers", () => {

@@ -9,13 +9,14 @@ type SortMetric = {
   aggregate: Record<string, { value: number | null }>;
 };
 
-export type UsageSortColumn = "name" | "snapShare" | "targets" | "receptions" | "receivingYards" | "carries" | "rushingYards" | "totalTd" | "trend";
+export type UsageSortColumn = "name" | "snapShare" | "attempts" | "completions" | "passingYards" | "passingTds" | "targets" | "receptions" | "receivingYards" | "carries" | "rushingYards" | "totalTd" | "trend";
 
 export function usageChartData(games: UsageGame[]) {
   return games.map((game) => ({
     name: `W${game.week}`,
     carries: game.metrics.carries?.value ?? undefined,
     targets: game.metrics.targets?.value ?? undefined,
+    passingYards: game.metrics.passingYards?.value ?? undefined,
   }));
 }
 

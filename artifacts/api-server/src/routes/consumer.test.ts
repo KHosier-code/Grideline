@@ -194,6 +194,56 @@ test("player usage aggregation preserves sparse history and null denominators", 
   assert.equal(result[0]?.trend, "down");
 });
 
+test("quarterback passing stats survive aggregation; missing source stays unavailable", () => {
+  const common = { playerId: "qb", playerName: "Quarterback", position: "QB", teamId: "KC", season: 2026, seasonType: "REG",
+    targets: 0, receptions: 0, receivingYards: 0, carries: 2, rushingYards: 17, rushingTds: 0, receivingTds: 0 };
+  const result = aggregatePlayerUsage([
+    { ...common, gameId: "g1", week: 1, attempts: 27, completions: 15, passingYards: 184, passingTds: 2 },
+    { ...common, gameId: "g2", week: 2, attempts: 47, completions: 32, passingYards: 382, passingTds: 3 },
+  ], [], 3, "last3", new Map([["KC", 3]]), new Map([["KC", ["g1", "g2", "g3"]]]))[0]!;
+  assert.equal(result.aggregate.attempts.value, 74);
+  assert.equal(result.aggregate.completions.value, 47);
+  assert.equal(result.aggregate.passingYards.value, 566);
+  assert.equal(result.aggregate.passingTds.value, 5);
+  assert.equal(result.aggregate.totalTd.value, 5);
+  assert.equal(result.games[0]?.metrics.passingYards.value, 184);
+  assert.equal(result.trend, "up");
+  assert.equal(result.sourceCoverage.includedGames, 2);
+  assert.equal(result.sourceCoverage.requestedGames, 3);
+  const missing = aggregatePlayerUsage([
+    { ...common, gameId: "g1", week: 1, attempts: null, completions: 0, passingYards: null, passingTds: 0 },
+  ], [], 1, "season")[0]!;
+  assert.equal(missing.aggregate.attempts.value, null);
+  assert.equal(missing.aggregate.attempts.available, false);
+  assert.equal(missing.aggregate.completions.value, 0);
+  assert.equal(missing.aggregate.completions.available, true);
+});
+
+test("usage windows exclude kicked-off games until their final status is recorded", () => {
+  const kickoff = new Date("2026-09-20T18:00:00Z");
+  const candidates = [
+    { gameId: "final", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_FINAL" },
+    { gameId: "still-playing", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_IN_PROGRESS" },
+    { gameId: "scheduled", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_SCHEDULED" },
+  ];
+  assert.deepEqual(eligibleUsageGames(candidates, 2026, new Date("2026-09-21T00:00:00Z"))
+    .map((game) => game.gameId), ["final"]);
+});
+
+test("usage keeps a player's statistics separate after changing teams", () => {
+  const common = { playerId: "same-id", playerName: "Traded player", position: "WR", season: 2026,
+    seasonType: "REG", attempts: 0, completions: 0, passingYards: 0, passingTds: 0,
+    receptions: 2, receivingYards: 20, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0 };
+  const players = aggregatePlayerUsage([
+    { ...common, teamId: "KC", gameId: "g1", week: 1, targets: 3 },
+    { ...common, teamId: "BUF", gameId: "g2", week: 2, targets: 5 },
+  ], [], 2, "last3", new Map([["KC", 1], ["BUF", 1]]),
+  new Map([["KC", ["g1"]], ["BUF", ["g2"]]]));
+  assert.equal(players.length, 2);
+  assert.equal(players.find((player) => player.teamId === "KC")?.aggregate.targets.value, 3);
+  assert.equal(players.find((player) => player.teamId === "BUF")?.aggregate.targets.value, 5);
+});
+
 test("usage windows retain only requested recent games and consumer positions", () => {
   const rows = Array.from({ length: 8 }, (_, index) => ({
     playerId: "p1", playerName: "Back", position: "RB", teamId: "T", gameId: `g${index}`,

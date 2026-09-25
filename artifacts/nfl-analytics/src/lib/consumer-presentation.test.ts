@@ -4,6 +4,7 @@ import {
   PREMIUM_GAME_DETAIL_SECTION_ORDER,
   isMatchupSupported,
   formatUsageMetric,
+  USAGE_METRIC_LABELS,
   eligibleMarketComparisons,
   supportedAssessments,
   preKickoffMovementLabel,
@@ -46,6 +47,7 @@ describe('consumer-presentation', () => {
     assert.strictEqual(formatUsageMetric('carries', 15), '15');
     assert.strictEqual(formatUsageMetric('yardsPerCarry', 4.25), '4.3');
     assert.strictEqual(formatUsageMetric('missing', null), null);
+    assert.strictEqual(USAGE_METRIC_LABELS.passingYards, 'Pass yards');
   });
 
   test('premium detail sections stay in the consumer hierarchy', () => {

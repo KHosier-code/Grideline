@@ -60,12 +60,13 @@ const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
 
 type ConsumerFilters = { season?: number; week?: number; gameId?: string; asOf?: Date };
 
-export const USAGE_METRICS = ["snapShare", "targets", "targetShare", "receptions", "receivingYards", "carries", "rushingYards", "totalTd", "yardsPerTarget", "yardsPerCarry"] as const;
+export const USAGE_METRICS = ["snapShare", "attempts", "completions", "passingYards", "passingTds", "targets", "targetShare", "receptions", "receivingYards", "carries", "rushingYards", "totalTd", "yardsPerTarget", "yardsPerCarry"] as const;
 export const UNSUPPORTED_USAGE_METRICS = ["redZoneTouches", "redZoneTargets", "explosiveRate"] as const;
 type UsageMetric = typeof USAGE_METRICS[number];
 type UsageRow = {
   playerId: string; playerName: string; position: string | null; teamId: string | null;
   gameId: string; season: number; week: number; seasonType: string;
+  attempts?: number | null; completions?: number | null; passingYards?: number | null; passingTds?: number | null;
   targets: number | null; receptions: number | null; receivingYards: number | null;
   carries: number | null; rushingYards: number | null; rushingTds: number | null; receivingTds: number | null;
 };
@@ -115,7 +116,7 @@ export function eligibleUsageRows<T extends { season: number; gameId: string }>(
     row.season === season && (allowSourceChronology || eligibleGameIds.has(row.gameId)));
 }
 
-export function eligibleUsageGames<T extends { gameId: string; season: number; kickoffTime: Date | null }>(
+export function eligibleUsageGames<T extends { gameId: string; season: number; kickoffTime: Date | null; gameStatus?: string }>(
   games: T[],
   season: number,
   cutoff: Date,
@@ -125,6 +126,7 @@ export function eligibleUsageGames<T extends { gameId: string; season: number; k
     .filter((game) =>
       game.gameId !== excludedGameId
       && game.season === season
+      && (game.gameStatus === undefined || game.gameStatus === "STATUS_FINAL")
       && game.kickoffTime !== null
       && game.kickoffTime < cutoff)
     .sort((left, right) =>
@@ -213,10 +215,13 @@ export function aggregatePlayerUsage(
     const rushingYards = sum("rushingYards");
     const values: Record<string, ReturnType<typeof metric>> = {
       snapShare: metric(snapValues.length ? snapValues.reduce((a, b) => a + b, 0) / snapValues.length : null, snapValues.length ? null : "Snap share unavailable"),
+      attempts: metric(sum("attempts")), completions: metric(sum("completions")),
+      passingYards: metric(sum("passingYards")), passingTds: metric(sum("passingTds")),
       targets: metric(targets), targetShare: metric(targets !== null && teamTargets !== null && teamTargets > 0 ? targets / teamTargets : null, teamTargets && teamTargets > 0 ? null : "Team target denominator unavailable"),
       receptions: metric(sum("receptions")), receivingYards: metric(receivingYards),
       carries: metric(carries), rushingYards: metric(rushingYards),
-      totalTd: metric(sum("rushingTds") === null && sum("receivingTds") === null ? null : (sum("rushingTds") ?? 0) + (sum("receivingTds") ?? 0)),
+      totalTd: metric(["passingTds", "rushingTds", "receivingTds"].every((key) => sum(key as keyof UsageRow) === null)
+        ? null : (sum("passingTds") ?? 0) + (sum("rushingTds") ?? 0) + (sum("receivingTds") ?? 0)),
       yardsPerTarget: metric(targets && targets > 0 && receivingYards !== null ? receivingYards / targets : null, targets && targets > 0 ? null : "Targets denominator unavailable"),
       yardsPerCarry: metric(carries && carries > 0 && rushingYards !== null ? rushingYards / carries : null, carries && carries > 0 ? null : "Carries denominator unavailable"),
       ...Object.fromEntries(UNSUPPORTED_USAGE_METRICS.map((name) => [name, metric(null, "Persisted source does not support this metric")])),
@@ -224,8 +229,8 @@ export function aggregatePlayerUsage(
     const gameSeries = selected.map((r) => {
       const gameTeamRows = rows.filter((candidate) => candidate.teamId === r.teamId && candidate.gameId === r.gameId);
       const gameTargets = gameTeamRows.reduce((total, candidate) => total + (candidate.targets ?? 0), 0);
-      const td = r.rushingTds === null && r.receivingTds === null
-        ? null : (r.rushingTds ?? 0) + (r.receivingTds ?? 0);
+      const td = r.passingTds == null && r.rushingTds === null && r.receivingTds === null
+        ? null : (r.passingTds ?? 0) + (r.rushingTds ?? 0) + (r.receivingTds ?? 0);
       const targetShare = r.targets !== null && gameTargets > 0 ? r.targets / gameTargets : null;
       const ypt = r.targets !== null && r.targets > 0 && r.receivingYards !== null ? r.receivingYards / r.targets : null;
       const ypc = r.carries !== null && r.carries > 0 && r.rushingYards !== null ? r.rushingYards / r.carries : null;
@@ -234,6 +239,8 @@ export function aggregatePlayerUsage(
       metrics: Object.fromEntries([...USAGE_METRICS, ...UNSUPPORTED_USAGE_METRICS].map((name) => {
         const values: Record<string, number | null> = {
           snapShare: snapMap.get(`${r.playerId}:${r.gameId}`) ?? null, targets: r.targets,
+          attempts: r.attempts ?? null, completions: r.completions ?? null,
+          passingYards: r.passingYards ?? null, passingTds: r.passingTds ?? null,
           targetShare, receptions: r.receptions, receivingYards: r.receivingYards,
           carries: r.carries, rushingYards: r.rushingYards, totalTd: td,
           yardsPerTarget: ypt, yardsPerCarry: ypc,
@@ -246,11 +253,13 @@ export function aggregatePlayerUsage(
       })),
       };
     });
-    const trendMetric = (name: "targets" | "snapShare") => {
+    const trendMetric = (name: "targets" | "snapShare" | "passingYards") => {
       const values = gameSeries.map((g) => g.metrics[name].value).filter((v): v is number => v !== null);
       return values.length >= 2 ? values.at(-1)! - values[0]! : null;
     };
-    const delta = trendMetric("targets") ?? trendMetric("snapShare");
+    const delta = ordered[0].position?.toUpperCase() === "QB"
+      ? trendMetric("passingYards") ?? trendMetric("snapShare")
+      : trendMetric("targets") ?? trendMetric("snapShare");
     const teamRequestedGames = requestedGamesByTeam?.get(ordered[0].teamId ?? "") ?? requestedGames;
     const playerRequestedGames = selectedIds?.length ?? (window === "season"
       ? teamRequestedGames
@@ -1589,7 +1598,7 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
           eq(snapCountsTable.season, game.season),
           inArray(snapCountsTable.teamId, detailSourceTeams),
         )),
-      db.select({ gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week, kickoffTime: gamesTable.kickoffTime, homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId })
+      db.select({ gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week, kickoffTime: gamesTable.kickoffTime, gameStatus: gamesTable.gameStatus, homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId })
         .from(gamesTable).where(eq(gamesTable.season, game.season)),
       getCurrentGamePersonnel(game.gameId, sourceCutoff),
       db.select({

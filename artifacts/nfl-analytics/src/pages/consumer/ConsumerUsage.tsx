@@ -68,7 +68,7 @@ function SituationalRow({ label, metric: m, percent = false }: { label: string, 
   )
 }
 
-function UsageChart({ games }: { games: ConsumerUsagePlayer['games'] }) {
+function UsageChart({ games, position }: { games: ConsumerUsagePlayer['games']; position: string | null }) {
   if (!games?.length) return <div className="text-xs text-muted-foreground flex h-full items-center justify-center">No game history</div>;
 
   const data = usageChartData(games);
@@ -84,8 +84,14 @@ function UsageChart({ games }: { games: ConsumerUsagePlayer['games'] }) {
           itemStyle={{ fontSize: '11px', fontWeight: 600 }}
           cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
         />
-        <Line name="Targets" type="monotone" dataKey="targets" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
-        <Line name="Carries" type="monotone" dataKey="carries" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ fill: 'hsl(var(--chart-2))', r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: 'hsl(var(--chart-2))', stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
+        {position === 'QB' ? (
+          <Line name="Pass yards" type="monotone" dataKey="passingYards" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
+        ) : (
+          <>
+            <Line name="Targets" type="monotone" dataKey="targets" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
+            <Line name="Carries" type="monotone" dataKey="carries" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ fill: 'hsl(var(--chart-2))', r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: 'hsl(var(--chart-2))', stroke: 'hsl(var(--background))', strokeWidth: 2 }} />
+          </>
+        )}
       </LineChart>
     </ResponsiveContainer>
   );
@@ -145,6 +151,10 @@ export default function ConsumerUsage() {
   }
 
   function handleFilterChange(filter: 'team' | 'position' | 'window', value: string) {
+    if (filter === 'position') {
+      setSortCol(value === 'QB' ? 'passingYards' : 'targets');
+      setSortDir('desc');
+    }
     trackEvent('usage_filter_changed', {
       filter,
       value: value || 'all',
@@ -187,14 +197,14 @@ export default function ConsumerUsage() {
   };
 
   return (
-    <div className="consumer-page space-y-8">
-      <header className="consumer-page-header flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
+    <div className="consumer-page min-w-0 max-w-full space-y-8">
+      <header className="consumer-page-header min-w-0 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="min-w-0">
           <p className="consumer-eyebrow">Player Lab</p>
           <h1>Usage & Production</h1>
           <p>Review persisted offensive roles, recent volume, and production efficiency.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 items-end bg-card p-4 rounded-xl border border-border shadow-sm w-full md:w-auto">
+        <div className="flex min-w-0 max-w-full flex-col sm:flex-row gap-3 items-end bg-card p-4 rounded-xl border border-border shadow-sm w-full md:w-auto">
           <label className="flex flex-col gap-1.5 w-full sm:w-24">
             <span className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground font-semibold">Team</span>
             <select className="h-9 bg-background border border-input rounded-md px-3 text-sm focus:ring-1 focus:ring-accent outline-none transition-shadow" value={team} onChange={e => {
@@ -297,9 +307,9 @@ export default function ConsumerUsage() {
               </div>
             </div>
           )}
-        <div className="border border-border rounded-xl bg-card shadow-sm overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-5 py-4 border-b border-border bg-muted/20 gap-3">
-            <div className="flex items-center gap-3">
+        <div className="min-w-0 w-full max-w-full border border-border rounded-xl bg-card shadow-sm overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500">
+           <div className="min-w-0 flex flex-col sm:flex-row items-start sm:items-center justify-between px-5 py-4 border-b border-border bg-muted/20 gap-3">
+             <div className="min-w-0 flex flex-wrap items-center gap-3">
               <h2 className="font-serif text-lg m-0">Participation Evidence</h2>
               <span className="bg-accent/10 text-accent text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full tracking-widest">
               {query.data.players.length} PLAYERS · {query.data.season} SEASON
@@ -311,12 +321,16 @@ export default function ConsumerUsage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-sm text-left min-w-[950px]">
+           <div className="min-w-0 max-w-full overflow-x-auto w-full">
+             <table className="w-full text-sm text-left min-w-[1290px]">
               <thead className="bg-muted/30 border-b border-border select-none">
                 <tr>
                     <SortableHeader col="name" label="Player" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
                     <SortableHeader col="snapShare" label="Snap %" align="right" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
+                    <SortableHeader col="attempts" label="Pass Att" align="right" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
+                    <SortableHeader col="completions" label="Cmp" align="right" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
+                    <SortableHeader col="passingYards" label="Pass Yds" align="right" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
+                    <SortableHeader col="passingTds" label="Pass TD" align="right" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
                    <SortableHeader col="targets" label="Tgts" align="right" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
                    <SortableHeader col="receptions" label="Rec" align="right" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
                     <SortableHeader col="receivingYards" label="Rec Yds" align="right" currentSort={sortCol} currentDir={sortDir} onSort={handleSort} />
@@ -347,6 +361,10 @@ export default function ConsumerUsage() {
                           </div>
                         </td>
                         <td className="px-4 py-3.5 text-right font-mono"><MetricText metric={player.aggregate.snapShare} percent /></td>
+                         <td className="px-4 py-3.5 text-right font-mono"><MetricText metric={player.aggregate.attempts} /></td>
+                         <td className="px-4 py-3.5 text-right font-mono"><MetricText metric={player.aggregate.completions} /></td>
+                         <td className="px-4 py-3.5 text-right font-mono"><MetricText metric={player.aggregate.passingYards} /></td>
+                         <td className="px-4 py-3.5 text-right font-mono"><MetricText metric={player.aggregate.passingTds} /></td>
                         <td className="px-4 py-3.5 text-right font-mono"><MetricText metric={player.aggregate.targets} /></td>
                         <td className="px-4 py-3.5 text-right font-mono"><MetricText metric={player.aggregate.receptions} /></td>
                         <td className="px-4 py-3.5 text-right font-mono"><MetricText metric={player.aggregate.receivingYards} /></td>
@@ -363,12 +381,12 @@ export default function ConsumerUsage() {
                       </tr>
                       {isExpanded && (
                         <tr>
-                          <td colSpan={11} className="p-0 border-b border-border bg-accent/[0.02]">
+                           <td colSpan={15} className="p-0 border-b border-border bg-accent/[0.02]">
                             <div className="p-6 border-l-2 border-accent overflow-hidden shadow-inner flex flex-col lg:flex-row gap-8">
                               <div className="flex-1 min-w-0">
-                                <h4 className="text-[11px] uppercase tracking-widest text-accent font-mono font-semibold mb-4">Volume & Efficiency Trends</h4>
+                                   <h4 className="text-[11px] uppercase tracking-widest text-accent font-mono font-semibold mb-4">{player.position === 'QB' ? 'Passing yards by game' : 'Volume & Efficiency Trends'}</h4>
                                 <div className="h-56 w-full bg-card border border-border rounded-xl p-4 shadow-sm">
-                                  <UsageChart games={player.games} />
+                                     <UsageChart games={player.games} position={player.position} />
                                 </div>
                               </div>
 
