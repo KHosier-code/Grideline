@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lt, lte } from "drizzle-orm";
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import {
   db,
   gamesTable,
@@ -1527,9 +1527,11 @@ router.get("/consumer/games", async (req, res): Promise<void> => {
   }
 });
 
-router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
+export function consumerGameDetailHandler(loadGames: typeof consumerGames = consumerGames) {
+  return async (req: Request, res: Response): Promise<void> => {
   try {
-    const gameResults = await consumerGames({ gameId: req.params.gameId });
+    const gameId = Array.isArray(req.params.gameId) ? req.params.gameId[0] : req.params.gameId;
+    const gameResults = await loadGames({ gameId });
     const game = gameResults[0];
     if (!game) {
       res.status(404).json({ error: "This game is not available.", code: "game_not_found" });
@@ -1804,7 +1806,10 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
     req.log.error({ error }, "Consumer game detail read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });
   }
-});
+  };
+}
+
+router.get("/consumer/games/:gameId", consumerGameDetailHandler());
 
 router.get("/consumer/performance", async (req, res): Promise<void> => {
   try {

@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import express from "express";
+import { inArray, like } from "drizzle-orm";
+import {
+  db, gamesTable, injuriesTable, playerGameStatsTable,
+  playersTable, snapCountsTable, teamsTable,
+} from "@workspace/db";
 import {
   GetConsumerDashboardResponse,
   GetConsumerGameResponse,
@@ -28,6 +34,8 @@ import consumerRouter, {
   buildUsageTeamMappings,
   buildConsumerMarketBoard,
   compareUsageGameChronology,
+  consumerGameDetailHandler,
+  consumerGames,
   consumerFinalScore,
   consumerMarket,
   currentModelPersonnelLimitation,
@@ -46,6 +54,7 @@ import consumerRouter, {
   verifyTeamRecords,
 } from "./consumer";
 import { deriveCurrentTeamDepth } from "../lib/current-personnel-derivation";
+import { logger } from "../lib/logger";
 
 const boardRow = (
   sportsbook: string,
@@ -296,6 +305,122 @@ test("Game Detail Seattle cards retain sparse usage and fill missing roles witho
   assert.equal(selected.find((player) => player.playerId === "Jaxon Smith-Njigba")?.aggregate.carries.value, null);
   assert.equal(selected.find((player) => player.playerId === "Drew Lock")?.aggregate.targets.value, null);
   assert.deepEqual(rankRecentKeyPlayers([], "SEA"), []);
+});
+
+test("database-backed Game Detail selects both teams' skill players and enforces pregame eligibility", async (t) => {
+  const prefix = `detail-fixture-${randomUUID()}`;
+  // Unique source abbreviations and IDs prevent existing seasons or concurrent tests
+  // from contributing player history to either team's selection.
+  const away = { id: `${prefix}-away`, code: `A${randomUUID().slice(0, 10).toUpperCase()}` };
+  const home = { id: `${prefix}-home`, code: `H${randomUUID().slice(0, 10).toUpperCase()}` };
+  const previousId = `${prefix}-previous`;
+  const finalId = `${prefix}-final`;
+  const upcomingId = `${prefix}-upcoming`;
+  const now = Date.now();
+  const daysAgo = (days: number) => new Date(now - days * 86_400_000);
+  const tomorrow = new Date(now + 86_400_000);
+  const statusAt = new Date(now - 60_000);
+  const playerId = (name: string) => `${prefix}-${name}`;
+  const players = [
+    { name: "away-qb", team: away, position: "QB", targets: 0, carries: 2, snap: .95 },
+    { name: "away-rb", team: away, position: "RB", targets: 3, carries: 14, snap: .65 },
+    { name: "away-wr", team: away, position: "WR", targets: 9, carries: 0, snap: .8 },
+    { name: "away-ol", team: away, position: "OL", targets: 0, carries: 0, snap: 1 },
+    { name: "away-out", team: away, position: "WR", targets: 22, carries: 0, snap: .9 },
+    { name: "home-qb", team: home, position: "QB", targets: 0, carries: 3, snap: .98 },
+    { name: "home-rb", team: home, position: "RB", targets: 4, carries: 17, snap: .7 },
+    { name: "home-wr", team: home, position: "WR", targets: 12, carries: 0, snap: .76 },
+    { name: "home-ol", team: home, position: "C", targets: 0, carries: 0, snap: 1 },
+    { name: "home-out", team: home, position: "RB", targets: 5, carries: 30, snap: .92 },
+  ];
+  const app = express();
+  app.use((req, _res, next) => { req.log = logger; next(); });
+  app.get("/consumer/games/:gameId", consumerGameDetailHandler(async (filters) => {
+    const games = await consumerGames(filters);
+    const fresh = { status: "healthy" as const };
+    return Object.assign(games, {
+      sourceHealth: {
+        ...games.sourceHealth,
+        sources: {
+          ...games.sourceHealth.sources,
+          injuries: { ...games.sourceHealth.sources.injuries, ...fresh },
+          players: { ...games.sourceHealth.sources.players, ...fresh },
+        },
+      },
+    });
+  }));
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  t.after(async () => {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    await db.delete(injuriesTable).where(like(injuriesTable.sourceHash, `${prefix}%`));
+    await db.delete(snapCountsTable).where(inArray(snapCountsTable.gameId, [previousId, finalId]));
+    await db.delete(playerGameStatsTable).where(inArray(playerGameStatsTable.teamId, [away.code, home.code]));
+    await db.delete(playersTable).where(like(playersTable.playerId, `${prefix}%`));
+    await db.delete(gamesTable).where(inArray(gamesTable.gameId, [previousId, finalId, upcomingId]));
+    await db.delete(teamsTable).where(inArray(teamsTable.teamId, [away.id, home.id]));
+  });
+
+  await db.insert(teamsTable).values([
+    { teamId: away.id, abbreviation: away.code, teamName: "Fixture Away" },
+    { teamId: home.id, abbreviation: home.code, teamName: "Fixture Home" },
+  ]);
+  await db.insert(gamesTable).values([
+    { gameId: previousId, season: 2026, week: 1, gameDate: daysAgo(4), kickoffTime: daysAgo(4),
+      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_FINAL", finalHomeScore: 20, finalAwayScore: 17 },
+    { gameId: finalId, season: 2026, week: 2, gameDate: daysAgo(2), kickoffTime: daysAgo(2),
+      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_FINAL", finalHomeScore: 24, finalAwayScore: 21 },
+    { gameId: upcomingId, season: 2026, week: 3, gameDate: tomorrow, kickoffTime: tomorrow,
+      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_SCHEDULED" },
+  ]);
+  await db.insert(playersTable).values(players.map(({ name, team, position }) => ({
+    playerId: playerId(name), name, teamId: team.id, position,
+    activeStatus: name.endsWith("-out") ? "Out" : "Active", sourceUpdatedAt: statusAt,
+  })));
+  await db.insert(playerGameStatsTable).values([1, 2].flatMap((week) => players.map((player) => ({
+    playerId: playerId(player.name), playerName: player.name, position: player.position,
+    teamId: player.team.code, opponentTeamId: player.team === away ? home.code : away.code,
+    season: 2026, seasonType: "REG", week, targets: player.targets,
+    carries: player.carries, receptions: player.targets, receivingYards: player.targets * 10,
+    rushingYards: player.carries * 4,
+  }))));
+  await db.insert(snapCountsTable).values([1, 2].flatMap((week) => players.map((player) => ({
+    gameId: week === 1 ? previousId : finalId, playerId: playerId(player.name),
+    playerName: player.name, position: player.position, season: 2026, week,
+    teamId: player.team.code, opponentTeamId: player.team === away ? home.code : away.code,
+    offensePct: player.snap,
+  }))));
+  // The route's health assessment is fixed above; only this game's player
+  // statuses and injury records need to exist in the development database.
+  await db.insert(injuriesTable).values(players.map(({ name, team, position }) => ({
+    playerId: playerId(name), teamId: team.id, position,
+    gameStatus: name.endsWith("-out") ? "Out" : "Active",
+    sourceHash: `${prefix}-${name}`, snapshotTimestamp: statusAt,
+  })));
+
+  const getDetail = async (gameId: string) => {
+    const response = await fetch(`http://127.0.0.1:${address.port}/consumer/games/${gameId}`);
+    const body = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(body).slice(0, 300));
+    return GetConsumerGameResponse.parse(body);
+  };
+  const upcoming = await getDetail(upcomingId);
+  assert.equal(upcoming.gameState, "pregame");
+  assert.deepEqual(upcoming.keyPlayers.map(({ name }) => name),
+    ["away-qb", "away-rb", "away-wr", "home-qb", "home-rb", "home-wr"]);
+  assert.deepEqual(upcoming.keyPlayers.map(({ teamId }) => teamId),
+    [away.code, away.code, away.code, home.code, home.code, home.code]);
+  assert.ok(upcoming.keyPlayers.every(({ eligibility }) => eligibility.status === "eligible"));
+  assert.equal(upcoming.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.targets, 18);
+  assert.equal(upcoming.keyPlayers.find(({ name }) => name === "home-rb")?.recentUsage.carries, 34);
+  const completed = await getDetail(finalId);
+  assert.equal(completed.gameState, "final");
+  assert.deepEqual(completed.keyPlayers.map(({ name }) => name),
+    ["away-qb", "away-rb", "away-out", "away-wr", "home-qb", "home-out", "home-wr", "home-rb"]);
+  assert.ok(completed.keyPlayers.every(({ eligibility }) => eligibility.status === "ineligible"));
+  assert.equal(completed.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.targets, 9);
 });
 
 test("usage team mapping joins ESPN schedule IDs to nflverse abbreviations and aliases", () => {

@@ -36,3 +36,4 @@
 - [Selective cherry-pick verification](selective-cherry-pick-verification.md) — a clean cherry-pick can still splice unrelated route and test logic; verify combined behavior before release.
 - [Production replica aggregate limits](production-replica-aggregate-limits.md) — broad player-stat counts may return transaction wrappers without rows; never interpret that as zero.
 - [Isolated task publishing boundary](isolated-task-publishing.md) — publishing main during an in-progress task does not deploy the task's code.
+- [Append-only evidence in route fixtures](append-only-route-fixtures.md) — avoid seeding immutable provider snapshots in route tests that must clean up after themselves.
