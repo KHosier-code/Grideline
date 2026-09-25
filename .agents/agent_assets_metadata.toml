@@ -224,3 +224,17 @@ mtime_ms = 1790300841655
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/d57f8fd1-47bf-420e-b803-500f83783586/9e6fdf14-4538-4f89-9bd1-f19ec6eb887e"
 storage_version_token = "1790301076882658"
 content_type = "image/png"
+
+[[outputs]]
+id = "cSZAiNcFr7P7OXBcP-XF7"
+uri = "file://reports/gridline-production-recovery-audit.md"
+type = "text"
+title = "Gridline production recovery audit"
+description = "Read-only findings, three game traces, limitations, and recovery verdict."
+logical_id = "81c06c38-b830-49a5-b7d0-1f42a54a552e"
+content_hash = "sha256:d82c460bd6047ebcef4fba64e9df63269820c05c290b103b48ac87d9ba7d3188"
+size = 23296
+mtime_ms = 1790353457995
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/81c06c38-b830-49a5-b7d0-1f42a54a552e/f5088d93-b728-4cb8-9e9d-38be28b6d8bb"
+storage_version_token = "1790353508275179"
+content_type = "text/markdown"

@@ -34,3 +34,4 @@
 - [Aggregate timestamp decoding](aggregate-timestamp-decoding.md) — Drizzle SQL aggregate date generics do not decode runtime strings; normalize before date arithmetic or ISO serialization.
 - [Unchanged player fetches](unchanged-player-fetches.md) — a complete, successful provider fetch is fresh evidence even if change-only snapshots insert zero rows.
 - [Selective cherry-pick verification](selective-cherry-pick-verification.md) — a clean cherry-pick can still splice unrelated route and test logic; verify combined behavior before release.
+- [Production replica aggregate limits](production-replica-aggregate-limits.md) — broad player-stat counts may return transaction wrappers without rows; never interpret that as zero.
