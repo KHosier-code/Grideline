@@ -452,10 +452,6 @@ function Shell({ children }: { children: ReactNode }) {
 const consumerNav = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/games', label: 'Games', icon: CalendarDays },
-  { href: '/usage', label: 'Usage Lab', icon: Activity },
-  { href: '/performance', label: 'Performance', icon: BarChart3 },
-  { href: '/trends', label: 'Trends', icon: TrendingUp },
-  { href: '/props', label: 'Props', icon: LockKeyhole },
 ];
 
 function ConsumerShell({ children }: { children: ReactNode }) {
@@ -466,10 +462,16 @@ function ConsumerShell({ children }: { children: ReactNode }) {
   return <div className="consumer-shell">
     <header className="consumer-topbar">
       <Link href="/" className="consumer-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-6 w-6" /><strong>Gridline</strong></Link>
-      <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''}><Icon />{item.label}{item.href === '/props' && <small>Soon</small>}</Link>; })}{admin.data === true && <Link href="/admin"><ShieldCheck />Admin</Link>}</nav>
-      <div className="consumer-account">{isSignedIn ? <Link href="/" className="button button-primary" data-testid="link-open-dashboard">Open dashboard</Link> : <Link href="/sign-in" className="button button-primary" data-testid="link-public-sign-in">Sign in</Link>}{isSignedIn && <UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} />}<button type="button" aria-label="Open navigation" aria-expanded={open} onClick={() => setOpen(!open)} data-testid="button-consumer-navigation"><Menu /></button></div>
+      <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin"><ShieldCheck />Admin</Link>}</nav>
+      <div className="consumer-account">
+        {isSignedIn ? <>
+          <Link href="/admin" className="button button-subtle">Open dashboard</Link>
+          <UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} />
+        </> : <Link href="/sign-in" className="button button-subtle">Sign in</Link>}
+        <button type="button" aria-label="Open navigation" aria-expanded={open} onClick={() => setOpen(!open)}><Menu /></button>
+      </div>
     </header>
-    {open && <nav className="consumer-mobile-nav" aria-label="Mobile navigation">{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</Link>}</nav>}
+    {open && <nav className="consumer-mobile-nav" aria-label="Mobile navigation">{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</Link>}{isSignedIn ? <Link href="/admin" onClick={() => setOpen(false)}>Open dashboard</Link> : <Link href="/sign-in" onClick={() => setOpen(false)}>Sign in</Link>}</nav>}
     <main className="consumer-main">{children}</main>
   </div>;
 }

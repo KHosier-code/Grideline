@@ -460,11 +460,6 @@
   .consumer-matchup strong { width: 42px; font-family: var(--app-font-serif); font-size: 19px; }
   .consumer-matchup span { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
   .consumer-matchup b { font-family: var(--app-font-mono); font-size: 18px; }
-  .consumer-game-card:focus-visible, .consumer-account a:focus-visible, .consumer-topbar a:focus-visible { outline: 3px solid hsl(var(--accent)); outline-offset: 3px; }
-  .consumer-prediction-states { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid hsl(var(--border)); padding: 12px 17px; }
-  .consumer-prediction-states > div { min-width: 0; }
-  .consumer-prediction-states small { display: block; margin-bottom: 4px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 8px; letter-spacing: .05em; text-transform: uppercase; }
-  .consumer-prediction-states span { display: block; overflow-wrap: anywhere; font-size: 11px; font-weight: 700; }
   .consumer-card-metrics { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid hsl(var(--border)); background: hsl(var(--secondary) / .3); }
   .consumer-card-metrics span, .consumer-detail-metrics span, .consumer-summary-grid span { padding: 14px 17px; font-size: 12px; font-weight: 700; }
   .consumer-card-metrics span + span { border-left: 1px solid hsl(var(--border)); }
@@ -572,6 +567,22 @@
   .depth-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .depth-team { min-width: 0; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 16px; background: hsl(var(--card)); }
   .depth-team > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid hsl(var(--border)); padding: 16px 18px; background: hsl(var(--sidebar)); color: white; }
+  .personnel-role { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; align-items: start; padding: 11px 0; border-top: 1px solid hsl(var(--border)); }
+  .personnel-role-label { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .personnel-role-detail { display: grid; gap: 3px; min-width: 0; }
+  .personnel-role-detail strong { font-size: 13px; overflow-wrap: anywhere; }
+  .personnel-role-detail small { color: hsl(var(--muted-foreground)); font-size: 10px; line-height: 1.4; }
+  .personnel-position { color: hsl(var(--muted-foreground)); font-size: 11px; }
+  .personnel-availability { color: hsl(var(--accent)); font-size: 11px; text-transform: capitalize; }
+  .personnel-unconfirmed { color: hsl(var(--muted-foreground)); }
+  .personnel-defense-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
+  .personnel-defense-group { min-width: 0; }
+  .personnel-defense-group h5 { margin: 8px 0; font-family: var(--app-font-mono); font-size: 10px; text-transform: uppercase; }
+  .personnel-defense-group .personnel-role { grid-template-columns: 55px minmax(0, 1fr); }
+  .premium-personnel-warning { display: flex; gap: 12px; align-items: flex-start; padding: 16px 18px; border: 1px solid hsl(28 80% 65%); border-radius: 12px; background: hsl(37 100% 96%); color: hsl(24 65% 22%); }
+  .premium-personnel-warning svg { flex: 0 0 auto; }
+  .premium-personnel-warning strong { display: block; font-size: 14px; }
+  .premium-personnel-warning p { margin: 5px 0 0; font-size: 12px; line-height: 1.5; }
   .depth-team header p, .depth-team header small { margin: 0; color: hsl(var(--sidebar-foreground) / .72); font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }
   .depth-team header h3 { margin: 3px 0 0; font-family: var(--app-font-serif); font-size: 20px; }
   .depth-team header h3 span { color: hsl(var(--sidebar-foreground)); font-family: var(--app-font-sans); font-size: 11px; font-weight: 500; }
@@ -660,13 +671,43 @@
 .market-state-healthy, .market-state-eligible { background: hsl(142 71% 45% / .13); color: hsl(142 71% 30%); }
 .market-state-partial, .market-state-stale { background: hsl(38 80% 48% / .14); color: hsl(34 72% 34%); }
 .market-state-absent, .market-state-unavailable, .market-state-historical, .market-state-ineligible, .market-state-unknown { background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
-.consumer-source-health { margin: 16px 0; border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 16px; background: hsl(var(--card)); }
+.consumer-source-health { border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 16px; background: hsl(var(--card)); }
+.consumer-source-health summary, .market-unusable summary { cursor: pointer; }
+.consumer-source-health summary:focus-visible, .market-unusable summary:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 3px; }
+.consumer-source-health[open] summary { margin-bottom: 12px; }
+.consumer-source-hint { color: hsl(var(--muted-foreground)); font-size: 11px; }
+.market-unusable { border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 14px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.market-unusable .premium-comparison-grid { margin-top: 14px; }
 .consumer-source-heading, .consumer-source-item > div { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.consumer-source-heading { margin-bottom: 12px; }
+.consumer-source-heading { display: flex; align-items: center; gap: 12px; }
 .consumer-source-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .consumer-source-item { min-width: 0; border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 10px; display: grid; gap: 4px; }
 .consumer-source-item strong { font-size: 12px; }
 .consumer-source-item small, .consumer-source-item p { font-size: 10px; color: hsl(var(--muted-foreground)); overflow-wrap: anywhere; margin: 0; }
+.board-disclosure { border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 12px 16px; background: hsl(var(--card)); margin: 12px 0; }
+.board-disclosure summary { cursor: pointer; font-size: 12px; font-weight: 700; line-height: 1.5; }
+.board-disclosure .consumer-source-grid { margin-top: 14px; }
+.board-record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; font-size: 12px; margin-top: 12px; }
+.board-slate-note { margin: 12px 0 0; font-size: 12px; color: hsl(var(--muted-foreground)); }
+.board-game { padding: 16px; gap: 12px; }
+.board-game .tb-row-main { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) auto; align-items: center; gap: 20px; }
+.board-game .tc-matchup { padding: 0; border: 0; min-width: 0; }
+.board-game .tc-time { flex-wrap: wrap; gap: 6px; }
+.board-game .tc-time > span:last-child { display: inline-flex; align-items: center; gap: 5px; }
+.board-result { color: hsl(var(--foreground)); font-weight: 700; }
+.board-projection { margin: 6px 0 0; padding-top: 8px; border-top: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.5; }
+.board-projection strong { color: hsl(var(--foreground)); }
+.board-market-summary { font-size: 12px; line-height: 1.5; min-width: 0; }
+.board-market-summary > strong { text-transform: capitalize; }
+.board-market-summary p { margin: 6px 0; color: hsl(var(--muted-foreground)); overflow-wrap: anywhere; }
+.board-market-summary small { color: hsl(var(--muted-foreground)); }
+.board-game .tc-action { padding: 0; border: 0; background: none; }
+.board-game .tb-evidence { border-top: 1px solid hsl(var(--border)); padding-top: 16px; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .board-game .tb-row-main { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  .board-market-summary { grid-column: 1 / -1; grid-row: 2; }
+  .board-game .tc-action { grid-column: 2; grid-row: 1; }
+}
 @media (max-width: 850px) { .consumer-source-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .consumer-source-grid { grid-template-columns: 1fr; } }
 .tq-grid { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
@@ -909,8 +950,6 @@
   .consumer-main { padding: 30px 16px 60px; }
   .consumer-hero { min-height: 240px; padding: 30px 24px; }
   .consumer-hero-icon { display: none; }
-  .consumer-prediction-states { gap: 6px; padding-right: 12px; padding-left: 12px; }
-  .consumer-prediction-states span { font-size: 10px; }
   .consumer-card-grid, .consumer-performance-grid, .consumer-evidence-grid, .consumer-trend-list { grid-template-columns: 1fr; }
   .consumer-page-header { align-items: stretch; flex-direction: column; }
   .consumer-filters { width: 100%; }
@@ -1096,6 +1135,8 @@
   .player-matchups-grid { grid-template-columns: 1fr; }
   .depth-teams { grid-template-columns: 1fr; }
   .depth-team > header { align-items: flex-start; }
+  .personnel-defense-grid { grid-template-columns: 1fr; }
+  .personnel-role { grid-template-columns: 90px minmax(0, 1fr); }
   .depth-badge { max-width: 92px; }
   .depth-player summary { flex-wrap: wrap; }
   .depth-player-main { min-width: calc(100% - 40px); }

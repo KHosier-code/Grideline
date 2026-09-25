@@ -6,4 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConsumerGameOfficialPredictionMarketSnapshot = { [key: string]: unknown };
+/**
+ * @nullable
+ */
+export type ConsumerScheduleSelectionSelection = {
+  season: number;
+  week: number;
+} | null;

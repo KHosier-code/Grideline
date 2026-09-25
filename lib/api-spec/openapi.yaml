@@ -536,6 +536,20 @@ paths:
                 $ref: "#/components/schemas/ConsumerDashboard"
         "503":
           $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/schedule-selection:
+    get:
+      operationId: getConsumerScheduleSelection
+      tags: [nfl]
+      summary: Select a slate from persisted NFL schedule evidence
+      responses:
+        "200":
+          description: Read-only schedule selection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerScheduleSelection"
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
   /consumer/games:
     get:
       operationId: listConsumerGames
@@ -907,7 +921,7 @@ components:
         results: { type: array, items: { type: object, additionalProperties: true } }
     ConsumerGame:
       type: object
-      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, officialPredictionStatus, officialPrediction, market, marketBoard, recommendation, dataConfidence, confidence, availability]
+      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, market, marketBoard, recommendation, dataConfidence, confidence, availability]
       properties:
         gameId: { type: string }
         season: { type: integer }
@@ -933,52 +947,14 @@ components:
           required: [modelLabel, projectedHomeScore, projectedAwayScore, projectedMargin, projectedTotal, homeWinProbability, awayWinProbability]
           properties:
             modelLabel: { type: string, const: Gridline Production Model }
-            projectedHomeScore: { type: ["number", "null"] }
-            projectedAwayScore: { type: ["number", "null"] }
-            projectedMargin: { type: ["number", "null"] }
-            projectedTotal: { type: ["number", "null"] }
-            homeWinProbability: { type: ["number", "null"] }
-            awayWinProbability: { type: ["number", "null"] }
-        officialPredictionStatus: { type: string, enum: [official, not_created] }
-        officialPrediction:
-          type: ["object", "null"]
-          required: [modelLabel, projectedHomeScore, projectedAwayScore, projectedMargin, projectedTotal, homeWinProbability, awayWinProbability, predictionTimestamp, frozenAt, evaluationCutoffAt, featureVersion, modelVersions, confidence, inputSourceEvidence, marketSnapshot, marketEligibility]
-          properties:
-            modelLabel: { type: string, const: Gridline Production Model }
-            projectedHomeScore: { type: ["number", "null"] }
-            projectedAwayScore: { type: ["number", "null"] }
-            projectedMargin: { type: ["number", "null"] }
-            projectedTotal: { type: ["number", "null"] }
-            homeWinProbability: { type: ["number", "null"] }
-            awayWinProbability: { type: ["number", "null"] }
+            officialFinalPrediction: { type: boolean, description: Whether this saved snapshot was verified and frozen as the official pregame prediction. }
             predictionTimestamp: { type: string, format: date-time }
-            frozenAt: { type: string, format: date-time }
-            evaluationCutoffAt: { type: string, format: date-time }
-            featureVersion: { type: string }
-            modelVersions:
-              type: object
-              required: [spread, moneyline, total]
-              properties:
-                spread: { type: ["string", "null"] }
-                moneyline: { type: ["string", "null"] }
-                total: { type: ["string", "null"] }
-            confidence:
-              type: object
-              required: [qb, lowSample, inputFeatureCount, inputMissingFeatureCount]
-              properties:
-                qb: { type: ["number", "null"] }
-                lowSample: { type: boolean }
-                inputFeatureCount: { type: integer }
-                inputMissingFeatureCount: { type: integer }
-            inputSourceEvidence: { type: ["object", "null"], additionalProperties: true }
-            marketSnapshot: { type: object, additionalProperties: true }
-            marketEligibility:
-              type: object
-              required: [spread, total, moneyline]
-              properties:
-                spread: { $ref: "#/components/schemas/OfficialMarketEligibility" }
-                total: { $ref: "#/components/schemas/OfficialMarketEligibility" }
-                moneyline: { $ref: "#/components/schemas/OfficialMarketEligibility" }
+            projectedHomeScore: { type: ["number", "null"] }
+            projectedAwayScore: { type: ["number", "null"] }
+            projectedMargin: { type: ["number", "null"] }
+            projectedTotal: { type: ["number", "null"] }
+            homeWinProbability: { type: ["number", "null"] }
+            awayWinProbability: { type: ["number", "null"] }
         market: { $ref: "#/components/schemas/ConsumerGameMarket" }
         marketBoard: { $ref: "#/components/schemas/ConsumerMarketBoard" }
         recommendation: { $ref: "#/components/schemas/ConsumerRecommendation" }
@@ -996,13 +972,17 @@ components:
           properties:
             prediction: { type: ["string", "null"] }
             market: { type: ["string", "null"] }
-    OfficialMarketEligibility:
+    ConsumerScheduleSelection:
       type: object
-      required: [eligible, cutoffAt, reason]
+      required: [selection, reason]
       properties:
-        eligible: { type: boolean }
-        cutoffAt: { type: string, format: date-time }
-        reason: { type: ["string", "null"] }
+        selection:
+          type: ["object", "null"]
+          required: [season, week]
+          properties:
+            season: { type: integer }
+            week: { type: integer }
+        reason: { type: string, enum: [live, upcoming, past, no_schedule] }
     ConsumerGames:
       type: object
       required: [status, coverage, games, teamRecords, recordVerification, sourceHealth]
@@ -1214,7 +1194,7 @@ components:
         message: { type: ["string", "null"] }
     ConsumerContextTeam:
       type: object
-      required: [side, name, abbreviation, qbCertainty, qbChange, qbEvidenceAvailable, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, injuryEvidenceAvailable, injuryReportStatus, injuries, asOf, depthFreshness, depth]
+      required: [side, name, abbreviation, qbCertainty, qbChange, qbEvidenceAvailable, personnelCompleteness, offenseInjuryImpact, defenseInjuryImpact, injuryEvidenceAvailable, injuryReportStatus, injuries, expectedQb, currentOffenseRoles, defensiveGroupings, asOf, depthFreshness, depth]
       properties:
         side: { type: string, enum: [home, away] }
         name: { type: string }
@@ -1227,6 +1207,9 @@ components:
         defenseInjuryImpact: { type: ["number", "null"] }
         injuryEvidenceAvailable: { type: boolean }
         injuryReportStatus: { type: string, enum: [available, partial, unavailable] }
+        expectedQb: { $ref: "#/components/schemas/ConsumerExpectedQb" }
+        currentOffenseRoles: { $ref: "#/components/schemas/ConsumerCurrentOffenseRoles" }
+        defensiveGroupings: { $ref: "#/components/schemas/ConsumerDefensiveGroupings" }
         injuries:
           type: array
           maxItems: 25
@@ -1237,6 +1220,69 @@ components:
           type: array
           maxItems: 30
           items: { $ref: "#/components/schemas/ConsumerDepthPlayer" }
+    ConsumerExpectedQb:
+      type: object
+      required: [name, status, availability, confidence, asOf, confirmed]
+      properties:
+        name: { type: ["string", "null"] }
+        status: { type: string, enum: [available, unconfirmed, unavailable] }
+        availability: { type: string, enum: [available, questionable, unavailable, unknown] }
+        confidence: { type: ["number", "null"] }
+        asOf: { type: ["string", "null"], format: date-time }
+        confirmed: { type: boolean }
+    ConsumerCurrentRolePlayer:
+      type: object
+      required: [name, availability, confidence, asOf, confirmed]
+      properties:
+        name: { type: ["string", "null"] }
+        availability: { type: string, enum: [available, questionable, unavailable, unknown] }
+        confidence: { type: ["number", "null"] }
+        asOf: { type: ["string", "null"], format: date-time }
+        confirmed: { type: boolean }
+    ConsumerCurrentOffenseRoles:
+      type: object
+      required: [runningBackCommittee, primaryTe, wr1, wr2]
+      properties:
+        runningBackCommittee:
+          type: object
+          required: [status, players]
+          properties:
+            status: { type: string, enum: [confirmed, unconfirmed] }
+            players:
+              type: array
+              maxItems: 3
+              items: { $ref: "#/components/schemas/ConsumerCurrentRolePlayer" }
+        primaryTe: { $ref: "#/components/schemas/ConsumerCurrentRolePlayer" }
+        wr1: { $ref: "#/components/schemas/ConsumerCurrentRolePlayer" }
+        wr2: { $ref: "#/components/schemas/ConsumerCurrentRolePlayer" }
+    ConsumerDefensivePlayer:
+      allOf:
+        - $ref: "#/components/schemas/ConsumerCurrentRolePlayer"
+        - type: object
+          required: [position]
+          properties:
+            position: { type: string }
+            role: { type: ["string", "null"] }
+    ConsumerDefensiveGroupings:
+      type: object
+      required: [front, linebackers, corners, safeties]
+      properties:
+        front:
+          type: array
+          maxItems: 16
+          items: { $ref: "#/components/schemas/ConsumerDefensivePlayer" }
+        linebackers:
+          type: array
+          maxItems: 12
+          items: { $ref: "#/components/schemas/ConsumerDefensivePlayer" }
+        corners:
+          type: array
+          maxItems: 12
+          items: { $ref: "#/components/schemas/ConsumerDefensivePlayer" }
+        safeties:
+          type: array
+          maxItems: 8
+          items: { $ref: "#/components/schemas/ConsumerDefensivePlayer" }
     ConsumerDepthPlayer:
       type: object
       required: [name, position, unit, depthRank, role, sourceLabel, recentSnapShare, injuryStatus, practiceStatus, starterConfidence, evidenceSummary, lineupSlot, freshness, asOf]
@@ -1275,7 +1321,7 @@ components:
         summary: { type: string }
     ConsumerContext:
       type: object
-      required: [available, dataConfidence, teams, drivers, projectedMatchups, matchupMessage, message]
+      required: [available, dataConfidence, teams, drivers, projectedMatchups, matchupMessage, message, modelPersonnelLimitation]
       properties:
         available: { type: boolean }
         dataConfidence: { type: ["number", "null"] }
@@ -1290,6 +1336,13 @@ components:
           items: { $ref: "#/components/schemas/ConsumerProjectedMatchup" }
         matchupMessage: { type: ["string", "null"] }
         message: { type: ["string", "null"] }
+        modelPersonnelLimitation:
+          type: object
+          required: [active, reason, recommendationSuppressed]
+          properties:
+            active: { type: boolean }
+            reason: { type: ["string", "null"] }
+            recommendationSuppressed: { type: boolean }
     ConsumerKeyPlayer:
       type: object
       required: [playerId, name, teamId, position, recentUsage, currentPersonnel, eligibility]

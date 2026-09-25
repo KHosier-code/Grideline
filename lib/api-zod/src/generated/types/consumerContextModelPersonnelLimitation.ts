@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface OfficialMarketEligibility {
-  eligible: boolean;
-  cutoffAt: Date;
+export type ConsumerContextModelPersonnelLimitation = {
+  active: boolean;
   /** @nullable */
   reason: string | null;
-}
+  recommendationSuppressed: boolean;
+};

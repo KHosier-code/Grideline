@@ -20,8 +20,6 @@ import {
   gameSpecificSnapshot,
   getLatestValidPredictionSnapshots,
   getPredictionPerformance,
-  isCanonicalOfficialPrediction,
-  canonicalMarketEligibility,
 } from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
 import { buildConsumerMatchupBoard } from "../lib/consumer-matchups";
@@ -41,6 +39,8 @@ import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
 import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, interpretNflGameState, verifyTeamRecords } from "../lib/game-state";
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
+import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
+import { GetConsumerScheduleSelectionResponse } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 import {
   completeGameMarketObservation,
@@ -467,21 +467,6 @@ export function buildConsumerMarketBoard(
   };
 }
 
-/**
- * Historical "official" flags alone are not sufficient evidence: older rows
- * may have been frozen after kickoff without a canonical cutoff or input
- * provenance. Never promote these rows in a read path.
- */
-export function verifiedOfficialSnapshot<T extends typeof predictionSnapshotsTable.$inferSelect>(
-  rows: T[],
-  gameId: string,
-  kickoffTime: Date | null,
-  asOf: Date,
-): T | null {
-  return rows.find((row) => row.gameId === gameId
-    && isCanonicalOfficialPrediction(row, kickoffTime, asOf)) ?? null;
-}
-
 export function summarizeConsumerMarketBoards(games: Array<{ marketBoard: ReturnType<typeof buildConsumerMarketBoard> }>) {
   const statuses = games.map((game) => game.marketBoard.status);
   const coveredBy = (sportsbook: string) => games.filter((game) =>
@@ -501,7 +486,7 @@ export function summarizeConsumerMarketBoards(games: Array<{ marketBoard: Return
   };
 }
 
-export function serializeMovement(rows: MovementRow[], kickoffTime?: Date | null) {
+export function serializeMovement(rows: MovementRow[], kickoffTime?: Date | null, now = new Date()) {
   const supportedRows = rows.filter((row) =>
     SUPPORTED_CONSUMER_BOOKS.has(row.sportsbook) && SUPPORTED_CONSUMER_MARKETS.has(row.market));
   const allOrdered = [...supportedRows].sort((left, right) =>
@@ -525,7 +510,7 @@ export function serializeMovement(rows: MovementRow[], kickoffTime?: Date | null
       const first = stream[0];
       const current = stream[stream.length - 1];
       const retained = stream.filter((row) => retainedRows.has(row));
-      const eligible = kickoffTime
+      const eligible = kickoffTime && kickoffTime.getTime() <= now.getTime()
         ? stream.filter((row) => row.capturedAt.getTime() <= kickoffTime.getTime())
         : [];
       return {
@@ -612,6 +597,26 @@ type SerializedContext = {
     defenseInjuryImpact: number | null;
     injuryEvidenceAvailable: boolean;
     injuryReportStatus: "available" | "partial" | "unavailable";
+    expectedQb: {
+      name: string | null;
+      status: "available" | "unconfirmed" | "unavailable";
+      availability: "available" | "questionable" | "unavailable" | "unknown";
+      confidence: number | null;
+      asOf: string | null;
+      confirmed: boolean;
+    };
+    currentOffenseRoles: {
+      runningBackCommittee: { status: "confirmed" | "unconfirmed"; players: CurrentRoleEntry[] };
+      primaryTe: { name: string | null; availability: "available" | "questionable" | "unavailable" | "unknown"; confidence: number | null; asOf: string | null; confirmed: boolean };
+      wr1: { name: string | null; availability: "available" | "questionable" | "unavailable" | "unknown"; confidence: number | null; asOf: string | null; confirmed: boolean };
+      wr2: { name: string | null; availability: "available" | "questionable" | "unavailable" | "unknown"; confidence: number | null; asOf: string | null; confirmed: boolean };
+    };
+    defensiveGroupings: {
+      front: Array<{ name: string; position: string; role: string | null; confidence: number | null; availability: "available" | "questionable" | "unavailable" | "unknown"; asOf: string | null; confirmed: boolean }>;
+      linebackers: Array<{ name: string; position: string; role: string | null; confidence: number | null; availability: "available" | "questionable" | "unavailable" | "unknown"; asOf: string | null; confirmed: boolean }>;
+      corners: Array<{ name: string; position: string; role: string | null; confidence: number | null; availability: "available" | "questionable" | "unavailable" | "unknown"; asOf: string | null; confirmed: boolean }>;
+      safeties: Array<{ name: string; position: string; role: string | null; confidence: number | null; availability: "available" | "questionable" | "unavailable" | "unknown"; asOf: string | null; confirmed: boolean }>;
+    };
     injuries: Array<{
       name: string; position: string | null; injury: string | null; gameStatus: string | null;
       practiceStatus: string | null; asOf: string | null; sourceLabel: "ESPN injury report";
@@ -631,7 +636,178 @@ type SerializedContext = {
   projectedMatchups: [];
   matchupMessage: string;
   message: string | null;
+  modelPersonnelLimitation: { active: boolean; reason: string | null; recommendationSuppressed: boolean };
 };
+
+type CurrentRoleEntry = {
+  name: string | null;
+  availability: "available" | "questionable" | "unavailable" | "unknown";
+  confidence: number | null;
+  asOf: string | null;
+  confirmed: boolean;
+};
+
+const emptyCurrentRole = (): CurrentRoleEntry => ({
+  name: null, availability: "unknown", confidence: null, asOf: null, confirmed: false,
+});
+
+function currentRoleEntry(
+  player: InterpretedTeamDepth["depth"]["offense"][number] | undefined,
+  team: InterpretedTeamDepth,
+): CurrentRoleEntry {
+  if (!player) return emptyCurrentRole();
+  const status = player.injuryState.gameStatus ?? player.injuryState.practiceStatus
+    ?? player.injuryState.sleeperStatus ?? player.injuryState.sleeperInjuryStatus ?? "";
+  const availability = /out|inactive|injured reserve|\bir\b|suspend|physically unable/i.test(status)
+    ? "unavailable" as const
+    : /questionable|limited|doubtful|day.to.day/i.test(status) ? "questionable" as const
+      : /active|available|full|healthy|probable/i.test(status) ? "available" as const : "unknown" as const;
+  const evidenceAsOf = player.providerEvidence.map((item) => item.capturedAt).filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+  const confirmed = team.freshness === "current"
+    && player.sourceClassification !== "inferred"
+    && availability !== "unavailable"
+    && !player.conflicts.some((conflict) => conflict.severity === "blocking");
+  return {
+    name: player.playerName,
+    availability,
+    confidence: player.confidence,
+    asOf: player.injuryState.asOf ?? evidenceAsOf ?? team.asOf,
+    confirmed,
+  };
+}
+
+function currentDefenseEntry(
+  player: InterpretedTeamDepth["depth"]["defense"][number],
+  team: InterpretedTeamDepth,
+) {
+  const entry = currentRoleEntry(player, team);
+  return {
+    ...entry,
+    name: entry.name ?? "Player name unconfirmed",
+    position: player.position ?? "Unknown",
+    role: player.role,
+  };
+}
+
+function savedPersonnelQbId(
+  evidence: unknown,
+  side: "home" | "away",
+  teamId: string,
+  opponentId: string,
+  predictionTimestamp: Date,
+  kickoffTime: Date | null,
+) {
+  if (!evidence || typeof evidence !== "object") return null;
+  const rows = (evidence as Record<string, unknown>).rows;
+  if (!Array.isArray(rows) || rows.length !== 2) return null;
+  const row = rows.find((candidate) => candidate && typeof candidate === "object"
+    && (candidate as Record<string, unknown>).isHome === (side === "home"));
+  if (!row || typeof row !== "object") return null;
+  const input = row as Record<string, unknown>;
+  if (input.teamId !== teamId || input.opponentTeamId !== opponentId) return null;
+  const sourceCutoff = typeof input.sourceCutoff === "string" ? Date.parse(input.sourceCutoff) : NaN;
+  const generatedAt = typeof input.generatedAt === "string" ? Date.parse(input.generatedAt) : NaN;
+  if (!Number.isFinite(sourceCutoff) || !Number.isFinite(generatedAt)
+    || sourceCutoff > predictionTimestamp.getTime() || generatedAt > predictionTimestamp.getTime()
+    || (kickoffTime && sourceCutoff >= kickoffTime.getTime())) return null;
+  const selectedAudit = input.selectedAudit;
+  if (!selectedAudit || typeof selectedAudit !== "object") return null;
+  const context = (selectedAudit as Record<string, unknown>)._personnel_context;
+  if (!context || typeof context !== "object") return null;
+  const teams = (context as Record<string, unknown>).teams;
+  if (!teams || typeof teams !== "object") return null;
+  const team = (teams as Record<string, unknown>)[side];
+  if (!team || typeof team !== "object") return null;
+  const qb = (team as Record<string, unknown>).qb;
+  if (!qb || typeof qb !== "object") return null;
+  const starter = (qb as Record<string, unknown>).projectedStarter;
+  if (!starter || typeof starter !== "object") return null;
+  const playerId = (starter as Record<string, unknown>).playerId;
+  return typeof playerId === "string" && playerId.trim() ? playerId : null;
+}
+
+export function currentModelPersonnelLimitation(input: {
+  savedInputSourceEvidence: unknown;
+  predictionTimestamp: Date | null;
+  kickoffTime: Date | null;
+  homeTeamId: string;
+  awayTeamId: string;
+  current: { home: InterpretedTeamDepth | null; away: InterpretedTeamDepth | null } | null;
+  historical?: { home: InterpretedTeamDepth | null; away: InterpretedTeamDepth | null } | null;
+}) {
+  const unchanged = { active: false, reason: null as string | null, recommendationSuppressed: false };
+  if (!input.predictionTimestamp || !input.current) return unchanged;
+  const unmodeledSides: string[] = [];
+  for (const side of ["home", "away"] as const) {
+    const team = input.current[side];
+    const historicalTeam = input.historical?.[side];
+    const opponentId = side === "home" ? input.awayTeamId : input.homeTeamId;
+    const teamId = side === "home" ? input.homeTeamId : input.awayTeamId;
+    const expected = team?.qbStarter;
+    const expectedPlayer = expected?.status === "available"
+      && expected.player?.sourceClassification !== "inferred"
+      && !expected.player?.conflicts?.some((conflict) => conflict.severity === "blocking")
+      ? expected.player : null;
+    const savedId = savedPersonnelQbId(
+      input.savedInputSourceEvidence, side, teamId, opponentId, input.predictionTimestamp, input.kickoffTime,
+    );
+    if (savedId && team?.freshness === "current" && expectedPlayer?.playerId && savedId !== expectedPlayer.playerId) {
+      return {
+        active: true,
+        reason: `The supported ${side === "home" ? "home" : "away"} expected quarterback differs from the quarterback identity stored with this saved prediction. The saved projection is unchanged; an official recommendation is withheld.`,
+        recommendationSuppressed: true,
+      };
+    }
+    const historicalQb = historicalTeam?.freshness === "current"
+      && historicalTeam.qbStarter.status === "available"
+      && historicalTeam.qbStarter.player?.rank === 1
+      && historicalTeam.qbStarter.player.sourceClassification !== "inferred"
+      && !historicalTeam.qbStarter.player.conflicts?.some((conflict) => conflict.severity === "blocking")
+      ? historicalTeam.qbStarter.player : null;
+    const currentEvidenceAfterPrediction = expectedPlayer?.providerEvidence?.some((item) => {
+      const capturedAt = item.capturedAt ? Date.parse(item.capturedAt) : NaN;
+      return Number.isFinite(capturedAt) && capturedAt > input.predictionTimestamp!.getTime()
+        && (!input.kickoffTime || capturedAt < input.kickoffTime.getTime());
+    });
+    const historicalCutoffSafe = historicalTeam?.asOf
+      ? Date.parse(historicalTeam.asOf) <= input.predictionTimestamp.getTime() : false;
+    if (!savedId && team?.freshness === "current" && expectedPlayer?.rank === 1
+      && expectedPlayer.playerId && historicalQb?.rank === 1 && historicalQb.playerId
+      && historicalQb.playerId !== expectedPlayer.playerId && historicalCutoffSafe
+      && currentEvidenceAfterPrediction) {
+      return {
+        active: true,
+        reason: `Cutoff-safe personnel evidence confirms the ${side} QB1 changed after this prediction, but the saved model input does not retain a named quarterback identity. The saved projection is unchanged; an official recommendation is withheld.`,
+        recommendationSuppressed: true,
+      };
+    }
+    if (!savedId && team) unmodeledSides.push(side);
+  }
+  if (unmodeledSides.length) {
+    return {
+      active: true,
+      reason: `The saved model input does not retain a named quarterback identity for the ${unmodeledSides.join(" and ")} side${unmodeledSides.length === 1 ? "" : "s"}; a modeled-QB comparison cannot be confirmed. No player identity is inferred from numeric QB-confidence features.`,
+      recommendationSuppressed: false,
+    };
+  }
+  return unchanged;
+}
+
+export function applyModelPersonnelLimitationToRecommendation<
+  T extends {
+    status: "healthy" | "partial" | "stale" | "unavailable" | "historical";
+    reason: string | null;
+    markets: { spread: boolean; total: boolean; moneyline: boolean };
+  },
+>(recommendation: T, limitation: { active: boolean; reason: string | null; recommendationSuppressed: boolean }) {
+  if (!limitation.active || !limitation.recommendationSuppressed) return recommendation;
+  return {
+    ...recommendation,
+    status: "unavailable" as const,
+    reason: limitation.reason,
+    markets: { spread: false, total: false, moneyline: false },
+  };
+}
 
 export function serializeContext(
   context: PersistedContext | null,
@@ -647,6 +823,7 @@ export function serializeContext(
       projectedMatchups: [],
       matchupMessage: "Matchup projection not yet available.",
       message: "Player information temporarily unavailable",
+      modelPersonnelLimitation: { active: false, reason: null, recommendationSuppressed: false },
     };
   }
   const teams = [
@@ -718,6 +895,16 @@ export function serializeContext(
       injuryEvidenceAvailable: Array.isArray(team?.injuryPlayers) && team.injuryPlayers.length > 0,
       injuryReportStatus,
       injuries,
+      expectedQb: {
+        name: null, status: "unconfirmed" as const, availability: "unknown" as const,
+        confidence: safeNumber(team?.qb?.starterCertainty),
+        asOf: typeof context.sourceCutoff === "string" ? context.sourceCutoff : null, confirmed: false,
+      },
+      currentOffenseRoles: {
+        runningBackCommittee: { status: "unconfirmed" as const, players: [] },
+        primaryTe: emptyCurrentRole(), wr1: emptyCurrentRole(), wr2: emptyCurrentRole(),
+      },
+      defensiveGroupings: { front: [], linebackers: [], corners: [], safeties: [] },
       asOf: typeof context.sourceCutoff === "string" ? context.sourceCutoff : null,
       depthFreshness: depth.length === 0 ? "unavailable" as const
         : depth.some((player) => player.freshness === "stale") ? "stale" as const
@@ -741,6 +928,7 @@ export function serializeContext(
     projectedMatchups: [],
     matchupMessage: "Matchup projection not yet available.",
     message: null,
+    modelPersonnelLimitation: { active: false, reason: null, recommendationSuppressed: false },
   };
 }
 
@@ -761,6 +949,12 @@ export function applyCurrentPersonnelToConsumerContext(
       side,
       name: source?.teamName ?? "Team unavailable",
       abbreviation: source?.abbreviation ?? "—",
+      expectedQb: { name: null, status: "unconfirmed" as const, availability: "unknown" as const, confidence: null, asOf: current.asOf, confirmed: false },
+      currentOffenseRoles: {
+        runningBackCommittee: { status: "unconfirmed" as const, players: [] },
+        primaryTe: emptyCurrentRole(), wr1: emptyCurrentRole(), wr2: emptyCurrentRole(),
+      },
+      defensiveGroupings: { front: [], linebackers: [], corners: [], safeties: [] },
       qbCertainty: null,
       qbChange: null,
       qbEvidenceAvailable: false,
@@ -784,7 +978,16 @@ export function applyCurrentPersonnelToConsumerContext(
     teams: baseTeams.map((team) => {
       const source = current.teams[team.side];
       if (!source) return {
-        ...team, depth: [], injuries: [], depthFreshness: "unavailable" as const,
+        ...team, expectedQb: {
+          name: null, status: "unconfirmed" as const, availability: "unknown" as const,
+          confidence: null, asOf: current.asOf, confirmed: false,
+        },
+        currentOffenseRoles: {
+          runningBackCommittee: { status: "unconfirmed" as const, players: [] },
+          primaryTe: emptyCurrentRole(), wr1: emptyCurrentRole(), wr2: emptyCurrentRole(),
+        },
+        defensiveGroupings: { front: [], linebackers: [], corners: [], safeties: [] },
+        depth: [], injuries: [], depthFreshness: "unavailable" as const,
         injuryReportStatus: "unavailable" as const, asOf: current.asOf,
       };
       const players = [...source.depth.offense, ...source.depth.defense]
@@ -836,10 +1039,66 @@ export function applyCurrentPersonnelToConsumerContext(
         : injuries.some((player) =>
           !player.position || !player.injury || !player.gameStatus || !player.practiceStatus || !player.asOf)
           ? "partial" as const : "available" as const;
+      const qbPlayer = source.qbStarter.player;
+      const qbRoleStatus = !qbPlayer ? "unconfirmed" as const
+        : source.qbStarter.status !== "available" || currentRoleEntry(qbPlayer, source).availability === "unavailable"
+          ? "unavailable" as const : "available" as const;
+      const confirmedQbRoleStatus = source.freshness !== "current" && qbRoleStatus === "available"
+        ? "unconfirmed" as const : qbRoleStatus;
+      const qbAvailability = qbPlayer ? currentRoleEntry(qbPlayer, source).availability : "unknown" as const;
+      const runningBackCandidates = source.depth.offense
+        .filter((player) => player.position === "RB" && (player.rank ?? 99) <= 2)
+        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)
+          || (b.recentSnapShare ?? -1) - (a.recentSnapShare ?? -1)
+          || a.playerId.localeCompare(b.playerId))
+        .filter((player) => currentRoleEntry(player, source).availability !== "unavailable");
+      const leadBack = runningBackCandidates[0];
+      const committeeBacks = leadBack ? runningBackCandidates.slice(1, 3).filter((player) =>
+        player.rank === 1 || (
+          leadBack.recentSnapShare !== null && player.recentSnapShare !== null
+          && leadBack.recentSnapShare >= 0.25 && player.recentSnapShare >= 0.25
+          && player.recentSnapShare >= leadBack.recentSnapShare * 0.55
+        )) : [];
+      const runningBacks = [leadBack, ...committeeBacks]
+        .filter((player): player is NonNullable<typeof player> => Boolean(player))
+        .map((player) => currentRoleEntry(player, source));
+      const receivers = source.depth.offense.filter((player) => player.position === "WR")
+        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)
+          || (b.recentSnapShare ?? -1) - (a.recentSnapShare ?? -1)
+          || a.playerId.localeCompare(b.playerId));
+      const primaryTe = source.depth.offense.find((player) => player.position === "TE" && (player.rank ?? 99) <= 1);
+      const defensive = source.depth.defense;
+      const group = (predicate: (position: string) => boolean) => defensive
+        .filter((player) => predicate(player.position ?? ""))
+        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || a.playerId.localeCompare(b.playerId))
+        .map((player) => currentDefenseEntry(player, source));
       return {
         ...team,
         name: source.teamName ?? team.name,
         abbreviation: source.abbreviation ?? team.abbreviation,
+        expectedQb: {
+          name: qbPlayer?.playerName ?? null,
+          status: confirmedQbRoleStatus,
+          availability: qbAvailability,
+          confidence: qbPlayer ? source.qbStarter.confidence : null,
+          asOf: qbPlayer ? currentRoleEntry(qbPlayer, source).asOf : source.asOf,
+          confirmed: Boolean(qbPlayer && confirmedQbRoleStatus === "available" && currentRoleEntry(qbPlayer, source).confirmed),
+        },
+        currentOffenseRoles: {
+          runningBackCommittee: {
+            status: runningBacks.some((player) => player.confirmed) ? "confirmed" as const : "unconfirmed" as const,
+            players: runningBacks,
+          },
+          primaryTe: currentRoleEntry(primaryTe, source),
+          wr1: currentRoleEntry(receivers[0], source),
+          wr2: currentRoleEntry(receivers[1], source),
+        },
+        defensiveGroupings: {
+          front: group((position) => ["DL", "DE", "DT", "NT", "EDGE"].includes(position)),
+          linebackers: group((position) => ["LB", "ILB", "OLB", "MLB"].includes(position)),
+          corners: group((position) => ["CB"].includes(position)),
+          safeties: group((position) => ["S", "FS", "SS"].includes(position)),
+        },
         asOf: source.asOf,
         depthFreshness: source.freshness === "current" ? "current" as const
           : source.freshness === "stale" ? "stale" as const : "unavailable" as const,
@@ -988,7 +1247,6 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
   const results = await Promise.all(games.map(async (game) => {
     const gameState = interpretNflGameState(game, asOf);
     const snapshot = gameSpecificSnapshot(game.gameId, snapshots);
-    const officialSnapshot = verifiedOfficialSnapshot(snapshotHistory, game.gameId, game.kickoffTime, asOf);
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
     const consumerHome = home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined;
@@ -1155,43 +1413,14 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       finalScore: consumerFinalScore(game, asOf),
       prediction: snapshot ? {
         modelLabel: "Gridline Production Model",
+        officialFinalPrediction: snapshot.officialFinalPrediction,
+        predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
         projectedHomeScore: safeNumber(snapshot.projectedHomeScore),
         projectedAwayScore: safeNumber(snapshot.projectedAwayScore),
         projectedMargin: safeNumber(snapshot.projectedMargin),
         projectedTotal: safeNumber(snapshot.projectedTotal),
         homeWinProbability: safeNumber(snapshot.homeWinProbability),
         awayWinProbability: safeNumber(snapshot.awayWinProbability),
-      } : null,
-      officialPredictionStatus: officialSnapshot ? "official" as const : "not_created" as const,
-      officialPrediction: officialSnapshot ? {
-        modelLabel: "Gridline Production Model" as const,
-        projectedHomeScore: safeNumber(officialSnapshot.projectedHomeScore),
-        projectedAwayScore: safeNumber(officialSnapshot.projectedAwayScore),
-        projectedMargin: safeNumber(officialSnapshot.projectedMargin),
-        projectedTotal: safeNumber(officialSnapshot.projectedTotal),
-        homeWinProbability: safeNumber(officialSnapshot.homeWinProbability),
-        awayWinProbability: safeNumber(officialSnapshot.awayWinProbability),
-        predictionTimestamp: officialSnapshot.predictionTimestamp.toISOString(),
-        frozenAt: officialSnapshot.frozenAt!.toISOString(),
-        evaluationCutoffAt: officialSnapshot.evaluationCutoffAt!.toISOString(),
-        featureVersion: officialSnapshot.featureVersion,
-        modelVersions: {
-          spread: officialSnapshot.spreadModelVersion,
-          moneyline: officialSnapshot.moneylineModelVersion,
-          total: officialSnapshot.totalsModelVersion,
-        },
-        confidence: {
-          qb: safeNumber(officialSnapshot.qbConfidence),
-          lowSample: officialSnapshot.lowSample,
-          inputFeatureCount: officialSnapshot.inputFeatureCount,
-          inputMissingFeatureCount: officialSnapshot.inputMissingFeatureCount,
-        },
-        inputSourceEvidence: officialSnapshot.inputSourceEvidence,
-        marketSnapshot: officialSnapshot.marketSnapshot,
-        marketEligibility: canonicalMarketEligibility(
-          officialSnapshot.marketSnapshot,
-          officialSnapshot.evaluationCutoffAt!,
-        ),
       } : null,
       market,
       marketBoard,
@@ -1222,6 +1451,22 @@ router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   } catch (error) {
     _req.log.error({ error }, "Consumer dashboard read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
+  try {
+    const schedule = await db.select({
+      season: gamesTable.season,
+      week: gamesTable.week,
+      kickoffTime: gamesTable.kickoffTime,
+      gameStatus: gamesTable.gameStatus,
+    }).from(gamesTable);
+    res.set("Cache-Control", "no-store");
+    res.json(GetConsumerScheduleSelectionResponse.parse(selectConsumerSlate(schedule, new Date())));
+  } catch (error) {
+    req.log.error({ error }, "Consumer schedule selection read failed");
+    res.status(503).json({ error: "Schedule evidence unavailable", code: "consumer_data_unavailable" });
   }
 });
 
@@ -1270,7 +1515,7 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
     const detailSourceTeams = [gameRow.homeTeamId, gameRow.awayTeamId]
       .map((id) => detailTeamMaps.scheduleToAbbreviation.get(id))
       .flatMap((abbr) => abbr ? nflverseTeamCandidates(abbr) : []);
-    const [weather, contextRows, movementRows, recentStats, recentSnaps, recentGames, currentPersonnel] = await Promise.all([
+    const [weather, contextRows, movementRows, recentStats, recentSnaps, recentGames, currentPersonnel, predictionEvidenceRows] = await Promise.all([
       db.select().from(weatherForecastSnapshotsTable)
         .where(and(
           eq(weatherForecastSnapshotsTable.gameId, game.gameId),
@@ -1324,6 +1569,21 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       db.select({ gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week, kickoffTime: gamesTable.kickoffTime, homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId })
         .from(gamesTable).where(eq(gamesTable.season, game.season)),
       getCurrentGamePersonnel(game.gameId, sourceCutoff),
+      db.select({
+        predictionTimestamp: predictionSnapshotsTable.predictionTimestamp,
+        projectedHomeScore: predictionSnapshotsTable.projectedHomeScore,
+        projectedAwayScore: predictionSnapshotsTable.projectedAwayScore,
+        projectedMargin: predictionSnapshotsTable.projectedMargin,
+        projectedTotal: predictionSnapshotsTable.projectedTotal,
+        homeWinProbability: predictionSnapshotsTable.homeWinProbability,
+        inputSourceEvidence: predictionSnapshotsTable.inputSourceEvidence,
+      }).from(predictionSnapshotsTable)
+        .where(and(
+          eq(predictionSnapshotsTable.gameId, game.gameId),
+          lte(predictionSnapshotsTable.predictionTimestamp, sourceCutoff),
+        ))
+        .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id))
+        .limit(20),
     ]);
     const forecast = weather[0];
     const context = contextRows
@@ -1332,6 +1592,39 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
     const finalizedContext = applyCurrentPersonnelToConsumerContext(
       serializeContext(context ?? null, gameRow?.homeTeamId ?? "", gameRow?.awayTeamId ?? ""),
       currentPersonnel,
+    );
+    const savedPrediction = game.prediction
+      && game.prediction.projectedHomeScore !== null
+      && game.prediction.projectedAwayScore !== null
+      && game.prediction.projectedMargin !== null
+      && game.prediction.projectedTotal !== null
+      && game.prediction.homeWinProbability !== null
+      ? predictionEvidenceRows.find((row) =>
+        safeNumber(row.projectedHomeScore) === game.prediction?.projectedHomeScore
+        && safeNumber(row.projectedAwayScore) === game.prediction?.projectedAwayScore
+        && safeNumber(row.projectedMargin) === game.prediction?.projectedMargin
+        && safeNumber(row.projectedTotal) === game.prediction?.projectedTotal
+        && safeNumber(row.homeWinProbability) === game.prediction?.homeWinProbability)
+      : undefined;
+    const historicalPersonnel = savedPrediction
+      ? await getCurrentGamePersonnel(game.gameId, savedPrediction.predictionTimestamp)
+      : null;
+    const modelPersonnelLimitation = currentModelPersonnelLimitation({
+      savedInputSourceEvidence: savedPrediction?.inputSourceEvidence,
+      predictionTimestamp: savedPrediction?.predictionTimestamp ?? null,
+      kickoffTime: kickoff,
+      homeTeamId: gameRow?.homeTeamId ?? "",
+      awayTeamId: gameRow?.awayTeamId ?? "",
+      current: currentPersonnel?.teams ?? null,
+      historical: historicalPersonnel?.teams ?? null,
+    });
+    finalizedContext.modelPersonnelLimitation = {
+      active: modelPersonnelLimitation.active,
+      reason: modelPersonnelLimitation.reason,
+      recommendationSuppressed: modelPersonnelLimitation.recommendationSuppressed,
+    };
+    const recommendation = applyModelPersonnelLimitationToRecommendation(
+      game.recommendation, modelPersonnelLimitation,
     );
     const eligibleRecentGames = eligibleUsageGames(recentGames, game.season, sourceCutoff, game.gameId)
       .filter((candidate) => candidate.homeTeamId === gameRow.homeTeamId || candidate.homeTeamId === gameRow.awayTeamId
@@ -1434,6 +1727,7 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
     res.set("Cache-Control", "no-store");
     res.json({
       ...game,
+      recommendation,
       sourceHealth: gameResults.sourceHealth,
       weather: forecast ? {
         available: true,

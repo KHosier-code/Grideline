@@ -1,0 +1,11 @@
+Work on Gridline’s personnel accuracy and game-detail display in an isolated branch or task based on published GL-002 commit `b9b44fce38744fc43042dd3a40e0e4ec3a3b88ee`. Preserve unpublished GL-003 candidate `af67d3c72869be1477b46e64b3ed5bb8a4c21024`; do not bundle its code or database guards into this work.
+
+**1. Audit Washington–Seattle.** Show Gridline’s current projected score, margin, win probability, model version, feature values, creation time, expected starting QBs, injury and depth records, and odds available at prediction time. Trace whether the Daniels injury and Mariota’s expected start affect the numerical projection. Check Seattle’s QB assumption too. Separate what the model calculated from what the UI merely displays.
+
+**2. Fix “Likely roles and depth.”** Show a projected starting QB, lead RB or committee, primary TE, WR1, and WR2 for each offense. Remove the QB1/QB2, RB1/RB2, and TE1/TE2 rows from this compact view. Show player names, availability, role confidence, and source time; mark unsupported roles unconfirmed.
+
+Audit both defenses player by player against roster, injury, and depth records. Fix systemic team, position, player-ID, and matchup-join errors. Present defensive front, linebackers, corners, and safeties in a way that fits each team’s scheme. Do not fill uncertain defensive roles with guessed starters.
+
+**3. Handle an unmodeled QB change honestly.** If a confirmed expected starter differs materially from the personnel represented by the active model, make that limitation prominent on the game view and suppress an unsupported official betting recommendation for that game. Preserve the raw projection and saved history. Do not hard-code a point adjustment or change an official snapshot.
+
+Test Washington–Seattle and other games covering a replacement QB, RB committee, unavailable WR, and different defensive alignments. Provide before-and-after desktop and mobile views, the root cause of any bad defensive entries, targeted test results, and builds. Report separately what would be needed to make current injuries change the numerical model through a validated personnel challenger. Keep this work in development until it has its own release review.

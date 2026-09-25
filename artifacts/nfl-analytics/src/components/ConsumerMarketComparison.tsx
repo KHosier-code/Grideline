@@ -24,7 +24,7 @@ export function ConsumerMarketComparisonCell({ comparison, className = '', eligi
       </div>
       <dl className="comparison-values">
         <div><dt>Gridline</dt><dd>{formatComparisonValue(comparison, comparison.modelValue)}</dd></div>
-        <div><dt>Market</dt><dd>{formatComparisonValue(comparison, comparison.marketValue)}</dd></div>
+        <div><dt>{usable ? 'Market' : 'Last observed market (not eligible)'}</dt><dd>{formatComparisonValue(comparison, comparison.marketValue)}</dd></div>
         <div><dt>Model difference</dt><dd>{usable ? formatDifference(comparison) : 'Unavailable'}</dd></div>
       </dl>
       {usable && comparison.selectedQuote && (
@@ -33,7 +33,9 @@ export function ConsumerMarketComparisonCell({ comparison, className = '', eligi
           {comparison.selectedQuote.price}
         </p>
       )}
-      <p className="consumer-note">{usable ? comparison.freshnessLabel : 'Current comparison suppressed: complete, fresh evidence is required.'}</p>
+      <p className="consumer-note">{usable ? comparison.freshnessLabel : comparison.state === 'stale'
+        ? `${comparison.freshnessLabel}. No usable comparison without fresh, complete evidence.`
+        : comparison.state === 'absent' ? 'No market observation is available.' : 'Comparison unavailable: complete, fresh, eligible evidence is required.'}</p>
     </div>
   );
 }

@@ -12,13 +12,16 @@ import {
   GetConsumerTrendsResponse,
   GetConsumerPlayerUsageResponse,
   ListConsumerGamesResponse,
+  GetConsumerScheduleSelectionResponse,
 } from "@workspace/api-zod";
+import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
 import consumerRouter, {
   MAX_CONSUMER_GAMES,
   MAX_CONSUMER_MOVEMENT_ROWS,
   MAX_CONSUMER_PERFORMANCE_ROWS,
   MAX_CONSUMER_SNAPSHOT_ROWS,
   aggregatePlayerUsage,
+  applyModelPersonnelLimitationToRecommendation,
   applyCurrentPersonnelToConsumerContext,
   americanOddsImpliedProbability,
   buildUsageSnapPlayerAliases,
@@ -27,6 +30,7 @@ import consumerRouter, {
   compareUsageGameChronology,
   consumerFinalScore,
   consumerMarket,
+  currentModelPersonnelLimitation,
   deterministicSourceGameId,
   eligibleUsageGames,
   eligibleUsageRows,
@@ -35,12 +39,12 @@ import consumerRouter, {
   serializeMovement,
   serializePerformance,
   summarizeConsumerMarketBoards,
-  verifiedOfficialSnapshot,
   usageCompositeIdentity,
   usageMatchupIdentity,
   usageSeasonAtCutoff,
   verifyTeamRecords,
 } from "./consumer";
+import { deriveCurrentTeamDepth } from "../lib/current-personnel-derivation";
 
 const boardRow = (
   sportsbook: string,
@@ -50,6 +54,22 @@ const boardRow = (
   price: number,
   capturedAt: string,
 ) => ({ sportsbook, market, selection, point, price, capturedAt: new Date(capturedAt) });
+
+test("persisted schedule selects live then next kickoff, including postseason year rollover", () => {
+  const rows = [
+    { season: 2026, week: 18, kickoffTime: new Date("2027-01-04T17:00:00Z"), gameStatus: "STATUS_FINAL" },
+    { season: 2026, week: 19, kickoffTime: new Date("2027-01-11T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+    { season: 2026, week: 19, kickoffTime: new Date("2027-01-12T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+    { season: 2026, week: 20, kickoffTime: new Date("2027-01-19T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+    { season: 2027, week: 1, kickoffTime: new Date("2027-09-10T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+  ];
+  assert.deepEqual(selectConsumerSlate(rows, new Date("2027-01-05T00:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "upcoming" });
+  assert.deepEqual(selectConsumerSlate([{ ...rows[1], gameStatus: "STATUS_IN_PROGRESS" }, ...rows.slice(2)], new Date("2027-01-11T19:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "live" });
+  assert.deepEqual(selectConsumerSlate(rows.slice(0, 1), new Date("2027-06-01T00:00:00Z")), { selection: { season: 2026, week: 18 }, reason: "past" });
+  assert.deepEqual(selectConsumerSlate([{ ...rows[0], gameStatus: "STATUS_SCHEDULED" }, ...rows.slice(1)], new Date("2027-01-05T12:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "upcoming" });
+  assert.deepEqual(selectConsumerSlate([], new Date("2027-01-01T00:00:00Z")), { selection: null, reason: "no_schedule" });
+  assert.equal(GetConsumerScheduleSelectionResponse.safeParse(selectConsumerSlate(rows, new Date("2027-01-05T00:00:00Z"))).success, true);
+});
 
 test("American odds implied probability rejects invalid prices", () => {
   assert.equal(americanOddsImpliedProbability(-150), 0.6);
@@ -395,6 +415,31 @@ test("consumer movement preserves chronology, price-only changes, and legitimate
   assert.doesNotMatch(JSON.stringify(movement), /"id"|"observationKey"|"stateHash"/);
 });
 
+test("future games do not expose a final pre-kickoff quote; completed games expose only recorded pre-kickoff history", () => {
+  const rows = [
+    boardRow("DraftKings", "spread", "Home", -3, -110, "2026-09-01T12:00:00Z"),
+    boardRow("DraftKings", "spread", "Home", -3, -105, "2026-09-01T13:00:00Z"),
+    boardRow("DraftKings", "spread", "Home", -2.5, -110, "2026-09-01T15:00:00Z"),
+  ];
+  const kickoff = new Date("2026-09-01T14:00:00Z");
+  const future = serializeMovement(rows, kickoff, new Date("2026-09-01T13:30:00Z"));
+  assert.equal(future.streams[0]?.finalPreKickoff, null);
+  assert.equal(future.streams[0]?.firstObserved.price, -110);
+  assert.equal(future.streams[0]?.current.point, -2.5);
+  const final = serializeMovement(rows, kickoff, new Date("2026-09-01T16:00:00Z"));
+  assert.equal(final.streams[0]?.finalPreKickoff?.price, -105);
+  assert.equal(final.streams[0]?.current.point, -2.5);
+});
+
+test("Washington–Seattle persisted spread/total score and independent moneyline orientation", () => {
+  const homeMargin = -0.7257358100211451;
+  const total = 44.954963921603145;
+  const homeProbability = 0.3432441400949979;
+  assert.ok(Math.abs((total + homeMargin) / 2 - 22.114614055791) < 1e-9);
+  assert.ok(Math.abs((total - homeMargin) / 2 - 22.840349865812144) < 1e-9);
+  assert.ok(Math.abs((1 - homeProbability) * 100 - 65.67558599050021) < 1e-9);
+});
+
 test("consumer movement and context use explicit unavailable states", () => {
   assert.deepEqual(serializeMovement([]), {
     available: false,
@@ -416,6 +461,7 @@ test("consumer movement and context use explicit unavailable states", () => {
     projectedMatchups: [],
     matchupMessage: "Matchup projection not yet available.",
     message: "Player information temporarily unavailable",
+    modelPersonnelLimitation: { active: false, reason: null, recommendationSuppressed: false },
   });
 });
 
@@ -601,6 +647,193 @@ test("live personnel is exposed when persisted model context is absent", () => {
   assert.equal(result.message, null);
 });
 
+test("curated context selects replacement QB, RB committee and flags unavailable WR", () => {
+  const cutoff = new Date("2026-09-17T12:00:00.000Z");
+  const source = (playerId: string, playerName: string, position: string, depthOrder: number, role = position) => ({
+    playerId, playerName, teamId: "home", sourceTeamId: "HOM", position, role, depthOrder,
+    source: "sleeper" as const, classification: "published_secondary" as const,
+    capturedAt: "2026-09-17T10:00:00.000Z", sourceUpdatedAt: "2026-09-17T10:00:00.000Z",
+    mappingStatus: "exact_provider_id", mappingConfidence: 1,
+  });
+  const current = deriveCurrentTeamDepth({
+    teamId: "home", abbreviation: "HOM", cutoff, season: 2026,
+    publishedDepth: [
+      source("daniels", "Jayden Daniels", "QB", 1), source("mariota", "Marcus Mariota", "QB", 2),
+      source("rb1", "Back One", "RB", 1), source("rb2", "Back Two", "RB", 2),
+      source("te", "Tight End", "TE", 1),
+      source("wr1", "Unavailable Receiver", "WR", 1), source("wr2", "Receiver Two", "WR", 2),
+      source("edge", "Edge Defender", "EDGE", 1), source("dt", "Defensive Tackle", "DT", 1),
+      source("lb", "Linebacker", "LB", 1), source("cb", "Cornerback", "CB", 1),
+      source("s", "Safety", "S", 1),
+    ],
+    snaps: [], historicalDepth: [],
+    injuries: [{
+      playerId: "daniels", teamId: "home", position: "QB", gameStatus: "Out",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }, {
+      playerId: "mariota", teamId: "home", position: "QB", gameStatus: "Active",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }, {
+      playerId: "wr1", teamId: "home", position: "WR", gameStatus: "Out",
+      snapshotTimestamp: "2026-09-17T11:00:00.000Z", sourceUpdatedAt: "2026-09-17T11:00:00.000Z",
+    }],
+    playerNames: { daniels: "Jayden Daniels", mariota: "Marcus Mariota", wr1: "Unavailable Receiver" },
+  });
+  current.depth.offense.find((player) => player.playerId === "rb1")!.recentSnapShare = 0.52;
+  current.depth.offense.find((player) => player.playerId === "rb2")!.recentSnapShare = 0.38;
+  const context = applyCurrentPersonnelToConsumerContext(serializeContext(null, "home", "away"), {
+    asOf: cutoff.toISOString(), teams: { home: current, away: null },
+  });
+  const home = context.teams.find((team) => team.side === "home")!;
+  assert.deepEqual(home.expectedQb, {
+    name: "Marcus Mariota", status: "available", availability: "available", confidence: current.qbStarter.confidence,
+    asOf: "2026-09-17T11:00:00.000Z", confirmed: true,
+  });
+  assert.equal(home.currentOffenseRoles.runningBackCommittee.players.length, 2);
+  assert.equal(home.currentOffenseRoles.runningBackCommittee.status, "confirmed");
+  assert.equal(home.currentOffenseRoles.primaryTe.name, "Tight End");
+  assert.equal(home.currentOffenseRoles.wr1.name, "Unavailable Receiver");
+  assert.equal(home.currentOffenseRoles.wr1.availability, "unavailable");
+  assert.equal(home.currentOffenseRoles.wr1.confirmed, false);
+  assert.equal(home.currentOffenseRoles.wr2.name, "Receiver Two");
+  assert.deepEqual(home.defensiveGroupings.front.map((player) => player.position).sort(), ["DT", "EDGE"]);
+  assert.deepEqual(home.defensiveGroupings.linebackers.map((player) => player.position), ["LB"]);
+  assert.deepEqual(home.defensiveGroupings.corners.map((player) => player.position), ["CB"]);
+  assert.deepEqual(home.defensiveGroupings.safeties.map((player) => player.position), ["S"]);
+  current.depth.offense.find((player) => player.playerId === "rb2")!.recentSnapShare = null;
+  const leadOnly = applyCurrentPersonnelToConsumerContext(serializeContext(null, "home", "away"), {
+    asOf: cutoff.toISOString(), teams: { home: current, away: null },
+  }).teams[0]!;
+  assert.deepEqual(leadOnly.currentOffenseRoles.runningBackCommittee.players.map((player) => player.name), ["Back One"]);
+});
+
+test("defensive groupings retain distinct 3-4 and 4-3 fronts without guessed roles", () => {
+  const cutoff = new Date("2026-09-17T12:00:00.000Z");
+  const source = (id: string, pos: string, rank: number) => ({
+    playerId: id, playerName: id, teamId: "team", sourceTeamId: "TST",
+    position: pos, role: pos, depthOrder: rank, source: "sleeper" as const,
+    classification: "published_secondary" as const, capturedAt: "2026-09-17T10:00:00.000Z",
+    mappingStatus: "exact_provider_id", mappingConfidence: 1,
+  });
+  const make = (positions: string[]) => deriveCurrentTeamDepth({
+    teamId: "team", cutoff, season: 2026,
+    publishedDepth: positions.map((position, index) => source(`${position}-${index}`, position, index + 1)),
+    snaps: [], historicalDepth: [], injuries: [],
+  });
+  const threeFour = make(["NT", "DE", "EDGE", "LB", "ILB", "CB", "S"]);
+  const fourThree = make(["DT", "DE", "EDGE", "LB", "LB", "CB", "FS", "SS"]);
+  const serialize = (team: ReturnType<typeof make>) => applyCurrentPersonnelToConsumerContext(
+    serializeContext(null, "home", "away"), { asOf: team.asOf, teams: { home: team, away: null } },
+  ).teams[0]!;
+  assert.deepEqual(serialize(threeFour).defensiveGroupings.front.map((player) => player.position).sort(), ["DT", "EDGE", "EDGE"]);
+  assert.deepEqual(serialize(threeFour).defensiveGroupings.front.map((player) => player.role).sort(), ["DE", "EDGE", "NT"]);
+  assert.deepEqual(serialize(threeFour).defensiveGroupings.linebackers.map((player) => player.position).sort(), ["LB", "LB"]);
+  assert.deepEqual(serialize(threeFour).defensiveGroupings.linebackers.map((player) => player.role).sort(), ["ILB", "LB"]);
+  assert.deepEqual(serialize(fourThree).defensiveGroupings.front.map((player) => player.position).sort(), ["DT", "EDGE", "EDGE"]);
+  assert.deepEqual(serialize(fourThree).defensiveGroupings.safeties.map((player) => player.role).sort(), ["FS", "SS"]);
+});
+
+test("QB model limitation compares explicit cutoff-safe identity only", () => {
+  const current = {
+    teamId: "home", teamName: "Home", abbreviation: "HOM", asOf: "2026-09-17T11:00:00.000Z",
+    freshness: "current" as const,
+    qbStarter: { status: "available" as const, player: { playerId: "mariota", playerName: "Marcus Mariota" } as any },
+  } as any;
+  const predictionTimestamp = new Date("2026-09-15T15:00:00.000Z");
+  const evidence = (qbId: string) => ({
+    rows: [{
+      isHome: true, teamId: "home", opponentTeamId: "away",
+      sourceCutoff: "2026-09-15T14:59:59.000Z", generatedAt: "2026-09-15T15:00:00.000Z",
+      selectedAudit: { _personnel_context: { teams: { home: { qb: { projectedStarter: { playerId: qbId } } } } } },
+    }, {
+      isHome: false, teamId: "away", opponentTeamId: "home",
+      sourceCutoff: "2026-09-15T14:59:59.000Z", generatedAt: "2026-09-15T15:00:00.000Z",
+      selectedAudit: {},
+    }],
+  });
+  const base = {
+    predictionTimestamp, kickoffTime: new Date("2026-09-24T17:00:00.000Z"),
+    homeTeamId: "home", awayTeamId: "away", current: { home: current, away: null },
+  };
+  assert.equal(currentModelPersonnelLimitation({ ...base, savedInputSourceEvidence: evidence("daniels") }).recommendationSuppressed, true);
+  assert.equal(currentModelPersonnelLimitation({ ...base, savedInputSourceEvidence: evidence("mariota") }).active, false);
+  const noNamedQb = currentModelPersonnelLimitation({
+    ...base, savedInputSourceEvidence: { rows: [{ selectedValues: { qb_confidence_difference: 0 } }] },
+  });
+  assert.equal(noNamedQb.active, true);
+  assert.equal(noNamedQb.recommendationSuppressed, false);
+  assert.match(noNamedQb.reason ?? "", /does not retain a named quarterback identity/);
+  const futureEvidence = evidence("daniels");
+  futureEvidence.rows[0]!.sourceCutoff = "2026-09-17T11:00:00.000Z";
+  assert.equal(currentModelPersonnelLimitation({ ...base, savedInputSourceEvidence: futureEvidence }).recommendationSuppressed, false);
+});
+
+test("named QB-less snapshot warns unless cutoff-safe personnel confirms a post-snapshot change", () => {
+  const predictionTimestamp = new Date("2026-09-17T15:00:00.000Z");
+  const player = (playerId: string, capturedAt: string, rank: number) => ({
+    playerId, playerName: playerId === "daniels" ? "Jayden Daniels" : "Marcus Mariota",
+    position: "QB", rank, sourceClassification: "published_secondary" as const,
+    providerEvidence: [{ capturedAt }],
+    conflicts: [],
+  });
+  const current = {
+    home: {
+      asOf: "2026-09-24T11:00:00.000Z", freshness: "current" as const,
+      qbStarter: { status: "available" as const, player: player("mariota", "2026-09-24T10:00:00.000Z", 1) },
+    },
+    away: null,
+  } as any;
+  const historical = {
+    home: {
+      asOf: predictionTimestamp.toISOString(), freshness: "current" as const,
+      qbStarter: { status: "available" as const, player: player("daniels", "2026-09-17T11:00:00.000Z", 1) },
+    },
+    away: null,
+  } as any;
+  const result = currentModelPersonnelLimitation({
+    savedInputSourceEvidence: { rows: [{ selectedValues: { qb_confidence_difference: 0 } }] },
+    predictionTimestamp, kickoffTime: new Date("2026-09-24T17:00:00.000Z"),
+    homeTeamId: "home", awayTeamId: "away", current, historical,
+  });
+  assert.equal(result.active, true);
+  assert.equal(result.recommendationSuppressed, true);
+  assert.match(result.reason ?? "", /saved model input does not retain a named quarterback identity/);
+
+  const noTransition = currentModelPersonnelLimitation({
+    savedInputSourceEvidence: { rows: [{ selectedValues: { qb_confidence_difference: 0 } }] },
+    predictionTimestamp, kickoffTime: new Date("2026-09-24T17:00:00.000Z"),
+    homeTeamId: "home", awayTeamId: "away", current, historical: null,
+  });
+  assert.equal(noTransition.active, true);
+  assert.equal(noTransition.recommendationSuppressed, false);
+});
+
+test("confirmed QB mismatch withholds recommendations without modifying projections", () => {
+  const savedProjection = {
+    projectedHomeScore: 22.1146,
+    projectedAwayScore: 22.8403,
+    projectedMargin: -0.7257,
+    projectedTotal: 44.9549,
+    homeWinProbability: 0.3432,
+  };
+  const recommendation = {
+    status: "healthy" as const, reason: null,
+    markets: { spread: true, total: true, moneyline: true },
+  };
+  const limitation = { active: true, reason: "Saved personnel identity differs.", recommendationSuppressed: true };
+  assert.deepEqual(applyModelPersonnelLimitationToRecommendation(recommendation, limitation), {
+    status: "unavailable", reason: limitation.reason,
+    markets: { spread: false, total: false, moneyline: false },
+  });
+  assert.deepEqual(applyModelPersonnelLimitationToRecommendation(recommendation, {
+    active: true, reason: "No saved named QB.", recommendationSuppressed: false,
+  }), recommendation);
+  assert.deepEqual(savedProjection, {
+    projectedHomeScore: 22.1146, projectedAwayScore: 22.8403,
+    projectedMargin: -0.7257, projectedTotal: 44.9549, homeWinProbability: 0.3432,
+  });
+});
+
 test("consumer performance is whitelisted and matches generated response contracts", () => {
   const performance = serializePerformance({
     status: "measured",
@@ -660,8 +893,6 @@ test("generated contracts accept representative list, dashboard, detail, and una
     },
     finalScore: null,
     prediction: null,
-    officialPredictionStatus: "not_created" as const,
-    officialPrediction: null,
     market: {
       spread: null,
       moneyline: null,
@@ -786,16 +1017,6 @@ test("generated contracts accept representative list, dashboard, detail, and una
     note: "Persisted snapshots only",
   }).success, true);
   assert.equal(GetConsumerGameResponse.safeParse({ ...detail, sourceHealth }).success, true);
-  assert.equal(ListConsumerGamesResponse.safeParse({
-    status: "absent",
-    coverage: { games: 1, gamesWithComparison: 0, DraftKings: 0, FanDuel: 0 },
-    games: [{ ...game, gameState: "final", finalScore: { home: 24, away: 17 } }],
-    sourceHealth, teamRecords: [],
-    recordVerification: {
-      expectedTeamCount: 32, actualTeamCount: 0, targetWeek: 1,
-      completedPriorGames: 0, complete: false, discrepancies: ["Expected 32 teams, found 0"],
-    },
-  }).success, true);
   assert.equal(MAX_CONSUMER_GAMES, 100);
   assert.equal(MAX_CONSUMER_MOVEMENT_ROWS, 200);
   assert.equal(MAX_CONSUMER_SNAPSHOT_ROWS, 100);
@@ -821,29 +1042,16 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.doesNotMatch(routeSource, /\b(generateLivePredictions|gradeCompletedPredictions|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);
 });
 
-test("legacy post-kickoff freezes and unfrozen saved snapshots never appear official in historical views", () => {
-  const kickoff = new Date("2026-09-15T00:15:00Z");
-  const legacy = {
-    gameId: "historical", officialFinalPrediction: true,
-    predictionTimestamp: new Date("2026-09-14T21:25:41Z"),
-    frozenAt: new Date("2026-09-15T00:15:40Z"),
-    evaluationCutoffAt: null,
-  };
-  assert.equal(verifiedOfficialSnapshot([legacy] as any, "historical", kickoff,
-    new Date("2026-09-16T00:00:00Z")), null);
-  assert.equal(verifiedOfficialSnapshot([{ ...legacy, officialFinalPrediction: false }] as any,
-    "historical", kickoff, new Date("2026-09-16T00:00:00Z")), null);
-});
-
 test("consumer movement UI keeps honest terminology and responsive controls", () => {
   const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
   const component = readFileSync(path.join(webRoot, "components/LineMovementExperience.tsx"), "utf8");
   const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
   assert.match(component, /First observed by Gridline/);
-  assert.match(component, /Final pre-kickoff/);
+  assert.match(component, /preKickoffMovementLabel\(beforeKickoff\)/);
   assert.match(component, /Compare books/);
   assert.match(component, /DraftKings.*FanDuel/s);
-  assert.doesNotMatch(component, /\bopener\b|\bclosing line\b/i);
+  assert.match(component, /not a verified sportsbook closing line/);
+  assert.doesNotMatch(component, /\bopener\b|label="Final pre-kickoff"/i);
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.movement-controls/);
   assert.match(css, /\.movement-chart \{[^}]*overflow: hidden/);
 });
@@ -851,9 +1059,10 @@ test("consumer movement UI keeps honest terminology and responsive controls", ()
 test("consumer market board keeps neutral language and 320px responsive controls", () => {
   const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
   const component = readFileSync(path.join(webRoot, "pages/consumer/ConsumerGames.tsx"), "utf8");
+  const comparison = readFileSync(path.join(webRoot, "components/ConsumerMarketComparison.tsx"), "utf8");
   const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
-  assert.match(component, /Model difference/);
-  assert.match(component, /First observed by Gridline/);
+  assert.match(comparison, /Model difference/);
+  assert.match(component, /Not eligible:.*evidence only, not current comparisons/);
   assert.match(component, /aria-expanded/);
   assert.doesNotMatch(component, /\bbet\b|\bpick\b|\bedge\b|expected return/i);
   assert.match(css, /@media \(max-width: 420px\)/);

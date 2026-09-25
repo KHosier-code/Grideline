@@ -1,4 +1,18 @@
-import type { ConsumerProjectedMatchup } from '@workspace/api-client-react';
+import type { ConsumerProjectedMatchup, ConsumerGameDetail, ConsumerMatchupAssessment } from '@workspace/api-client-react';
+
+export function eligibleMarketComparisons(game: Pick<ConsumerGameDetail, 'marketBoard' | 'recommendation'>, beforeKickoff: boolean) {
+  return game.marketBoard.comparisons.filter((comparison) =>
+    beforeKickoff && game.recommendation.markets[comparison.market] && comparison.state === 'available'
+    && comparison.modelValue !== null && comparison.marketValue !== null);
+}
+
+export function supportedAssessments(assessments: ConsumerMatchupAssessment[]) {
+  return assessments.filter((assessment) => assessment.edge !== 'insufficient');
+}
+
+export function preKickoffMovementLabel(beforeKickoff: boolean): string | null {
+  return beforeKickoff ? null : 'Last recorded pre-kickoff';
+}
 
 export const PREMIUM_GAME_DETAIL_SECTION_ORDER = [
   'game-header',

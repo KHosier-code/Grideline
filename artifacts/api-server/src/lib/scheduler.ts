@@ -32,13 +32,7 @@ import {
   oddsCaptureRequestCount,
 } from "./odds";
 import { syncEspnScheduleCoverage } from "./schedule";
-import {
-  CANONICAL_EVALUATION_CUTOFF_MINUTES,
-  freezeOfficialFinalPredictions,
-  generateLivePredictions,
-  generateWeeklyLearningReport,
-  gradeCompletedPredictions,
-} from "./live-predictions";
+import { freezeOfficialFinalPredictions, generateLivePredictions, generateWeeklyLearningReport, gradeCompletedPredictions } from "./live-predictions";
 import { trainPhase4Models } from "./modeling";
 import { logger } from "./logger";
 import { captureConfidenceResults } from "./confidence-capture";
@@ -1232,7 +1226,7 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
         : [];
       const persistedCutoff = priorCutoff ? new Date(priorCutoff) : null;
       const currentKickoffCutoff = canonicalGame?.kickoffTime
-        ? new Date(canonicalGame.kickoffTime.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000)
+        ? new Date(canonicalGame.kickoffTime.getTime() - 30 * 60_000)
         : null;
       // A later kickoff never moves the evidence boundary forward after the
       // first attempt. An earlier flex can only tighten it, preventing any
@@ -1246,7 +1240,6 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
         gameId: canonicalGameId,
         cutoffOverride: cutoffOverride && Number.isFinite(cutoffOverride.getTime()) ? cutoffOverride : undefined,
       });
-      if (canonicalGameId) result = retainCanonicalCutoff(result, cutoffOverride);
       // Missing/stale market evidence is a recoverable condition. Keep the
       // occurrence enabled and retry; only an actually frozen snapshot ends
       // this one-shot lifecycle.
@@ -1369,11 +1362,6 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
       updatedAt: now,
     })
     .where(and(eq(schedulerJobsTable.jobKey, job.jobKey), eq(schedulerJobsTable.lockOwner, job.owner)));
-}
-
-export function retainCanonicalCutoff(result: unknown, attemptedCutoff: Date | undefined) {
-  if (!attemptedCutoff || !Number.isFinite(attemptedCutoff.getTime())) return result;
-  return { ...(result as Record<string, unknown>), canonicalCutoffAt: attemptedCutoff.toISOString() };
 }
 
 async function tick() {

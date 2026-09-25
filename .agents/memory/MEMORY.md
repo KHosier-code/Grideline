@@ -25,7 +25,7 @@
 - [Personnel audit preflight](personnel-audit-preflight.md) — missing or derived-zero evidence warns; absent contexts or non-pregame chronology blocks before fitting.
 - [Large batch result assembly](large-batch-result-assembly.md) — append large database result sets iteratively; variadic array spreading can overflow the stack.
 - [Confidence evidence identity](confidence-evidence-identity.md) — confidence is market-specific and immutable only when version and complete calculation evidence identify each result.
-- [Consumer personnel display boundary](consumer-personnel-display.md) — display season-bound current evidence; immutable model context may lag and must not repopulate stale starters.
+- [Consumer personnel display boundary](consumer-personnel-display.md) — show season-bound depth; never infer a modeled QB name from numeric confidence or stale context.
 - [Runtime analytics reporting](runtime-analytics-reporting.md) — self-serve admin reports need a privacy-safe first-party event copy; injected analytics is agent-queryable, not app-queryable.
 - [Retention state validation](retention-state-validation.md) — worker persistence tests require the development retention migrations applied before state assertions are meaningful.
 - [Singleton integration-test isolation](singleton-integration-test-isolation.md) — PostgreSQL advisory locks serialize parallel test files that mutate shared singleton fixtures.
@@ -33,5 +33,4 @@
 - [Game completion semantics](game-completion-semantics.md) — scheduled ESPN rows may carry 0–0 score values; only final status proves a completed game.
 - [Aggregate timestamp decoding](aggregate-timestamp-decoding.md) — Drizzle SQL aggregate date generics do not decode runtime strings; normalize before date arithmetic or ISO serialization.
 - [Unchanged player fetches](unchanged-player-fetches.md) — a complete, successful provider fetch is fresh evidence even if change-only snapshots insert zero rows.
-- [Function migration baselines](function-migration-baselines.md) — trigger-name checks cannot prove a replaced PL/pgSQL function body is installed; force one-time execution for behavior changes.
-- [Managed production custom DDL](managed-production-custom-ddl.md) — general SQL-runner documentation does not establish PL/pgSQL/trigger support or transaction semantics; require operator confirmation.
+- [Selective cherry-pick verification](selective-cherry-pick-verification.md) — a clean cherry-pick can still splice unrelated route and test logic; verify combined behavior before release.

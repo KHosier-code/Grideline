@@ -36,6 +36,7 @@ import type {
   ConsumerPlayerUsage,
   ConsumerPlayerUsageGames,
   ConsumerPropsAvailability,
+  ConsumerScheduleSelection,
   ConsumerTrends,
   DashboardSummary,
   DataHealth,
@@ -2258,6 +2259,83 @@ export function useGetConsumerDashboard<TData = Awaited<ReturnType<typeof getCon
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerScheduleSelectionUrl = () => {
+
+
+
+
+  return `/api/consumer/schedule-selection`
+}
+
+/**
+ * @summary Select a slate from persisted NFL schedule evidence
+ */
+export const getConsumerScheduleSelection = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerScheduleSelection> => {
+
+  return customFetch<ConsumerScheduleSelection>(getGetConsumerScheduleSelectionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerScheduleSelectionQueryKey = () => {
+    return [
+    `/api/consumer/schedule-selection`
+    ] as const;
+    }
+
+
+export const getGetConsumerScheduleSelectionQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerScheduleSelection>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerScheduleSelection>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerScheduleSelectionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerScheduleSelection>>> = ({ signal }) => getConsumerScheduleSelection({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerScheduleSelection>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerScheduleSelectionQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerScheduleSelection>>>
+export type GetConsumerScheduleSelectionQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Select a slate from persisted NFL schedule evidence
+ */
+
+export function useGetConsumerScheduleSelection<TData = Awaited<ReturnType<typeof getConsumerScheduleSelection>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerScheduleSelection>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerScheduleSelectionQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -7,7 +7,6 @@ import {
   classifySchedulerAlerts,
   confidenceCaptureOccurrences,
   canonicalPredictionOccurrence,
-  retainCanonicalCutoff,
   adaptiveOddsJobReconciliation,
   nextWeeklyOccurrence,
   groupSundayKickoffWindows,
@@ -16,18 +15,6 @@ import {
   shouldRearmDynamicOccurrence,
   zonedTimeToUtc,
 } from "./scheduler";
-
-test("a failed official freeze keeps the attempted boundary for a later flex retry", () => {
-  const first = retainCanonicalCutoff({ status: "success", frozen: 0, canonicalCutoffAt: null },
-    new Date("2026-09-20T16:30:00Z"));
-  assert.deepEqual(first, {
-    status: "success", frozen: 0, canonicalCutoffAt: "2026-09-20T16:30:00.000Z",
-  });
-  const retry = retainCanonicalCutoff({ frozen: 0 },
-    new Date((first as { canonicalCutoffAt: string }).canonicalCutoffAt));
-  assert.equal((retry as { canonicalCutoffAt: string }).canonicalCutoffAt,
-    "2026-09-20T16:30:00.000Z");
-});
 import { shouldInsertLatestState } from "./availability";
 import { shouldRefreshNflverseSource } from "./nflverse";
 import {

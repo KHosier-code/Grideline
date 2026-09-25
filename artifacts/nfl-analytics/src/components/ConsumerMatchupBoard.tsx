@@ -1,6 +1,7 @@
 import type { ConsumerMatchupAssessment, ConsumerMatchupBoard as MatchupBoard, ConsumerTeam } from '@workspace/api-client-react';
 import { AlertTriangle, ArrowRight, Minus } from 'lucide-react';
 import { formatMatchupMetric, supportedMatchupSummary } from '../lib/consumer-matchups';
+import { supportedAssessments } from '../lib/consumer-presentation';
 
 function Assessment({ assessment, home, away }: {
   assessment: ConsumerMatchupAssessment;
@@ -32,6 +33,8 @@ export function ConsumerMatchupBoard({ board, home, away }: {
   away: ConsumerTeam;
 }) {
   const summary = supportedMatchupSummary(board);
+  const supported = supportedAssessments(board.assessments);
+  const unsupported = board.assessments.length - supported.length;
   return <section className="matchup-board-section" data-section="matchup-board">
     <div className="consumer-section-heading"><div><p className="consumer-eyebrow">Pregame matchup evidence</p><h2>Matchup Board</h2></div><span className={`matchup-board-status status-${board.status}`}>{board.status}</span></div>
     <p className="consumer-note">Only supported evidence available before kickoff is used. These assessments do not change the Gridline prediction.</p>
@@ -40,9 +43,10 @@ export function ConsumerMatchupBoard({ board, home, away }: {
       {summary.length ? <div>{summary.map((item) => <article key={item.category}><strong>{item.label}</strong><span>{item.title}</span><small>{item.evidence}</small></article>)}</div>
         : <p><AlertTriangle aria-hidden="true" /> No sufficiently supported advantage is available yet.</p>}
     </div>
-    <div className="matchup-team-labels" aria-hidden="true"><span>{away.abbreviation}</span><span>Assessment</span><span>{home.abbreviation}</span></div>
-    <div className="matchup-assessments">{board.assessments.map((assessment) =>
+    {supported.length > 0 && <div className="matchup-team-labels" aria-hidden="true"><span>{away.abbreviation}</span><span>Assessment</span><span>{home.abbreviation}</span></div>}
+    <div className="matchup-assessments">{supported.map((assessment) =>
       <Assessment assessment={assessment} home={home} away={away} key={assessment.category} />)}</div>
+    {unsupported > 0 && <p className="consumer-note">{unsupported} matchup {unsupported === 1 ? 'category lacks' : 'categories lack'} sufficient pregame evidence and {unsupported === 1 ? 'is' : 'are'} omitted.</p>}
     <footer>Sources: {board.sources.join(' · ') || 'No supported sources'} · Pregame evidence through {new Date(board.sourceCutoff).toLocaleString()} · {board.completeness.supportedCategories}/{board.completeness.totalCategories} categories supported</footer>
   </section>;
 }

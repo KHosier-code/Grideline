@@ -155,6 +155,10 @@ function normalizedRole(value: string | null | undefined) {
 function interpretedPosition(row: Pick<CurrentDepthSource, "position" | "role">) {
   const position = normalizedSlot(row.position);
   const role = normalizedRole(row.role);
+  if (["HB", "HALFBACK"].includes(position ?? "") || ["HB", "HALFBACK"].includes(role ?? "")) return "RB";
+  if (["E", "LE", "RE", "LDE", "RDE"].includes(position ?? "") || ["LDE", "RDE"].includes(role ?? "")) return "EDGE";
+  if (["WLB", "MLB", "SLB", "MIKE", "WILL", "SAM"].includes(position ?? "")
+    || ["WLB", "MIKE", "WILL", "SAM"].includes(role ?? "")) return "LB";
   if (role && ["LCB", "RCB"].includes(role) && ["CB", "S"].includes(position ?? "")) return "CB";
   if (role && ["SCB", "NCB"].includes(role) && position === "CB") return "CB";
   if (role && ["FS", "SS"].includes(role) && ["CB", "S"].includes(position ?? "")) return "S";
@@ -307,7 +311,8 @@ export function deriveCurrentTeamDepth(input: {
   const inferredSlots = new Set(rows.map((row) => normalizedSlot(row.position ?? row.role)).filter(Boolean));
   for (const historical of [...input.historicalDepth]
     .filter((row) => row.teamId === input.teamId && (row.depthPosition ?? 99) <= 2)
-    .filter((row) => input.season === undefined || row.season === input.season)
+    .filter((row) => input.season === undefined
+      || (row.season ?? evidenceSeason(row.sourceSnapshotAt ?? row.sourceUpdatedAt) ?? undefined) === input.season)
     .filter((row) => (timestamp(row.sourceSnapshotAt ?? row.sourceUpdatedAt) ?? Infinity) <= cutoffTime)
     .sort((a, b) => (timestamp(b.sourceSnapshotAt ?? b.sourceUpdatedAt) ?? -1) - (timestamp(a.sourceSnapshotAt ?? a.sourceUpdatedAt) ?? -1))) {
     const position = normalizedSlot(historical.position);
@@ -498,15 +503,31 @@ export function deriveCurrentTeamDepth(input: {
     ? qbRows.filter((row) => row.gameId === latestQbGameId)
       .sort((a, b) => b.dropbacks - a.dropbacks || a.playerId.localeCompare(b.playerId))[0] ?? null
     : null;
-  const qbCandidates = interpreted.filter((row) => row.position === "QB" && row.rank === 1);
-  const qbPlayer = qbCandidates
-    .sort((a, b) =>
-      (b.sourceClassification === "official" ? 1 : 0) - (a.sourceClassification === "official" ? 1 : 0)
-      || b.confidence - a.confidence)[0] ?? null;
-  const qbConflict = qbCandidates.length > 1
+  const qbCandidates = interpreted.filter((row) => row.position === "QB");
+  const orderedQbCandidates = qbCandidates.sort((a, b) =>
+    (a.rank ?? 999) - (b.rank ?? 999)
+    || (b.sourceClassification === "official" ? 1 : 0) - (a.sourceClassification === "official" ? 1 : 0)
+    || b.confidence - a.confidence);
+  const rankedQbCandidates = orderedQbCandidates.filter((row) => row.rank === 1 || row.rank === 2);
+  const availableQbCandidates = rankedQbCandidates.filter((row) =>
+    !injuryUnavailable(row.injuryState.gameStatus ?? row.injuryState.practiceStatus
+      ?? row.injuryState.sleeperStatus ?? row.injuryState.sleeperInjuryStatus));
+  // A current, unavailable QB1 does not make the current role unavailable if
+  // current evidence supports an available QB2. Do not make this substitution
+  // across seasons or from historical-only depth (those rows are filtered above).
+  const qbPlayer = availableQbCandidates[0]
+    ?? rankedQbCandidates.find((row) => row.rank === 1)
+    ?? null;
+  const listedQb1 = rankedQbCandidates.find((row) => row.rank === 1);
+  const supportedReplacement = Boolean(
+    qbPlayer?.rank === 2 && listedQb1
+    && injuryUnavailable(listedQb1.injuryState.gameStatus ?? listedQb1.injuryState.practiceStatus
+      ?? listedQb1.injuryState.sleeperStatus ?? listedQb1.injuryState.sleeperInjuryStatus),
+  );
+  const qbConflict = qbCandidates.filter((row) => row.rank === 1).length > 1
     || Boolean(qbPlayer?.conflicts.some((conflict) => conflict.severity === "blocking"))
-    || Boolean(recentQbLeader && qbPlayer && recentQbLeader.playerId !== qbPlayer.playerId);
-  if (recentQbLeader && qbPlayer && recentQbLeader.playerId !== qbPlayer.playerId) {
+    || Boolean(recentQbLeader && qbPlayer && recentQbLeader.playerId !== qbPlayer.playerId && !supportedReplacement);
+  if (recentQbLeader && qbPlayer && recentQbLeader.playerId !== qbPlayer.playerId && !supportedReplacement) {
     const conflict: PersonnelConflict = {
       type: "participation", playerId: qbPlayer.playerId, position: "QB", severity: "warning",
       explanation: `Published QB1 disagrees with the most recent dropback leader (${recentQbLeader.playerName ?? recentQbLeader.playerId}).`,
@@ -521,6 +542,7 @@ export function deriveCurrentTeamDepth(input: {
     confidence: qbPlayer ? clamp(qbPlayer.confidence + (recentQbLeader?.playerId === qbPlayer.playerId ? 8 : 0)) : 0,
     supportingEvidence: [
       ...(qbPlayer?.explanation ?? []),
+      ...(supportedReplacement ? ["Current QB1 is unavailable; current published QB2 is the supported replacement."] : []),
       ...(recentQbLeader ? [`Most recent pre-cutoff QB participation: ${recentQbLeader.playerName ?? recentQbLeader.playerId}, ${recentQbLeader.dropbacks} dropbacks.`] : ["Recent QB dropback evidence is unavailable."]),
     ],
     conflicts: conflicts.filter((conflict) => conflict.position === "QB"),
