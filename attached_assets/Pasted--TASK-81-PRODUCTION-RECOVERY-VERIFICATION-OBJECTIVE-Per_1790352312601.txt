@@ -1,0 +1,120 @@
+# TASK 81 — PRODUCTION RECOVERY VERIFICATION
+
+OBJECTIVE
+
+Perform a comprehensive, read-only production audit following the recent production database-binding and rollback issues.
+
+Do not assume the application is healthy simply because its website loads.
+
+STRICT RESTRICTIONS
+
+- No deployments, publishing or rollbacks.
+- No database migrations or binding changes.
+- No data repairs, backfills or synchronization triggers.
+- No retraining, refitting or model promotion.
+- No production writes.
+- Do not modify existing prediction snapshots.
+- Do not expose database credentials or secrets.
+
+AUDIT REQUIREMENTS
+
+1. DATABASE INTEGRITY
+
+Verify the production application and dedicated Gridline worker are connected to the intended production database.
+
+Check:
+- Non-sensitive database identity evidence.
+- Production database schema and migration history.
+- Historical NFL records.
+- Previously preserved model artifacts.
+- Pre-rollback and post-rollback records.
+- Recent scheduled ingestion activity.
+- Missing, duplicate or inconsistent records.
+
+If the original database identity cannot be established, report that limitation.
+
+2. PHASE 6.1 MODEL INTEGRITY
+
+Verify all three approved production models:
+
+- Spread: regularized linear regression.
+- Moneyline: logistic regression.
+- Totals: gradient boosting.
+
+Verify exact active model IDs, artifact hashes, feature ordering, training cutoffs and promotion history against the approved records.
+
+Confirm that each model uses its approved 27-feature schema.
+
+3. PREDICTION VERIFICATION
+
+Review currently available upcoming and recently completed games.
+
+Check:
+- Game identity.
+- Kickoff and prediction timestamps.
+- Exact active artifact references.
+- Complete input features.
+- Distinct game-specific input signatures.
+- Valid probability and score outputs.
+- Invalid or suppressed snapshots.
+- No recurrence of the historical identical-prediction bug.
+
+Do not generate new predictions.
+
+4. WORKER AND INTEGRATIONS
+
+Check:
+- ESPN.
+- nflverse.
+- Sleeper.
+- The Odds API.
+- Weather.
+- Dedicated data worker.
+- Scheduled ingestion history.
+
+For each integration, provide the most recent successful synchronization, freshness, errors and available record counts.
+
+Do not trigger new paid requests.
+
+5. CONSUMER PRODUCT
+
+Verify published routes and consumer API contracts for:
+
+- Home.
+- Games.
+- Game Detail.
+- Market Board.
+- Line Movement.
+- Matchup Board.
+- Personnel/Depth Chart.
+- Player Usage.
+- Performance.
+- Trends.
+
+Some features may have been implemented without being published. Distinguish source-code readiness from production availability.
+
+6. CROSS-SYSTEM VALIDATION
+
+Trace at least three suitable existing games across the database, model artifact, prediction snapshot, API and consumer page.
+
+Confirm consistent game identity, model identity, projection values and timestamps.
+
+7. RECOVERY VERDICT
+
+Report whether production is genuinely operating against the intended database and whether the historical records needed for the next phase of development remain intact.
+
+Generate:
+
+reports/gridline-production-recovery-audit.md
+
+Include PASS, WARNING, FAIL or UNVERIFIED for every subsystem.
+
+End with one overall status:
+
+VERIFIED
+PARTIALLY VERIFIED
+NOT READY
+
+List blockers, required actions, test results and whether development can safely resume.
+
+Do not perform corrective actions. Report them for approval first.
