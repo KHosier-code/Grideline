@@ -1,0 +1,140 @@
+# GRIDLINE — SEGMENT 4: EXISTING PLAYER USAGE VERIFICATION
+
+## OBJECTIVE
+
+Verify whether Gridline's existing 2026 Player Usage production import is complete and functioning correctly.
+
+Segment 3 established that the import previously executed twice and that the production read replica contains 2,291 expected player-stat row keys.
+
+Do not repeat the import.
+
+This task is strictly read-only.
+
+## 1. VERIFY EXISTING IMPORT
+
+Inspect the existing production import evidence.
+
+Confirm:
+- Previously recorded import attempts.
+- Import completion status.
+- Imported row counts.
+- Existing source-file ledger records.
+- Existing synchronization records.
+- Current production row counts.
+
+Distinguish successful import execution from verified data correctness.
+
+Do not change any records.
+
+## 2. VERIFY PLAYER STATISTICS
+
+Where independently verifiable source evidence is available, compare existing production statistics against the corresponding source records.
+
+Include:
+- Player identity.
+- Team.
+- Season.
+- Week.
+- Passing statistics.
+- Rushing statistics.
+- Receiving statistics.
+- Touchdowns.
+
+Use the exact source version associated with the earlier import if it is available.
+
+If those original source bytes are unavailable, do not claim full historical value equality.
+
+Report any discrepancies or verification limitations.
+
+## 3. VERIFY CONSUMER PLAYER USAGE
+
+Inspect existing production API responses for:
+
+- Seattle WR usage.
+- Seattle QB usage.
+- Cleveland RB usage.
+- Kansas City QB usage.
+
+Confirm that these responses contain appropriate available 2026 statistics.
+
+Inspect:
+- Player identity.
+- Correct season and week.
+- Usage calculations.
+- Historical windows.
+- Missing-data behavior.
+- Consumer-safe formatting.
+
+Verify corresponding Game Detail components where accessible.
+
+Do not fabricate unavailable data.
+
+## 4. PRODUCTION DATA CONTINUITY
+
+Gather available non-sensitive evidence concerning:
+
+- Current production database identity.
+- Existing import ledger continuity.
+- Application database connectivity.
+- Worker database connectivity.
+- Previously verified Phase 6.1 artifacts.
+- Current production prediction records.
+
+Do not equate matching database names or successful connections with proof of original physical database identity.
+
+Document evidence that remains unavailable.
+
+## 5. FINAL ASSESSMENT
+
+Determine whether:
+
+A. Player Usage is functioning correctly with sufficient verified evidence.
+
+B. Player Usage is functioning but historical source-value or database-identity verification remains incomplete.
+
+C. Player Usage has a confirmed data or consumer presentation defect.
+
+If Player Usage works, recommend closing the import workstream without another import.
+
+If a defect exists, document the exact cause and propose the smallest safe correction.
+
+Do not execute corrections automatically.
+
+## RESTRICTIONS
+
+- No production writes.
+- No imports or synchronization triggers.
+- No migrations.
+- No database-binding changes.
+- No deployments.
+- No model changes.
+- No sportsbook-history modifications.
+
+## DELIVERABLE
+
+Generate:
+
+reports/gridline-player-usage-production-verification.md
+
+Include:
+
+1. Existing import evidence.
+2. Row-count and ledger verification.
+3. Available value-level comparisons.
+4. Consumer API results.
+5. Game Detail verification.
+6. Production database continuity evidence.
+7. Unresolved limitations.
+8. Exact remaining corrective actions, if any.
+
+FINAL STATUS:
+
+PLAYER USAGE VERIFIED
+
+PARTIALLY VERIFIED
+
+or
+
+CONFIRMED DEFECT
+
+Confirm that no production modifications occurred.

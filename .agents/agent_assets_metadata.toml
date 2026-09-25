@@ -280,3 +280,17 @@ mtime_ms = 1790356165210
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/08d3c1c9-71e9-4985-aaf1-606385c2bb26/5eeceebb-27f7-49d8-b9f5-1207c7a9808f"
 storage_version_token = "1790356172143735"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "4pLM-Rv8j1-G1FrD0vKXw"
+uri = "file://reports/gridline-player-usage-production-verification.md"
+type = "text"
+title = "Gridline Player Usage Production Verification"
+description = "Read-only assessment of the existing 2026 import and production consumer usage."
+logical_id = "531f24db-2951-4a81-8443-3b2dd7d418f1"
+content_hash = "sha256:d69a76c2cdfbf4ad4f352cb5533089b0ade84561a50a1603b9e7b32163471229"
+size = 9949
+mtime_ms = 1790367180328
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/531f24db-2951-4a81-8443-3b2dd7d418f1/2af620f3-8e29-4df2-98a6-a99442f69dd6"
+storage_version_token = "1790367206027440"
+content_type = "text/markdown"
