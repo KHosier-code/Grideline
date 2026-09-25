@@ -1,0 +1,204 @@
+# GRIDLINE — PLAYER USAGE MISSING STATISTICS REPAIR
+
+## OBJECTIVE
+
+The Player Usage section now appears on the published Gridline website, but the statistics are missing.
+
+Previous production verification confirmed:
+- Two successful 2026 player-stat imports.
+- 2,291 expected player-stat row keys.
+- Sampled statistics matching the available NFLverse source.
+- Successful production API queries for Seattle WR/QB, Cleveland RB and Kansas City QB.
+
+Investigate the actual published website and identify exactly where the data is being lost.
+
+Do not assume another import is needed.
+
+## PHASE 1 — REPRODUCE THE PROBLEM
+
+Inspect the published website.
+
+Select an actual game where 2026 player statistics are known to exist.
+
+Document:
+- Game and teams.
+- Selected season and week.
+- Player Usage section.
+- Which statistics are missing.
+- Whether player names and positions are displayed.
+- Whether missing values appear as zero, blank, unavailable or loading.
+
+Capture the actual API request and response used by the page.
+
+Do not use fabricated data.
+
+## PHASE 2 — END-TO-END DATA TRACE
+
+Select verified examples from Seattle, Cleveland and Kansas City.
+
+Trace each example through:
+
+1. Production player_game_stats records.
+2. Backend aggregation query.
+3. Consumer API response.
+4. Generated API client and response types.
+5. Frontend data-fetching hook.
+6. Player Usage calculation functions.
+7. Rendered Player Usage component.
+
+Record the actual statistics at every stage.
+
+Identify precisely where valid statistics disappear.
+
+Distinguish an unavailable source value from a valid zero.
+
+## PHASE 3 — INVESTIGATE LIKELY CAUSES
+
+Check:
+
+- Incorrect season selection.
+- Incorrect week filters.
+- Historical windows excluding available games.
+- Incorrect player ID mapping.
+- Team abbreviations or joins.
+- Season type mismatches.
+- Upcoming-game versus completed-game behavior.
+- Missing frontend field mappings.
+- Incorrect API response transformations.
+- Null values incorrectly converted to zero.
+- Required projection or sportsbook data unintentionally gating Player Usage.
+- Current published frontend and API version mismatch.
+
+Do not change calculations until the actual cause has been established.
+
+## PHASE 4 — STATISTICAL ACCURACY
+
+Verify available statistics by position.
+
+QB:
+- Passing attempts.
+- Completions.
+- Passing yards.
+- Passing touchdowns.
+- Rushing statistics where available.
+
+RB:
+- Carries.
+- Rushing yards.
+- Targets.
+- Receptions.
+- Receiving yards.
+- Touchdowns.
+
+WR/TE:
+- Targets.
+- Receptions.
+- Receiving yards.
+- Receiving touchdowns.
+
+For every metric, document its source field and calculation.
+
+Ensure:
+- Last 3 means the last three eligible completed games.
+- Last 5 means the last five eligible completed games.
+- Season means completed games before the selected game's cutoff.
+- The selected game never leaks into its own pregame statistics.
+
+Do not treat missing values as observed zeros.
+
+## PHASE 5 — IMPLEMENT THE SMALLEST FIX
+
+Once the root cause is verified, implement the minimum necessary correction in development.
+
+Do not rewrite working systems.
+
+Preserve:
+- Existing imported player statistics.
+- Existing source-file ledgers.
+- Existing prediction snapshots.
+- Approved Phase 6.1 models.
+- Sportsbook history.
+
+Do not trigger production imports or synchronization jobs.
+
+## PHASE 6 — VALIDATION
+
+Use actual available 2026 player records.
+
+Verify:
+- Seattle WR.
+- Seattle QB.
+- Cleveland RB.
+- Kansas City QB.
+- At least one other WR, RB, TE and QB where source evidence is available.
+
+Confirm each displayed statistic agrees with the underlying source-supported API calculation.
+
+Test:
+- Populated statistics.
+- Partial statistics.
+- Rookie/low-sample players.
+- Players changing teams.
+- Missing statistics.
+- Upcoming games.
+- Completed games.
+- Missing projections and sportsbook markets.
+
+Check desktop and mobile.
+
+Run frontend and API typechecks, focused regression tests and the production build locally.
+
+## PHASE 7 — DEPLOYMENT PREPARATION
+
+Identify:
+- Exact root cause.
+- Files changed.
+- Tests passed.
+- Expected main-project commit.
+- Whether deployment is required.
+- Exact post-publish verification steps.
+
+Do not automatically publish.
+
+If the fix already exists in an isolated task but not in the published main project, identify that as the cause instead of making duplicate changes.
+
+## SAFETY
+
+No:
+- Production database writes.
+- Data reimports.
+- Database-binding changes.
+- Production migrations.
+- Model retraining or promotion.
+- Phase 6.1 modifications.
+- Sportsbook-history changes.
+
+## FINAL REPORT
+
+Generate:
+
+reports/gridline-player-usage-statistics-repair.md
+
+Include:
+1. Root cause.
+2. Actual affected games and players.
+3. Evidence from each stage of the data trace.
+4. Corrective changes.
+5. Statistical accuracy verification.
+6. Tests and build results.
+7. Deployment instructions.
+8. Remaining limitations.
+
+Conclude with:
+
+FRONTEND FIX READY
+
+BACKEND FIX READY
+
+REPUBLISH REQUIRED — EXISTING CODE ALREADY CORRECT
+
+or
+
+BLOCKED — ADDITIONAL EVIDENCE REQUIRED
+
+Do not declare the published website fixed until the correct build is deployed and the actual production page has been verified.

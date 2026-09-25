@@ -308,3 +308,17 @@ mtime_ms = 1790368514472
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/7fb88ee9-6542-412e-acc8-2a6651a042c9/388bfafb-a3b2-4d97-9018-d50f70cda9bd"
 storage_version_token = "1790368566975565"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "5V1lUTU-3kOG1nwhosZUe"
+uri = "file://reports/gridline-player-usage-statistics-repair.md"
+type = "text"
+title = "Gridline Player Usage Statistics Repair"
+description = "Published-site reproduction, source-to-screen trace, statistical checks, development fix, and post-publish verification."
+logical_id = "b5712cdc-aafd-4794-a3ba-f094e1f055a0"
+content_hash = "sha256:f6512fec889af468a2c4ef93cda4436251199fca1f5703f6734481962cfe974d"
+size = 14639
+mtime_ms = 1790369847921
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/b5712cdc-aafd-4794-a3ba-f094e1f055a0/a28c981c-4854-41e8-8b22-e87f94ebfa59"
+storage_version_token = "1790369900368337"
+content_type = "text/markdown"
