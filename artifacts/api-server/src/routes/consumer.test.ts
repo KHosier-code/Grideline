@@ -5,10 +5,10 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import express from "express";
-import { inArray, like } from "drizzle-orm";
+import { desc, eq, inArray, like } from "drizzle-orm";
 import {
-  db, gamesTable, injuriesTable, playerGameStatsTable,
-  playersTable, snapCountsTable, teamsTable,
+  db, gamesTable, identitySourceImportsTable, injuriesTable, nflversePlayerIdentitiesTable,
+  playerGameStatsTable, playersTable, snapCountsTable, teamsTable,
 } from "@workspace/db";
 import {
   GetConsumerDashboardResponse,
@@ -325,6 +325,7 @@ test("database-backed Game Detail selects both teams' skill players and enforces
   const tomorrow = new Date(now + 86_400_000);
   const statusAt = new Date(now - 60_000);
   const playerId = (name: string) => `${prefix}-${name}`;
+  const receiverSnapId = `${prefix}-pfr-away-wr`;
   const players = [
     { name: "away-qb", team: away, position: "QB", targets: 0, carries: 2, snap: .95 },
     { name: "away-rb", team: away, position: "RB", targets: 3, carries: 14, snap: .65 },
@@ -384,6 +385,30 @@ test("database-backed Game Detail selects both teams' skill players and enforces
     playerId: playerId(name), name, teamId: team.id, position,
     activeStatus: name.endsWith("-out") ? "Out" : "Active", sourceUpdatedAt: statusAt,
   })));
+  const latestRealImport = () => db.select({ id: identitySourceImportsTable.id })
+    .from(identitySourceImportsTable)
+    .where(eq(identitySourceImportsTable.sourceNamespace, "nflverse"))
+    .orderBy(desc(identitySourceImportsTable.id)).limit(1);
+  const realImportBefore = await latestRealImport();
+  // This append-only observation uses a test namespace, so latest real nflverse
+  // import selection remains unchanged even though the fixture cannot be deleted.
+  const [identityImport] = await db.insert(identitySourceImportsTable).values({
+    sourceNamespace: "test-fixture:nflverse",
+    sourceUrl: `fixture://${prefix}`,
+    sourceContentHash: prefix,
+    canonicalRowsHash: prefix,
+    rowCount: 1,
+  }).returning({ id: identitySourceImportsTable.id });
+  assert.ok(identityImport);
+  await db.insert(nflversePlayerIdentitiesTable).values({
+    importId: identityImport.id,
+    gsisId: playerId("away-wr"),
+    pfrId: receiverSnapId,
+    displayName: "away-wr",
+    rowFingerprint: prefix,
+  });
+  assert.deepEqual(await latestRealImport(), realImportBefore,
+    "a route fixture must not replace the latest real nflverse import");
   await db.insert(playerGameStatsTable).values([1, 2].flatMap((week) => players.map((player) => ({
     playerId: playerId(player.name), playerName: player.name, position: player.position,
     teamId: player.team.code, opponentTeamId: player.team === away ? home.code : away.code,
@@ -392,7 +417,8 @@ test("database-backed Game Detail selects both teams' skill players and enforces
     rushingYards: player.carries * 4,
   }))));
   await db.insert(snapCountsTable).values([1, 2].flatMap((week) => players.map((player) => ({
-    gameId: week === 1 ? previousId : finalId, playerId: playerId(player.name),
+    gameId: week === 1 ? previousId : finalId,
+    playerId: player.name === "away-wr" ? receiverSnapId : playerId(player.name),
     playerName: player.name, position: player.position, season: 2026, week,
     teamId: player.team.code, opponentTeamId: player.team === away ? home.code : away.code,
     offensePct: player.snap,
@@ -419,6 +445,7 @@ test("database-backed Game Detail selects both teams' skill players and enforces
     [away.code, away.code, away.code, home.code, home.code, home.code]);
   assert.ok(upcoming.keyPlayers.every(({ eligibility }) => eligibility.status === "eligible"));
   assert.equal(upcoming.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.targets, 18);
+  assert.equal(upcoming.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.snapShare, .8);
   assert.equal(upcoming.keyPlayers.find(({ name }) => name === "home-rb")?.recentUsage.carries, 34);
   const completed = await getDetail(finalId);
   assert.equal(completed.gameState, "final");
@@ -426,9 +453,9 @@ test("database-backed Game Detail selects both teams' skill players and enforces
     ["away-qb", "away-rb", "away-out", "away-wr", "home-qb", "home-out", "home-wr", "home-rb"]);
   assert.ok(completed.keyPlayers.every(({ eligibility }) => eligibility.status === "ineligible"));
   assert.equal(completed.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.targets, 9);
+  assert.equal(completed.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.snapShare, .8);
 
-  // The fixture rows are still recent here: stale *source health* alone must
-  // prevent old Out/Active labels from becoming current pregame eligibility.
+  // Preserve the incoming source-health checks with the restored fixture.
   const assertUnknownPregameStatuses = (detail: typeof upcoming) => {
     assert.equal(detail.gameState, "pregame");
     assert.equal(detail.keyPlayers.find(({ name }) => name === "away-out")?.eligibility.status, "unknown");
@@ -450,8 +477,6 @@ test("database-backed Game Detail selects both teams' skill players and enforces
   assert.equal(stalePlayers.sourceHealth.sources.players.status, "stale");
   assertUnknownPregameStatuses(stalePlayers);
 
-  // With both feeds labeled healthy, stale row timestamps must still be
-  // rejected rather than lending a historical Out or Active label authority.
   playerSourceStatus = "healthy";
   await db.update(playersTable).set({ sourceUpdatedAt: daysAgo(4) })
     .where(like(playersTable.playerId, `${prefix}%`));
