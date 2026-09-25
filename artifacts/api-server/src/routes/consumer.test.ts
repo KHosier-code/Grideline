@@ -333,18 +333,19 @@ test("database-backed Game Detail selects both teams' skill players and enforces
     { name: "home-ol", team: home, position: "C", targets: 0, carries: 0, snap: 1 },
     { name: "home-out", team: home, position: "RB", targets: 5, carries: 30, snap: .92 },
   ];
+  let injurySourceStatus: "healthy" | "stale" = "healthy";
+  let playerSourceStatus: "healthy" | "stale" = "healthy";
   const app = express();
   app.use((req, _res, next) => { req.log = logger; next(); });
   app.get("/consumer/games/:gameId", consumerGameDetailHandler(async (filters) => {
     const games = await consumerGames(filters);
-    const fresh = { status: "healthy" as const };
     return Object.assign(games, {
       sourceHealth: {
         ...games.sourceHealth,
         sources: {
           ...games.sourceHealth.sources,
-          injuries: { ...games.sourceHealth.sources.injuries, ...fresh },
-          players: { ...games.sourceHealth.sources.players, ...fresh },
+          injuries: { ...games.sourceHealth.sources.injuries, status: injurySourceStatus },
+          players: { ...games.sourceHealth.sources.players, status: playerSourceStatus },
         },
       },
     });
@@ -421,6 +422,41 @@ test("database-backed Game Detail selects both teams' skill players and enforces
     ["away-qb", "away-rb", "away-out", "away-wr", "home-qb", "home-out", "home-wr", "home-rb"]);
   assert.ok(completed.keyPlayers.every(({ eligibility }) => eligibility.status === "ineligible"));
   assert.equal(completed.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.targets, 9);
+
+  // The fixture rows are still recent here: stale *source health* alone must
+  // prevent old Out/Active labels from becoming current pregame eligibility.
+  const assertUnknownPregameStatuses = (detail: typeof upcoming) => {
+    assert.equal(detail.gameState, "pregame");
+    assert.equal(detail.keyPlayers.find(({ name }) => name === "away-out")?.eligibility.status, "unknown");
+    assert.equal(detail.keyPlayers.find(({ name }) => name === "home-out")?.eligibility.status, "unknown");
+    assert.equal(detail.keyPlayers.find(({ name }) => name === "away-qb")?.eligibility.status, "unknown");
+    assert.ok(detail.keyPlayers.every(({ eligibility }) =>
+      eligibility.status === "unknown" && eligibility.reason === "Player status evidence is missing, invalid, or stale."));
+  };
+  injurySourceStatus = "stale";
+  const staleInjuries = await getDetail(upcomingId);
+  assert.equal(staleInjuries.sourceHealth.sources.injuries.status, "stale");
+  assert.equal(staleInjuries.sourceHealth.sources.players.status, "healthy");
+  assertUnknownPregameStatuses(staleInjuries);
+
+  injurySourceStatus = "healthy";
+  playerSourceStatus = "stale";
+  const stalePlayers = await getDetail(upcomingId);
+  assert.equal(stalePlayers.sourceHealth.sources.injuries.status, "healthy");
+  assert.equal(stalePlayers.sourceHealth.sources.players.status, "stale");
+  assertUnknownPregameStatuses(stalePlayers);
+
+  // With both feeds labeled healthy, stale row timestamps must still be
+  // rejected rather than lending a historical Out or Active label authority.
+  playerSourceStatus = "healthy";
+  await db.update(playersTable).set({ sourceUpdatedAt: daysAgo(4) })
+    .where(like(playersTable.playerId, `${prefix}%`));
+  await db.update(injuriesTable).set({ snapshotTimestamp: daysAgo(4) })
+    .where(like(injuriesTable.sourceHash, `${prefix}%`));
+  const oldStatuses = await getDetail(upcomingId);
+  assert.equal(oldStatuses.sourceHealth.sources.injuries.status, "healthy");
+  assert.equal(oldStatuses.sourceHealth.sources.players.status, "healthy");
+  assertUnknownPregameStatuses(oldStatuses);
 });
 
 test("usage team mapping joins ESPN schedule IDs to nflverse abbreviations and aliases", () => {
