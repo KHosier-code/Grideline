@@ -11,6 +11,9 @@
  */
 export type ConsumerGamePrediction = {
   modelLabel: 'Gridline Production Model';
+  /** Whether this saved snapshot was verified and frozen as the official pregame prediction. */
+  officialFinalPrediction?: boolean;
+  predictionTimestamp?: Date;
   /** @nullable */
   projectedHomeScore: number | null;
   /** @nullable */

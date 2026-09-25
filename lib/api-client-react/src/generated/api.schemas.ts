@@ -450,6 +450,9 @@ export type ConsumerGameFinalScore = {
  */
 export type ConsumerGamePrediction = {
   modelLabel: 'Gridline Production Model';
+  /** Whether this saved snapshot was verified and frozen as the official pregame prediction. */
+  officialFinalPrediction?: boolean;
+  predictionTimestamp?: string;
   /** @nullable */
   projectedHomeScore: number | null;
   /** @nullable */
@@ -2379,4 +2382,3 @@ export const GetConsumerPlayerUsageWindow = {
   last8: 'last8',
   season: 'season',
 } as const;
-

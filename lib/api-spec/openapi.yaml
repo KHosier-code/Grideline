@@ -947,6 +947,8 @@ components:
           required: [modelLabel, projectedHomeScore, projectedAwayScore, projectedMargin, projectedTotal, homeWinProbability, awayWinProbability]
           properties:
             modelLabel: { type: string, const: Gridline Production Model }
+            officialFinalPrediction: { type: boolean, description: Whether this saved snapshot was verified and frozen as the official pregame prediction. }
+            predictionTimestamp: { type: string, format: date-time }
             projectedHomeScore: { type: ["number", "null"] }
             projectedAwayScore: { type: ["number", "null"] }
             projectedMargin: { type: ["number", "null"] }

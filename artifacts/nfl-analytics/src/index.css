@@ -671,9 +671,15 @@
 .market-state-healthy, .market-state-eligible { background: hsl(142 71% 45% / .13); color: hsl(142 71% 30%); }
 .market-state-partial, .market-state-stale { background: hsl(38 80% 48% / .14); color: hsl(34 72% 34%); }
 .market-state-absent, .market-state-unavailable, .market-state-historical, .market-state-ineligible, .market-state-unknown { background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
-.consumer-source-health { margin: 16px 0; border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 16px; background: hsl(var(--card)); }
+.consumer-source-health { border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 16px; background: hsl(var(--card)); }
+.consumer-source-health summary, .market-unusable summary { cursor: pointer; }
+.consumer-source-health summary:focus-visible, .market-unusable summary:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 3px; }
+.consumer-source-health[open] summary { margin-bottom: 12px; }
+.consumer-source-hint { color: hsl(var(--muted-foreground)); font-size: 11px; }
+.market-unusable { border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 14px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.market-unusable .premium-comparison-grid { margin-top: 14px; }
 .consumer-source-heading, .consumer-source-item > div { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.consumer-source-heading { margin-bottom: 12px; }
+.consumer-source-heading { display: flex; align-items: center; gap: 12px; }
 .consumer-source-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .consumer-source-item { min-width: 0; border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 10px; display: grid; gap: 4px; }
 .consumer-source-item strong { font-size: 12px; }

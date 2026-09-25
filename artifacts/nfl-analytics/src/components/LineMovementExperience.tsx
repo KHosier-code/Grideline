@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { ConsumerMovement, ConsumerMovementItem, ConsumerMovementQuote } from '@workspace/api-client-react';
 import { AlertTriangle, LineChart as LineChartIcon } from 'lucide-react';
+import { preKickoffMovementLabel } from '../lib/consumer-presentation';
 import {
   CartesianGrid,
   Legend,
@@ -64,7 +65,7 @@ function SummaryValue({
   </div>;
 }
 
-export function LineMovementExperience({ movement }: { movement: ConsumerMovement }) {
+export function LineMovementExperience({ movement, beforeKickoff }: { movement: ConsumerMovement; beforeKickoff: boolean }) {
   const [market, setMarket] = useState<Market>('spread');
   const [book, setBook] = useState<BookFilter>('All');
   const streams = useMemo(() => movement.streams.filter((stream) =>
@@ -176,12 +177,12 @@ export function LineMovementExperience({ movement }: { movement: ConsumerMovemen
               <header><div><span>{stream.sportsbook}</span><h3>{stream.selection}</h3></div><small>{stream.observations.length} shown</small></header>
               <div className="movement-summary-grid">
                 <SummaryValue label="First observed by Gridline" market={stream.market} quote={stream.firstObserved} />
-                <SummaryValue label="Current" market={stream.market} quote={stream.current} />
-                <SummaryValue label="Final pre-kickoff" market={stream.market} quote={stream.finalPreKickoff} />
+                 <SummaryValue label="Last recorded by Gridline" market={stream.market} quote={stream.current} />
+                 {preKickoffMovementLabel(beforeKickoff) && <SummaryValue label={preKickoffMovementLabel(beforeKickoff)!} market={stream.market} quote={stream.finalPreKickoff} />}
               </div>
             </article>)}
           </div>
         </>}
-    <p className="movement-methodology">“First observed by Gridline” is the earliest persisted observation available to Gridline and does not establish when a sportsbook first published the market. “Final pre-kickoff” is the latest persisted observation at or before kickoff and makes no claim about sportsbook methodology.</p>
+    <p className="movement-methodology">“First observed by Gridline” is the earliest persisted observation available here. The last recorded price may be after kickoff on completed games. The last recorded pre-kickoff observation is not a verified sportsbook closing line.</p>
   </section>;
 }

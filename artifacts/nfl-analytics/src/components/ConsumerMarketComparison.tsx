@@ -22,18 +22,20 @@ export function ConsumerMarketComparisonCell({ comparison, className = '', eligi
           {usable ? 'Ready' : comparison.state === 'absent' ? 'No market' : comparison.state === 'stale' ? 'Stale' : 'Not eligible'}
         </span>
       </div>
-      {usable && <dl className="comparison-values">
+      <dl className="comparison-values">
         <div><dt>Gridline</dt><dd>{formatComparisonValue(comparison, comparison.modelValue)}</dd></div>
-        <div><dt>Market</dt><dd>{formatComparisonValue(comparison, comparison.marketValue)}</dd></div>
-        <div><dt>Model difference</dt><dd>{formatDifference(comparison)}</dd></div>
-      </dl>}
+        <div><dt>{usable ? 'Market' : 'Last observed market (not eligible)'}</dt><dd>{formatComparisonValue(comparison, comparison.marketValue)}</dd></div>
+        <div><dt>Model difference</dt><dd>{usable ? formatDifference(comparison) : 'Unavailable'}</dd></div>
+      </dl>
       {usable && comparison.selectedQuote && (
         <p className="selected-book">
           {comparison.selectedQuote.sportsbook} · {comparison.selectedQuote.price > 0 ? '+' : ''}
           {comparison.selectedQuote.price}
         </p>
       )}
-      {usable && <p className="consumer-note">{comparison.freshnessLabel}</p>}
+      <p className="consumer-note">{usable ? comparison.freshnessLabel : comparison.state === 'stale'
+        ? `${comparison.freshnessLabel}. No usable comparison without fresh, complete evidence.`
+        : comparison.state === 'absent' ? 'No market observation is available.' : 'Comparison unavailable: complete, fresh, eligible evidence is required.'}</p>
     </div>
   );
 }

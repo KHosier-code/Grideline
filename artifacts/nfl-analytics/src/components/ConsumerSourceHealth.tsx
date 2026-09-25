@@ -25,12 +25,13 @@ export function ConsumerSourceHealth({ health, compact = false }: { health: Heal
     {content}
   </details>;
   return (
-    <section className="consumer-source-health" aria-label="Data source health">
-      <div className="consumer-source-heading">
+    <details className="consumer-source-health" aria-label="Data source health">
+      <summary className="consumer-source-heading">
         <strong>Data feeds</strong>
         <span className={`market-state market-state-${health.status}`}>{health.status}</span>
-      </div>
+        <span className="consumer-source-hint">View feed details</span>
+      </summary>
       {content}
-    </section>
+    </details>
   );
 }

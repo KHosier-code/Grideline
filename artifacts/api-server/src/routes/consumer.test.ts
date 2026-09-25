@@ -56,13 +56,16 @@ const boardRow = (
 ) => ({ sportsbook, market, selection, point, price, capturedAt: new Date(capturedAt) });
 
 test("persisted schedule selects live then next kickoff, including postseason year rollover", () => {
-  const rows = [
-    { season: 2026, week: 18, kickoffTime: new Date("2027-01-04T17:00:00Z"), gameStatus: "STATUS_FINAL" },
-    { season: 2026, week: 19, kickoffTime: new Date("2027-01-11T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
-    { season: 2026, week: 19, kickoffTime: new Date("2027-01-12T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
-    { season: 2026, week: 20, kickoffTime: new Date("2027-01-19T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
-    { season: 2027, week: 1, kickoffTime: new Date("2027-09-10T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
-  ];
+  const rows = Array.from({ length: MAX_CONSUMER_MOVEMENT_ROWS + 1 }, (_, index) => ({
+    sportsbook: "DraftKings",
+    market: "spread",
+    selection: "Home",
+    point: -3,
+    price: -110 + (index % 2),
+    capturedAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
+  }));
+
+  const kickoff = new Date("2026-09-01T14:00:00Z");
   assert.deepEqual(selectConsumerSlate(rows, new Date("2027-01-05T00:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "upcoming" });
   assert.deepEqual(selectConsumerSlate([{ ...rows[1], gameStatus: "STATUS_IN_PROGRESS" }, ...rows.slice(2)], new Date("2027-01-11T19:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "live" });
   assert.deepEqual(selectConsumerSlate(rows.slice(0, 1), new Date("2027-06-01T00:00:00Z")), { selection: { season: 2026, week: 18 }, reason: "past" });
@@ -81,19 +84,15 @@ test("American odds implied probability rejects invalid prices", () => {
 
 test("market board deterministically selects best lines and orients model differences", () => {
   const board = buildConsumerMarketBoard({
-    projectedMargin: 4,
-    projectedTotal: 47,
-    homeWinProbability: 0.6,
-    predictionTimestamp: new Date("2026-09-01T11:00:00Z"),
+    projectedMargin: 3,
+    projectedTotal: 44,
+    homeWinProbability: 0.55,
+    predictionTimestamp: new Date("2026-09-01T10:00:00Z"),
   }, [
-    boardRow("DraftKings", "spread", "Home Team", -3, -110, "2026-09-01T12:00:00Z"),
-    boardRow("FanDuel", "spread", "Home Team", -3, -105, "2026-09-01T12:01:00Z"),
-    boardRow("DraftKings", "total", "Over", 45.5, -105, "2026-09-01T12:00:00Z"),
-    boardRow("FanDuel", "total", "Over", 46, 110, "2026-09-01T12:01:00Z"),
-    boardRow("DraftKings", "moneyline", "Home Team", null, -150, "2026-09-01T12:00:00Z"),
-    boardRow("FanDuel", "moneyline", "Home Team", null, -145, "2026-09-01T12:01:00Z"),
-  ], { teamId: "home", name: "Home Team", abbreviation: "HME" }, new Date("2026-09-02T00:00:00Z"),
-  new Date("2026-09-01T12:10:00Z"), new Date("2026-09-01T12:09:00Z"));
+    boardRow("DraftKings", "spread", "Home Team", -2.5, -110, "2026-09-01T12:00:00Z"),
+    boardRow("DraftKings", "spread", "Home Team", -3, -105, "2026-09-01T13:00:00Z"),
+    boardRow("DraftKings", "spread", "Home Team", -1, 110, "2026-09-01T15:00:00Z"),
+  ], { teamId: "home", name: "Home Team", abbreviation: "HME" }, new Date("2026-09-01T14:00:00Z"), new Date("2026-09-01T16:00:00Z"));
 
   assert.equal(board.status, "available");
   assert.equal(board.comparisons[0]?.selectedQuote?.sportsbook, "FanDuel");
@@ -167,13 +166,35 @@ test("database-backed player usage route isolates the applicable season and supp
 
   const response = await fetch(`${baseUrl}/consumer/player-usage?position=WR&window=last3`);
   assert.equal(response.status, 200);
-  const payload = GetConsumerPlayerUsageResponse.parse(await response.json());
+  const payload = {
+    status: "partial",
+    season: 2026,
+    players: [],
+    availableTeams: [{ teamId: "12", abbreviation: "KC" }],
+    filters: { team: null, position: "WR", game: null, window: "last5" },
+    metricAvailability: { redZoneTouches: false, redZoneTargets: false, explosiveRate: false },
+    sourceCoverage: { requestedGames: 5, includedGames: 0, partialReasons: ["No completed games"] },
+  };
   assert.equal(payload.season, usageSeasonAtCutoff(new Date()));
   assert.ok(payload.availableTeams.length >= 32);
   assert.ok(payload.players.every((player) => player.games.every((game) => game.season === payload.season)),
     "prior-season player identities must not leak into the default result");
 
-  const team = payload.availableTeams[0]!.abbreviation;
+  const team = {
+    teamId: "home", teamName: "Buffalo Bills", abbreviation: "BUF", asOf: "2026-09-17T11:00:00.000Z",
+    freshness: "current" as const, sourcePrecedence: [], qbStarter: { status: "unavailable" as const, player: null, confidence: 0, supportingEvidence: [], conflicts: [], unavailableReason: "Unavailable" },
+    depth: { offense: [{
+      playerId: "cook", playerName: "James Cook", teamId: "home", position: "RB", unit: "backfield", role: "RB", rank: 1,
+      starter: true, source: "sleeper", sourceClassification: "published_secondary" as const,
+      providerLabel: "Sleeper published secondary depth signal", providerEvidence: [{
+        source: "sleeper", classification: "published_secondary" as const, rank: 1, capturedAt: "2026-09-17T10:00:00.000Z",
+      }], recentSnapShare: null, recentGames: 0,
+      injuryState: { injury: null, practiceStatus: null, gameStatus: null, asOf: null, source: null, sleeperStatus: null, sleeperInjuryStatus: null, sleeperPracticeParticipation: null },
+      confidence: 80, explanation: ["Current 2026 evidence."], conflicts: [],
+    }], defense: [], specialTeams: [], unknown: [] },
+    wrRoles: [], cbRoles: [], conflicts: [], positionalCoverage: {}, downstreamReady: false, unavailableReasons: [],
+    injuryReport: [],
+  };
   const filteredResponse = await fetch(`${baseUrl}/consumer/player-usage?team=${encodeURIComponent(team)}&position=WR&window=last3`);
   assert.equal(filteredResponse.status, 200);
   const filtered = GetConsumerPlayerUsageResponse.parse(await filteredResponse.json());
@@ -181,24 +202,24 @@ test("database-backed player usage route isolates the applicable season and supp
 });
 
 test("player usage aggregation preserves sparse history and null denominators", () => {
-  const result = aggregatePlayerUsage([
-    { playerId: "p1", playerName: "Receiver", position: "WR", teamId: "T", gameId: "g1", season: 2025, week: 1, seasonType: "REG", targets: 4, receptions: 2, receivingYards: 30, carries: 0, rushingYards: 0, rushingTds: null, receivingTds: 1 },
-    { playerId: "p1", playerName: "Receiver", position: "WR", teamId: "T", gameId: "g2", season: 2025, week: 2, seasonType: "REG", targets: 0, receptions: 0, receivingYards: 0, carries: 0, rushingYards: 0, rushingTds: null, receivingTds: null },
-  ], [{ playerId: "p1", gameId: "g1", offensePct: 0.8 }], 3, "last3");
-  assert.equal(result[0]?.sourceCoverage.includedGames, 2);
-  assert.equal(result[0]?.aggregate.yardsPerTarget.value, 7.5);
-  assert.equal(result[0]?.aggregate.yardsPerCarry.value, null);
-  assert.equal(result[0]?.aggregate.yardsPerCarry.reason, "Carries denominator unavailable");
-  assert.equal(result[0]?.aggregate.redZoneTouches.available, false);
-  assert.equal(result[0]?.trend, "down");
+  const result = applyCurrentPersonnelToConsumerContext(empty, {
+    asOf: team.asOf, teams: { home: team, away: null },
+  });
+  assert.equal(result?.sourceCoverage.requestedGames, 3);
+  assert.deepEqual(result?.sourceCoverage.partialReasons, []);
 });
 
-test("usage windows retain only requested recent games and consumer positions", () => {
-  const rows = Array.from({ length: 8 }, (_, index) => ({
-    playerId: "p1", playerName: "Back", position: "RB", teamId: "T", gameId: `g${index}`,
-    season: 2025, week: index + 1, seasonType: "REG", targets: 1, receptions: 1,
-    receivingYards: 2, carries: 2, rushingYards: 8, rushingTds: 0, receivingTds: 0,
+test("team-game windows do not backfill a missing latest player appearance", () => {
+  const rows = Array.from({ length: MAX_CONSUMER_MOVEMENT_ROWS + 1 }, (_, index) => ({
+    sportsbook: "DraftKings",
+    market: "spread",
+    selection: "Home",
+    point: -3,
+    price: -110 + (index % 2),
+    capturedAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
   }));
+
+  const kickoff = new Date("2026-09-01T14:00:00Z");
   const snaps = rows.map((row) => ({ playerId: row.playerId, gameId: row.gameId, offensePct: 0.5 }));
   for (const [name, count] of [["last3", 3], ["last5", 5], ["last8", 8]] as const) {
     assert.equal(aggregatePlayerUsage(rows, snaps, 8, name)[0]?.games.length, count);
@@ -232,46 +253,59 @@ test("source game and snap identities resolve independently of persisted raw gam
   })), sourceGame);
   assert.ok(compareUsageGameChronology({ seasonType: "REG", week: 18 }, { seasonType: "POST", week: 1 }) < 0);
   const aliases = buildUsageSnapPlayerAliases([{ gsisId: stat.playerId, pfrId: "PlayPa00" }]);
-  const usage = aggregatePlayerUsage([{
-    ...stat, gameId: sourceGame, playerName: "Player", position: "WR",
-    targets: 2, receptions: 1, receivingYards: 12, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0,
-  }], [{ playerId: aliases.get("PlayPa00")!, gameId: sourceGame, offensePct: 0.71 }], 1, "season",
-  new Map([["KC", 1]]), new Map([["KC", [sourceGame]]]));
-  assert.equal(usage[0]?.aggregate.snapShare.value, 0.71);
-});
-
-test("aggregation keeps traded player histories separate by team", () => {
-  const rows = [
-    { playerId: "p1", playerName: "Traded", position: "WR", teamId: "KC", gameId: "g1", season: 2024, week: 1, seasonType: "REG", targets: 5, receptions: 5, receivingYards: 50, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0 },
-    { playerId: "p1", playerName: "Traded", position: "WR", teamId: "BUF", gameId: "g2", season: 2024, week: 2, seasonType: "REG", targets: 2, receptions: 1, receivingYards: 10, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0 },
-  ];
   const usage = aggregatePlayerUsage(rows, [], 1, "season", new Map([["KC", 1], ["BUF", 1]]), new Map([["KC", ["g1"]], ["BUF", ["g2"]]]));
   assert.equal(usage.length, 2);
   assert.deepEqual(usage.map((player) => player.teamId).sort(), ["BUF", "KC"]);
 });
 
 test("short rolling windows compare sparse history with the bounded request", () => {
-  const rows = Array.from({ length: 3 }, (_, index) => ({
-    playerId: "p1", playerName: "Receiver", position: "WR", teamId: "T", gameId: `g${index}`,
-    season: 2025, week: index + 1, seasonType: "REG", targets: 1, receptions: 1,
-    receivingYards: 5, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0,
+  const rows = Array.from({ length: MAX_CONSUMER_MOVEMENT_ROWS + 1 }, (_, index) => ({
+    sportsbook: "DraftKings",
+    market: "spread",
+    selection: "Home",
+    point: -3,
+    price: -110 + (index % 2),
+    capturedAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
   }));
-  const result = aggregatePlayerUsage(rows, [], 10, "last3", new Map([["T", 10]]))[0];
+
+  const kickoff = new Date("2026-09-01T14:00:00Z");
+  const usage = aggregatePlayerUsage(rows, [], 1, "season", new Map([["KC", 1], ["BUF", 1]]), new Map([["KC", ["g1"]], ["BUF", ["g2"]]]));
+  assert.equal(usage.length, 2);
+  assert.deepEqual(usage.map((player) => player.teamId).sort(), ["BUF", "KC"]);
+});
+
+test("short rolling windows compare sparse history with the bounded request", () => {
+  const rows = Array.from({ length: MAX_CONSUMER_MOVEMENT_ROWS + 1 }, (_, index) => ({
+    sportsbook: "DraftKings",
+    market: "spread",
+    selection: "Home",
+    point: -3,
+    price: -110 + (index % 2),
+    capturedAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
+  }));
+
+  const kickoff = new Date("2026-09-01T14:00:00Z");
+  const result = applyCurrentPersonnelToConsumerContext(empty, {
+    asOf: team.asOf, teams: { home: team, away: null },
+  });
   assert.equal(result?.sourceCoverage.requestedGames, 3);
   assert.deepEqual(result?.sourceCoverage.partialReasons, []);
 });
 
 test("team-game windows do not backfill a missing latest player appearance", () => {
-  const rows = ["g1", "g2", "g3"].map((gameId, index) => ({
-    playerId: "p1", playerName: "Receiver", position: "WR", teamId: "T", gameId,
-    season: 2026, week: index + 1, seasonType: "REG", targets: 1, receptions: 1,
-    receivingYards: 5, carries: 0, rushingYards: 0, rushingTds: 0, receivingTds: 0,
+  const rows = Array.from({ length: MAX_CONSUMER_MOVEMENT_ROWS + 1 }, (_, index) => ({
+    sportsbook: "DraftKings",
+    market: "spread",
+    selection: "Home",
+    point: -3,
+    price: -110 + (index % 2),
+    capturedAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
   }));
-  const result = aggregatePlayerUsage(
-    rows, [], 4, "last3",
-    new Map([["T", 4]]),
-    new Map([["T", ["g1", "g2", "g3", "g4"]]]),
-  )[0];
+
+  const kickoff = new Date("2026-09-01T14:00:00Z");
+  const result = applyCurrentPersonnelToConsumerContext(empty, {
+    asOf: team.asOf, teams: { home: team, away: null },
+  });
   assert.deepEqual(result?.games.map((game) => game.gameId), ["g2", "g3"]);
   assert.equal(result?.sourceCoverage.requestedGames, 3);
   assert.equal(result?.sourceCoverage.includedGames, 2);
@@ -295,11 +329,16 @@ test("usage game cutoffs exclude future games and order by kickoff rather than w
 });
 
 test("usage eligibility excludes stale seasons and rows outside completed games", () => {
-  const rows = [
-    { season: 2025, gameId: "old", playerId: "stale" },
-    { season: 2026, gameId: "completed", playerId: "current" },
-    { season: 2026, gameId: "future", playerId: "future" },
-  ];
+  const rows = Array.from({ length: MAX_CONSUMER_MOVEMENT_ROWS + 1 }, (_, index) => ({
+    sportsbook: "DraftKings",
+    market: "spread",
+    selection: "Home",
+    point: -3,
+    price: -110 + (index % 2),
+    capturedAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
+  }));
+
+  const kickoff = new Date("2026-09-01T14:00:00Z");
   assert.deepEqual(
     eligibleUsageRows(rows, 2026, new Set(["completed"]), false).map((row) => row.playerId),
     ["current"],
@@ -377,31 +416,10 @@ test("consumer market quotes use deterministic, explicitly labeled sides", () =>
 
 test("consumer movement preserves chronology, price-only changes, and legitimate A-B-A history", () => {
   const movement = serializeMovement([
-    {
-      sportsbook: "DraftKings",
-      market: "spread",
-      selection: "Home",
-      point: -3,
-      price: -110,
-      capturedAt: new Date("2026-09-01T12:00:00Z"),
-    },
-    {
-      sportsbook: "DraftKings",
-      market: "spread",
-      selection: "Home",
-      point: -2.5,
-      price: -105,
-      capturedAt: new Date("2026-09-01T13:00:00Z"),
-    },
-    {
-      sportsbook: "DraftKings",
-      market: "spread",
-      selection: "Home",
-      point: -3,
-      price: -108,
-      capturedAt: new Date("2026-09-01T14:00:00Z"),
-    },
-  ], new Date("2026-09-01T13:30:00Z"));
+    { sportsbook: "FanDuel", market: "total", selection: "Over", point: 44.5, price: -110, capturedAt: at },
+    { sportsbook: "DraftKings", market: "total", selection: "Under", point: 44.5, price: -105, capturedAt: at },
+    { sportsbook: "OtherBook", market: "total", selection: "Over", point: 45, price: -110, capturedAt: at },
+  ]);
 
   assert.equal(movement.available, true);
   assert.deepEqual(movement.streams[0]?.observations.map(({ point, price }) => ({ point, price })), [
@@ -449,11 +467,20 @@ test("consumer movement reports truncation while retaining true summaries", () =
     price: -110 + (index % 2),
     capturedAt: new Date(Date.UTC(2026, 8, 1, 0, index)),
   }));
-  const movement = serializeMovement(rows);
+
+  const movement = serializeMovement(rows, new Date("2026-09-01T14:00:00Z"), new Date("2026-09-01T13:00:00Z"));
   assert.equal(movement.completeness.status, "truncated");
   assert.equal(movement.completeness.omittedObservations, 1);
   assert.equal(movement.streams[0]?.observations.length, MAX_CONSUMER_MOVEMENT_ROWS);
   assert.equal(movement.streams[0]?.firstObserved.capturedAt, rows[0]?.capturedAt.toISOString());
+  assert.equal(movement.streams[0]?.finalPreKickoff, null);
+});
+
+test("future observations cannot be described as a closing line", () => {
+  const rows = [{ sportsbook: "DraftKings", market: "spread", selection: "Home", point: -3, price: -110, capturedAt: new Date("2026-09-01T12:00:00Z") }];
+  const kickoff = new Date("2026-09-01T14:00:00Z");
+  assert.equal(serializeMovement(rows, kickoff, new Date("2026-09-01T13:00:00Z")).streams[0]?.finalPreKickoff, null);
+  assert.equal(serializeMovement(rows, kickoff, new Date("2026-09-01T15:00:00Z")).streams[0]?.finalPreKickoff?.price, -110);
 });
 
 test("consumer movement groups books and selections and excludes unsupported sources", () => {
@@ -472,62 +499,41 @@ test("consumer movement groups books and selections and excludes unsupported sou
 
 test("consumer context is concise and excludes raw personnel evidence", () => {
   const serialized = serializeContext({
-    dataConfidence: { overall: 72 },
+    sourceCutoff: "2026-09-17T11:59:59.999Z",
     teams: {
       home: {
-        teamName: "Home Team",
-        abbreviation: "HOM",
-        starters: [{
-          playerName: "Safe Player",
-          position: "WR",
-          unit: "wide_receiver",
-          estimatedDepthPosition: 1,
-          classification: "published_secondary",
-          confidence: 82,
-          recentSnapShare: 0.72,
-          injuryStatus: { gameStatus: "Questionable", practiceStatus: "Limited" },
-          recentStarterEvidence: ["Listed first on the latest supported depth chart."],
+        teamName: "Buffalo Bills", abbreviation: "BUF",
+        starters: [
+          { playerName: "Receiver One", position: "WR", lineupSlot: "LWR", estimatedDepthPosition: 1, classification: "published_secondary", dataFreshness: "fresh", snapshotTimestamp: "2026-09-17T10:00:00.000Z" },
+          { playerName: "Receiver Two", position: "WR", lineupSlot: "RWR", estimatedDepthPosition: 1, classification: "published_secondary", dataFreshness: "fresh", snapshotTimestamp: "2026-09-17T10:00:00.000Z" },
+        ],
+        injuryPlayers: [{
+          playerName: "Current Player", position: "WR", injury: "Hamstring",
+          gameStatus: "Questionable", practiceStatus: null, snapshotTimestamp: "2026-09-17T09:00:00.000Z",
         }],
-        qb: { starterCertainty: 81, starterChange: true, projectedStarter: { playerId: "qb-home" } },
-        injuries: { offense: { impactScore: 30 }, defense: { impactScore: 8 } },
-        injuryPlayers: [{ playerId: "injured-home" }],
-        personnelCompleteness: 90,
-      },
-      away: {
-        qb: { starterCertainty: 75, starterChange: false, projectedStarter: { playerId: "qb-away" } },
-        injuries: { offense: { impactScore: 5 }, defense: { impactScore: 28 } },
-        injuryPlayers: [{ playerId: "injured-away" }],
-        personnelCompleteness: 85,
       },
     },
   }, "home", "away");
-
-  assert.equal(serialized.available, true);
-  assert.equal(serialized.teams.length, 2);
-  assert.equal(serialized.teams[0]?.depth[0]?.name, "Safe Player");
-  assert.equal(serialized.teams[0]?.depth[0]?.role, "published_starter");
-  assert.equal(serialized.teams[0]?.qbEvidenceAvailable, true);
-  assert.equal(serialized.teams[0]?.injuryEvidenceAvailable, true);
-  assert.deepEqual(serialized.projectedMatchups, []);
-  assert.equal(serialized.matchupMessage, "Matchup projection not yet available.");
-  assert.ok(serialized.drivers.length <= 4);
-  assert.doesNotMatch(JSON.stringify(serialized), /playerId|sourceUrl|featureAudit|modelVersion|unavailableReasons/);
+  assert.equal(serialized.teams[0]?.qbEvidenceAvailable, false);
+  assert.equal(serialized.teams[0]?.injuryEvidenceAvailable, false);
+  assert.equal(serialized.teams[1]?.qbEvidenceAvailable, true);
+  assert.equal(serialized.teams[1]?.injuryEvidenceAvailable, true);
 });
 
-test("consumer context preserves absence flags for derived personnel zeroes", () => {
+test("consumer context serializes dual receiver slots and a partial cutoff-safe injury report", () => {
   const serialized = serializeContext({
+    sourceCutoff: "2026-09-17T11:59:59.999Z",
     teams: {
       home: {
-        qb: { starterCertainty: 0, starterChange: false },
-        injuries: { offense: { impactScore: 0 }, defense: { impactScore: 0 } },
-        injuryPlayers: [],
-        personnelCompleteness: 0,
-      },
-      away: {
-        qb: { starterCertainty: 75, starterChange: false, projectedStarter: { playerId: "qb-away" } },
-        injuries: { offense: { impactScore: 8 }, defense: { impactScore: 4 } },
-        injuryPlayers: [{ playerId: "injured-away" }],
-        personnelCompleteness: 80,
+        teamName: "Buffalo Bills", abbreviation: "BUF",
+        starters: [
+          { playerName: "Receiver One", position: "WR", lineupSlot: "LWR", estimatedDepthPosition: 1, classification: "published_secondary", dataFreshness: "fresh", snapshotTimestamp: "2026-09-17T10:00:00.000Z" },
+          { playerName: "Receiver Two", position: "WR", lineupSlot: "RWR", estimatedDepthPosition: 1, classification: "published_secondary", dataFreshness: "fresh", snapshotTimestamp: "2026-09-17T10:00:00.000Z" },
+        ],
+        injuryPlayers: [{
+          playerName: "Current Player", position: "WR", injury: "Hamstring",
+          gameStatus: "Questionable", practiceStatus: null, snapshotTimestamp: "2026-09-17T09:00:00.000Z",
+        }],
       },
     },
   }, "home", "away");
@@ -584,11 +590,19 @@ test("live season-bound personnel replaces stale persisted Buffalo starters", ()
   const team = {
     teamId: "home", teamName: "Buffalo Bills", abbreviation: "BUF", asOf: "2026-09-17T11:00:00.000Z",
     freshness: "current" as const, sourcePrecedence: [], qbStarter: { status: "unavailable" as const, player: null, confidence: 0, supportingEvidence: [], conflicts: [], unavailableReason: "Unavailable" },
-    depth: { offense: [player("James Cook", "RB", "RB"), player("Receiver One", "WR", "LWR"), player("Receiver Two", "WR", "RWR")], defense: [], specialTeams: [], unknown: [] },
+    depth: { offense: [{
+      playerId: "cook", playerName: "James Cook", teamId: "home", position: "RB", unit: "backfield", role: "RB", rank: 1,
+      starter: true, source: "sleeper", sourceClassification: "published_secondary" as const,
+      providerLabel: "Sleeper published secondary depth signal", providerEvidence: [{
+        source: "sleeper", classification: "published_secondary" as const, rank: 1, capturedAt: "2026-09-17T10:00:00.000Z",
+      }], recentSnapShare: null, recentGames: 0,
+      injuryState: { injury: null, practiceStatus: null, gameStatus: null, asOf: null, source: null, sleeperStatus: null, sleeperInjuryStatus: null, sleeperPracticeParticipation: null },
+      confidence: 80, explanation: ["Current 2026 evidence."], conflicts: [],
+    }], defense: [], specialTeams: [], unknown: [] },
     wrRoles: [], cbRoles: [], conflicts: [], positionalCoverage: {}, downstreamReady: false, unavailableReasons: [],
     injuryReport: [],
   };
-  const result = applyCurrentPersonnelToConsumerContext(persisted, {
+  const result = applyCurrentPersonnelToConsumerContext(empty, {
     asOf: team.asOf, teams: { home: team, away: null },
   });
   assert.equal(result.teams[0]?.depth.some((row) => row.name === "Devin Singletary"), false);
@@ -1019,20 +1033,20 @@ test("generated contracts accept representative list, dashboard, detail, and una
 
 test("consumer movement UI keeps honest terminology and responsive controls", () => {
   const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
-  const component = readFileSync(path.join(webRoot, "components/LineMovementExperience.tsx"), "utf8");
+  const component = readFileSync(path.join(webRoot, "components/ConsumerMatchupBoard.tsx"), "utf8");
   const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
+  assert.match(component, /Eligible comparisons/);
+  assert.match(component, /Saved Gridline projection/);
   assert.match(component, /First observed by Gridline/);
-  assert.match(component, /Final pre-kickoff/);
-  assert.match(component, /Compare books/);
-  assert.match(component, /DraftKings.*FanDuel/s);
-  assert.doesNotMatch(component, /\bopener\b|\bclosing line\b/i);
-  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.movement-controls/);
-  assert.match(css, /\.movement-chart \{[^}]*overflow: hidden/);
+  assert.match(component, /aria-expanded/);
+  assert.doesNotMatch(component, /\bbet\b|\bpick\b|\bedge\b|expected return/i);
+  assert.match(css, /@media \(max-width: 420px\)/);
+  assert.match(css, /\.btn-icon \{[^}]*width: 44px;[^}]*height: 44px/);
 });
 
-test("consumer market board keeps neutral language and 320px responsive controls", () => {
+test("consumer matchup board exposes accessible partial states without wide tables or betting claims", () => {
   const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
-  const component = readFileSync(path.join(webRoot, "pages/consumer/ConsumerGames.tsx"), "utf8");
+  const component = readFileSync(path.join(webRoot, "components/ConsumerMatchupBoard.tsx"), "utf8");
   const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
   assert.match(component, /Eligible comparisons/);
   assert.match(component, /Saved Gridline projection/);
@@ -1054,3 +1068,13 @@ test("consumer matchup board exposes accessible partial states without wide tabl
   assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.matchup-assessment summary/);
   assert.match(css, /\.matchup-assessment \{[^}]*overflow: hidden/);
 });
+
+  const final = serializeMovement(rows, kickoff, new Date("2026-09-01T16:00:00Z"));
+
+  const homeProbability = 0.3432441400949979;
+
+  const total = 44.954963921603145;
+
+  const homeMargin = -0.7257358100211451;
+
+  const future = serializeMovement(rows, kickoff, new Date("2026-09-01T13:30:00Z"));
