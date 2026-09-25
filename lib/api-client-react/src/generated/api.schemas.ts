@@ -512,6 +512,30 @@ export interface ConsumerGame {
   availability: ConsumerGameAvailability;
 }
 
+/**
+ * @nullable
+ */
+export type ConsumerScheduleSelectionSelection = {
+  season: number;
+  week: number;
+} | null;
+
+export type ConsumerScheduleSelectionReason = typeof ConsumerScheduleSelectionReason[keyof typeof ConsumerScheduleSelectionReason];
+
+
+export const ConsumerScheduleSelectionReason = {
+  live: 'live',
+  upcoming: 'upcoming',
+  past: 'past',
+  no_schedule: 'no_schedule',
+} as const;
+
+export interface ConsumerScheduleSelection {
+  /** @nullable */
+  selection: ConsumerScheduleSelectionSelection;
+  reason: ConsumerScheduleSelectionReason;
+}
+
 export type ConsumerGamesStatus = typeof ConsumerGamesStatus[keyof typeof ConsumerGamesStatus];
 
 

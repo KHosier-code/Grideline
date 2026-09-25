@@ -1138,6 +1138,18 @@ export const GetConsumerDashboardResponse = zod.object({
 
 
 /**
+ * @summary Select a slate from persisted NFL schedule evidence
+ */
+export const GetConsumerScheduleSelectionResponse = zod.object({
+  "selection": zod.object({
+  "season": zod.number().int(),
+  "week": zod.number().int()
+}).nullable(),
+  "reason": zod.enum(['live', 'upcoming', 'past', 'no_schedule'])
+})
+
+
+/**
  * Returns at most 100 games in kickoff order from persisted data. It never starts synchronization, context builds, prediction generation, or grading.
  * @summary Read consumer-safe persisted games
  */

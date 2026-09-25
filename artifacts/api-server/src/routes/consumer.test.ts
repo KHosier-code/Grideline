@@ -12,7 +12,9 @@ import {
   GetConsumerTrendsResponse,
   GetConsumerPlayerUsageResponse,
   ListConsumerGamesResponse,
+  GetConsumerScheduleSelectionResponse,
 } from "@workspace/api-zod";
+import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
 import consumerRouter, {
   MAX_CONSUMER_GAMES,
   MAX_CONSUMER_MOVEMENT_ROWS,
@@ -52,6 +54,22 @@ const boardRow = (
   price: number,
   capturedAt: string,
 ) => ({ sportsbook, market, selection, point, price, capturedAt: new Date(capturedAt) });
+
+test("persisted schedule selects live then next kickoff, including postseason year rollover", () => {
+  const rows = [
+    { season: 2026, week: 18, kickoffTime: new Date("2027-01-04T17:00:00Z"), gameStatus: "STATUS_FINAL" },
+    { season: 2026, week: 19, kickoffTime: new Date("2027-01-11T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+    { season: 2026, week: 19, kickoffTime: new Date("2027-01-12T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+    { season: 2026, week: 20, kickoffTime: new Date("2027-01-19T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+    { season: 2027, week: 1, kickoffTime: new Date("2027-09-10T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+  ];
+  assert.deepEqual(selectConsumerSlate(rows, new Date("2027-01-05T00:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "upcoming" });
+  assert.deepEqual(selectConsumerSlate([{ ...rows[1], gameStatus: "STATUS_IN_PROGRESS" }, ...rows.slice(2)], new Date("2027-01-11T19:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "live" });
+  assert.deepEqual(selectConsumerSlate(rows.slice(0, 1), new Date("2027-06-01T00:00:00Z")), { selection: { season: 2026, week: 18 }, reason: "past" });
+  assert.deepEqual(selectConsumerSlate([{ ...rows[0], gameStatus: "STATUS_SCHEDULED" }, ...rows.slice(1)], new Date("2027-01-05T12:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "upcoming" });
+  assert.deepEqual(selectConsumerSlate([], new Date("2027-01-01T00:00:00Z")), { selection: null, reason: "no_schedule" });
+  assert.equal(GetConsumerScheduleSelectionResponse.safeParse(selectConsumerSlate(rows, new Date("2027-01-05T00:00:00Z"))).success, true);
+});
 
 test("American odds implied probability rejects invalid prices", () => {
   assert.equal(americanOddsImpliedProbability(-150), 0.6);
@@ -1016,7 +1034,8 @@ test("consumer market board keeps neutral language and 320px responsive controls
   const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
   const component = readFileSync(path.join(webRoot, "pages/consumer/ConsumerGames.tsx"), "utf8");
   const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
-  assert.match(component, /Model difference/);
+  assert.match(component, /Eligible comparisons/);
+  assert.match(component, /Saved Gridline projection/);
   assert.match(component, /First observed by Gridline/);
   assert.match(component, /aria-expanded/);
   assert.doesNotMatch(component, /\bbet\b|\bpick\b|\bedge\b|expected return/i);

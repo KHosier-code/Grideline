@@ -536,6 +536,20 @@ paths:
                 $ref: "#/components/schemas/ConsumerDashboard"
         "503":
           $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/schedule-selection:
+    get:
+      operationId: getConsumerScheduleSelection
+      tags: [nfl]
+      summary: Select a slate from persisted NFL schedule evidence
+      responses:
+        "200":
+          description: Read-only schedule selection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerScheduleSelection"
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
   /consumer/games:
     get:
       operationId: listConsumerGames
@@ -956,6 +970,17 @@ components:
           properties:
             prediction: { type: ["string", "null"] }
             market: { type: ["string", "null"] }
+    ConsumerScheduleSelection:
+      type: object
+      required: [selection, reason]
+      properties:
+        selection:
+          type: ["object", "null"]
+          required: [season, week]
+          properties:
+            season: { type: integer }
+            week: { type: integer }
+        reason: { type: string, enum: [live, upcoming, past, no_schedule] }
     ConsumerGames:
       type: object
       required: [status, coverage, games, teamRecords, recordVerification, sourceHealth]

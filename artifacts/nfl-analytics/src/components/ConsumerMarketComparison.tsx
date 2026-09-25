@@ -22,18 +22,18 @@ export function ConsumerMarketComparisonCell({ comparison, className = '', eligi
           {usable ? 'Ready' : comparison.state === 'absent' ? 'No market' : comparison.state === 'stale' ? 'Stale' : 'Not eligible'}
         </span>
       </div>
-      <dl className="comparison-values">
+      {usable && <dl className="comparison-values">
         <div><dt>Gridline</dt><dd>{formatComparisonValue(comparison, comparison.modelValue)}</dd></div>
         <div><dt>Market</dt><dd>{formatComparisonValue(comparison, comparison.marketValue)}</dd></div>
-        <div><dt>Model difference</dt><dd>{usable ? formatDifference(comparison) : 'Unavailable'}</dd></div>
-      </dl>
+        <div><dt>Model difference</dt><dd>{formatDifference(comparison)}</dd></div>
+      </dl>}
       {usable && comparison.selectedQuote && (
         <p className="selected-book">
           {comparison.selectedQuote.sportsbook} · {comparison.selectedQuote.price > 0 ? '+' : ''}
           {comparison.selectedQuote.price}
         </p>
       )}
-      <p className="consumer-note">{usable ? comparison.freshnessLabel : 'Current comparison suppressed: complete, fresh evidence is required.'}</p>
+      {usable && <p className="consumer-note">{comparison.freshnessLabel}</p>}
     </div>
   );
 }

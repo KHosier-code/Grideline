@@ -39,6 +39,8 @@ import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
 import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, interpretNflGameState, verifyTeamRecords } from "../lib/game-state";
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
+import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
+import { GetConsumerScheduleSelectionResponse } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 import {
   completeGameMarketObservation,
@@ -1447,6 +1449,22 @@ router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   } catch (error) {
     _req.log.error({ error }, "Consumer dashboard read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
+  try {
+    const schedule = await db.select({
+      season: gamesTable.season,
+      week: gamesTable.week,
+      kickoffTime: gamesTable.kickoffTime,
+      gameStatus: gamesTable.gameStatus,
+    }).from(gamesTable);
+    res.set("Cache-Control", "no-store");
+    res.json(GetConsumerScheduleSelectionResponse.parse(selectConsumerSlate(schedule, new Date())));
+  } catch (error) {
+    req.log.error({ error }, "Consumer schedule selection read failed");
+    res.status(503).json({ error: "Schedule evidence unavailable", code: "consumer_data_unavailable" });
   }
 });
 
