@@ -1370,6 +1370,7 @@ components:
             targetShare: { type: ["number", "null"] }
             receptions: { type: ["number", "null"] }
             receivingYards: { type: ["number", "null"] }
+            receivingTds: { type: ["number", "null"] }
             carries: { type: ["number", "null"] }
             rushingYards: { type: ["number", "null"] }
             totalTd: { type: ["number", "null"] }

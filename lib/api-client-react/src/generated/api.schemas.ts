@@ -1021,6 +1021,8 @@ export type ConsumerKeyPlayerRecentUsage = {
   /** @nullable */
   receivingYards: number | null;
   /** @nullable */
+  receivingTds?: number | null;
+  /** @nullable */
   carries: number | null;
   /** @nullable */
   rushingYards: number | null;

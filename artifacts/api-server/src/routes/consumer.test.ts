@@ -200,6 +200,9 @@ test("player usage aggregation preserves sparse history and null denominators", 
   assert.equal(result[0]?.aggregate.yardsPerCarry.value, null);
   assert.equal(result[0]?.aggregate.yardsPerCarry.reason, "Carries denominator unavailable");
   assert.equal(result[0]?.aggregate.redZoneTouches.available, false);
+  assert.equal(result[0]?.aggregate.receivingTds.value, 1);
+  assert.equal(result[0]?.games[0]?.metrics.receivingTds.value, 1);
+  assert.equal(result[0]?.games[1]?.metrics.receivingTds.value, null);
   assert.equal(result[0]?.trend, "down");
 });
 
@@ -214,6 +217,7 @@ test("quarterback passing stats survive aggregation; missing source stays unavai
   assert.equal(result.aggregate.completions.value, 47);
   assert.equal(result.aggregate.passingYards.value, 566);
   assert.equal(result.aggregate.passingTds.value, 5);
+  assert.equal(result.aggregate.receivingTds.value, 0);
   assert.equal(result.aggregate.totalTd.value, 5);
   assert.equal(result.games[0]?.metrics.passingYards.value, 184);
   assert.equal(result.trend, "up");

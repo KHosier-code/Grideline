@@ -60,7 +60,7 @@ const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
 
 type ConsumerFilters = { season?: number; week?: number; gameId?: string; asOf?: Date };
 
-export const USAGE_METRICS = ["snapShare", "attempts", "completions", "passingYards", "passingTds", "targets", "targetShare", "receptions", "receivingYards", "carries", "rushingYards", "totalTd", "yardsPerTarget", "yardsPerCarry"] as const;
+export const USAGE_METRICS = ["snapShare", "attempts", "completions", "passingYards", "passingTds", "targets", "targetShare", "receptions", "receivingYards", "receivingTds", "carries", "rushingYards", "totalTd", "yardsPerTarget", "yardsPerCarry"] as const;
 export const UNSUPPORTED_USAGE_METRICS = ["redZoneTouches", "redZoneTargets", "explosiveRate"] as const;
 type UsageMetric = typeof USAGE_METRICS[number];
 type UsageRow = {
@@ -218,7 +218,7 @@ export function aggregatePlayerUsage(
       attempts: metric(sum("attempts")), completions: metric(sum("completions")),
       passingYards: metric(sum("passingYards")), passingTds: metric(sum("passingTds")),
       targets: metric(targets), targetShare: metric(targets !== null && teamTargets !== null && teamTargets > 0 ? targets / teamTargets : null, teamTargets && teamTargets > 0 ? null : "Team target denominator unavailable"),
-      receptions: metric(sum("receptions")), receivingYards: metric(receivingYards),
+      receptions: metric(sum("receptions")), receivingYards: metric(receivingYards), receivingTds: metric(sum("receivingTds")),
       carries: metric(carries), rushingYards: metric(rushingYards),
       totalTd: metric(["passingTds", "rushingTds", "receivingTds"].every((key) => sum(key as keyof UsageRow) === null)
         ? null : (sum("passingTds") ?? 0) + (sum("rushingTds") ?? 0) + (sum("receivingTds") ?? 0)),
@@ -241,7 +241,7 @@ export function aggregatePlayerUsage(
           snapShare: snapMap.get(`${r.playerId}:${r.gameId}`) ?? null, targets: r.targets,
           attempts: r.attempts ?? null, completions: r.completions ?? null,
           passingYards: r.passingYards ?? null, passingTds: r.passingTds ?? null,
-          targetShare, receptions: r.receptions, receivingYards: r.receivingYards,
+          targetShare, receptions: r.receptions, receivingYards: r.receivingYards, receivingTds: r.receivingTds,
           carries: r.carries, rushingYards: r.rushingYards, totalTd: td,
           yardsPerTarget: ypt, yardsPerCarry: ypc,
         };

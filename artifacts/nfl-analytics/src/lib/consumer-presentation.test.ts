@@ -4,6 +4,7 @@ import {
   PREMIUM_GAME_DETAIL_SECTION_ORDER,
   isMatchupSupported,
   formatUsageMetric,
+  usagePeriodLabel,
   USAGE_METRIC_LABELS,
   eligibleMarketComparisons,
   supportedAssessments,
@@ -48,6 +49,14 @@ describe('consumer-presentation', () => {
     assert.strictEqual(formatUsageMetric('yardsPerCarry', 4.25), '4.3');
     assert.strictEqual(formatUsageMetric('missing', null), null);
     assert.strictEqual(USAGE_METRIC_LABELS.passingYards, 'Pass yards');
+    assert.strictEqual(USAGE_METRIC_LABELS.receivingTds, 'Rec TD');
+    assert.strictEqual(formatUsageMetric('receivingTds', 0), '0');
+    assert.strictEqual(formatUsageMetric('receivingTds', null), null);
+  });
+
+  test('usage period explicitly excludes the current matchup and other seasons', () => {
+    assert.strictEqual(usagePeriodLabel(2026, 3), '2026 season · up to 5 completed team games before Week 3');
+    assert.strictEqual(usagePeriodLabel(2026, 1), '2026 season · up to 5 completed team games before Week 1');
   });
 
   test('premium detail sections stay in the consumer hierarchy', () => {

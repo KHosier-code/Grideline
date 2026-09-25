@@ -672,6 +672,7 @@ export const GetLiveModelInputIntegrityResponse = zod.object({
 }))
 })
 
+
 /**
  * Requires authenticated administrator access. The optional featureVersion pregame-v4-personnel-context creates additive rows from pregame-v3 and never overwrites v3. Never trains or scores a betting model.
  * @summary Build an immutable version of historical pregame features
@@ -1785,6 +1786,7 @@ export const GetConsumerGameResponse = zod.object({
   "targetShare": zod.number().nullable(),
   "receptions": zod.number().nullable(),
   "receivingYards": zod.number().nullable(),
+  "receivingTds": zod.number().nullish(),
   "carries": zod.number().nullable(),
   "rushingYards": zod.number().nullable(),
   "totalTd": zod.number().nullable(),

@@ -1,6 +1,6 @@
 import type { ConsumerKeyPlayer, ConsumerTeam } from '@workspace/api-client-react';
 import { AlertTriangle, UserRound } from 'lucide-react';
-import { USAGE_METRIC_LABELS, formatUsageMetric } from '../lib/consumer-presentation';
+import { USAGE_METRIC_LABELS, formatUsageMetric, usagePeriodLabel } from '../lib/consumer-presentation';
 
 function PlayerUsageCard({ player, testId }: { player: ConsumerKeyPlayer; testId: string }) {
   const entries = Object.entries(player.recentUsage || {})
@@ -47,7 +47,7 @@ function PlayerUsageCard({ player, testId }: { player: ConsumerKeyPlayer; testId
   );
 }
 
-export function ConsumerKeyPlayers({ players, away, home }: { players: ConsumerKeyPlayer[], away: ConsumerTeam, home: ConsumerTeam }) {
+export function ConsumerKeyPlayers({ players, away, home, season, week }: { players: ConsumerKeyPlayer[], away: ConsumerTeam, home: ConsumerTeam, season: number, week: number }) {
   const awayPlayers = (players ?? []).filter(p => p.teamId === away.abbreviation);
   const homePlayers = (players ?? []).filter(p => p.teamId === home.abbreviation);
 
@@ -55,7 +55,7 @@ export function ConsumerKeyPlayers({ players, away, home }: { players: ConsumerK
     <section className="premium-key-players" data-section="player-usage" data-testid="premium-key-players" aria-labelledby="key-player-usage-heading">
       <div className="consumer-section-heading">
         <div>
-          <p className="consumer-eyebrow">Recent roles · last 5 team games</p>
+          <p className="consumer-eyebrow">{usagePeriodLabel(season, week)}</p>
           <h2 id="key-player-usage-heading">Key player usage</h2>
         </div>
       </div>
@@ -64,13 +64,13 @@ export function ConsumerKeyPlayers({ players, away, home }: { players: ConsumerK
         <div className="pkp-team" data-testid="pkp-away">
           <h3>{away.name}</h3>
           <div className="pkp-cards">
-            {awayPlayers.length > 0 ? awayPlayers.map((p, index) => <PlayerUsageCard key={`away-${p.playerId}-${index}`} player={p} testId={`player-usage-away-${index}`} />) : <p className="pkp-empty text-muted-foreground text-sm">Recent usage is unavailable for this team.</p>}
+            {awayPlayers.length > 0 ? awayPlayers.map((p, index) => <PlayerUsageCard key={`away-${p.playerId}-${index}`} player={p} testId={`player-usage-away-${index}`} />) : <p className="pkp-empty text-muted-foreground text-sm">No verified {season} usage from completed games before this matchup.</p>}
           </div>
         </div>
         <div className="pkp-team" data-testid="pkp-home">
           <h3>{home.name}</h3>
           <div className="pkp-cards">
-            {homePlayers.length > 0 ? homePlayers.map((p, index) => <PlayerUsageCard key={`home-${p.playerId}-${index}`} player={p} testId={`player-usage-home-${index}`} />) : <p className="pkp-empty text-muted-foreground text-sm">Recent usage is unavailable for this team.</p>}
+            {homePlayers.length > 0 ? homePlayers.map((p, index) => <PlayerUsageCard key={`home-${p.playerId}-${index}`} player={p} testId={`player-usage-home-${index}`} />) : <p className="pkp-empty text-muted-foreground text-sm">No verified {season} usage from completed games before this matchup.</p>}
           </div>
         </div>
       </div>

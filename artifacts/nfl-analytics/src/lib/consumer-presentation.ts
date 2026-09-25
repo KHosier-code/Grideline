@@ -53,6 +53,10 @@ export function formatUsageMetric(key: string, value: number | null): string | n
   }
 }
 
+export function usagePeriodLabel(season: number, week: number): string {
+  return `${season} season · up to 5 completed team games before Week ${week}`;
+}
+
 export const USAGE_METRIC_LABELS: Record<string, string> = {
   snapShare: 'Snap share',
   attempts: 'Pass att',
@@ -63,6 +67,7 @@ export const USAGE_METRIC_LABELS: Record<string, string> = {
   targetShare: 'Target share',
   receptions: 'Receptions',
   receivingYards: 'Rec yards',
+  receivingTds: 'Rec TD',
   carries: 'Carries',
   rushingYards: 'Rush yards',
   totalTd: 'Total TD',
