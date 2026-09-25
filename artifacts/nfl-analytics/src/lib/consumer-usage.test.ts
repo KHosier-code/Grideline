@@ -30,6 +30,14 @@ test("usage sorting keeps unavailable values last in either direction", () => {
   assert.deepEqual(sortUsagePlayers(players, "targets", "asc").map((player) => player.playerName), ["Low", "High", "Unavailable"]);
 });
 
+test("public navigation and signed-out routing expose player usage", () => {
+  const source = readFileSync(fileURLToPath(new URL("../App.tsx", import.meta.url)), "utf8");
+  const publicRoutes = source.split("if (!isSignedIn) return")[1]?.split("return <RoutedErrorBoundary><Switch>")[0];
+  assert.ok(publicRoutes, "signed-out routes must exist");
+  assert.match(publicRoutes, /<Route path="\/usage"><ConsumerShell><ConsumerUsage \/><\/ConsumerShell><\/Route>/);
+  assert.match(source, /\{ href: '\/usage', label: 'Player Usage'/);
+});
+
 test("usage page renders server-validated filters and responsive expandable table evidence", () => {
   const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
   assert.match(source, /availableTeams\.map/);

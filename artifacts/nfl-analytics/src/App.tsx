@@ -453,6 +453,7 @@ function Shell({ children }: { children: ReactNode }) {
 const consumerNav = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/games', label: 'Games', icon: CalendarDays },
+  { href: '/usage', label: 'Player Usage', icon: ChartNoAxesColumnIncreasing },
 ];
 
 function ConsumerShell({ children }: { children: ReactNode }) {
@@ -2069,6 +2070,7 @@ function Router() {
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
     <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
+    <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
     <Route path="/"><ConsumerShell><ConsumerHome /></ConsumerShell></Route>
     <Route component={SignInPage} />
   </Switch></RoutedErrorBoundary>;
