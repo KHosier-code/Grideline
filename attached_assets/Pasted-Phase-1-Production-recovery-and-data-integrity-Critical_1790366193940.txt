@@ -1,0 +1,180 @@
+Phase 1 — Production recovery and data integrity
+Critical
+These items protect the work you've already completed. They don't require us to stop developing new features locally.
+Interactive action tracker
+0 / 17 complete
+
+
+
+Check off actions as Replit completes and verifies them. This checklist tracks progress in this conversation.
+
+Phase 1 — Production recovery0 of 3 finished[ ] 
+Obtain Replit database confirmation
+Send Replit Support the follow-up request. Ask them to verify which database branch contains the correct production records and whether an archived development database contains the missing evaluation data.
+Waiting on Replit Support
+
+
+
+[ ] 
+Resolve remaining Task 81 findings
+Investigate the overdue odds-request record, missing current-season Player Usage and older invalid prediction snapshots. First verify the problems without writing to production.
+Investigation needed
+
+
+
+[ ] 
+Clear the production release gate
+After Replit confirms the intended database binding, repeat targeted checks of model artifacts, worker activity, predictions and the published website before allowing deployments.
+Blocked by verification
+
+
+
+
+
+
+Phase 2 — Model evaluation and historical evidence0 of 4 finished[ ] 
+Prepare historical baseline recovery (Task 82B)
+Build a read-only tool to validate any archived database export and document an independent reconstruction procedure if the original baseline cannot be located.
+Prompt ready
+
+
+
+[ ] 
+Recover or independently reproduce the 2025 baseline
+If an archive exists, verify its exact records and checksums. Otherwise, consider an independently identified reconstruction using the original approved methodology. Get approval before development database writes.
+Blocked
+
+
+
+[ ] 
+Rerun the personnel comparison (Task 82)
+Once verified game-level baseline evidence is available, rerun the paired 2025 comparison and permanently preserve its numerical results and individual predictions.
+Blocked
+
+
+
+[ ] 
+Investigate historical personnel limitations
+Find out whether missing historical injury, OL and secondary features reflect unavailable source evidence, mapping limitations or feature-generation gaps. Do not backfill future information into historical predictions.
+Research needed
+
+
+
+
+
+
+Phase 3 — Player and matchup intelligence0 of 5 finished[ ] 
+Finish player projection datasets (Task 83)
+Construct verified historical player-game datasets for passing, rushing, receiving, receptions and scoring touchdowns. Validate identity, usage and pregame cutoffs.
+Awaiting results
+
+
+
+[ ] 
+Finish defensive matchup data (Task 84)
+Build defensive profiles, secondary availability, historical defensive trends and carefully gated WR–CB matchup evidence.
+Awaiting results
+
+
+
+[ ] 
+Reassess current depth-chart completeness
+Audit current WR, CB, safety and offensive-line coverage. Preserve uncertainty labels and decide whether another licensed source is justified.
+Partial coverage
+
+
+
+[ ] 
+Build the Player Projection Engine (Task 86)
+Train and evaluate separate player-level models using verified datasets. Include calibrated touchdown probabilities, uncertainty and chronological validation.
+Planned
+
+
+
+[ ] 
+Introduce player props and Anytime TD research
+Compare validated player projections with available sportsbook markets. Include usage trends, red-zone involvement, injury evidence and recorded prices.
+Planned
+
+
+
+
+
+
+Phase 4 — Confidence and performance0 of 3 finished[ ] 
+Complete confidence framework (Task 85)
+Separate Data Confidence, Model Confidence and Market Edge Strength. Evaluate historical performance without manufacturing high-confidence categories.
+Awaiting results
+
+
+
+[ ] 
+Build forward performance tracking
+Preserve model predictions, available sportsbook prices, timestamps and final outcomes. Measure forecast accuracy, calibration, ATS performance and returns using actual observed prices.
+Planned
+
+
+
+[ ] 
+Establish controlled challenger governance
+Create explicit evidence requirements for comparing and potentially promoting future models. Keep current production artifacts unchanged until a candidate satisfies those requirements.
+Planned
+
+
+
+
+
+
+Phase 5 — Consumer release and operations0 of 2 finished[ ] 
+Integrate and verify completed consumer features
+Confirm Market Board, Line Movement, Matchup Board, Usage Lab and Premium Game Detail are merged, published and tested together against real production data.
+Integration pending
+
+
+
+[ ] 
+Operational monitoring and final QA
+Establish worker-failure alerts, missing-data detection, model verification and recurring production-health reporting. Finish authenticated desktop/mobile QA before broader access.
+Planned
+
+
+
+
+
+
+What we've already accomplished
+I would avoid spending more money or development time rebuilding these capabilities unless testing reveals actual problems.
+Completed work	Current position
+Phase 6.1	Three approved artifact-backed model families
+Prediction safeguards	Complete-input validation and protections against invalid snapshots
+Market Board	Implemented and tested
+Line Movement	Implemented with historical integrity safeguards
+Premium Game Detail	Implemented, responsive testing passed
+Depth-chart framework	Implemented, source completeness remains limited
+SportsDataIO evaluation	Completed; not recommended as primary
+Production recovery audit	Completed; partially verified
+Personnel comparison framework	Built; full reproduction currently blocked
+The distinction is important: several features have passed development tests, but that doesn't establish that all of them are live and functioning together in production.
+What we learned from the models
+We should use the existing results to guide development without overinterpreting them.
+Previously retained 2025 comparison
+The underlying baseline records are missing from the current development database, so these numbers haven't been independently reproduced in the latest task.Model	Personnel challenger versus baseline
+Spread	MAE lower by 0.0050; a negligible numerical change.
+Moneyline	Accuracy lower by 1.08 percentage points; log loss and Brier score higher.
+Totals	No change in reported MAE or RMSE.
+Previously retained results also showed the recorded market had lower forecast error than these models on the compared games.
+
+Another important finding is that the historical evaluation reported no usable historical injury, offensive-line or secondary source evidence for its 554 team observations. We therefore haven't properly established whether those particular personnel features would improve Gridline.
+That's why our next analytical investment should focus on verified historical datasets, rather than adding more variables indiscriminately.
+My proposed schedule
+What to work on right now
+These are parallel workstreams, not estimated completion dates.
+Workstream	Action
+Replit Support	Confirm database identity and locate any archived baseline.
+Task 82B	Prepare archive verification and reconstruction procedures.
+Task 83	Complete player projection datasets.
+Task 84	Complete defensive matchup datasets.
+Task 85	Complete confidence calculations and their evaluation.
+
+Once those tasks report back, I suggest we review them together before approving additional implementation. Their findings will determine the correct scope of Task 86, the Player Projection Engine.
+The next major milestone: a reproducible, validated system that generates team and player projections, explains its inputs, tracks performance against the market, and refuses to display unsupported confidence or matchup claims. That is the foundation I'd want established before expanding Gridline to additional users.
