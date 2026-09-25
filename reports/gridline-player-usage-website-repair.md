@@ -24,10 +24,14 @@ Read-only GETs against the published production site remain successful. The gene
 | --- | --- | --- |
 | Seattle WR | SEA WR `partial`: Cooper Kupp, Rashid Shaheed, Jaxon Smith-Njigba, Montorie Foster Jr. Jaxon has 22 targets and 277 receiving yards in completed weeks 1–2. | Future SEA at WSH `401872955` has Jaxon with 22 targets/277 yards in `keyPlayers`; the others are not guaranteed to be among the selected top five. |
 | Seattle QB | `partial`: Sam Darnold has only a week-1 row; Drew Lock has weeks 1–2. | SEA at WSH includes Drew (2 carries/13 yards), not Sam. Missing appearances are not fabricated. |
-| Cleveland RB | `partial`: Quinshon Judkins (24 carries, 54 rush yards, 7 targets), Dylan Sampson, Raheim Sanders, Jaleel McLaughlin. | CAR at CLE `401872949` includes **no RB** in `keyPlayers`: server selection ranks all positions by snap share, takes five per team, and its Cleveland top five are QB/linemen. This is a limitation of the *Key players* subset, not absent RB records; the full `/usage` table will expose them after the frontend route is published. This task does not change the separate Game Detail selection policy. |
+| Cleveland RB | `partial`: Quinshon Judkins (24 carries, 54 rush yards, 7 targets), Dylan Sampson, Raheim Sanders, Jaleel McLaughlin. | The **published** CAR at CLE `401872949` includes no RB in `keyPlayers`: its server selection ranks all positions by snap share. The development-only Game Detail fix described below changes this selection policy, not the underlying usage records. |
 | Kansas City QB | `available`: Patrick Mahomes, two completed team games, 9 carries/40 rush yards/1 TD. | KC at MIA `401872952` includes Mahomes with 9 carries. |
 
 Game-filtered usage excludes the future SEA–WSH contest from historical games. Unsupported red-zone/explosive metrics remain unavailable rather than guessed. The production `player-usage-games` GET also returns 2026 game context choices. No API-route or generated-client mismatch was found.
+
+### Game Detail selection follow-up (development only)
+
+Game Detail now selects up to five per team from QB/RB/WR/TE usage rows instead of taking the top five snap shares across all positions. It chooses a representative from each position when present, ranks RB/WR/TE by recorded touches (targets plus carries), prefers snap share for the QB, and fills remaining slots from other skill-position records. Pregame eligibility filtering happens **before** the five-card limit so an ineligible player cannot displace an eligible one; completed games retain the existing historical behavior. Null metrics are not replaced with estimated values. Cleveland/Seattle regression fixtures cover the position mix and sparse Seattle metrics. The already-mounted `ConsumerKeyPlayers` view requires no frontend or API contract change. This is a code change only: the published site still uses its previous selection until a subsequent publish, and a populated live Game Detail render of this change has not been verified.
 
 ## Component and state checks
 

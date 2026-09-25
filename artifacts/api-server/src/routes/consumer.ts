@@ -270,6 +270,29 @@ export function aggregatePlayerUsage(
   });
 }
 
+/** Pick a representative skill-position core before filling remaining Game Detail cards. */
+export function rankRecentKeyPlayers<T extends {
+  playerId: string; teamId: string | null; position: string | null;
+  aggregate: Record<string, { value: number | null }>;
+}>(players: T[], teamId: string): T[] {
+  const candidates = filterUsagePlayers(players, teamId);
+  const touches = (player: T) => (player.aggregate.targets?.value ?? 0) + (player.aggregate.carries?.value ?? 0);
+  const compare = (a: T, b: T) =>
+    touches(b) - touches(a)
+    || (b.aggregate.snapShare?.value ?? -1) - (a.aggregate.snapShare?.value ?? -1)
+    || a.playerId.localeCompare(b.playerId);
+  const selected: T[] = [];
+  for (const position of ["QB", "RB", "WR", "TE"]) {
+    const ranked = candidates.filter((player) => player.position?.toUpperCase() === position)
+      .sort(position === "QB"
+        ? (a, b) => (b.aggregate.snapShare?.value ?? -1) - (a.aggregate.snapShare?.value ?? -1) || compare(a, b)
+        : compare);
+    if (ranked[0]) selected.push(ranked[0]);
+  }
+  const ids = new Set(selected.map((player) => player.playerId));
+  return [...selected, ...candidates.filter((player) => !ids.has(player.playerId)).sort(compare)].slice(0, 5);
+}
+
 export function safeNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -1663,12 +1686,6 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
     const recent = aggregatePlayerUsage(recentRows, resolvedSnaps, 5, "last5",
       new Map([...recentTeamIds].map(([teamId, ids]) => [teamId, ids.length])),
       recentTeamIds);
-    const rankRecent = (teamId: string) => recent
-      .filter((player) => player.teamId === teamId)
-      .sort((a, b) => (b.aggregate.snapShare.value ?? 0) - (a.aggregate.snapShare.value ?? 0)
-        || (b.aggregate.targets.value ?? 0) - (a.aggregate.targets.value ?? 0)
-        || (b.aggregate.carries.value ?? 0) - (a.aggregate.carries.value ?? 0))
-      .slice(0, 5);
     const detailHome = detailTeamMaps.scheduleToAbbreviation.get(gameRow.homeTeamId) ?? gameRow.homeTeamId;
     const detailAway = detailTeamMaps.scheduleToAbbreviation.get(gameRow.awayTeamId) ?? gameRow.awayTeamId;
     const rosterRows = recent.length
@@ -1678,8 +1695,7 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       }).from(playersTable).where(inArray(playersTable.playerId, recent.map((player) => player.playerId)))
       : [];
     const rosterById = new Map(rosterRows.map((player) => [player.playerId, player]));
-    const keyPlayers = [detailAway, detailHome]
-      .flatMap(rankRecent)
+    const eligiblePlayers = recent
       .map((player) => {
          const contextTeams = finalizedContext.teams;
         const team = contextTeams.find((candidate) => candidate.side === (player.teamId === detailHome ? "home" : "away"))
@@ -1711,6 +1727,12 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
       .filter((player) => game.gameState === "pregame" || game.gameState === "scheduled"
         ? player.eligibility.status !== "ineligible"
         : true);
+    const eligibleById = new Map(eligiblePlayers.map((player) => [`${player.teamId}:${player.playerId}`, player]));
+    const keyPlayers = [detailAway, detailHome]
+      .flatMap((teamId) => rankRecentKeyPlayers(
+        recent.filter((player) => eligibleById.has(`${player.teamId}:${player.playerId}`)), teamId,
+      ))
+      .map((player) => eligibleById.get(`${player.teamId}:${player.playerId}`)!);
     const movement = serializeMovement(movementRows, kickoff);
     const teamEvidence = (teamId: string) => {
       const row = contextRows.find((candidate) => candidate.teamId === teamId);

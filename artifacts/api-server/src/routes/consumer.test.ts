@@ -35,6 +35,7 @@ import consumerRouter, {
   eligibleUsageGames,
   eligibleUsageRows,
   filterUsagePlayers,
+  rankRecentKeyPlayers,
   serializeContext,
   serializeMovement,
   serializePerformance,
@@ -205,6 +206,46 @@ test("usage windows retain only requested recent games and consumer positions", 
   }
   assert.equal(filterUsagePlayers([{ teamId: "T", position: "K" }, { teamId: "T", position: "WR" }], "T").length, 1);
   assert.equal(filterUsagePlayers([{ teamId: "T", position: "RB" }], "OTHER").length, 0);
+});
+
+test("Game Detail Cleveland cards include Judkins and skill positions ahead of linemen", () => {
+  const candidate = (playerId: string, position: string, snapShare: number | null, targets = 0, carries = 0) => ({
+    playerId, teamId: "CLE", position,
+    aggregate: { snapShare: { value: snapShare }, targets: { value: targets }, carries: { value: carries } },
+  });
+  const selected = rankRecentKeyPlayers([
+    ...Array.from({ length: 6 }, (_, i) => candidate(`lineman-${i}`, "OL", 1)),
+    candidate("quarterback", "QB", .98),
+    candidate("Quinshon Judkins", "RB", .51, 7, 24),
+    candidate("other-back", "RB", .65, 1, 5),
+    candidate("receiver", "WR", .43, 10),
+    candidate("tight-end", "TE", .5, 4),
+    candidate("other-receiver", "WR", .75, 8),
+  ], "CLE");
+  assert.deepEqual(selected.map((player) => player.playerId),
+    ["quarterback", "Quinshon Judkins", "receiver", "tight-end", "other-receiver"]);
+  assert.equal(selected.length, 5);
+});
+
+test("Game Detail Seattle cards retain sparse usage and fill missing roles without inventing metrics", () => {
+  const candidate = (playerId: string, position: string, snapShare: number | null, targets: number | null, carries: number | null) => ({
+    playerId, teamId: "SEA", position,
+    aggregate: { snapShare: { value: snapShare }, targets: { value: targets }, carries: { value: carries } },
+  });
+  const selected = rankRecentKeyPlayers([
+    candidate("Drew Lock", "QB", .67, null, 2),
+    candidate("Sam Darnold", "QB", .33, null, null),
+    candidate("Jaxon Smith-Njigba", "WR", .85, 22, null),
+    candidate("Cooper Kupp", "WR", .8, 12, null),
+    candidate("Rashid Shaheed", "WR", .65, 6, null),
+    candidate("lineman", "C", 1, null, null),
+    { ...candidate("opposing-player", "RB", 1, 20, 20), teamId: "CLE" },
+  ], "SEA");
+  assert.deepEqual(selected.map((player) => player.playerId),
+    ["Drew Lock", "Jaxon Smith-Njigba", "Cooper Kupp", "Rashid Shaheed", "Sam Darnold"]);
+  assert.equal(selected.find((player) => player.playerId === "Jaxon Smith-Njigba")?.aggregate.carries.value, null);
+  assert.equal(selected.find((player) => player.playerId === "Drew Lock")?.aggregate.targets.value, null);
+  assert.deepEqual(rankRecentKeyPlayers([], "SEA"), []);
 });
 
 test("usage team mapping joins ESPN schedule IDs to nflverse abbreviations and aliases", () => {
