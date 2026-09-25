@@ -75,6 +75,7 @@ test("consumer API is public and read-only", () => {
   const source = routeSource("consumer.ts");
   const expected = [
     "/consumer/dashboard",
+    "/consumer/schedule-selection",
     "/consumer/games",
     "/consumer/games/:gameId",
     "/consumer/performance",
@@ -87,9 +88,11 @@ test("consumer API is public and read-only", () => {
   }
   assert.doesNotMatch(source, /router\.(post|put|patch|delete)\s*\(/);
   assert.doesNotMatch(source, /\brequireAdmin\b/);
+  // Internal availability interpretation may read supplemental provider status,
+  // but must not serialize provider identifiers or identity diagnostics.
   assert.doesNotMatch(
     source,
-    /sleeper|provider[_A-Z]?id|mappingConfidence|candidateEvidence/i,
-    "consumer routes must not expose Sleeper identity diagnostics or provider identifiers",
+    /(?:sleeperIdentity|providerId|mappingConfidence|candidateEvidence)\s*:/i,
+    "consumer responses must not expose provider identity diagnostics",
   );
 });

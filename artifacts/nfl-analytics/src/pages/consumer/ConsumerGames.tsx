@@ -65,6 +65,9 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
               ? `${score(prediction.projectedMargin)} margin · ${score(prediction.projectedTotal)} total (scores unavailable)`
               : `${game.matchup.away.abbreviation} ${score(prediction.projectedAwayScore)} – ${game.matchup.home.abbreviation} ${score(prediction.projectedHomeScore)}`
             : game.availability.prediction ?? 'Unavailable'}</p>
+          {prediction && <small className="board-result">{prediction.officialFinalPrediction
+            ? 'Verified official pregame prediction · frozen before kickoff'
+            : 'Saved model projection · not a verified official pregame prediction'}</small>}
         </div>
         <div className="board-market-summary">
           <strong>Eligible comparisons: {eligible.length ? eligible.map((item) => item.market).join(', ') : 'None'}</strong>

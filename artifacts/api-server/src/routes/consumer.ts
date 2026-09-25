@@ -1445,16 +1445,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
 
 router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   try {
-    const games = await db.select({
-      gameId: gamesTable.gameId,
-      season: gamesTable.season,
-      week: gamesTable.week,
-      kickoffTime: gamesTable.kickoffTime,
-      homeTeamId: gamesTable.homeTeamId,
-      awayTeamId: gamesTable.awayTeamId,
-    }).from(gamesTable)
-      .where(eq(gamesTable.season, season))
-      .orderBy(desc(gamesTable.week), desc(gamesTable.kickoffTime), asc(gamesTable.gameId));
+    const games = await consumerGames();
     res.set("Cache-Control", "no-store");
     res.json({ status: games.length ? "available" : "unavailable", games, sourceHealth: games.sourceHealth, note: "Persisted snapshots only; this endpoint never starts model computation or data synchronization." });
   } catch (error) {
@@ -1481,23 +1472,14 @@ router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
 
 router.get("/consumer/games", async (req, res): Promise<void> => {
   const parseNumber = (value: unknown) => typeof value === "string" && /^\d+$/.test(value) ? Number(value) : undefined;
-  const season = usageSeasonAtCutoff(new Date());
+  const season = parseNumber(req.query.season);
   const week = parseNumber(req.query.week);
   if ((req.query.season !== undefined && (season === undefined || season < 2020)) || (req.query.week !== undefined && (week === undefined || week < 1 || week > 22))) {
     res.status(400).json({ error: "Choose a valid season and week.", code: "invalid_request" });
     return;
   }
   try {
-    const games = await db.select({
-      gameId: gamesTable.gameId,
-      season: gamesTable.season,
-      week: gamesTable.week,
-      kickoffTime: gamesTable.kickoffTime,
-      homeTeamId: gamesTable.homeTeamId,
-      awayTeamId: gamesTable.awayTeamId,
-    }).from(gamesTable)
-      .where(eq(gamesTable.season, season))
-      .orderBy(desc(gamesTable.week), desc(gamesTable.kickoffTime), asc(gamesTable.gameId));
+    const games = await consumerGames({ season, week });
     const summary = summarizeConsumerMarketBoards(games);
     res.set("Cache-Control", "no-store");
     res.json({
@@ -1516,7 +1498,7 @@ router.get("/consumer/games", async (req, res): Promise<void> => {
 router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
   try {
     const gameResults = await consumerGames({ gameId: req.params.gameId });
-  const game = typeof req.query.game === "string" ? req.query.game : undefined;
+    const game = gameResults[0];
     if (!game) {
       res.status(404).json({ error: "This game is not available.", code: "game_not_found" });
       return;
@@ -1663,8 +1645,8 @@ router.get("/consumer/games/:gameId", async (req, res): Promise<void> => {
     });
     const recentTeamIds = new Map<string, string[]>();
     for (const candidate of eligibleRecentGames) {
-      const home = teamMaps.scheduleToAbbreviation.get(eligible.homeTeamId) ?? eligible.homeTeamId;
-      const away = teamMaps.scheduleToAbbreviation.get(eligible.awayTeamId) ?? eligible.awayTeamId;
+      const home = detailTeamMaps.scheduleToAbbreviation.get(candidate.homeTeamId) ?? candidate.homeTeamId;
+      const away = detailTeamMaps.scheduleToAbbreviation.get(candidate.awayTeamId) ?? candidate.awayTeamId;
       recentTeamIds.set(home, [...(recentTeamIds.get(home) ?? []), candidate.gameId]);
       recentTeamIds.set(away, [...(recentTeamIds.get(away) ?? []), candidate.gameId]);
     }
@@ -1889,8 +1871,8 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
     const eligibleGames = eligibleUsageGames(selectedGames, applicableSeason, cutoff, game);
     const gameKeys = new Map<string, string>();
     for (const g of eligibleGames) {
-      const home = teamMaps.scheduleToAbbreviation.get(eligible.homeTeamId) ?? eligible.homeTeamId;
-      const away = teamMaps.scheduleToAbbreviation.get(eligible.awayTeamId) ?? eligible.awayTeamId;
+      const home = teamMaps.scheduleToAbbreviation.get(g.homeTeamId) ?? g.homeTeamId;
+      const away = teamMaps.scheduleToAbbreviation.get(g.awayTeamId) ?? g.awayTeamId;
       gameKeys.set(`${g.season}:${g.week}:${home}:${away}`, g.gameId);
       gameKeys.set(`${g.season}:${g.week}:${away}:${home}`, g.gameId);
     }
