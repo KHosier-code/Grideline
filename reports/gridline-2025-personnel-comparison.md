@@ -1,5 +1,13 @@
 # Gridline 2025 Personnel-Aware Challenger Comparison
 
+## Task 82 rerun status — blocked on September 25, 2026
+
+**The numerical results below are the previously retained comparison, not a newly reproduced rerun.** The existing development-only comparison command stopped before personnel preflight or model fitting with `No persisted accepted 2025 market baseline exists`. A separate read-only development query of `market_baseline_runs` returned no rows for season 2025. The runner requires the accepted run and its event, quote, and game-level prediction evidence to enforce exact per-family pairing. The prior run ID in the report is not a substitute for those persisted rows.
+
+In accordance with the stop rule, no alternative baseline or game set was substituted and no new statistical or per-game results were generated. The retained machine-readable report at `reports/gridline-2025-personnel-comparison.json` was left byte-for-byte unchanged (SHA-256 `4a94b018ffb377fd445abf9707360dbc597968f02fc63d172baa29aebfc4bc2c`). It preserves the earlier numerical results, but it does **not** include individual paired predictions; their differences cannot be reconstructed from these aggregates. The current development database therefore cannot independently verify those values or the historical personnel contexts. The verdicts below are historical, not a successful Task 82 rerun.
+
+**To unblock a future evaluation:** make the exact accepted baseline run and associated immutable market/evaluation evidence available in a non-production evaluation database under a separately approved data-restoration plan. Then rerun the existing command with its retained-report fingerprint guard and strict preflight. Do not rewrite historical records, change model artifacts, or infer unavailable evidence from current data.
+
 **Baseline run:** `phase6-1-2025-market-baseline-v4-bc87373a5d1a-f289a18f99c4`  
 **Training:** 2021–2024 only  
 **Test season:** 2025 only  

@@ -238,3 +238,17 @@ mtime_ms = 1790353457995
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/81c06c38-b830-49a5-b7d0-1f42a54a552e/f5088d93-b728-4cb8-9e9d-38be28b6d8bb"
 storage_version_token = "1790353508275179"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "iRmDTwABXOiWNSPPSaXOC"
+uri = "file://reports/gridline-2025-personnel-comparison.md"
+type = "text"
+title = "Personnel comparison — rerun blocked"
+description = "Retained numerical comparison with the documented missing-baseline blocker and reproduction limits."
+logical_id = "f6cda5bc-0905-42d8-90cc-0e1d2e259b55"
+content_hash = "sha256:6199c0181331dacc37d70426d6c61a95342f77ca3081f6575d2a4ac644b402b9"
+size = 9278
+mtime_ms = 1790354777915
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/f6cda5bc-0905-42d8-90cc-0e1d2e259b55/a2b3b609-6a32-4310-aaa2-b0a9ccb1b212"
+storage_version_token = "1790354798832059"
+content_type = "text/markdown"

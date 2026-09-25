@@ -1,0 +1,133 @@
+# TASK 82 — PERSONNEL-AWARE MODEL COMPARISON
+
+OBJECTIVE
+
+Rerun the existing Task #68 personnel-aware challenger evaluation against the frozen Phase 6.1 historical baseline.
+
+Preserve the numerical results permanently.
+
+This is an evaluation task, not a model-development or deployment task.
+
+OWNERSHIP
+
+Own only:
+- The existing personnel comparison runner.
+- Necessary evaluation-only test code.
+- Evaluation reports.
+
+Avoid consumer UI, live inference, data ingestion, model promotion and production database changes.
+
+REQUIREMENTS
+
+1. EXISTING FRAMEWORK
+
+Locate and inspect the merged Task #68 implementation.
+
+Reuse the existing methodology and feature definitions.
+
+Do not rebuild the evaluator unnecessarily.
+
+2. HISTORICAL INTEGRITY
+
+- Train only on eligible 2021–2024 historical data.
+- Evaluate on the exact eligible 2025 games used by the retained baseline, separately for each market family.
+- Reconstruct personnel context as it existed at each historical prediction cutoff.
+- Exclude future information and unavailable historical evidence.
+- Preserve the original baseline and its evaluation assumptions.
+
+If an exact comparison cannot be reproduced, stop and report the discrepancy.
+
+3. SPREAD COMPARISON
+
+Report:
+- Paired sample size.
+- Baseline and challenger MAE.
+- Baseline and challenger RMSE.
+- Per-game prediction differences.
+- Recorded-market benchmark.
+- ATS records under the existing evaluation rules.
+- Edge-bucket results.
+
+4. MONEYLINE COMPARISON
+
+Report:
+- Paired sample size.
+- Accuracy.
+- Log loss.
+- Brier score.
+- Calibration.
+- Recorded-market benchmark.
+- Results by probability-difference bucket where supported.
+
+5. TOTALS COMPARISON
+
+Report:
+- Paired sample size.
+- MAE.
+- RMSE.
+- Recorded-market benchmark.
+- Over/under results.
+- Historical edge buckets.
+
+6. PERSONNEL FEATURE AUDIT
+
+Report which historical personnel features were genuinely available, including:
+
+- QB certainty.
+- Player injury evidence.
+- Starter continuity.
+- Depth-chart context.
+- Offensive line context.
+- Secondary availability.
+- Other supported features.
+
+Quantify missingness and unavailable information.
+
+Do not silently replace unavailable historical features with current information.
+
+7. STATISTICAL ANALYSIS
+
+Evaluate paired performance differences.
+
+Include uncertainty intervals or appropriate paired tests where sample sizes and methodology permit.
+
+Separate numerical improvement from statistically supported improvement.
+
+Do not tune model parameters, select thresholds or change features after viewing 2025 outcomes.
+
+8. PERMANENT REPORTS
+
+Generate:
+
+reports/gridline-2025-personnel-comparison.json
+
+reports/gridline-2025-personnel-comparison.md
+
+Ensure both reports are included in the task's changes and survive merging.
+
+Include reproducibility information, evaluation configuration, dataset fingerprints and sample counts.
+
+9. SAFETY
+
+- No production changes.
+- No model promotions.
+- No refitting of production artifacts.
+- No new production predictions.
+- No changes to sportsbook history.
+- No historical data rewriting.
+
+FINAL RESPONSE
+
+Summarize:
+- Results by model family.
+- Paired numerical differences.
+- Market comparisons.
+- Statistical uncertainty.
+- Personnel feature availability.
+- Any regression.
+- Missing evidence.
+- Exact report paths.
+- Tests passed.
+- Confirmation that production was untouched.
+
+Do not claim a challenger is superior unless the preserved evidence supports that conclusion.
