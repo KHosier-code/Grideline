@@ -1053,25 +1053,28 @@ export async function freezeOfficialFinalPredictions(
   now = new Date(),
   options: { gameId?: string; cutoffOverride?: Date } = {},
 ) {
+  const latestFreezeTime = new Date(now.getTime() + CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000);
   const candidates = await db.select().from(predictionSnapshotsTable).where(and(
     eq(predictionSnapshotsTable.officialFinalPrediction, false),
     ...(options.gameId ? [eq(predictionSnapshotsTable.gameId, options.gameId)] : []),
     sql`${predictionSnapshotsTable.kickoffTime} is not null`,
-    ...(options.gameId ? [] : [lte(predictionSnapshotsTable.kickoffTime, new Date(now.getTime() + CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000))]),
-    sql`${predictionSnapshotsTable.predictionTimestamp} < ${predictionSnapshotsTable.kickoffTime}`,
+    sql`${predictionSnapshotsTable.kickoffTime} > ${now}`,
+    ...(options.gameId ? [] : [lte(predictionSnapshotsTable.kickoffTime, latestFreezeTime)]),
+    sql`${predictionSnapshotsTable.predictionTimestamp} <= ${predictionSnapshotsTable.kickoffTime} - (${CANONICAL_EVALUATION_CUTOFF_MINUTES} * interval '1 minute')`,
   )).orderBy(asc(predictionSnapshotsTable.gameId), desc(predictionSnapshotsTable.predictionTimestamp));
   const latest = new Map<string, {
     candidate: typeof candidates[number];
     canonicalMarket: Awaited<ReturnType<typeof marketData>>;
+    evaluationCutoffAt: Date;
   }>();
   let missingMarketEvidence = 0;
   for (const candidate of candidates) {
-    const cutoff = options.cutoffOverride ?? (candidate.kickoffTime
-      ? new Date(candidate.kickoffTime.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000)
-      : null);
+    const cutoff = candidate.kickoffTime
+      ? canonicalEvaluationCutoff(candidate.kickoffTime, options.cutoffOverride)
+      : null;
     if (
       cutoff
-      && cutoff <= now
+      && canonicalFreezeWindowOpen(candidate.predictionTimestamp, candidate.kickoffTime!, now, options.cutoffOverride)
       && isEligiblePredictionSnapshot(candidate)
       && !latest.has(candidate.gameId)
     ) {
@@ -1079,50 +1082,145 @@ export async function freezeOfficialFinalPredictions(
       const [home] = game
         ? await db.select().from(teamsTable).where(eq(teamsTable.teamId, game.homeTeamId)).limit(1)
         : [];
-      if (!game || !home) continue;
+      if (!game?.kickoffTime || game.kickoffTime <= now || !home) continue;
+      const evaluationCutoffAt = canonicalEvaluationCutoff(game.kickoffTime, cutoff);
+      if (candidate.predictionTimestamp > evaluationCutoffAt || evaluationCutoffAt > now) continue;
       // The model snapshot is selected independently from the market stream.
-      // Re-read the latest six book/market observations at-or-before the
+      // Re-read the latest book/market observations at-or-before the
       // immutable cutoff instead of trusting the market embedded at prediction
       // time. This is the canonical evaluation occurrence.
-      const canonicalMarket = await marketData(candidate.gameId, cutoff, {
+      const canonicalMarket = await marketData(candidate.gameId, evaluationCutoffAt, {
         teamId: home.teamId,
         name: home.teamName,
         abbreviation: home.abbreviation,
       }, false);
-      if (!canonicalSnapshotReady(candidate.predictionTimestamp, cutoff, canonicalMarket)) {
+      if (!canonicalSnapshotReady(candidate.predictionTimestamp, evaluationCutoffAt, canonicalMarket)) {
         missingMarketEvidence += 1;
         continue;
       }
-      latest.set(candidate.gameId, { candidate, canonicalMarket });
+      recordCanonicalFreezeCandidate(latest, candidate.gameId, { candidate, canonicalMarket, evaluationCutoffAt });
     }
   }
-  for (const { candidate, canonicalMarket } of latest.values()) {
-    await db.update(predictionSnapshotsTable).set({
-      marketSnapshot: canonicalMarket,
-      marketComparison: comparisonData(
+  let frozen = 0;
+  for (const { candidate, canonicalMarket, evaluationCutoffAt } of latest.values()) {
+    const canonicalComparison = comparisonData(
+      canonicalMarket,
+      candidate.projectedMargin,
+      candidate.projectedTotal,
+      candidate.homeWinProbability,
+    );
+    const result = await db.update(predictionSnapshotsTable).set({
+      marketSnapshot: canonicalMarketEvidenceSnapshot(
+        candidate.marketSnapshot,
+        candidate.marketComparison,
         canonicalMarket,
-        candidate.projectedMargin,
-        candidate.projectedTotal,
-        candidate.homeWinProbability,
+        canonicalComparison,
+        {
+          cutoffAt: evaluationCutoffAt,
+          frozenAt: now,
+          candidate,
+        },
       ),
+      marketComparison: canonicalComparison,
       officialFinalPrediction: true,
-      evaluationCutoffAt: options.cutoffOverride
-        ?? new Date(candidate.kickoffTime!.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000),
+      evaluationCutoffAt,
       frozenAt: now,
     }).where(and(
       eq(predictionSnapshotsTable.id, candidate.id),
       eq(predictionSnapshotsTable.officialFinalPrediction, false),
-    ));
+      lte(predictionSnapshotsTable.predictionTimestamp, evaluationCutoffAt),
+      sql`${evaluationCutoffAt} <= now()`,
+      sql`${predictionSnapshotsTable.kickoffTime} > now()`,
+      sql`exists (
+        select 1 from ${gamesTable}
+        where ${gamesTable.gameId} = ${predictionSnapshotsTable.gameId}
+          and ${gamesTable.kickoffTime} > now()
+          and ${evaluationCutoffAt} <= ${gamesTable.kickoffTime}
+            - (${CANONICAL_EVALUATION_CUTOFF_MINUTES} * interval '1 minute')
+      )`,
+    )).returning({ id: predictionSnapshotsTable.id });
+    if (result.length) frozen += 1;
   }
   return {
     status: "success",
-    frozen: latest.size,
+    frozen,
     pendingMarketEvidence: missingMarketEvidence,
     canonicalCutoffMinutes: CANONICAL_EVALUATION_CUTOFF_MINUTES,
-    canonicalCutoffAt: options.cutoffOverride?.toISOString()
-      ?? ([...latest.values()][0]?.candidate.kickoffTime
-        ? new Date([...latest.values()][0]!.candidate.kickoffTime!.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000).toISOString()
-        : null),
+    canonicalCutoffAt: [...latest.values()][0]?.candidate.kickoffTime
+      ? [...latest.values()][0]!.evaluationCutoffAt.toISOString()
+      : null,
+  };
+}
+
+export function canonicalEvaluationCutoff(kickoff: Date, cutoffOverride?: Date) {
+  const fixedCutoff = new Date(kickoff.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000);
+  return cutoffOverride && Number.isFinite(cutoffOverride.getTime()) && cutoffOverride < fixedCutoff
+    ? cutoffOverride
+    : fixedCutoff;
+}
+
+export function canonicalFreezeWindowOpen(
+  predictionTimestamp: Date,
+  kickoff: Date,
+  now: Date,
+  cutoffOverride?: Date,
+) {
+  const cutoff = canonicalEvaluationCutoff(kickoff, cutoffOverride);
+  return predictionTimestamp <= cutoff && cutoff <= now && now < kickoff;
+}
+
+export function recordCanonicalFreezeCandidate<T>(
+  selected: Map<string, T>,
+  gameId: string,
+  value: T,
+) {
+  if (selected.has(gameId)) return false;
+  selected.set(gameId, value);
+  return true;
+}
+
+export function canonicalMarketEvidenceSnapshot(
+  predictionTimeMarketSnapshot: Record<string, unknown>,
+  predictionTimeMarketComparison: Record<string, unknown>,
+  canonicalMarket: Record<string, unknown>,
+  canonicalComparison: Record<string, unknown>,
+  details: {
+    cutoffAt: Date;
+    frozenAt: Date;
+    candidate: {
+      snapshotKey: string;
+      predictionTimestamp: Date;
+      qbConfidence: number | null;
+      lowSample: boolean;
+      inputFeatureCount: number;
+      inputMissingFeatureCount: number;
+      homeWinProbability: number | null;
+      awayWinProbability: number | null;
+    };
+  },
+): Record<string, unknown> {
+  return {
+    ...canonicalMarket,
+    predictionTimeEvidence: {
+      marketSnapshot: predictionTimeMarketSnapshot,
+      marketComparison: predictionTimeMarketComparison,
+    },
+    canonicalEvaluation: {
+      cutoffAt: details.cutoffAt.toISOString(),
+      frozenAt: details.frozenAt.toISOString(),
+      candidateSnapshotKey: details.candidate.snapshotKey,
+      candidatePredictionTimestamp: details.candidate.predictionTimestamp.toISOString(),
+      canonicalComparison,
+      confidence: {
+        qbConfidence: details.candidate.qbConfidence,
+        lowSample: details.candidate.lowSample,
+        inputFeatureCount: details.candidate.inputFeatureCount,
+        inputMissingFeatureCount: details.candidate.inputMissingFeatureCount,
+        homeWinProbability: details.candidate.homeWinProbability,
+        awayWinProbability: details.candidate.awayWinProbability,
+      },
+      explanation: "Official prediction selected at or before the fixed 30-minute pre-kickoff cutoff; complete DraftKings and FanDuel spread, moneyline, and total evidence was observed no later than that cutoff.",
+    },
   };
 }
 
@@ -1140,19 +1238,41 @@ export function hasCompleteCanonicalMarketEvidence(
   for (const market of ["spread", "moneyline", "total"]) {
     const row = (markets as Record<string, unknown>)[market];
     if (!row || typeof row !== "object") return false;
-    for (const book of ["draftKings", "fanDuel"]) {
-      const quote = (row as Record<string, unknown>)[book];
+    const marketRow = row as Record<string, unknown>;
+    if (!Array.isArray(marketRow.quotes)) return false;
+    for (const [book, sportsbook] of [["draftKings", "DraftKings"], ["fanDuel", "FanDuel"]] as const) {
+      const quote = marketRow[book];
       if (!quote || typeof quote !== "object") return false;
       const value = quote as Record<string, unknown>;
-      if (typeof value.price !== "number" || !Number.isFinite(value.price)
+      if (value.market !== market || value.sportsbook !== sportsbook
+        || typeof value.price !== "number" || !Number.isFinite(value.price)
         || typeof value.capturedAt !== "string") return false;
-      const captured = new Date(value.capturedAt);
-      if (!Number.isFinite(captured.getTime()) || captured > cutoff
-        || cutoff.getTime() - captured.getTime() > CANONICAL_MARKET_MAX_AGE_MINUTES * 60_000) return false;
+      if (!canonicalQuoteFreshAt(value, cutoff)) return false;
       if (market !== "moneyline" && (typeof value.point !== "number" || !Number.isFinite(value.point))) return false;
+      const outcomes = new Set<string>();
+      for (const quote of marketRow.quotes) {
+        if (!quote || typeof quote !== "object") continue;
+        const rawQuote = quote as Record<string, unknown>;
+        if (rawQuote.sportsbook !== sportsbook) continue;
+        if (rawQuote.market !== market || typeof rawQuote.selection !== "string" || !rawQuote.selection
+          || typeof rawQuote.price !== "number" || !Number.isFinite(rawQuote.price)
+          || typeof rawQuote.capturedAt !== "string" || !canonicalQuoteFreshAt(rawQuote, cutoff)
+          || (market !== "moneyline"
+            && (typeof rawQuote.point !== "number" || !Number.isFinite(rawQuote.point)))) return false;
+        outcomes.add(rawQuote.selection);
+      }
+      if (market === "moneyline" && outcomes.size < 2) return false;
     }
   }
   return true;
+}
+
+function canonicalQuoteFreshAt(quote: Record<string, unknown>, cutoff: Date) {
+  if (typeof quote.capturedAt !== "string") return false;
+  const captured = new Date(quote.capturedAt);
+  return Number.isFinite(captured.getTime())
+    && captured <= cutoff
+    && cutoff.getTime() - captured.getTime() <= CANONICAL_MARKET_MAX_AGE_MINUTES * 60_000;
 }
 
 /**
@@ -1165,8 +1285,33 @@ export function canonicalSnapshotReady(
   cutoff: Date,
   marketSnapshot: Record<string, unknown>,
 ) {
-  return predictionTimestamp <= cutoff
+  return Number.isFinite(predictionTimestamp.getTime())
+    && Number.isFinite(cutoff.getTime())
+    && predictionTimestamp <= cutoff
     && hasCompleteCanonicalMarketEvidence(marketSnapshot, cutoff);
+}
+
+export function isCanonicalOfficialPrediction(
+  snapshot: typeof predictionSnapshotsTable.$inferSelect,
+  authoritativeKickoff: Date | null | undefined,
+  asOf = new Date(),
+) {
+  if (!snapshot.officialFinalPrediction || !authoritativeKickoff
+    || !snapshot.kickoffTime || !snapshot.frozenAt || !snapshot.evaluationCutoffAt
+    || snapshot.frozenAt > asOf || snapshot.frozenAt >= authoritativeKickoff
+    || snapshot.evaluationCutoffAt > snapshot.frozenAt
+    || snapshot.evaluationCutoffAt > new Date(authoritativeKickoff.getTime()
+      - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000)
+    || snapshot.predictionTimestamp > snapshot.evaluationCutoffAt
+    || !isEligiblePredictionSnapshot(snapshot)
+    || !hasCompleteCanonicalMarketEvidence(snapshot.marketSnapshot, snapshot.evaluationCutoffAt)) return false;
+  const meta = snapshot.marketSnapshot.canonicalEvaluation as Record<string, unknown> | undefined;
+  const predictionTime = snapshot.marketSnapshot.predictionTimeEvidence;
+  return Boolean(meta && predictionTime && typeof predictionTime === "object"
+    && meta.cutoffAt === snapshot.evaluationCutoffAt.toISOString()
+    && meta.frozenAt === snapshot.frozenAt.toISOString()
+    && meta.candidateSnapshotKey === snapshot.snapshotKey
+    && meta.candidatePredictionTimestamp === snapshot.predictionTimestamp.toISOString());
 }
 
 function resultForLine(actual: number, line: number | null, direction: "spread" | "total") {
@@ -1245,8 +1390,8 @@ async function gradeSnapshot(snapshot: typeof predictionSnapshotsTable.$inferSel
 }
 
 export async function gradeCompletedPredictions(now = new Date()) {
-  const predictions = (await db.select().from(predictionSnapshotsTable).where(eq(predictionSnapshotsTable.officialFinalPrediction, true)))
-    .filter(isEligiblePredictionSnapshot);
+  const predictions = await db.select().from(predictionSnapshotsTable)
+    .where(eq(predictionSnapshotsTable.officialFinalPrediction, true));
   if (!predictions.length) return { status: "success", graded: 0 };
   const gameIds = [...new Set(predictions.map((prediction) => prediction.gameId))];
   const games = await db.select().from(gamesTable).where(inArray(gamesTable.gameId, gameIds));
@@ -1256,7 +1401,7 @@ export async function gradeCompletedPredictions(now = new Date()) {
   for (const prediction of predictions) {
     if (gradedIds.has(prediction.id)) continue;
     const game = games.find((candidate) => candidate.gameId === prediction.gameId);
-    if (!game) continue;
+    if (!game || !isCanonicalOfficialPrediction(prediction, game.kickoffTime, now)) continue;
     const authoritativeFinal = interpretNflGameState(game, now) === "final"
       && game.finalHomeScore !== null && game.finalAwayScore !== null
       && Boolean(game.kickoffTime && game.kickoffTime <= now);
@@ -1304,16 +1449,14 @@ export async function getPredictionPerformance(
       window ? eq(gamesTable.week, window.week) : undefined,
     ))
     .orderBy(desc(predictionSnapshotsTable.predictionTimestamp));
-  const selectedRowsWithSentinel = maxOfficialPredictions === undefined
-    ? await query
-    : await query.limit(maxOfficialPredictions + 1);
+  const selectedRowsWithSentinel = (await query).filter((row) =>
+    isCanonicalOfficialPrediction(row.prediction, row.game?.kickoffTime));
   const windowTruncated = maxOfficialPredictions !== undefined
     && selectedRowsWithSentinel.length > maxOfficialPredictions;
   const selectedRows = maxOfficialPredictions === undefined
     ? selectedRowsWithSentinel
     : selectedRowsWithSentinel.slice(0, maxOfficialPredictions);
   const rows = selectedRows
-    .filter((row) => isEligiblePredictionSnapshot(row.prediction))
     .filter((row) => matchesPredictionPerformanceWindow(row, window));
   const graded = rows.filter((row) => row.grade);
   const abs = (values: Array<number | null | undefined>) => values.filter((value): value is number => typeof value === "number").map(Math.abs);
@@ -1374,12 +1517,13 @@ export async function getPredictionPerformance(
 
 export async function getModelDriftMonitoring() {
   const rows = (await db
-    .select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable })
+    .select({ prediction: predictionSnapshotsTable, grade: predictionGradesTable, game: gamesTable })
     .from(predictionSnapshotsTable)
     .innerJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
+    .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
     .where(eq(predictionSnapshotsTable.officialFinalPrediction, true))
     .orderBy(desc(predictionSnapshotsTable.predictionTimestamp)))
-    .filter((row) => isEligiblePredictionSnapshot(row.prediction));
+    .filter((row) => isCanonicalOfficialPrediction(row.prediction, row.game.kickoffTime));
   const results = (["spread", "moneyline", "totals"] as const).map((family) => {
     const versionKey = family === "spread" ? "spreadModelVersion" : family === "moneyline" ? "moneylineModelVersion" : "totalsModelVersion";
     const groups = new Map<string, typeof rows>();
@@ -1680,7 +1824,7 @@ export async function generateWeeklyLearningReport(season: number, week: number)
     .innerJoin(predictionGradesTable, eq(predictionGradesTable.predictionId, predictionSnapshotsTable.id))
     .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
     .where(and(eq(gamesTable.season, season), eq(gamesTable.week, week))))
-    .filter((row) => isEligiblePredictionSnapshot(row.prediction));
+    .filter((row) => isCanonicalOfficialPrediction(row.prediction, row.game.kickoffTime));
   const misses = selectedRows
     .sort((left, right) => Math.max(Math.abs(right.grade.marginError ?? 0), Math.abs(right.grade.totalError ?? 0)) - Math.max(Math.abs(left.grade.marginError ?? 0), Math.abs(left.grade.totalError ?? 0)))
     .slice(0, 5)

@@ -982,6 +982,33 @@ export const GetConsumerDashboardResponse = zod.object({
   "homeWinProbability": zod.number().nullable(),
   "awayWinProbability": zod.number().nullable()
 }).nullable(),
+  "officialPredictionStatus": zod.enum(['official', 'not_created']),
+  "officialPrediction": zod.object({
+  "modelLabel": zod.literal("Gridline Production Model"),
+  "projectedHomeScore": zod.number().nullable(),
+  "projectedAwayScore": zod.number().nullable(),
+  "projectedMargin": zod.number().nullable(),
+  "projectedTotal": zod.number().nullable(),
+  "homeWinProbability": zod.number().nullable(),
+  "awayWinProbability": zod.number().nullable(),
+  "predictionTimestamp": zod.coerce.date(),
+  "frozenAt": zod.coerce.date(),
+  "evaluationCutoffAt": zod.coerce.date(),
+  "featureVersion": zod.string(),
+  "modelVersions": zod.object({
+  "spread": zod.string().nullable(),
+  "moneyline": zod.string().nullable(),
+  "total": zod.string().nullable()
+}),
+  "confidence": zod.object({
+  "qb": zod.number().nullable(),
+  "lowSample": zod.boolean(),
+  "inputFeatureCount": zod.number().int(),
+  "inputMissingFeatureCount": zod.number().int()
+}),
+  "inputSourceEvidence": zod.record(zod.string(), zod.unknown()).nullable(),
+  "marketSnapshot": zod.record(zod.string(), zod.unknown())
+}).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
   "sportsbook": zod.string(),
@@ -1200,6 +1227,33 @@ export const ListConsumerGamesResponse = zod.object({
   "projectedTotal": zod.number().nullable(),
   "homeWinProbability": zod.number().nullable(),
   "awayWinProbability": zod.number().nullable()
+}).nullable(),
+  "officialPredictionStatus": zod.enum(['official', 'not_created']),
+  "officialPrediction": zod.object({
+  "modelLabel": zod.literal("Gridline Production Model"),
+  "projectedHomeScore": zod.number().nullable(),
+  "projectedAwayScore": zod.number().nullable(),
+  "projectedMargin": zod.number().nullable(),
+  "projectedTotal": zod.number().nullable(),
+  "homeWinProbability": zod.number().nullable(),
+  "awayWinProbability": zod.number().nullable(),
+  "predictionTimestamp": zod.coerce.date(),
+  "frozenAt": zod.coerce.date(),
+  "evaluationCutoffAt": zod.coerce.date(),
+  "featureVersion": zod.string(),
+  "modelVersions": zod.object({
+  "spread": zod.string().nullable(),
+  "moneyline": zod.string().nullable(),
+  "total": zod.string().nullable()
+}),
+  "confidence": zod.object({
+  "qb": zod.number().nullable(),
+  "lowSample": zod.boolean(),
+  "inputFeatureCount": zod.number().int(),
+  "inputMissingFeatureCount": zod.number().int()
+}),
+  "inputSourceEvidence": zod.record(zod.string(), zod.unknown()).nullable(),
+  "marketSnapshot": zod.record(zod.string(), zod.unknown())
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
@@ -1438,6 +1492,33 @@ export const GetConsumerGameResponse = zod.object({
   "projectedTotal": zod.number().nullable(),
   "homeWinProbability": zod.number().nullable(),
   "awayWinProbability": zod.number().nullable()
+}).nullable(),
+  "officialPredictionStatus": zod.enum(['official', 'not_created']),
+  "officialPrediction": zod.object({
+  "modelLabel": zod.literal("Gridline Production Model"),
+  "projectedHomeScore": zod.number().nullable(),
+  "projectedAwayScore": zod.number().nullable(),
+  "projectedMargin": zod.number().nullable(),
+  "projectedTotal": zod.number().nullable(),
+  "homeWinProbability": zod.number().nullable(),
+  "awayWinProbability": zod.number().nullable(),
+  "predictionTimestamp": zod.coerce.date(),
+  "frozenAt": zod.coerce.date(),
+  "evaluationCutoffAt": zod.coerce.date(),
+  "featureVersion": zod.string(),
+  "modelVersions": zod.object({
+  "spread": zod.string().nullable(),
+  "moneyline": zod.string().nullable(),
+  "total": zod.string().nullable()
+}),
+  "confidence": zod.object({
+  "qb": zod.number().nullable(),
+  "lowSample": zod.boolean(),
+  "inputFeatureCount": zod.number().int(),
+  "inputMissingFeatureCount": zod.number().int()
+}),
+  "inputSourceEvidence": zod.record(zod.string(), zod.unknown()).nullable(),
+  "marketSnapshot": zod.record(zod.string(), zod.unknown())
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({

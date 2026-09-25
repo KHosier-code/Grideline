@@ -460,6 +460,11 @@
   .consumer-matchup strong { width: 42px; font-family: var(--app-font-serif); font-size: 19px; }
   .consumer-matchup span { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
   .consumer-matchup b { font-family: var(--app-font-mono); font-size: 18px; }
+  .consumer-game-card:focus-visible, .consumer-account a:focus-visible, .consumer-topbar a:focus-visible { outline: 3px solid hsl(var(--accent)); outline-offset: 3px; }
+  .consumer-prediction-states { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid hsl(var(--border)); padding: 12px 17px; }
+  .consumer-prediction-states > div { min-width: 0; }
+  .consumer-prediction-states small { display: block; margin-bottom: 4px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 8px; letter-spacing: .05em; text-transform: uppercase; }
+  .consumer-prediction-states span { display: block; overflow-wrap: anywhere; font-size: 11px; font-weight: 700; }
   .consumer-card-metrics { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid hsl(var(--border)); background: hsl(var(--secondary) / .3); }
   .consumer-card-metrics span, .consumer-detail-metrics span, .consumer-summary-grid span { padding: 14px 17px; font-size: 12px; font-weight: 700; }
   .consumer-card-metrics span + span { border-left: 1px solid hsl(var(--border)); }
@@ -904,6 +909,8 @@
   .consumer-main { padding: 30px 16px 60px; }
   .consumer-hero { min-height: 240px; padding: 30px 24px; }
   .consumer-hero-icon { display: none; }
+  .consumer-prediction-states { gap: 6px; padding-right: 12px; padding-left: 12px; }
+  .consumer-prediction-states span { font-size: 10px; }
   .consumer-card-grid, .consumer-performance-grid, .consumer-evidence-grid, .consumer-trend-list { grid-template-columns: 1fr; }
   .consumer-page-header { align-items: stretch; flex-direction: column; }
   .consumer-filters { width: 100%; }

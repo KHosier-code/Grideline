@@ -38,6 +38,27 @@ export function formatQuote(quote: ConsumerMarketQuote | null, kind: 'spread' | 
 
 const score = (value?: number | null) => value === null || value === undefined ? '—' : value.toFixed(1);
 
+export function ConsumerPredictionStates({ game }: { game: ConsumerGame }) {
+  const saved = game.prediction;
+  const official = game.officialPrediction;
+  return (
+    <div className="consumer-prediction-states" aria-label="Game prediction and result states">
+      <div data-testid={`saved-projection-${game.gameId}`}>
+        <small>Saved projection</small>
+        <span>{saved ? `${score(saved.projectedAwayScore)} – ${score(saved.projectedHomeScore)}` : 'No saved projection available'}</span>
+      </div>
+      <div data-testid={`official-prediction-${game.gameId}`} data-status={game.officialPredictionStatus}>
+        <small>Official prediction</small>
+        <span>{official ? `${score(official.projectedAwayScore)} – ${score(official.projectedHomeScore)}` : 'Official prediction not created'}</span>
+      </div>
+      <div data-testid={`final-result-${game.gameId}`}>
+        <small>Final result</small>
+        <span>{game.finalScore ? `${game.finalScore.away} – ${game.finalScore.home}` : 'No final result yet'}</span>
+      </div>
+    </div>
+  );
+}
+
 export function ConsumerGameCard({ game, compact = false, href = `/games/${game.gameId}` }: { game: ConsumerGame; compact?: boolean; href?: string }) {
   const final = game.finalScore;
   const prediction = game.prediction;
@@ -48,6 +69,7 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
         <div><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(prediction?.projectedAwayScore)}</b>
         <div><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span></div><b>{final ? final.home : score(prediction?.projectedHomeScore)}</b>
       </div>
+      <ConsumerPredictionStates game={game} />
       {!compact && <div className="consumer-card-metrics">
         <span><small>Projection</small>{prediction ? `${score(prediction.projectedMargin)} margin` : game.availability.prediction ?? 'Updating'}</span>
         <span><small>Market spread</small>{game.recommendation.markets.spread && (!game.kickoffTime || new Date(game.kickoffTime).getTime() > Date.now()) ? formatQuote(game.marketBoard.comparisons.find((comparison) => comparison.market === 'spread')?.selectedQuote ?? null, 'spread') : 'Current comparison unavailable'}</span>

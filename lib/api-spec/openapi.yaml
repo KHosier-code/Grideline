@@ -907,7 +907,7 @@ components:
         results: { type: array, items: { type: object, additionalProperties: true } }
     ConsumerGame:
       type: object
-      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, market, marketBoard, recommendation, dataConfidence, confidence, availability]
+      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, officialPredictionStatus, officialPrediction, market, marketBoard, recommendation, dataConfidence, confidence, availability]
       properties:
         gameId: { type: string }
         season: { type: integer }
@@ -939,6 +939,39 @@ components:
             projectedTotal: { type: ["number", "null"] }
             homeWinProbability: { type: ["number", "null"] }
             awayWinProbability: { type: ["number", "null"] }
+        officialPredictionStatus: { type: string, enum: [official, not_created] }
+        officialPrediction:
+          type: ["object", "null"]
+          required: [modelLabel, projectedHomeScore, projectedAwayScore, projectedMargin, projectedTotal, homeWinProbability, awayWinProbability, predictionTimestamp, frozenAt, evaluationCutoffAt, featureVersion, modelVersions, confidence, inputSourceEvidence, marketSnapshot]
+          properties:
+            modelLabel: { type: string, const: Gridline Production Model }
+            projectedHomeScore: { type: ["number", "null"] }
+            projectedAwayScore: { type: ["number", "null"] }
+            projectedMargin: { type: ["number", "null"] }
+            projectedTotal: { type: ["number", "null"] }
+            homeWinProbability: { type: ["number", "null"] }
+            awayWinProbability: { type: ["number", "null"] }
+            predictionTimestamp: { type: string, format: date-time }
+            frozenAt: { type: string, format: date-time }
+            evaluationCutoffAt: { type: string, format: date-time }
+            featureVersion: { type: string }
+            modelVersions:
+              type: object
+              required: [spread, moneyline, total]
+              properties:
+                spread: { type: ["string", "null"] }
+                moneyline: { type: ["string", "null"] }
+                total: { type: ["string", "null"] }
+            confidence:
+              type: object
+              required: [qb, lowSample, inputFeatureCount, inputMissingFeatureCount]
+              properties:
+                qb: { type: ["number", "null"] }
+                lowSample: { type: boolean }
+                inputFeatureCount: { type: integer }
+                inputMissingFeatureCount: { type: integer }
+            inputSourceEvidence: { type: ["object", "null"], additionalProperties: true }
+            marketSnapshot: { type: object, additionalProperties: true }
         market: { $ref: "#/components/schemas/ConsumerGameMarket" }
         marketBoard: { $ref: "#/components/schemas/ConsumerMarketBoard" }
         recommendation: { $ref: "#/components/schemas/ConsumerRecommendation" }

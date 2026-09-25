@@ -464,6 +464,66 @@ export type ConsumerGamePrediction = {
   awayWinProbability: number | null;
 } | null;
 
+export type ConsumerGameOfficialPredictionStatus = typeof ConsumerGameOfficialPredictionStatus[keyof typeof ConsumerGameOfficialPredictionStatus];
+
+
+export const ConsumerGameOfficialPredictionStatus = {
+  official: 'official',
+  not_created: 'not_created',
+} as const;
+
+export type ConsumerGameOfficialPredictionModelVersions = {
+  /** @nullable */
+  spread: string | null;
+  /** @nullable */
+  moneyline: string | null;
+  /** @nullable */
+  total: string | null;
+};
+
+export type ConsumerGameOfficialPredictionConfidence = {
+  /** @nullable */
+  qb: number | null;
+  lowSample: boolean;
+  inputFeatureCount: number;
+  inputMissingFeatureCount: number;
+};
+
+/**
+ * @nullable
+ */
+export type ConsumerGameOfficialPredictionInputSourceEvidence = { [key: string]: unknown } | null;
+
+export type ConsumerGameOfficialPredictionMarketSnapshot = { [key: string]: unknown };
+
+/**
+ * @nullable
+ */
+export type ConsumerGameOfficialPrediction = {
+  modelLabel: 'Gridline Production Model';
+  /** @nullable */
+  projectedHomeScore: number | null;
+  /** @nullable */
+  projectedAwayScore: number | null;
+  /** @nullable */
+  projectedMargin: number | null;
+  /** @nullable */
+  projectedTotal: number | null;
+  /** @nullable */
+  homeWinProbability: number | null;
+  /** @nullable */
+  awayWinProbability: number | null;
+  predictionTimestamp: string;
+  frozenAt: string;
+  evaluationCutoffAt: string;
+  featureVersion: string;
+  modelVersions: ConsumerGameOfficialPredictionModelVersions;
+  confidence: ConsumerGameOfficialPredictionConfidence;
+  /** @nullable */
+  inputSourceEvidence: ConsumerGameOfficialPredictionInputSourceEvidence;
+  marketSnapshot: ConsumerGameOfficialPredictionMarketSnapshot;
+} | null;
+
 export type ConsumerGameDataConfidenceLabel = typeof ConsumerGameDataConfidenceLabel[keyof typeof ConsumerGameDataConfidenceLabel];
 
 
@@ -504,6 +564,9 @@ export interface ConsumerGame {
   finalScore: ConsumerGameFinalScore;
   /** @nullable */
   prediction: ConsumerGamePrediction;
+  officialPredictionStatus: ConsumerGameOfficialPredictionStatus;
+  /** @nullable */
+  officialPrediction: ConsumerGameOfficialPrediction;
   market: ConsumerGameMarket;
   marketBoard: ConsumerMarketBoard;
   recommendation: ConsumerRecommendation;

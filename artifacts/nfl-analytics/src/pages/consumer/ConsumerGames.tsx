@@ -7,7 +7,7 @@ import {
 import { ChevronDown, ChevronRight, Clock3 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { Link } from 'wouter';
-import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, useConsumerNow } from './consumer-ui';
+import { ConsumerLoading, ConsumerMessage, ConsumerPredictionStates, formatKickoff, formatQuote, useConsumerNow } from './consumer-ui';
 import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
 import { MarketConfidenceSummary } from '../../components/MarketConfidence';
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
@@ -75,6 +75,7 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
         </div>
       </div>
       <MarketConfidenceSummary value={game} compact />
+      <ConsumerPredictionStates game={game} />
       <p className="consumer-note">{beforeKickoff ? game.recommendation.reason ?? 'Fresh complete market evidence is available.' : 'Historical game: no current recommendations.'}</p>
       {expanded && (
         <div className="tb-evidence" id={evidenceId}>

@@ -7,7 +7,7 @@ import {
   predictionSnapshotsTable,
   weeklyLearningReportsTable,
 } from "@workspace/db";
-import { isEligiblePredictionSnapshot } from "./live-predictions";
+import { isCanonicalOfficialPrediction } from "./live-predictions";
 
 type CheckStatus = "verified" | "unavailable" | "not_verifiable";
 
@@ -58,12 +58,8 @@ export async function getLifecycleVerificationReport(now = new Date()) {
     .limit(1);
 
   const gamesReport = games.map(({ game, snapshot, grade }) => {
-    const validPregame = Boolean(
-      snapshot
-      && snapshot.kickoffTime
-      && snapshot.predictionTimestamp < snapshot.kickoffTime
-      && isEligiblePredictionSnapshot(snapshot),
-    );
+    const validPregame = Boolean(snapshot
+      && isCanonicalOfficialPrediction(snapshot, game.kickoffTime, now));
     const finalScorePresent = game.finalHomeScore !== null && game.finalAwayScore !== null;
     const clv = grade?.clv as Record<string, unknown> | undefined;
     const report = reportByWeek.get(`${game.season}:${game.week}`);
@@ -75,7 +71,7 @@ export async function getLifecycleVerificationReport(now = new Date()) {
       pregameSnapshot: validPregame
         ? check("verified", "A valid persisted prediction precedes kickoff.")
         : check("unavailable", "No valid pre-kickoff official snapshot is stored."),
-      kickoffFreeze: snapshot?.officialFinalPrediction && snapshot.frozenAt
+      kickoffFreeze: validPregame
         ? check("verified", "The selected official prediction has a persisted freeze timestamp.")
         : check("unavailable", "No persisted official freeze is available."),
       postKickoffImmutability: check(
@@ -85,13 +81,13 @@ export async function getLifecycleVerificationReport(now = new Date()) {
       finalScore: finalScorePresent
         ? check("verified", "Final home and away scores are persisted.")
         : check("unavailable", "A final score is not persisted."),
-      grading: grade
+      grading: validPregame && grade
         ? check("verified", "A persisted grade is linked to the official prediction.")
         : check("unavailable", "No persisted grade is linked to the official prediction."),
-      eligibleClv: clv?.status === "measured"
+      eligibleClv: validPregame && clv?.status === "measured"
         ? check("verified", "A grade contains legitimate measured closing-line evidence.")
         : check("unavailable", "No legitimate measured closing reference is stored."),
-      performanceUpdate: grade && report && report.generatedAt >= grade.gradedAt
+      performanceUpdate: validPregame && grade && report && report.generatedAt >= grade.gradedAt
         ? check("verified", "A later persisted weekly performance report exists.")
         : check("unavailable", "No later persisted weekly performance report proves consumption."),
       weeklyChallengerConsumption: evidenceCount.length

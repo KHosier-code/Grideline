@@ -12,6 +12,8 @@ import type { ConsumerGameFinalScore } from './consumerGameFinalScore';
 import type { ConsumerGameGameState } from './consumerGameGameState';
 import type { ConsumerGameMarket } from './consumerGameMarket';
 import type { ConsumerGameMatchup } from './consumerGameMatchup';
+import type { ConsumerGameOfficialPrediction } from './consumerGameOfficialPrediction';
+import type { ConsumerGameOfficialPredictionStatus } from './consumerGameOfficialPredictionStatus';
 import type { ConsumerGamePrediction } from './consumerGamePrediction';
 import type { ConsumerMarketBoard } from './consumerMarketBoard';
 import type { ConsumerRecommendation } from './consumerRecommendation';
@@ -31,6 +33,9 @@ export interface ConsumerGame {
   finalScore: ConsumerGameFinalScore;
   /** @nullable */
   prediction: ConsumerGamePrediction;
+  officialPredictionStatus: ConsumerGameOfficialPredictionStatus;
+  /** @nullable */
+  officialPrediction: ConsumerGameOfficialPrediction;
   market: ConsumerGameMarket;
   marketBoard: ConsumerMarketBoard;
   recommendation: ConsumerRecommendation;

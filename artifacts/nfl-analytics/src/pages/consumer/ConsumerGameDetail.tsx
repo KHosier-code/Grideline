@@ -22,6 +22,7 @@ export default function ConsumerGameDetail() {
   if (query.isError || !query.data) return <ConsumerMessage error title="This matchup is unavailable" detail="We couldn’t load this game right now. Return to Games and try again shortly." />;
   const game = query.data;
   const prediction = game.prediction;
+  const officialPrediction = game.officialPrediction;
   const beforeKickoff = Boolean(game.kickoffTime && new Date(game.kickoffTime).getTime() > now
     && (game.gameState === 'pregame' || game.gameState === 'scheduled'));
   const weather = game.weather as { summary?: unknown; temperature?: unknown; sustainedWind?: unknown; precipitationProbability?: unknown } | null;
@@ -85,7 +86,7 @@ export default function ConsumerGameDetail() {
       <div className="consumer-section-heading">
         <div>
           <p className="consumer-eyebrow">Pregame outlook</p>
-          <h2 id="projection-heading">Gridline projection</h2>
+          <h2 id="projection-heading">Saved projection</h2>
         </div>
         {prediction ? (
           <span className="premium-confidence-badge">
@@ -94,12 +95,10 @@ export default function ConsumerGameDetail() {
         ) : null}
       </div>
 
-      {game.finalScore && (
-        <div className="premium-final-result" data-testid="final-result">
-          <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-          <span><small>Final score</small>{game.finalScore.away} – {game.finalScore.home}</span>
-        </div>
-      )}
+      <div className="premium-final-result" data-testid="final-result">
+        <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+        <span><small>Final result</small>{game.finalScore ? `${game.finalScore.away} – ${game.finalScore.home}` : 'No final result yet'}</span>
+      </div>
       {prediction ? (
         <div className="premium-projection-grid">
           <div className="ppg-score">
@@ -120,6 +119,31 @@ export default function ConsumerGameDetail() {
         />
       )}
       <MarketConfidenceSummary value={game} />
+    </section>
+
+    <section className="premium-projection-section" data-section="official-prediction" data-testid="official-prediction" data-status={game.officialPredictionStatus} aria-labelledby="official-prediction-heading">
+      <div className="consumer-section-heading">
+        <div>
+          <p className="consumer-eyebrow">Published model record</p>
+          <h2 id="official-prediction-heading">Official prediction</h2>
+        </div>
+      </div>
+      {officialPrediction ? (
+        <div className="premium-projection-grid">
+          <div className="ppg-score">
+            <small>Official predicted score</small>
+            <div className="ppg-score-value">{metric(officialPrediction.projectedAwayScore)} – {metric(officialPrediction.projectedHomeScore)}</div>
+          </div>
+          <div className="ppg-metrics">
+            <div><small>Margin</small><span>{metric(officialPrediction.projectedMargin)}</span></div>
+            <div><small>Total</small><span>{metric(officialPrediction.projectedTotal)}</span></div>
+            <div><small>{game.matchup.away.abbreviation} Win %</small><span>{metric(officialPrediction.awayWinProbability, true)}</span></div>
+            <div><small>{game.matchup.home.abbreviation} Win %</small><span>{metric(officialPrediction.homeWinProbability, true)}</span></div>
+          </div>
+        </div>
+      ) : (
+        <p className="consumer-note" role="status">Official prediction not created</p>
+      )}
     </section>
 
       <section className="premium-comparison-section" data-section="market-comparison" data-testid="premium-comparison" aria-labelledby="market-comparison-heading">

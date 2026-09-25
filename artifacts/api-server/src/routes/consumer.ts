@@ -20,6 +20,7 @@ import {
   gameSpecificSnapshot,
   getLatestValidPredictionSnapshots,
   getPredictionPerformance,
+  isCanonicalOfficialPrediction,
 } from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
 import { buildConsumerMatchupBoard } from "../lib/consumer-matchups";
@@ -463,6 +464,21 @@ export function buildConsumerMarketBoard(
     selectionRule: "Best means the most favorable canonical line point, then the higher American price when points match; exact ties prefer DraftKings.",
     comparisons,
   };
+}
+
+/**
+ * Historical "official" flags alone are not sufficient evidence: older rows
+ * may have been frozen after kickoff without a canonical cutoff or input
+ * provenance. Never promote these rows in a read path.
+ */
+export function verifiedOfficialSnapshot<T extends typeof predictionSnapshotsTable.$inferSelect>(
+  rows: T[],
+  gameId: string,
+  kickoffTime: Date | null,
+  asOf: Date,
+): T | null {
+  return rows.find((row) => row.gameId === gameId
+    && isCanonicalOfficialPrediction(row, kickoffTime, asOf)) ?? null;
 }
 
 export function summarizeConsumerMarketBoards(games: Array<{ marketBoard: ReturnType<typeof buildConsumerMarketBoard> }>) {
@@ -971,6 +987,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
   const results = await Promise.all(games.map(async (game) => {
     const gameState = interpretNflGameState(game, asOf);
     const snapshot = gameSpecificSnapshot(game.gameId, snapshots);
+    const officialSnapshot = verifiedOfficialSnapshot(snapshotHistory, game.gameId, game.kickoffTime, asOf);
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
     const consumerHome = home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined;
@@ -1143,6 +1160,33 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
         projectedTotal: safeNumber(snapshot.projectedTotal),
         homeWinProbability: safeNumber(snapshot.homeWinProbability),
         awayWinProbability: safeNumber(snapshot.awayWinProbability),
+      } : null,
+      officialPredictionStatus: officialSnapshot ? "official" as const : "not_created" as const,
+      officialPrediction: officialSnapshot ? {
+        modelLabel: "Gridline Production Model" as const,
+        projectedHomeScore: safeNumber(officialSnapshot.projectedHomeScore),
+        projectedAwayScore: safeNumber(officialSnapshot.projectedAwayScore),
+        projectedMargin: safeNumber(officialSnapshot.projectedMargin),
+        projectedTotal: safeNumber(officialSnapshot.projectedTotal),
+        homeWinProbability: safeNumber(officialSnapshot.homeWinProbability),
+        awayWinProbability: safeNumber(officialSnapshot.awayWinProbability),
+        predictionTimestamp: officialSnapshot.predictionTimestamp.toISOString(),
+        frozenAt: officialSnapshot.frozenAt!.toISOString(),
+        evaluationCutoffAt: officialSnapshot.evaluationCutoffAt!.toISOString(),
+        featureVersion: officialSnapshot.featureVersion,
+        modelVersions: {
+          spread: officialSnapshot.spreadModelVersion,
+          moneyline: officialSnapshot.moneylineModelVersion,
+          total: officialSnapshot.totalsModelVersion,
+        },
+        confidence: {
+          qb: safeNumber(officialSnapshot.qbConfidence),
+          lowSample: officialSnapshot.lowSample,
+          inputFeatureCount: officialSnapshot.inputFeatureCount,
+          inputMissingFeatureCount: officialSnapshot.inputMissingFeatureCount,
+        },
+        inputSourceEvidence: officialSnapshot.inputSourceEvidence,
+        marketSnapshot: officialSnapshot.marketSnapshot,
       } : null,
       market,
       marketBoard,

@@ -35,6 +35,7 @@ import consumerRouter, {
   serializeMovement,
   serializePerformance,
   summarizeConsumerMarketBoards,
+  verifiedOfficialSnapshot,
   usageCompositeIdentity,
   usageMatchupIdentity,
   usageSeasonAtCutoff,
@@ -659,6 +660,8 @@ test("generated contracts accept representative list, dashboard, detail, and una
     },
     finalScore: null,
     prediction: null,
+    officialPredictionStatus: "not_created" as const,
+    officialPrediction: null,
     market: {
       spread: null,
       moneyline: null,
@@ -783,6 +786,16 @@ test("generated contracts accept representative list, dashboard, detail, and una
     note: "Persisted snapshots only",
   }).success, true);
   assert.equal(GetConsumerGameResponse.safeParse({ ...detail, sourceHealth }).success, true);
+  assert.equal(ListConsumerGamesResponse.safeParse({
+    status: "absent",
+    coverage: { games: 1, gamesWithComparison: 0, DraftKings: 0, FanDuel: 0 },
+    games: [{ ...game, gameState: "final", finalScore: { home: 24, away: 17 } }],
+    sourceHealth, teamRecords: [],
+    recordVerification: {
+      expectedTeamCount: 32, actualTeamCount: 0, targetWeek: 1,
+      completedPriorGames: 0, complete: false, discrepancies: ["Expected 32 teams, found 0"],
+    },
+  }).success, true);
   assert.equal(MAX_CONSUMER_GAMES, 100);
   assert.equal(MAX_CONSUMER_MOVEMENT_ROWS, 200);
   assert.equal(MAX_CONSUMER_SNAPSHOT_ROWS, 100);
@@ -806,6 +819,20 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.match(predictionSource, /options\.maxRows === undefined \? await query : await query\.limit\(options\.maxRows\)/);
   assert.match(routeSource, /\.limit\(1\)/);
   assert.doesNotMatch(routeSource, /\b(generateLivePredictions|gradeCompletedPredictions|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);
+});
+
+test("legacy post-kickoff freezes and unfrozen saved snapshots never appear official in historical views", () => {
+  const kickoff = new Date("2026-09-15T00:15:00Z");
+  const legacy = {
+    gameId: "historical", officialFinalPrediction: true,
+    predictionTimestamp: new Date("2026-09-14T21:25:41Z"),
+    frozenAt: new Date("2026-09-15T00:15:40Z"),
+    evaluationCutoffAt: null,
+  };
+  assert.equal(verifiedOfficialSnapshot([legacy] as any, "historical", kickoff,
+    new Date("2026-09-16T00:00:00Z")), null);
+  assert.equal(verifiedOfficialSnapshot([{ ...legacy, officialFinalPrediction: false }] as any,
+    "historical", kickoff, new Date("2026-09-16T00:00:00Z")), null);
 });
 
 test("consumer movement UI keeps honest terminology and responsive controls", () => {
