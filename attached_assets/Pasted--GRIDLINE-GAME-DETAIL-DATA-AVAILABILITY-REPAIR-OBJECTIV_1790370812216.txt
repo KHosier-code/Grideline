@@ -1,0 +1,180 @@
+# GRIDLINE — GAME DETAIL DATA AVAILABILITY REPAIR
+
+## OBJECTIVE
+
+The published Gridline Game Detail page displays two unavailable sections:
+
+1. Key Player Usage:
+   - Houston Texans: Recent usage is unavailable.
+   - Indianapolis Colts: Recent usage is unavailable.
+
+2. Player Matchups:
+   - Player matchup evidence unavailable.
+
+Investigate the actual production responses and their underlying data sources.
+
+Fix verified Player Usage defects and establish precisely what evidence is missing for player matchups.
+
+Do not fabricate statistics or matchup assignments.
+
+## PART 1 — REPRODUCE THE EXACT ISSUE
+
+Locate the Houston Texans vs Indianapolis Colts game shown on the published website.
+
+Identify:
+- Game ID.
+- Season and week.
+- Scheduled kickoff.
+- Current game status.
+- Historical prediction cutoff.
+- API request and response for Player Usage.
+- API request and response for Player Matchups.
+
+Determine why both sections display unavailable states.
+
+Record actual backend and frontend evidence rather than assuming the database is empty.
+
+## PART 2 — PLAYER USAGE DATA TRACE
+
+The previous production verification reported 2,291 available 2026 player-stat rows and successful queries for Seattle, Cleveland and Kansas City.
+
+Determine whether Houston and Indianapolis have equivalent available data.
+
+Inspect:
+
+1. Existing NFLverse player-game records.
+2. Canonical player identity mapping.
+3. Team abbreviation normalization.
+4. Season and season-type filters.
+5. Completed-game selection.
+6. Last-five-team-games calculation.
+7. Historical cutoff enforcement.
+8. Backend aggregation.
+9. Consumer API response.
+10. Frontend rendering.
+
+Find exactly where data becomes unavailable.
+
+Pay particular attention to whether the selected game occurs before any eligible 2026 games have been completed.
+
+If that is the case, determine whether the product can legitimately display prior-season usage as separately labeled historical context.
+
+Never silently mix previous-season data into current-season statistics.
+
+## PART 3 — PLAYER STATISTICS
+
+Where source-supported, display useful recent player statistics.
+
+QB:
+- Passing attempts.
+- Passing yards.
+- Passing touchdowns.
+- Rushing yards.
+
+RB:
+- Carries.
+- Rushing yards.
+- Targets.
+- Receptions.
+- Receiving yards.
+
+WR/TE:
+- Targets.
+- Receptions.
+- Receiving yards.
+- Receiving touchdowns.
+
+Also display snap share, target share and red-zone opportunities only when verified source data supports those calculations.
+
+Clearly identify the measurement period.
+
+Distinguish missing measurements from observed zeros.
+
+Use only games completed before the selected game's relevant cutoff.
+
+Do not require a valid sportsbook market or team prediction merely to display available historical usage.
+
+## PART 4 — PLAYER MATCHUP INVESTIGATION
+
+Investigate why Houston vs Indianapolis has no available individual matchup evidence.
+
+Inspect:
+- Available WR identities.
+- Available CB identities.
+- Current depth evidence.
+- Injury availability.
+- Historical snap participation.
+- Position and role evidence.
+- Existing matchup confidence requirements.
+
+Document which specific evidence requirements fail.
+
+Determine whether the existing defensive matchup foundation can supply additional legitimate team-level matchup context.
+
+Do not weaken the individual matchup evidence gates simply to populate the interface.
+
+If individual assignments remain unsupported, retain the unavailable state and consider displaying separately labeled team-level passing matchup information that is supported by existing data.
+
+Do not present team defensive statistics as individual CB coverage statistics.
+
+## PART 5 — IMPLEMENT TARGETED FIXES
+
+If Player Usage fails because of filtering, identity mapping, API transformation or frontend integration, implement the smallest necessary development-only correction.
+
+If it is genuinely unavailable because the selected cutoff has no eligible records, preserve the unavailable state and explain the limitation clearly.
+
+Do not introduce unsupported fallback statistics.
+
+For Player Matchups, implement only changes justified by verified existing evidence.
+
+## PART 6 — VALIDATION
+
+Test the exact Houston–Indianapolis example against real existing data.
+
+Also validate previously verified Seattle, Cleveland and Kansas City examples to prevent regressions.
+
+Cover:
+- Upcoming games.
+- Completed games.
+- First week of a season.
+- Players who changed teams.
+- Partial source coverage.
+- Invalid identities.
+- Missing projections.
+- Missing sportsbook markets.
+- Desktop and mobile.
+
+Run relevant API and frontend tests, typechecks and a local production build.
+
+## PRODUCTION SAFETY
+
+Do not:
+- Reimport 2026 player statistics.
+- Trigger paid API requests.
+- Modify production data.
+- Change database bindings.
+- Rewrite historical records.
+- Retrain or promote Phase 6.1.
+- Publish automatically.
+
+## FINAL REPORT
+
+Generate:
+
+reports/gridline-game-detail-data-availability.md
+
+Provide:
+
+1. Exact Player Usage root cause.
+2. Houston and Indianapolis data availability.
+3. Whether the reported issue is a defect or legitimate missing data.
+4. Corrective changes, if justified.
+5. Exact Player Matchup evidence gaps.
+6. Changes to matchup presentation, if any.
+7. Test results.
+8. Whether changes must be applied to main and published.
+9. Exact live verification steps.
+
+Do not declare the published website fixed until the correct deployment has been verified.
+
+Return separate conclusions for Player Usage and Player Matchups.

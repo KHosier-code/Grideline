@@ -322,3 +322,17 @@ mtime_ms = 1790369847921
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/b5712cdc-aafd-4794-a3ba-f094e1f055a0/a28c981c-4854-41e8-8b22-e87f94ebfa59"
 storage_version_token = "1790369900368337"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "MBpYd9PZLsIfOz9JbPPmB"
+uri = "file://reports/gridline-game-detail-data-availability.md"
+type = "text"
+title = "Gridline Game Detail Data Availability"
+description = "Production HOU–IND usage trace, matchup evidence gaps, tests, and post-publish checks."
+logical_id = "b049e621-489a-4d62-8446-7a239ec30bb2"
+content_hash = "sha256:8515d991c5e80de323e8ad747c053c835c42e8c7513074c77c96e82c63a9030d"
+size = 14041
+mtime_ms = 1790371303005
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/b049e621-489a-4d62-8446-7a239ec30bb2/1210ee9b-93e8-461c-a811-65583cb3895c"
+storage_version_token = "1790371390886050"
+content_type = "text/markdown"
