@@ -24,7 +24,8 @@ const quotes = ["DraftKings", "FanDuel"].flatMap((book) => [
 const comparisons = (["spread", "total", "moneyline"] as const).map((market) =>
   ({ market, state: "available" as const, modelValue: 1 }));
 const input = { gameState: "pregame" as const, kickoffTime: new Date("2026-09-20T17:00:00Z"),
-  now, sourceHealth: health, homeAbbreviation: "HME", awayAbbreviation: "AWY", rows: quotes, comparisons };
+  now, sourceHealth: health, homeAbbreviation: "HME", awayAbbreviation: "AWY", rows: quotes, comparisons,
+  verifiedAt: observed };
 
 test("the exact kickoff closes current recommendations, without deleting saved projections", () => {
   assert.equal(consumerRecommendation(input).status, "healthy");
@@ -56,4 +57,14 @@ test("missing moneyline price suppresses moneyline only", () => {
 test("latest invalid price cannot be bypassed by an older quote", () => {
   const rows = [...quotes, { ...quote("FanDuel", "moneyline", "AWY", null, 0), capturedAt: now }];
   assert.equal(consumerRecommendation({ ...input, rows }).markets.moneyline, false);
+});
+
+test("an unchanged quote remains eligible only when a complete game observation recently reverified it", () => {
+  const oldRows = quotes.map((row) => ({ ...row, capturedAt: new Date("2026-09-20T12:00:00Z") }));
+  assert.equal(consumerRecommendation({ ...input, rows: oldRows }).status, "healthy");
+  assert.equal(consumerRecommendation({
+    ...input,
+    rows: oldRows,
+    verifiedAt: new Date("2026-09-20T15:40:00Z"),
+  }).status, "unavailable");
 });

@@ -8,6 +8,7 @@ import {
   sleeperPlayerSnapshotsTable,
   sportsbookOddsTable,
 } from "@workspace/db";
+import { consumerMarketFreshnessMinutes } from "./consumer-market-freshness";
 
 export type ConsumerSourceStatus = "healthy" | "partial" | "stale" | "unavailable";
 export type ConsumerSourceName = "schedule" | "injuries" | "odds" | "players";
@@ -223,6 +224,7 @@ export async function getConsumerSourceHealth(now = new Date()): Promise<Consume
     db.select({
       requestedAt: oddsApiRequestsTable.requestedAt,
       status: oddsApiRequestsTable.status,
+      recordsProcessed: oddsApiRequestsTable.recordsProcessed,
       metadata: oddsApiRequestsTable.metadata,
     }).from(oddsApiRequestsTable).orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)).limit(100),
     db.select({ gameDate: gamesTable.gameDate, kickoffTime: gamesTable.kickoffTime })
@@ -235,12 +237,25 @@ export async function getConsumerSourceHealth(now = new Date()): Promise<Consume
   const playerTimes = runDates(playerRuns);
   const latestOddsRequest = oddsRequests[0] ?? null;
   const latestOddsSuccess = oddsRequests.find((request) => request.status === "success") ?? null;
+  const latestCompleteOddsObservation = oddsRequests.find((request) =>
+    request.status === "success"
+    && request.recordsProcessed > 0
+    && request.metadata
+    && typeof request.metadata === "object"
+    && !((Array.isArray(request.metadata.missingMarkets) && request.metadata.missingMarkets.length > 0)
+      || (Array.isArray(request.metadata.failedSportsbooks) && request.metadata.failedSportsbooks.length > 0)));
   const oddsMeta = latestOddsRequest?.metadata ?? {};
   const oddsPartialMessage = latestOddsRequest?.status === "success" &&
       ((Array.isArray(oddsMeta.missingMarkets) && oddsMeta.missingMarkets.length > 0) ||
        (Array.isArray(oddsMeta.failedSportsbooks) && oddsMeta.failedSportsbooks.length > 0))
     ? "The latest successful odds request reported missing markets or failed sportsbooks."
     : null;
+  const nearestKickoff = upcomingGames
+    .flatMap((game) => game.kickoffTime ? [game.kickoffTime] : [])
+    .sort((left, right) => left.getTime() - right.getTime())[0];
+  const oddsStaleAfterMinutes = nearestKickoff
+    ? consumerMarketFreshnessMinutes(nearestKickoff, now, "spread")
+    : 50 * 60;
 
   const sources: ConsumerSourceHealth["sources"] = {
     schedule: assessConsumerSource({
@@ -261,9 +276,10 @@ export async function getConsumerSourceHealth(now = new Date()): Promise<Consume
       lastAttemptAt: latestOddsRequest?.requestedAt ?? null,
       lastAttemptStatus: latestOddsRequest?.status ?? null,
       lastSuccessAt: latestOddsSuccess?.requestedAt ?? null,
-      sourceTimestamp: aggregateDate(oddsData?.sourceTimestamp ?? oddsData?.capturedAt),
+      sourceTimestamp: latestCompleteOddsObservation?.requestedAt
+        ?? aggregateDate(oddsData?.sourceTimestamp ?? oddsData?.capturedAt),
       hasSource: Number(oddsData?.count ?? 0) > 0,
-      staleAfterMinutes: 15,
+      staleAfterMinutes: oddsStaleAfterMinutes,
       observationRequired: true,
       now,
       partialMessage: oddsPartialMessage,

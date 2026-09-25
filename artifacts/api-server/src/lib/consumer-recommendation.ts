@@ -1,5 +1,6 @@
 import type { ConsumerSourceHealth } from "./consumer-source-health";
 import type { NflGameState } from "./game-state";
+import { consumerMarketFreshnessMinutes } from "./consumer-market-freshness";
 
 type Market = "spread" | "total" | "moneyline";
 type Quote = {
@@ -16,7 +17,18 @@ function validPrice(price: number) {
   return Number.isInteger(price) && (price <= -100 || price >= 100);
 }
 
-function completeMarket(rows: Quote[], market: Market, homeNames: string[], awayNames: string[], now: Date) {
+function completeMarket(
+  rows: Quote[],
+  market: Market,
+  homeNames: string[],
+  awayNames: string[],
+  now: Date,
+  kickoffTime: Date,
+  verifiedAt: Date | null,
+) {
+  const freshnessMinutes = consumerMarketFreshnessMinutes(kickoffTime, now, market);
+  if (!verifiedAt || verifiedAt > now
+    || now.getTime() - verifiedAt.getTime() > freshnessMinutes * 60_000) return false;
   return ["DraftKings", "FanDuel"].every((sportsbook) => {
     const forBook = rows.filter((quote) => quote.market === market && quote.sportsbook === sportsbook
       && quote.capturedAt.getTime() <= now.getTime())
@@ -33,8 +45,7 @@ function completeMarket(rows: Quote[], market: Market, homeNames: string[], away
       : namesMatch(row.selection, awayNames));
     if (!primary || !secondary) return false;
     if ([primary, secondary].some((quote) =>
-      now.getTime() - quote.capturedAt.getTime() > 15 * 60_000
-      || !validPrice(quote.price)
+      !validPrice(quote.price)
       || (market !== "moneyline" && (quote.point === null || !Number.isFinite(quote.point))))) return false;
     if (market === "total" && primary.point !== secondary.point) return false;
     if (market === "spread" && Math.abs((primary.point ?? 0) + (secondary.point ?? 0)) > 0.01) return false;
@@ -53,6 +64,7 @@ export function consumerRecommendation(input: {
   awayName?: string;
   rows: Quote[];
   comparisons: Comparison[];
+  verifiedAt: Date | null;
 }) {
   const empty = { spread: false, total: false, moneyline: false };
   if (!["scheduled", "pregame"].includes(input.gameState)
@@ -74,7 +86,7 @@ export function consumerRecommendation(input: {
     const comparison = input.comparisons.find((value) => value.market === market);
     return [market, comparison?.state === "available" && comparison.modelValue !== null
       && completeMarket(input.rows, market, [input.homeAbbreviation, input.homeName ?? ""],
-        [input.awayAbbreviation, input.awayName ?? ""], input.now)];
+        [input.awayAbbreviation, input.awayName ?? ""], input.now, input.kickoffTime!, input.verifiedAt)];
   })) as typeof empty;
   const available = Object.values(markets).filter(Boolean).length;
   return {

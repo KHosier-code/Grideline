@@ -13,6 +13,8 @@ import {
   weatherForecastSnapshotsTable,
   modelTrainingRunsTable,
   playersTable,
+  oddsApiRequestsTable,
+  oddsEventAuditsTable,
 } from "@workspace/db";
 import {
   gameSpecificSnapshot,
@@ -38,6 +40,10 @@ import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalSco
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
+import {
+  completeGameMarketObservation,
+  consumerMarketFreshnessMinutes,
+} from "../lib/consumer-market-freshness";
 export { consumerFinalScore } from "../lib/game-state";
 export { verifyTeamRecords } from "../lib/game-state";
 
@@ -46,7 +52,6 @@ export const MAX_CONSUMER_GAMES = 100;
 export const MAX_CONSUMER_MOVEMENT_ROWS = 200;
 export const MAX_CONSUMER_SNAPSHOT_ROWS = MAX_CONSUMER_GAMES;
 export const MAX_CONSUMER_PERFORMANCE_ROWS = 5_000;
-export const CONSUMER_MARKET_STALE_MINUTES = 15;
 const SUPPORTED_CONSUMER_BOOKS = new Set(["DraftKings", "FanDuel"]);
 const SUPPORTED_CONSUMER_MARKETS = new Set(["spread", "total", "moneyline"]);
 const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
@@ -371,6 +376,7 @@ export function buildConsumerMarketBoard(
   home: ConsumerHomeTeam | undefined,
   kickoffTime: Date | null,
   now = new Date(),
+  verifiedAt: Date | null = null,
 ) {
   const cutoff = kickoffTime && kickoffTime.getTime() < now.getTime() ? kickoffTime : now;
   const eligible = rows.filter((row) =>
@@ -412,8 +418,12 @@ export function buildConsumerMarketBoard(
         ? spec.modelValue + marketValue
         : (spec.modelValue - marketValue) * (spec.market === "moneyline" ? 100 : 1)
       : null;
-    const stale = Boolean(selected
-      && cutoff.getTime() - selected.capturedAt.getTime() > CONSUMER_MARKET_STALE_MINUTES * 60_000);
+    const staleAfterMinutes = kickoffTime
+      ? consumerMarketFreshnessMinutes(kickoffTime, cutoff, spec.market)
+      : 0;
+    const effectiveObservationAt = verifiedAt && verifiedAt <= cutoff ? verifiedAt : null;
+    const stale = Boolean(selected && (!effectiveObservationAt
+      || cutoff.getTime() - effectiveObservationAt.getTime() > staleAfterMinutes * 60_000));
     const observationAgeMinutes = selected
       ? Math.max(0, (cutoff.getTime() - selected.capturedAt.getTime()) / 60_000)
       : null;
@@ -446,7 +456,10 @@ export function buildConsumerMarketBoard(
       : available > 0 ? "partial" as const
       : stale > 0 ? "stale" as const
       : "absent" as const,
-    staleAfterMinutes: CONSUMER_MARKET_STALE_MINUTES,
+        staleAfterMinutes: kickoffTime
+          ? Math.min(...comparisons.map((comparison) =>
+              consumerMarketFreshnessMinutes(kickoffTime, cutoff, comparison.market)))
+          : 0,
     selectionRule: "Best means the most favorable canonical line point, then the higher American price when points match; exact ties prefer DraftKings.",
     comparisons,
   };
@@ -885,7 +898,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
   const recordSeason = filters.season ?? games[0]?.season;
   const recordWeek = filters.week ?? games[0]?.week;
-  const [teams, snapshots, marketRows, modelRuns, snapshotHistory] = await Promise.all([
+  const [teams, snapshots, marketRows, modelRuns, snapshotHistory, marketAudits] = await Promise.all([
     teamIds.length ? db.select().from(teamsTable).where(inArray(teamsTable.teamId, teamIds)) : [],
     getLatestValidPredictionSnapshots(games.map((game) => game.gameId), {
       preKickoffOnly: true,
@@ -912,6 +925,24 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
     games.length ? db.select().from(predictionSnapshotsTable)
       .where(and(inArray(predictionSnapshotsTable.gameId, games.map((game) => game.gameId)), lte(predictionSnapshotsTable.predictionTimestamp, asOf)))
       .orderBy(asc(predictionSnapshotsTable.predictionTimestamp), asc(predictionSnapshotsTable.id)) : [],
+    games.length ? db.selectDistinctOn([oddsEventAuditsTable.matchedGridlineGameId], {
+      gameId: oddsEventAuditsTable.matchedGridlineGameId,
+      auditedAt: oddsEventAuditsTable.auditedAt,
+      outcome: oddsEventAuditsTable.outcome,
+      observationsReceived: oddsEventAuditsTable.observationsReceived,
+      rejectedObservations: oddsEventAuditsTable.rejectedObservations,
+    }).from(oddsEventAuditsTable)
+      .innerJoin(oddsApiRequestsTable, eq(oddsApiRequestsTable.id, oddsEventAuditsTable.requestId))
+      .where(and(
+        inArray(oddsEventAuditsTable.matchedGridlineGameId, games.map((game) => game.gameId)),
+        eq(oddsApiRequestsTable.status, "success"),
+        lte(oddsEventAuditsTable.auditedAt, asOf),
+      ))
+      .orderBy(
+        oddsEventAuditsTable.matchedGridlineGameId,
+        desc(oddsEventAuditsTable.auditedAt),
+        desc(oddsEventAuditsTable.id),
+      ) : [],
   ]);
   const recordTeams = recordSeason === undefined ? [] : await db.select({
     teamId: teamsTable.teamId,
@@ -932,6 +963,9 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
   ));
   const verifiedArtifacts = new Map(modelRuns.filter((run) => verifyArtifactIntegrity(run).valid).map((run) => [run.modelVersion, true]));
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
+  const latestMarketAuditByGame = new Map(
+    marketAudits.flatMap((audit) => audit.gameId ? [[audit.gameId, audit] as const] : []),
+  );
   let persistedConfidenceResults = 0;
   if (persistConfidence) await persistConfidenceMethodology();
   const results = await Promise.all(games.map(async (game) => {
@@ -941,12 +975,17 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
     const away = teamsById.get(game.awayTeamId);
     const consumerHome = home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined;
     const market = consumerMarket(snapshot, consumerHome);
+    const latestMarketAudit = latestMarketAuditByGame.get(game.gameId);
+    const marketVerifiedAt = latestMarketAudit && completeGameMarketObservation(latestMarketAudit)
+      ? latestMarketAudit.auditedAt
+      : null;
     const marketBoard = buildConsumerMarketBoard(
       snapshot,
       marketRows.filter((row) => row.gameId === game.gameId),
       consumerHome,
       game.kickoffTime,
       asOf,
+      marketVerifiedAt,
     );
     const recommendation = consumerRecommendation({
       gameState, kickoffTime: game.kickoffTime, now: asOf, sourceHealth,
@@ -954,6 +993,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       awayAbbreviation: away?.abbreviation ?? "", awayName: away?.teamName,
       rows: marketRows.filter((row) => row.gameId === game.gameId),
       comparisons: marketBoard.comparisons,
+      verifiedAt: marketVerifiedAt,
     });
     const dataConfidence = confidence(snapshot);
     const confidenceData = snapshot ? snapshotDataConfidence({

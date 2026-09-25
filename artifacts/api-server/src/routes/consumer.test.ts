@@ -71,7 +71,8 @@ test("market board deterministically selects best lines and orients model differ
     boardRow("FanDuel", "total", "Over", 46, 110, "2026-09-01T12:01:00Z"),
     boardRow("DraftKings", "moneyline", "Home Team", null, -150, "2026-09-01T12:00:00Z"),
     boardRow("FanDuel", "moneyline", "Home Team", null, -145, "2026-09-01T12:01:00Z"),
-  ], { teamId: "home", name: "Home Team", abbreviation: "HME" }, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
+  ], { teamId: "home", name: "Home Team", abbreviation: "HME" }, new Date("2026-09-02T00:00:00Z"),
+  new Date("2026-09-01T12:10:00Z"), new Date("2026-09-01T12:09:00Z"));
 
   assert.equal(board.status, "available");
   assert.equal(board.comparisons[0]?.selectedQuote?.sportsbook, "FanDuel");
@@ -114,7 +115,8 @@ test("market board summary reports partial, stale, absent, and sportsbook covera
   };
   const available = buildConsumerMarketBoard(snapshot, [
     boardRow("DraftKings", "spread", "Home Team", -3, -110, "2026-09-01T12:00:00Z"),
-  ], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
+  ], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"),
+  new Date("2026-09-01T12:09:00Z"));
   const stale = buildConsumerMarketBoard(snapshot, [
     boardRow("FanDuel", "total", "Over", 44, -110, "2026-09-01T11:00:00Z"),
   ], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
