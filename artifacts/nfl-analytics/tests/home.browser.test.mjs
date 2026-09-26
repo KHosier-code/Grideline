@@ -12,6 +12,7 @@ const origin = process.env.HOME_BROWSER_URL
   ?? (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:80');
 const kickoff = new Date(Date.now() + 14 * 86400_000).toISOString();
 const season = new Date().getUTCFullYear() + 1;
+const week = 7;
 const health = {
   status: 'available',
   sources: Object.fromEntries(['schedule', 'injuries', 'odds', 'players'].map(name =>
@@ -19,7 +20,7 @@ const health = {
       sourceTimestamp: null, lastAttemptStatus: null, message: null, staleAfterMinutes: 60 }])),
 };
 const game = (gameId, away, home) => ({
-  gameId, season, week: 1, kickoffTime: kickoff, gameStatus: 'Scheduled', gameState: 'pregame',
+  gameId, season, week, kickoffTime: kickoff, gameStatus: 'Scheduled', gameState: 'pregame',
   venue: null, matchup: { away: { teamId: away, abbreviation: away, name: `${away} Away` },
     home: { teamId: home, abbreviation: home, name: `${home} Home` } },
   finalScore: null, prediction: null, market: {}, marketBoard: { comparisons: [] },
@@ -29,10 +30,21 @@ const game = (gameId, away, home) => ({
 });
 const games = [game('home-test-one', 'AWY', 'HOM'), game('home-test-two', 'VIS', 'LOC')];
 const pastGame = {
-  ...games[0], kickoffTime: new Date(Date.now() - 14 * 86400_000).toISOString(),
+  ...games[0], week: 1, kickoffTime: new Date(Date.now() - 14 * 86400_000).toISOString(),
   gameStatus: 'Final', gameState: 'final', finalScore: { away: 17, home: 20 },
 };
 let dashboardGames = games;
+const board = {
+  status: 'absent',
+  coverage: { games: games.length, gamesWithComparison: 0, DraftKings: 0, FanDuel: 0 },
+  games,
+  teamRecords: [],
+  recordVerification: {
+    expectedTeamCount: 32, actualTeamCount: 0, targetWeek: week,
+    completedPriorGames: 0, complete: false, discrepancies: ['No record evidence'],
+  },
+  sourceHealth: health,
+};
 let detail = {
   ...games[0], weather: null, movement: { available: false, streams: [], message: 'No observations',
     completeness: { status: 'complete', returnedObservations: 0, totalObservations: 0 } },
@@ -134,23 +146,32 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
     await cdp.send('Fetch.enable', { patterns: [{ urlPattern: '*://*/api/consumer/*', requestStage: 'Request' }] });
     const failures = [];
     const evidenceRequests = [];
+    const boardRequests = [];
     cdp.on('Fetch.requestPaused', ({ requestId, request }) => {
-      const path = new URL(request.url).pathname;
+      const url = new URL(request.url);
+      const path = url.pathname;
       const isEvidence = /defense-vs-position|player-position-matchup|player-usage|red-zone/.test(path);
       if (isEvidence) evidenceRequests.push(path);
+      if (path === '/api/consumer/games') boardRequests.push(url.search);
       const body = path === '/api/consumer/dashboard'
         ? { status: 'available', games: dashboardGames, note: 'Synthetic browser test', sourceHealth: health }
-        : path === '/api/consumer/schedule-selection'
-        ? { selection: { season, week: 1 }, reason: 'past' }
-        : path === '/api/consumer/games'
-        ? { status: 'available', games: [pastGame], sourceHealth: health,
-          coverage: { games: 1, gamesWithComparison: 0 },
-          teamRecords: [], recordVerification: { complete: true, discrepancies: [] } }
-        : path === `/api/consumer/games/${games[0].gameId}` ? detail : null;
+        : path === `/api/consumer/games/${games[0].gameId}` ? detail
+        : path === '/api/consumer/schedule-selection' ? { selection: { season, week: 1 }, reason: 'past' }
+        : path === '/api/consumer/games' && url.searchParams.get('season') === String(season)
+          && url.searchParams.get('week') === String(week) ? board
+        : path === '/api/consumer/games' && url.searchParams.get('season') === String(season)
+          && url.searchParams.get('week') === '1'
+          ? { ...board, status: 'available', games: [pastGame],
+              coverage: { ...board.coverage, games: 1 }, recordVerification: { ...board.recordVerification, targetWeek: 1 } }
+          : null;
       const action = isEvidence
         ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 503,
           responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
           body: Buffer.from('{"message":"Source unavailable"}').toString('base64') })
+        : path === '/api/consumer/games' && !body
+        ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 404,
+          responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+          body: Buffer.from('{"message":"Unexpected season or week"}').toString('base64') })
         : body
         ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 200,
           responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
@@ -196,7 +217,7 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
         await until(() => cdp.evaluate('document.querySelectorAll(".weekly-evidence").length === 1 && document.querySelectorAll(".weekly-card-toggle")[0].getAttribute("aria-expanded") === "true"'), 'Enter switches open card');
         assert.equal(await cdp.evaluate('document.querySelectorAll(".weekly-card-toggle")[1].getAttribute("aria-expanded")'), 'false');
         const href = await cdp.evaluate('document.querySelector(".weekly-evidence .weekly-detail-link").getAttribute("href")');
-        assert.equal(href, `/games/home-test-one?season=${season}&week=1`);
+        assert.equal(href, `/games/home-test-one?season=${season}&week=${week}`);
         evidenceRequests.length = 0;
         await cdp.evaluate('document.querySelector(".weekly-evidence .weekly-detail-link").focus()');
         assert.deepEqual(await cdp.evaluate(`(() => {
@@ -206,7 +227,23 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
         })()`), [true, true, 'solid', '2px'], `${theme} ${width}px detail link focus ring`);
         await cdp.key('Enter');
         await until(() => cdp.evaluate(`location.pathname === '/games/home-test-one' && !!document.querySelector('[data-testid="premium-hero"]')`), 'Game Detail loads after navigation');
-        assert.equal(await cdp.evaluate('location.search'), `?season=${season}&week=1`);
+        assert.equal(await cdp.evaluate('location.search'), `?season=${season}&week=${week}`);
+        assert.equal(await cdp.evaluate('document.querySelector(".consumer-back").getAttribute("href")'), `/games?season=${season}&week=${week}`, 'return link preserves the selected slate');
+        boardRequests.length = 0;
+        await cdp.evaluate('document.querySelector(".consumer-back").click()');
+        await until(() => cdp.evaluate(`location.pathname === '/games' && document.querySelectorAll('.board-game').length === 2`), 'Games opens the selected week');
+        assert.equal(await cdp.evaluate('location.search'), `?season=${season}&week=${week}`);
+        assert.deepEqual(await cdp.evaluate(`[
+          document.querySelector('input[aria-label="Season"]').value,
+          document.querySelector('select[aria-label="Week"]').value,
+          document.querySelector('.board-game').getAttribute('aria-label')
+        ]`), [String(season), String(week), 'AWY at HOM'], 'Games shows the requested slate, not its schedule default');
+        assert.equal(boardRequests.some(search => {
+          const params = new URLSearchParams(search);
+          return params.get('season') === String(season) && params.get('week') === String(week);
+        }), true, 'Games requested the chosen slate');
+        await cdp.send('Page.navigate', { url: `${origin}/games/home-test-one?season=${season}&week=${week}` });
+        await until(() => cdp.evaluate(`location.pathname === '/games/home-test-one' && !!document.querySelector('[data-testid="premium-hero"]')`), 'Game Detail reloads for disclosure checks');
         assert.equal(await cdp.evaluate('document.querySelector(".premium-teams").textContent.includes("AWY")'), true);
         assert.deepEqual(await cdp.evaluate(`(() => {
           const root = document.querySelector('.consumer-detail');
@@ -259,7 +296,7 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
             ],
           },
         };
-        await cdp.send('Page.navigate', { url: `${origin}/games/home-test-one?season=${season}&week=1` });
+        await cdp.send('Page.navigate', { url: `${origin}/games/home-test-one?season=${season}&week=${week}` });
         await until(() => cdp.evaluate('document.querySelector(".detail-insights article")?.textContent.includes("Passing edge")'), 'supported insight');
         assert.equal(await cdp.evaluate('document.querySelectorAll(".detail-insights article").length'), 1);
         await cdp.evaluate('document.querySelector("[data-testid=disclosure-matchups] > summary").focus()');

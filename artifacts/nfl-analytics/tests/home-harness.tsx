@@ -21,6 +21,7 @@ function Harness() {
     </div>
     <Switch>
       <Route path="/tests/home.html" component={ConsumerHome} />
+      <Route path="/games" component={ConsumerGames} />
       <Route path="/games/:gameId" component={ConsumerGameDetail} />
       <Route path="/games" component={ConsumerGames} />
     </Switch>

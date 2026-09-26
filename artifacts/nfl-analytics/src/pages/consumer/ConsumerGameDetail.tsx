@@ -1,6 +1,6 @@
 import { getGetConsumerGameQueryKey, useGetConsumerGame } from '@workspace/api-client-react';
 import { ChevronLeft, CloudRain, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { useLocation, useParams, Link } from 'wouter';
+import { useSearch, useParams, Link } from 'wouter';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { LineMovementExperience } from '../../components/LineMovementExperience';
@@ -23,9 +23,8 @@ import { eligibleMarketComparisons } from '../../lib/consumer-presentation';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
-  const [location] = useLocation();
-  const detailSearch = location.includes('?') ? location.slice(location.indexOf('?')) : '';
-  const backHref = detailSearch ? `/games${detailSearch}` : '/games';
+  const detailSearch = useSearch();
+  const backHref = detailSearch ? `/games?${detailSearch}` : '/games';
   const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
   const now = useConsumerNow();
   useEffect(() => {
