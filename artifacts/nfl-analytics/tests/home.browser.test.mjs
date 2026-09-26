@@ -28,6 +28,11 @@ const game = (gameId, away, home) => ({
   confidence: { markets: [] }, availability: { prediction: 'No eligible saved prediction', market: null },
 });
 const games = [game('home-test-one', 'AWY', 'HOM'), game('home-test-two', 'VIS', 'LOC')];
+const pastGame = {
+  ...games[0], kickoffTime: new Date(Date.now() - 14 * 86400_000).toISOString(),
+  gameStatus: 'Final', gameState: 'final', finalScore: { away: 17, home: 20 },
+};
+let dashboardGames = games;
 let detail = {
   ...games[0], weather: null, movement: { available: false, streams: [], message: 'No observations',
     completeness: { status: 'complete', returnedObservations: 0, totalObservations: 0 } },
@@ -134,7 +139,13 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
       const isEvidence = /defense-vs-position|player-position-matchup|player-usage|red-zone/.test(path);
       if (isEvidence) evidenceRequests.push(path);
       const body = path === '/api/consumer/dashboard'
-        ? { status: 'available', games, note: 'Synthetic browser test', sourceHealth: health }
+        ? { status: 'available', games: dashboardGames, note: 'Synthetic browser test', sourceHealth: health }
+        : path === '/api/consumer/schedule-selection'
+        ? { selection: { season, week: 1 }, reason: 'past' }
+        : path === '/api/consumer/games'
+        ? { status: 'available', games: [pastGame], sourceHealth: health,
+          coverage: { games: 1, gamesWithComparison: 0 },
+          teamRecords: [], recordVerification: { complete: true, discrepancies: [] } }
         : path === `/api/consumer/games/${games[0].gameId}` ? detail : null;
       const action = isEvidence
         ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 503,
@@ -260,6 +271,24 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
           completeness: { supportedCategories: 0, totalCategories: 0 } } };
         assert.deepEqual(failures, [], 'no intercepted request failures');
       }
+      dashboardGames = [];
+      await cdp.send('Page.navigate', { url: `${origin}/tests/home.html` });
+      await until(() => cdp.evaluate('document.querySelector(".weekly-intro h1")?.textContent === "No upcoming slate in the saved schedule"'), `empty Home at ${width}px`);
+      assert.equal(await cdp.evaluate('document.querySelector(".weekly-intro p:not(.consumer-eyebrow)")?.textContent.includes("No future games are available here.")'), true);
+      assert.equal(await cdp.evaluate('document.querySelector(".consumer-section-heading h2")?.textContent'), 'No upcoming games');
+      assert.equal(await cdp.evaluate('document.body.innerText.includes("The schedule has no future pregame matchups right now.")'), true);
+      assert.equal(await cdp.evaluate('document.querySelectorAll(".weekly-card-toggle, .weekly-home .consumer-matchup-feature").length'), 0, 'no invented upcoming matchup');
+      assert.equal(await cdp.evaluate('document.querySelectorAll(".consumer-section-heading a").length'), 1);
+      assert.deepEqual(await cdp.evaluate(`(() => {
+        const link = document.querySelector('.consumer-section-heading a');
+        return [link.textContent.trim(), link.getAttribute('href')];
+      })()`), ['Browse all games', '/games']);
+      await cdp.evaluate('document.querySelector(".consumer-section-heading a").click()');
+      await until(() => cdp.evaluate('location.pathname === "/games" && document.querySelector(".terminal-title")?.textContent === "Gridline market board"'), `Games route at ${width}px`);
+      await until(() => cdp.evaluate('document.querySelector(".board-game")?.getAttribute("aria-label") === "AWY at HOM"'), `synthetic past game at ${width}px`);
+      assert.equal(await cdp.evaluate('document.body.innerText.includes("Past slate · No upcoming games")'), true);
+      assert.deepEqual(failures, [], 'no intercepted request failures');
+      dashboardGames = games;
     }
   } catch (error) {
     if (cdp) {

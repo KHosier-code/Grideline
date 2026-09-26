@@ -8,6 +8,7 @@ import { publishableKeyFromHost } from '@clerk/react/internal';
 import { ThemeProvider, useTheme } from '../src/lib/theme';
 import ConsumerHome from '../src/pages/consumer/ConsumerHome';
 import ConsumerGameDetail from '../src/pages/consumer/ConsumerGameDetail';
+import ConsumerGames from '../src/pages/consumer/ConsumerGames';
 import '../src/index.css';
 
 function Harness() {
@@ -21,6 +22,7 @@ function Harness() {
     <Switch>
       <Route path="/tests/home.html" component={ConsumerHome} />
       <Route path="/games/:gameId" component={ConsumerGameDetail} />
+      <Route path="/games" component={ConsumerGames} />
     </Switch>
   </main>;
 }
