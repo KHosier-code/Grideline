@@ -1,3 +1,7 @@
+playwright-report/
+test-results/
+*clerk-state*.json
+artifacts/nfl-analytics/tests/.auth/
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # compiled output
