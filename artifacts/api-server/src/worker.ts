@@ -92,12 +92,16 @@ if (rehearsal) {
   }
 } else {
   const { startDataScheduler, stopDataScheduler } = await import("./lib/scheduler");
+  const { startWorkerHeartbeat } = await import("./lib/worker-heartbeat");
   process.env.GRIDLINE_SCHEDULER_WORKER = "1";
+  let stopWorkerHeartbeat: () => void;
   try {
     await startDataScheduler();
+    stopWorkerHeartbeat = await startWorkerHeartbeat();
   } catch (error) {
     // No independent feed or retention timer may start without the durable
     // scheduler. Release the ownership connection before failing the worker.
+    stopDataScheduler();
     try {
       await release();
     } finally {
@@ -111,7 +115,7 @@ if (rehearsal) {
   const stopFeedScheduler = startFeedScheduler();
   const stopUsageAnalyticsRetention = startUsageAnalyticsRetention();
   const stopPlayerRecoveryReceiptRetention = startPlayerRecoveryReceiptRetention();
-  logger.info("Gridline data worker is running; scheduled jobs continue independently of the interactive API process.");
+
   const keepAlive = setInterval(() => undefined, 60_000);
   for (const signal of ["SIGTERM", "SIGINT"] as const) {
     process.once(signal, () => {
@@ -119,6 +123,7 @@ if (rehearsal) {
       stopFeedScheduler();
       stopUsageAnalyticsRetention();
       stopPlayerRecoveryReceiptRetention();
+      stopWorkerHeartbeat();
       stopDataScheduler();
       // Do not release ownership until all active work is unable to run.
       process.exit(0);

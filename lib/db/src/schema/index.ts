@@ -7,3 +7,4 @@ export * from "./imagery-review";
 export * from "./usage-analytics";
 export * from "./game-alerts";
 export * from "./saved-games";
+export * from "./worker-heartbeat";

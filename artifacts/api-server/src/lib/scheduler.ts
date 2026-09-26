@@ -36,6 +36,7 @@ import { freezeOfficialFinalPredictions, generateLivePredictions, generateWeekly
 import { trainPhase4Models } from "./modeling";
 import { logger } from "./logger";
 import { captureConfidenceResults } from "./confidence-capture";
+import { getWorkerObservation } from "./worker-heartbeat";
 
 export const FOOTBALL_TIMEZONE = "America/New_York";
 const LOCK_TTL_MS = 2 * 60 * 60 * 1000;
@@ -1499,10 +1500,10 @@ export function stopDataScheduler() {
 
 export async function getSchedulerHealth() {
   const checkedAt = new Date();
-  const jobs = await db
+  const [worker, jobs] = await Promise.all([getWorkerObservation(), db
     .select()
     .from(schedulerJobsTable)
-    .orderBy(asc(schedulerJobsTable.provider), asc(schedulerJobsTable.jobKey));
+    .orderBy(asc(schedulerJobsTable.provider), asc(schedulerJobsTable.jobKey))]);
   const runs = await db
     .select()
     .from(dataSyncRunsTable)
@@ -1510,12 +1511,13 @@ export async function getSchedulerHealth() {
     .limit(100);
   const alerts = classifySchedulerAlerts(jobs, runs, checkedAt);
   return {
-    status: alerts.some((alert) => alert.severity === "critical")
+    status: worker.state === "stopped" || alerts.some((alert) => alert.severity === "critical")
       ? "critical"
-      : alerts.length > 0
+      : worker.state !== "observed" || alerts.length > 0
         ? "warning"
         : "healthy",
     checkedAt: checkedAt.toISOString(),
+    worker,
     alerts,
     activeInThisProcess: Boolean(timer),
     processRole: process.env.GRIDLINE_SCHEDULER_WORKER === "1" ? "persistent_worker" : "api",

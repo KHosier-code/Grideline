@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import test, { after, before } from "node:test";
 import { db, pool, usageAnalyticsRetentionTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import dashboardRouter, { createDataHealthHandler } from "./dashboard";
 import { PREGAME_FEATURE_DEFINITION } from "../lib/features";
 import { requireAdmin } from "../middlewares/admin";
+import { getWorkerObservation, startWorkerHeartbeat } from "../lib/worker-heartbeat";
 import {
   executeCancellableDatabaseQuery,
   getDatabasePoolCapacity,
@@ -146,6 +149,7 @@ const dataHealthDependencies = {
   getSchedulerHealth: async () => ({
     status: "healthy",
     checkedAt: now.toISOString(),
+    worker: { state: "observed", lastObservedAt: now.toISOString(), checkedAt: now.toISOString() },
     alerts: [],
     activeInThisProcess: false,
     processRole: "api",
@@ -255,6 +259,80 @@ function providerByName(body: unknown[], name: string) {
   assert.ok(provider, `the data-health response should include ${name}`);
   return provider;
 }
+
+test("worker liveness is distinct from provider and overdue-job status on protected data health", async () => {
+  for (const [state, expectedStatus, expectedDetail] of [
+    ["observed", "current", /does not prove that any provider/],
+    ["stopped", "stale", /may miss their windows even before jobs become overdue/],
+    ["unobserved", "unavailable", /has not been observed/],
+    ["unknown", "unavailable", /could not be classified/],
+  ] as const) {
+    const handler = createDataHealthHandler({
+      ...dataHealthDependencies,
+      getSchedulerHealth: async () => ({
+        ...await dataHealthDependencies!.getSchedulerHealth!(),
+        status: state === "stopped" ? "critical" : state === "observed" ? "healthy" : "warning",
+        worker: { state, lastObservedAt: state === "unobserved" ? null : now.toISOString(), checkedAt: now.toISOString() },
+      }),
+    }) as unknown as DataHealthHandler;
+    const body = await readDataHealth(handler);
+    const scheduler = providerByName(body, "scheduler");
+    assert.equal(scheduler.status, expectedStatus);
+    assert.match(scheduler.detail, expectedDetail);
+    assert.equal(scheduler.metadata.worker.state, state);
+    assert.equal(providerByName(body, "odds-api").status, "not_configured");
+  }
+});
+
+test("timed-out scheduler observation stays unknown rather than healthy", async () => {
+  const handler = createDataHealthHandler({
+    ...dataHealthDependencies,
+    getSchedulerHealth: async () => new Promise<never>(() => {}),
+  }, { timeoutMs: 35 }) as unknown as DataHealthHandler;
+  const scheduler = providerByName(await readDataHealth(handler), "scheduler");
+  assert.equal(scheduler.status, "unavailable");
+  assert.equal(scheduler.metadata.worker.state, "unknown");
+});
+
+test("protected Data Health reads normal heartbeat from a freshly migrated store without contacting providers", async () => {
+  const client = await pool.connect();
+  const schema = `dashboard_heartbeat_test_${randomUUID().replaceAll("-", "")}`;
+  let stop: (() => void) | undefined;
+  try {
+    await client.query(`CREATE SCHEMA "${schema}"`);
+    await client.query(`SET search_path TO "${schema}"`);
+    const baseline = await dataHealthDependencies!.getSchedulerHealth!();
+    const handler = createDataHealthHandler({
+      ...dataHealthDependencies,
+      getSchedulerHealth: async () => {
+        const worker = await getWorkerObservation(client);
+        return { ...baseline, worker, status: worker.state === "observed" ? "healthy" : "critical" };
+      },
+    }) as unknown as DataHealthHandler;
+    let scheduler = providerByName(await readDataHealth(handler), "scheduler");
+    assert.equal(scheduler.status, "unavailable", "missing table must not look healthy");
+    assert.equal(scheduler.metadata.worker.state, "unknown");
+    const migration = await readFile(
+      new URL("../../../../lib/db/migrations/0047_worker_heartbeat.sql", import.meta.url),
+      "utf8",
+    );
+    await client.query(migration);
+    stop = await startWorkerHeartbeat(client);
+    scheduler = providerByName(await readDataHealth(handler), "scheduler");
+    assert.equal(scheduler.status, "current");
+    assert.equal(scheduler.metadata.worker.state, "observed");
+    assert.equal(providerByName(await readDataHealth(handler), "odds-api").status, "not_configured");
+    await client.query("UPDATE worker_heartbeat SET observed_at = now() - interval '2 minutes' WHERE id = 1");
+    scheduler = providerByName(await readDataHealth(handler), "scheduler");
+    assert.equal(scheduler.status, "stale");
+    assert.match(scheduler.detail, /before jobs become overdue/);
+  } finally {
+    stop?.();
+    await client.query("SET search_path TO public");
+    await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    client.release();
+  }
+});
 
 test("old successful schedule and weather attempts are stale, not current", async () => {
   const old = new Date(Date.now() - 9 * 60 * 60 * 1000).toISOString();

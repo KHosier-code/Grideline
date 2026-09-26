@@ -309,6 +309,7 @@ export function createDataHealthHandler(
       {
         status: "warning",
         checkedAt: now.toISOString(),
+        worker: { state: "unknown", lastObservedAt: null, checkedAt: now.toISOString() },
         alerts: [],
         activeInThisProcess: false,
         processRole: "api",
@@ -643,17 +644,23 @@ export function createDataHealthHandler(
           label: "Recurring synchronization",
           status: schedulerResult.unavailable
             ? "unavailable"
+            : scheduler.worker.state === "unknown" || scheduler.worker.state === "unobserved"
+              ? "unavailable"
             : scheduler.status === "healthy"
               ? "current"
               : "stale",
           detail: schedulerResult.unavailable
             ? healthCheckUnavailable("scheduler")
+            : scheduler.worker.state === "stopped"
+              ? `Data worker heartbeat stopped (last observed ${scheduler.worker.lastObservedAt}). Scheduled feeds may miss their windows even before jobs become overdue. Provider health is reported separately.`
+              : scheduler.worker.state === "unobserved"
+                ? "Data worker has not been observed. Its state is unknown; scheduled feeds may miss their windows. Provider health is reported separately."
+                : scheduler.worker.state === "unknown"
+                  ? "Data worker heartbeat could not be classified. Worker state is unknown; provider health is reported separately."
             : scheduler.alerts.length > 0
               ? `${scheduler.alerts.length} durable worker scheduler alert${scheduler.alerts.length === 1 ? "" : "s"} detected. This API process only reports persisted state.`
-              : scheduler.activeInThisProcess
-                ? "The durable worker scheduler is active in this process. Persisted locks prevent duplicate work."
-                : "This API process is healthy but does not own recurring work; persisted durable worker state has no backlog alerts.",
-          lastUpdated: scheduler.processStartedAt,
+              : "Data worker heartbeat observed recently; this does not prove that any provider or scheduled job succeeded.",
+          lastUpdated: scheduler.worker.lastObservedAt,
           nextUpdate:
             scheduler.jobs
               .map((job) => job.nextRunAt)
@@ -669,6 +676,7 @@ export function createDataHealthHandler(
             persistentWorkerExpected: scheduler.persistentWorkerExpected,
             alwaysOnServiceRequired: scheduler.alwaysOnServiceRequired,
             schedulerStatus: scheduler.status,
+            worker: scheduler.worker,
             checkedAt: scheduler.checkedAt,
             alerts: scheduler.alerts,
             jobs: scheduler.jobs,
