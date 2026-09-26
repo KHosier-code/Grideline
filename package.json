@@ -6,6 +6,7 @@
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "test:fast": "pnpm --filter @workspace/scripts run test:typecheck-script-contract",
+    "test:consumer-performance": "pnpm --filter @workspace/nfl-analytics run perf:budget",
     "test:theme": "playwright test --config artifacts/nfl-analytics/playwright.config.ts",
     "test:theme:admin": "GRIDLINE_THEME_ADMIN=1 playwright test --config artifacts/nfl-analytics/playwright.config.ts",
     "typecheck:libs": "tsc --build",

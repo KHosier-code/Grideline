@@ -50,3 +50,4 @@
 - [Matchup alert evidence](matchup-alert-evidence.md) — compare overlapping persisted evidence against the last material baseline; missing coverage must not become a change.
 - [Saved-game meaning](saved-game-meaning.md) — following a matchup stores identity, not a projection; keep evidence eligibility current and unavailable states explicit.
 - [Public metadata boundary](public-metadata-boundary.md) — verify game identity at request time for share previews; client head updates alone cannot make social cards accurate.
+- [Optional image refresh](optional-image-refresh.md) — remote enrichment must not block consumer data; cold-path performance runs must not warm the API first.

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { SignIn, SignUp, UserButton, useAuth, useClerk } from '@clerk/react';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -72,29 +72,30 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
-import ConsumerHome from '@/pages/consumer/ConsumerHome';
-import VisitorHome from '@/pages/consumer/VisitorHome';
-import ConsumerGames from '@/pages/consumer/ConsumerGames';
-import ConsumerGameDetail from '@/pages/consumer/ConsumerGameDetail';
-import ConsumerSavedGames from '@/pages/consumer/ConsumerSavedGames';
-import ConsumerPerformance from '@/pages/consumer/ConsumerPerformance';
-import ConsumerMethodology from '@/pages/consumer/ConsumerMethodology';
 import { useRouteMetadata } from '@/lib/public-metadata';
-import ConsumerTrends from '@/pages/consumer/ConsumerTrends';
-import ConsumerProps from '@/pages/consumer/ConsumerProps';
-import ConsumerUsage from '@/pages/consumer/ConsumerUsage';
-import ConsumerRedZone from '@/pages/consumer/ConsumerRedZone';
-import DefenseVsPositionLeague from '@/components/DefenseVsPosition';
-import ConsumerTeams from '@/pages/consumer/ConsumerTeams';
-import UsageAnalytics from '@/pages/admin/UsageAnalytics';
 import { useAdminStatus } from '@/hooks/use-admin-status';
 import { consumerAccountState } from '@/lib/consumer-account-state';
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from '@/components/ConsumerAccountNavigation';
 import './index.css';
 
-import { AdminDepthChart } from '@/components/AdminDepthChart';
-import { AdminPlayerStatsImport } from '@/components/AdminPlayerStatsImport';
 import { useTheme } from '@/lib/theme';
+
+const ConsumerHome = lazy(() => import('@/pages/consumer/ConsumerHome'));
+const VisitorHome = lazy(() => import('@/pages/consumer/VisitorHome'));
+const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
+const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
+const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
+const ConsumerPerformance = lazy(() => import('@/pages/consumer/ConsumerPerformance'));
+const ConsumerMethodology = lazy(() => import('@/pages/consumer/ConsumerMethodology'));
+const ConsumerTrends = lazy(() => import('@/pages/consumer/ConsumerTrends'));
+const ConsumerProps = lazy(() => import('@/pages/consumer/ConsumerProps'));
+const ConsumerUsage = lazy(() => import('@/pages/consumer/ConsumerUsage'));
+const ConsumerRedZone = lazy(() => import('@/pages/consumer/ConsumerRedZone'));
+const DefenseVsPositionLeague = lazy(() => import('@/components/DefenseVsPosition'));
+const ConsumerTeams = lazy(() => import('@/pages/consumer/ConsumerTeams'));
+const UsageAnalytics = lazy(() => import('@/pages/admin/UsageAnalytics'));
+const AdminDepthChart = lazy(() => import('@/components/AdminDepthChart').then(module => ({ default: module.AdminDepthChart })));
+const AdminPlayerStatsImport = lazy(() => import('@/components/AdminPlayerStatsImport').then(module => ({ default: module.AdminPlayerStatsImport })));
 
 const queryClient = new QueryClient();
 const redZoneEnabled = import.meta.env.VITE_GRIDLINE_RED_ZONE_ENABLED === '1';
@@ -2031,7 +2032,13 @@ function EvaluationAudit() {
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
+  return <ErrorBoundary resetKey={location} FallbackComponent={() => (
+    <div className="consumer-state" role="alert">
+      <h2>This page could not be loaded</h2>
+      <p>Check your connection and try again.</p>
+      <button type="button" className="button button-primary" onClick={() => window.location.reload()}>Reload page</button>
+    </div>
+  )}><Suspense fallback={<div className="consumer-state" role="status"><Loader2 className="h-6 w-6 animate-spin" /><p>Loading page…</p></div>}>{children}</Suspense></ErrorBoundary>;
 }
 
 const authBasePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -2094,8 +2101,15 @@ function SignUpPage() {
 
 function Router() {
   useRouteMetadata();
+  const [location] = useLocation();
   const { isLoaded, isSignedIn } = useAuth();
-  if (!isLoaded) return <ConsumerLoadingFallback />;
+  // Public pages can render while Clerk initializes. Admin and account routes
+  // still wait for a definitive identity before making an access decision.
+  const publicRoute = location === '/' || location === '/games' || location.startsWith('/games/')
+    || location === '/performance' || location === '/methodology'
+    || location === '/defense-vs-position' || location === '/teams' || location === '/usage'
+    || (redZoneEnabled && location === '/red-zone');
+  if (!isLoaded && !publicRoute) return <ConsumerLoadingFallback />;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
     <Route path="/sign-up/*?" component={SignUpPage} />
     <Route path="/sign-in/*?" component={SignInPage} />

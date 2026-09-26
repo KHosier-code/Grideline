@@ -1,6 +1,33 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseImageCsv, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages } from "./verified-imagery";
+import { createImageRefreshGate, parseImageCsv, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages } from "./verified-imagery";
+
+test("a cold or timed-out image source never blocks consumer responses and retries are bounded", async () => {
+  let finish!: () => void;
+  let now = 1000;
+  let calls = 0;
+  const refresh = createImageRefreshGate(() => {
+    calls++;
+    return new Promise<void>(resolve => { finish = resolve; });
+  }, () => now);
+  const started = Date.now();
+  refresh(true);
+  assert.equal(staleVerifiedImages(null, [team("a", "A", "A")]), null);
+  assert.ok(Date.now() - started < 100, "no remote image work belongs in the read path");
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  refresh(true);
+  assert.equal(calls, 1, "parallel requests share one refresh");
+  finish();
+  await new Promise(resolve => setImmediate(resolve));
+  refresh(true);
+  assert.equal(calls, 1, "a completed but failed or stale refresh cannot stampede requests");
+  now += 5 * 60_000;
+  refresh(true);
+  await Promise.resolve();
+  assert.equal(calls, 2);
+  finish();
+});
 
 const url = (id: string) => `https://images.example.org/${id}.png`;
 const team = (teamId: string, abbreviation: string, name: string) => ({ teamId, abbreviation, name });

@@ -160,6 +160,24 @@ type ImageState = {
 let cached: { state: ImageState; expires: number } | null = null;
 let pending: Promise<ImageState> | null = null;
 let lastError: string | null = null;
+/** Keep optional remote imagery outside the request path, even on a cold start. */
+export function createImageRefreshGate(refresh: () => Promise<unknown>, now: () => number = Date.now) {
+  let inFlight = false;
+  let retryAt = 0;
+  return (stale: boolean) => {
+    if (!stale || inFlight || now() < retryAt) return;
+    inFlight = true;
+    retryAt = now() + 5 * 60_000;
+    void Promise.resolve().then(refresh).catch(() => {
+      // The awaited admin report can expose the recorded source failure.
+    }).finally(() => { inFlight = false; });
+  };
+}
+const scheduleConsumerRefresh = createImageRefreshGate(() => safeVerifiedImages([]));
+export function consumerVerifiedImages(teams: Team[]) {
+  scheduleConsumerRefresh(!cached || cached.expires <= Date.now());
+  return staleVerifiedImages(cached?.state ?? null, teams);
+}
 async function download(url: string) {
   const response = await fetch(url, { signal: AbortSignal.timeout(20_000), headers: { "User-Agent": "Gridline/1.0 (verified imagery)" } });
   if (!response.ok) throw new Error(`Image source returned HTTP ${response.status}`);

@@ -50,7 +50,7 @@ import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { GetConsumerScheduleSelectionResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
-import { safeVerifiedImages, playerHeadshot } from "../lib/verified-imagery";
+import { consumerVerifiedImages, playerHeadshot } from "../lib/verified-imagery";
 import {
   completeGameMarketObservation,
   consumerMarketFreshnessMinutes,
@@ -1367,7 +1367,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
     asOf,
   );
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
-  const imagery = await safeVerifiedImages(teams.map(team => ({
+  const imagery = consumerVerifiedImages(teams.map(team => ({
     teamId: team.teamId, abbreviation: team.abbreviation, name: team.teamName,
   })));
   const latestMarketAuditByGame = new Map(
@@ -1770,7 +1770,7 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
       homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId,
     }).from(gamesTable).where(eq(gamesTable.gameId, game.gameId)).limit(1);
     const detailTeamRows = await db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable);
-    const imagery = await safeVerifiedImages(detailTeamRows.map(team => ({
+    const imagery = consumerVerifiedImages(detailTeamRows.map(team => ({
       teamId: team.teamId, abbreviation: team.abbreviation,
       name: team.teamId === gameRow.homeTeamId ? game.matchup.home.name
         : team.teamId === gameRow.awayTeamId ? game.matchup.away.name : "",
