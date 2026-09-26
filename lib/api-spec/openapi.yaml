@@ -277,6 +277,32 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/OddsEventAudit"
+  /admin/player-recovery/receipts:
+    get:
+      operationId: listPlayerRecoveryReceipts
+      tags: [dashboard]
+      summary: Review attested one-shot player recovery receipts
+      description: Administrator-only, latest first. Receipts are retained for 90 days and link to data_sync_runs by syncRunJobKey. No provider errors or database identity claims are exposed.
+      security: [{ clerk: [] }]
+      parameters:
+        - name: receiptId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: Retained receipts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlayerRecoveryReceiptsResult" }
+        "400": { description: Invalid lookup }
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
+        "500": { description: Receipt store unavailable }
   /data-sync/schedule:
     post:
       operationId: syncSchedule
@@ -872,6 +898,41 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    PlayerRecoveryReceiptsResult:
+      type: object
+      additionalProperties: false
+      required: [retentionDays, receipts]
+      properties:
+        retentionDays: { type: integer }
+        receipts:
+          type: array
+          items: { $ref: "#/components/schemas/PlayerRecoveryReceipt" }
+    PlayerRecoveryReceipt:
+      type: object
+      additionalProperties: false
+      required: [event, receiptId, approvedFeeds, target, syncRunJobKey, startedAt, completedAt, status, attempts]
+      properties:
+        event: { type: string, enum: [player_recovery_receipt] }
+        receiptId: { type: string, format: uuid }
+        approvedFeeds:
+          type: array
+          items: { type: string, enum: [injuries, sleeper] }
+        target: { type: string, enum: [attested_development_primary, attested_disposable_development_primary] }
+        syncRunJobKey: { type: string }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        status: { type: string, enum: [success, partial_success, failed] }
+        attempts:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [feed, status]
+            properties:
+              feed: { type: string, enum: [injuries, sleeper] }
+              status: { type: string, enum: [success, failed] }
+              inserted: { type: integer, minimum: 0 }
+              reason: { type: string, enum: [locked, sync_error] }
     UsageAnalyticsEventInput:
       type: object
       additionalProperties: false

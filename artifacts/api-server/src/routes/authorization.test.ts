@@ -33,6 +33,7 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     ["settings.ts", '/settings'],
     ["dashboard.ts", '/dashboard/summary'],
     ["data-sync.ts", '/odds/audit'],
+    ["data-sync.ts", '/admin/player-recovery/receipts'],
     ["dashboard.ts", '/data-health'],
     ["dashboard.ts", '/admin/sleeper-identity-report'],
     ["models.ts", '/models/lab'],

@@ -5,6 +5,87 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+export type PlayerRecoveryReceiptEvent = typeof PlayerRecoveryReceiptEvent[keyof typeof PlayerRecoveryReceiptEvent];
+
+
+export const PlayerRecoveryReceiptEvent = {
+  player_recovery_receipt: 'player_recovery_receipt',
+} as const;
+
+export type PlayerRecoveryReceiptApprovedFeedsItem = typeof PlayerRecoveryReceiptApprovedFeedsItem[keyof typeof PlayerRecoveryReceiptApprovedFeedsItem];
+
+
+export const PlayerRecoveryReceiptApprovedFeedsItem = {
+  injuries: 'injuries',
+  sleeper: 'sleeper',
+} as const;
+
+export type PlayerRecoveryReceiptTarget = typeof PlayerRecoveryReceiptTarget[keyof typeof PlayerRecoveryReceiptTarget];
+
+
+export const PlayerRecoveryReceiptTarget = {
+  attested_development_primary: 'attested_development_primary',
+  attested_disposable_development_primary: 'attested_disposable_development_primary',
+} as const;
+
+export type PlayerRecoveryReceiptStatus = typeof PlayerRecoveryReceiptStatus[keyof typeof PlayerRecoveryReceiptStatus];
+
+
+export const PlayerRecoveryReceiptStatus = {
+  success: 'success',
+  partial_success: 'partial_success',
+  failed: 'failed',
+} as const;
+
+export type PlayerRecoveryReceiptAttemptsItemFeed = typeof PlayerRecoveryReceiptAttemptsItemFeed[keyof typeof PlayerRecoveryReceiptAttemptsItemFeed];
+
+
+export const PlayerRecoveryReceiptAttemptsItemFeed = {
+  injuries: 'injuries',
+  sleeper: 'sleeper',
+} as const;
+
+export type PlayerRecoveryReceiptAttemptsItemStatus = typeof PlayerRecoveryReceiptAttemptsItemStatus[keyof typeof PlayerRecoveryReceiptAttemptsItemStatus];
+
+
+export const PlayerRecoveryReceiptAttemptsItemStatus = {
+  success: 'success',
+  failed: 'failed',
+} as const;
+
+export type PlayerRecoveryReceiptAttemptsItemReason = typeof PlayerRecoveryReceiptAttemptsItemReason[keyof typeof PlayerRecoveryReceiptAttemptsItemReason];
+
+
+export const PlayerRecoveryReceiptAttemptsItemReason = {
+  locked: 'locked',
+  sync_error: 'sync_error',
+} as const;
+
+export type PlayerRecoveryReceiptAttemptsItem = {
+  feed: PlayerRecoveryReceiptAttemptsItemFeed;
+  status: PlayerRecoveryReceiptAttemptsItemStatus;
+  /** @minimum 0 */
+  inserted?: number;
+  reason?: PlayerRecoveryReceiptAttemptsItemReason;
+};
+
+export interface PlayerRecoveryReceipt {
+  event: PlayerRecoveryReceiptEvent;
+  receiptId: string;
+  approvedFeeds: PlayerRecoveryReceiptApprovedFeedsItem[];
+  target: PlayerRecoveryReceiptTarget;
+  syncRunJobKey: string;
+  startedAt: string;
+  completedAt: string;
+  status: PlayerRecoveryReceiptStatus;
+  attempts: PlayerRecoveryReceiptAttemptsItem[];
+}
+
+export interface PlayerRecoveryReceiptsResult {
+  retentionDays: number;
+  receipts: PlayerRecoveryReceipt[];
+}
+
 export type UsageAnalyticsEventInputEventName = typeof UsageAnalyticsEventInputEventName[keyof typeof UsageAnalyticsEventInputEventName];
 
 
@@ -1638,6 +1719,70 @@ export interface ConsumerUsagePlayer {
 }
 
 export type DefensePositionMetricUnit = typeof DefensePositionMetricUnit[keyof typeof DefensePositionMetricUnit];
+
+
+export const DefensePositionMetricUnit = {
+  yards: 'yards',
+  count: 'count',
+} as const;
+
+export interface DefensePositionMetric {
+  label: string;
+  unit: DefensePositionMetricUnit;
+  /** @nullable */
+  perGame: number | null;
+  /** @nullable */
+  total: number | null;
+  coveredGames: number;
+  completedGames: number;
+  coveredWeeks: number[];
+  missingWeeks: number[];
+  missingGames: string[];
+  /** @nullable */
+  reason: string | null;
+}
+
+export type ConsumerDefenseVsPositionSeasonType = typeof ConsumerDefenseVsPositionSeasonType[keyof typeof ConsumerDefenseVsPositionSeasonType];
+
+
+export const ConsumerDefenseVsPositionSeasonType = {
+  REG: 'REG',
+} as const;
+
+export type ConsumerDefenseVsPositionWindow = typeof ConsumerDefenseVsPositionWindow[keyof typeof ConsumerDefenseVsPositionWindow];
+
+
+export const ConsumerDefenseVsPositionWindow = {
+  season: 'season',
+  last3: 'last3',
+  last5: 'last5',
+} as const;
+
+export type ConsumerDefenseVsPositionUnsupported = {[key: string]: string};
+
+export type ConsumerDefenseVsPositionDefensesItemPositions = {[key: string]: {[key: string]: DefensePositionMetric}};
+
+export type ConsumerDefenseVsPositionDefensesItem = {
+  teamId: string;
+  abbreviation: string;
+  positions: ConsumerDefenseVsPositionDefensesItemPositions;
+};
+
+export interface ConsumerDefenseVsPosition {
+  season: number;
+  seasonType: ConsumerDefenseVsPositionSeasonType;
+  window: ConsumerDefenseVsPositionWindow;
+  cutoff: string;
+  source: string;
+  /** @nullable */
+  sourceUpdatedAt: string | null;
+  /** @nullable */
+  ingestedAt: string | null;
+  note: string;
+  unsupported: ConsumerDefenseVsPositionUnsupported;
+  defenses: ConsumerDefenseVsPositionDefensesItem[];
+}
+
 export type ConsumerPlayerUsageStatus = typeof ConsumerPlayerUsageStatus[keyof typeof ConsumerPlayerUsageStatus];
 
 
@@ -2889,6 +3034,15 @@ export const ListOddsAuditsOutcome = {
   unmatched: 'unmatched',
 } as const;
 
+export type ListPlayerRecoveryReceiptsParams = {
+receiptId?: string;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
 export type GetPregameFeatureHealthParams = {
 featureVersion?: GetPregameFeatureHealthFeatureVersion;
 };
@@ -2978,6 +3132,16 @@ season?: number;
 game?: string;
 window?: GetConsumerDefenseVsPositionWindow;
 };
+
+export type GetConsumerDefenseVsPositionWindow = typeof GetConsumerDefenseVsPositionWindow[keyof typeof GetConsumerDefenseVsPositionWindow];
+
+
+export const GetConsumerDefenseVsPositionWindow = {
+  season: 'season',
+  last3: 'last3',
+  last5: 'last5',
+} as const;
+
 export type GetConsumerPlayerUsageParams = {
 team?: string;
 position?: GetConsumerPlayerUsagePosition;
@@ -3050,72 +3214,3 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
-
-
-export type ConsumerDefenseVsPositionDefensesItemPositions = {[key: string]: {[key: string]: DefensePositionMetric}};
-
-export type ConsumerDefenseVsPositionDefensesItem = {
-  teamId: string;
-  abbreviation: string;
-  positions: ConsumerDefenseVsPositionDefensesItemPositions;
-};
-
-export type ConsumerDefenseVsPositionUnsupported = {[key: string]: string};
-
-export const ConsumerDefenseVsPositionWindow = {
-  season: 'season',
-  last3: 'last3',
-  last5: 'last5',
-} as const;
-
-export type ConsumerDefenseVsPositionWindow = typeof ConsumerDefenseVsPositionWindow[keyof typeof ConsumerDefenseVsPositionWindow];
-
-export const DefensePositionMetricUnit = {
-  yards: 'yards',
-  count: 'count',
-} as const;
-
-export interface ConsumerDefenseVsPosition {
-  season: number;
-  seasonType: ConsumerDefenseVsPositionSeasonType;
-  window: ConsumerDefenseVsPositionWindow;
-  cutoff: string;
-  source: string;
-  /** @nullable */
-  sourceUpdatedAt: string | null;
-  /** @nullable */
-  ingestedAt: string | null;
-  note: string;
-  unsupported: ConsumerDefenseVsPositionUnsupported;
-  defenses: ConsumerDefenseVsPositionDefensesItem[];
-}
-
-export const ConsumerDefenseVsPositionSeasonType = {
-  REG: 'REG',
-} as const;
-
-export type GetConsumerDefenseVsPositionWindow = typeof GetConsumerDefenseVsPositionWindow[keyof typeof GetConsumerDefenseVsPositionWindow];
-
-export const GetConsumerDefenseVsPositionWindow = {
-  season: 'season',
-  last3: 'last3',
-  last5: 'last5',
-} as const;
-
-export type ConsumerDefenseVsPositionSeasonType = typeof ConsumerDefenseVsPositionSeasonType[keyof typeof ConsumerDefenseVsPositionSeasonType];
-
-export interface DefensePositionMetric {
-  label: string;
-  unit: DefensePositionMetricUnit;
-  /** @nullable */
-  perGame: number | null;
-  /** @nullable */
-  total: number | null;
-  coveredGames: number;
-  completedGames: number;
-  coveredWeeks: number[];
-  missingWeeks: number[];
-  missingGames: string[];
-  /** @nullable */
-  reason: string | null;
-}

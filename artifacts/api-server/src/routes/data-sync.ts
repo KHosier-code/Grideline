@@ -3,6 +3,8 @@ import {
   CaptureOddsResponse,
   ListOddsAuditsQueryParams,
   ListOddsAuditsResponse,
+  ListPlayerRecoveryReceiptsQueryParams,
+  ListPlayerRecoveryReceiptsResponse,
   SyncScheduleBody,
   SyncScheduleResponse,
 } from "@workspace/api-zod";
@@ -12,10 +14,32 @@ import { captureOddsSnapshots, getOddsEventAudits } from "../lib/odds";
 import { syncEspnScheduleCoverage } from "../lib/schedule";
 import { requireAdmin } from "../middlewares/admin";
 import { withFeedLock } from "../lib/feed-scheduler";
+import { listPlayerRecoveryReceipts, PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS } from "../lib/player-recovery-receipts";
 
 const router: IRouter = Router();
 
 const playerStats2026Url = datasetUrl("player_stats", 2026);
+
+router.get("/admin/player-recovery/receipts", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = ListPlayerRecoveryReceiptsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid receipt lookup." });
+    return;
+  }
+  try {
+    const receipts = await listPlayerRecoveryReceipts({
+      receiptId: parsed.data.receiptId,
+      limit: parsed.data.limit ?? 50,
+    });
+    res.json(ListPlayerRecoveryReceiptsResponse.parse({
+      retentionDays: PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS,
+      receipts,
+    }));
+  } catch {
+    req.log.error("Player recovery receipt read failed");
+    res.status(500).json({ error: "Player recovery receipts are temporarily unavailable." });
+  }
+});
 
 router.get("/data-sync/player-stats-2026", requireAdmin, (_req, res) => {
   res.json({ season: 2026, dataset: "player_stats", sourceUrl: playerStats2026Url });

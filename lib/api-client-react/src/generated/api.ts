@@ -59,6 +59,7 @@ import type {
   ListGamesParams,
   ListOddsAuditsParams,
   ListPersonnelContextAuditParams,
+  ListPlayerRecoveryReceiptsParams,
   ListPregameFeatureAuditParams,
   LiveModelInputIntegrityAudit,
   OddsCaptureResult,
@@ -67,6 +68,7 @@ import type {
   PersonnelContext,
   PersonnelContextAuditRow,
   PersonnelContextCoverage,
+  PlayerRecoveryReceiptsResult,
   PregameFeatureAuditRow,
   PregameFeatureBuildInput,
   PregameFeatureHealth,
@@ -1133,6 +1135,91 @@ export function useListOddsAudits<TData = Awaited<ReturnType<typeof listOddsAudi
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListOddsAuditsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPlayerRecoveryReceiptsUrl = (params?: ListPlayerRecoveryReceiptsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/player-recovery/receipts?${stringifiedParams}` : `/api/admin/player-recovery/receipts`
+}
+
+/**
+ * Administrator-only, latest first. Receipts are retained for 90 days and link to data_sync_runs by syncRunJobKey. No provider errors or database identity claims are exposed.
+ * @summary Review attested one-shot player recovery receipts
+ */
+export const listPlayerRecoveryReceipts = async (params?: ListPlayerRecoveryReceiptsParams, options?: Parameters<typeof customFetch>[1]): Promise<PlayerRecoveryReceiptsResult> => {
+
+  return customFetch<PlayerRecoveryReceiptsResult>(getListPlayerRecoveryReceiptsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlayerRecoveryReceiptsQueryKey = (params?: ListPlayerRecoveryReceiptsParams,) => {
+    return [
+    `/api/admin/player-recovery/receipts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlayerRecoveryReceiptsQueryOptions = <TData = Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>, TError = ErrorType<void>>(params?: ListPlayerRecoveryReceiptsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlayerRecoveryReceiptsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>> = ({ signal }) => listPlayerRecoveryReceipts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlayerRecoveryReceiptsQueryResult = NonNullable<Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>>
+export type ListPlayerRecoveryReceiptsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Review attested one-shot player recovery receipts
+ */
+
+export function useListPlayerRecoveryReceipts<TData = Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>, TError = ErrorType<void>>(
+ params?: ListPlayerRecoveryReceiptsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlayerRecoveryReceiptsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -584,6 +584,27 @@ export const dataSyncRunsTable = pgTable("data_sync_runs", {
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });
 
+// One row per attested one-shot recovery. Payload is built only from the
+// allowlisted stdout receipt, never from the recovery configuration or errors.
+export const playerRecoveryReceiptsTable = pgTable("player_recovery_receipts", {
+  receiptId: text("receipt_id").primaryKey(),
+  event: text("event").notNull(),
+  approvedFeeds: jsonb("approved_feeds").$type<Array<"injuries" | "sleeper">>().notNull(),
+  target: text("target").notNull(),
+  syncRunJobKey: text("sync_run_job_key").notNull().unique(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
+  status: text("status").notNull(),
+  attempts: jsonb("attempts").$type<Array<{
+    feed: "injuries" | "sleeper";
+    status: "success" | "failed";
+    inserted?: number;
+    reason?: "locked" | "sync_error";
+  }>>().notNull(),
+}, (table) => [
+  index("player_recovery_receipts_completed_idx").on(table.completedAt),
+]);
+
 /**
  * Point-in-time rows from Sleeper's published NFL players feed. Rows are
  * append-only evidence: an unchanged player payload is deduplicated by its

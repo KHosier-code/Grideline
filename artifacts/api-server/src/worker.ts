@@ -80,8 +80,9 @@ if (rehearsal) {
       const { syncSleeperPlayers } = await import("./lib/sleeper");
       return syncSleeperPlayers({ jobKey });
     });
-    // A single machine-readable line survives the pretty logger and can be
-    // retained alongside the corresponding sync-run rows by operators.
+
+    const { persistPlayerRecoveryReceipt } = await import("./lib/player-recovery-receipts");
+    await persistPlayerRecoveryReceipt(receipt);
     process.stdout.write(`${JSON.stringify(receipt)}\n`);
     if (receipt.status !== "success")
       throw new Error(`Player recovery ${receipt.status}; receipt ${receipt.receiptId}`);
@@ -95,8 +96,10 @@ if (rehearsal) {
   await startDataScheduler();
   const { startFeedScheduler } = await import("./lib/feed-scheduler");
   const { startUsageAnalyticsRetention } = await import("./lib/usage-analytics-retention");
+  const { startPlayerRecoveryReceiptRetention } = await import("./lib/player-recovery-receipts");
   const stopFeedScheduler = startFeedScheduler();
   const stopUsageAnalyticsRetention = startUsageAnalyticsRetention();
+  const stopPlayerRecoveryReceiptRetention = startPlayerRecoveryReceiptRetention();
   logger.info("Gridline data worker is running; scheduled jobs continue independently of the interactive API process.");
   const keepAlive = setInterval(() => undefined, 60_000);
   for (const signal of ["SIGTERM", "SIGINT"] as const) {
@@ -104,6 +107,7 @@ if (rehearsal) {
       clearInterval(keepAlive);
       stopFeedScheduler();
       stopUsageAnalyticsRetention();
+      stopPlayerRecoveryReceiptRetention();
       stopDataScheduler();
       // Do not release ownership until all active work is unable to run.
       process.exit(0);
