@@ -38,6 +38,56 @@ async function names(page: Page, mobile: boolean) {
 }
 
 for (const width of [1280, 390]) {
+  test(`Player Usage ignores an older position response at ${width}px`, async ({ page }) => {
+    const mobile = width < 1024;
+    let notifyOlderRequested!: () => void;
+    let releaseOlder!: () => void;
+    let notifyOlderFinished!: () => void;
+    const olderRequested = new Promise<void>(resolve => { notifyOlderRequested = resolve; });
+    const olderReleased = new Promise<void>(resolve => { releaseOlder = resolve; });
+    const olderFinished = new Promise<void>(resolve => { notifyOlderFinished = resolve; });
+
+    await page.setViewportSize({ width, height: 850 });
+    await page.route('**/api/consumer/player-usage-games*', route =>
+      route.fulfill({ json: { season: 2026, games: [] } }));
+    await page.route('**/api/consumer/player-usage?*', async route => {
+      const position = new URL(route.request().url()).searchParams.get('position');
+      if (position === 'QB') {
+        notifyOlderRequested();
+        await olderReleased;
+      }
+      await route.fulfill({ json: {
+        ...response,
+        players: position ? players.filter(p => p.position === position) : players,
+      } });
+      if (position === 'QB') notifyOlderFinished();
+    });
+    await page.route('**/api/analytics/usage-event', route => route.fulfill({ status: 204 }));
+
+    try {
+      await page.goto('/tests/player-usage.html');
+      await expect.poll(() => names(page, mobile)).toEqual(['Dana Dash', 'Aaron Able', 'Blake Blank']);
+      const position = page.getByTestId('select-usage-position');
+      await position.selectOption('QB');
+      await olderRequested;
+      await position.selectOption('WR');
+      await expect(position).toHaveValue('WR');
+      await expect.poll(() => names(page, mobile)).toEqual(['Dana Dash']);
+      await expect(page.getByTestId('text-usage-count')).toContainText('1 of 2 players');
+
+      releaseOlder();
+      await olderFinished;
+      // Allow a browser render after the late response before inspecting the active list.
+      await page.evaluate(() => new Promise<void>(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      await expect.poll(() => names(page, mobile)).toEqual(['Dana Dash']);
+      await expect(page.getByTestId('text-usage-count')).toContainText('1 of 2 players');
+      await expect(position).toHaveValue('WR');
+    } finally {
+      releaseOlder();
+    }
+  });
+
   test(`Player Usage discovery, shared link and analytics at ${width}px`, async ({ page }) => {
     const mobile = width < 1024;
     const analytics: unknown[] = [];
