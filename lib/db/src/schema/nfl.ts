@@ -38,6 +38,26 @@ export const playersTable = pgTable("players", {
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
 });
 
+// Every successful complete roster capture retains all observed assignments,
+// including unchanged ones. A run is usable only after its completeness
+// metadata is committed; partial runs never count as verified coverage.
+export const espnRosterObservationsTable = pgTable("espn_roster_observations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  runId: integer("run_id").notNull(),
+  playerId: text("player_id").notNull(),
+  teamId: text("team_id").notNull(),
+  playerName: text("player_name").notNull(),
+  position: text("position"),
+  activeStatus: text("active_status"),
+  sourcePath: text("source_path").notNull(),
+  sourceHash: text("source_hash").notNull(),
+  observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+  publicationAt: timestamp("publication_at", { withTimezone: true }),
+}, (table) => [
+  unique("espn_roster_observations_run_player_unique").on(table.runId, table.playerId),
+  index("espn_roster_observations_player_observed_idx").on(table.playerId, table.observedAt),
+]);
+
 export const gamesTable = pgTable("games", {
   gameId: text("game_id").primaryKey(),
   season: integer("season").notNull(),

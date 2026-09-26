@@ -3,7 +3,7 @@ import {
   db,
   pool,
   dataSyncRunsTable,
-  sleeperPlayerSnapshotsTable,
+  espnRosterObservationsTable,
   depthChartSnapshotsTable,
   gamesTable,
   injuriesTable,
@@ -67,6 +67,8 @@ export type VerifiedRosterAssignment = {
   teamId: string;
   activeStatus: string | null;
   observedAt: Date | string;
+  runId?: number;
+  publicationAt?: Date | string | null;
 };
 
 export type ReadinessIdentity = {
@@ -100,6 +102,7 @@ export type ReadinessDepth = {
 };
 
 export type ProviderObservation = {
+  id?: number;
   provider: string;
   status: string;
   startedAt: Date | string;
@@ -133,7 +136,41 @@ export function validPlayerObservation(run: ProviderObservation): Date | null {
       && typeof meta.unchanged === "number"
       && meta.unchanged + run.recordsProcessed === meta.observedCount ? retrieved : null;
   }
+  if (run.provider === "espn-complete-rosters") {
+    return meta.observationKind === "complete-espn-rosters" && meta.responseComplete === true
+      && meta.teamCount === 32 && Array.isArray(meta.teams)
+      && meta.teams.length === 32 && new Set(meta.teams).size === 32
+      && Number.isInteger(meta.observedCount) && (meta.observedCount as number) > 0
+      && run.recordsProcessed === meta.observedCount ? retrieved : null;
+  }
   return null;
+}
+
+/** Never trust success metadata without the corresponding intact row set. */
+export function verifiedAssignmentsForRun(
+  run: ProviderObservation,
+  rows: (VerifiedRosterAssignment & {
+    runId: number; sourcePath: string; publicationAt: Date | string | null;
+  })[],
+): VerifiedRosterAssignment[] {
+  if (!run.id || !validPlayerObservation(run) || run.provider !== "espn-complete-rosters") return [];
+  const selected = rows.filter((row) => row.runId === run.id);
+  const teams = new Set(selected.map((row) => row.teamId));
+  const ids = new Set(selected.map((row) => row.playerId));
+  const expected = new Set(run.metadata?.teams as string[]);
+  const start = toDate(run.startedAt)!.getTime();
+  const end = toDate(run.completedAt)!.getTime();
+  if (selected.length !== run.recordsProcessed || ids.size !== selected.length
+    || teams.size !== 32 || [...teams].some((team) => !expected.has(team))
+    || selected.some((row) => {
+      const time = toDate(row.observedAt)?.getTime();
+      const publication = toDate(row.publicationAt)?.getTime();
+      return !/^\d+$/.test(row.playerId) || !/^\d+$/.test(row.teamId)
+        || row.sourcePath !== `/teams/${row.teamId}/roster`
+        || time === undefined || time < start || time > end
+        || (row.publicationAt !== null && (publication === undefined || publication > time));
+    })) return [];
+  return selected;
 }
 
 function toDate(value: Date | string | null | undefined): Date | null {
@@ -208,7 +245,6 @@ export function buildUpcomingPlayerReadinessAudit(input: {
   depthCharts: ReadinessDepth[];
   playerStatsIngestedAt?: Date | string | null;
   providerRuns?: ProviderObservation[];
-  sleeperLastChangedAt?: Date | string | null;
   allPlayerIds?: string[];
   // Only a complete, independently timestamped player/team observation can
   // verify an unchanged assignment; players.source_updated_at is change-only.
@@ -263,7 +299,13 @@ export function buildUpcomingPlayerReadinessAudit(input: {
     return ids.size === 1 && knownPlayerIds.has([...ids][0]!);
   }).length;
 
-  const verifiedRosterByPlayer = latestPerPair(input.verifiedRosterAssignments ?? [], (row) => toDate(row.observedAt));
+  const verifiedRosterByPlayer = new Map<string, VerifiedRosterAssignment>();
+  for (const row of input.verifiedRosterAssignments ?? []) {
+    const prior = verifiedRosterByPlayer.get(row.playerId);
+    if (!prior || (toDate(row.observedAt)?.getTime() ?? 0) > (toDate(prior.observedAt)?.getTime() ?? 0)) {
+      verifiedRosterByPlayer.set(row.playerId, row);
+    }
+  }
   const rosterFreshness = measureFreshness({
     timestamp: latestTimestamp((input.verifiedRosterAssignments ?? []).map((row) => ({
       sourceUpdatedAt: row.observedAt,
@@ -278,16 +320,19 @@ export function buildUpcomingPlayerReadinessAudit(input: {
     .sort((a, b) => (toDate(b.startedAt)?.getTime() ?? 0) - (toDate(a.startedAt)?.getTime() ?? 0));
   const injuryRuns = runsFor("espn-injuries");
   const sleeperRuns = runsFor("sleeper-players");
+  const rosterRuns = runsFor("espn-complete-rosters");
   const latestValid = (runs: ProviderObservation[]) =>
     runs.map(validPlayerObservation).filter((date): date is Date => date !== null)
       .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
   const lastSuccess = (runs: ProviderObservation[]) => runs.find((run) => run.status === "success");
-  rosterFreshness.lastAttemptAt = toDate(sleeperRuns[0]?.startedAt)?.toISOString() ?? null;
-  rosterFreshness.lastSuccessAt = toDate(lastSuccess(sleeperRuns)?.completedAt)?.toISOString() ?? null;
-  rosterFreshness.validRetrievalAt = latestValid(sleeperRuns)?.toISOString() ?? null;
-  rosterFreshness.lastChangedRowAt = toDate(input.sleeperLastChangedAt)?.toISOString() ?? null;
-  rosterFreshness.publicationAt = null;
-  rosterFreshness.status += "; Sleeper retrieval does not verify ESPN roster assignments";
+  rosterFreshness.lastAttemptAt = toDate(rosterRuns[0]?.startedAt)?.toISOString() ?? null;
+  rosterFreshness.lastSuccessAt = toDate(lastSuccess(rosterRuns)?.completedAt)?.toISOString() ?? null;
+  rosterFreshness.validRetrievalAt = (input.verifiedRosterAssignments?.length
+    ? latestValid(rosterRuns) : null)?.toISOString() ?? null;
+  rosterFreshness.lastChangedRowAt = null;
+  rosterFreshness.publicationAt = latestTimestamp((input.verifiedRosterAssignments ?? []).map((row) =>
+    ({ sourceUpdatedAt: row.publicationAt })))?.toISOString() ?? null;
+  rosterFreshness.status += `; Sleeper retrieval${latestValid(sleeperRuns) ? " (including a valid one)" : ""} does not verify ESPN roster assignments`;
   const latestInjury = latestTimestamp(input.injuries);
   const injuryFreshness = measureFreshness({
     timestamp: latestInjury,
@@ -334,12 +379,14 @@ export function buildUpcomingPlayerReadinessAudit(input: {
   };
 
   for (const player of candidatePlayers) {
-    if (!player.teamId) {
+    const rosterAssignment = verifiedRosterByPlayer.get(player.playerId);
+    const currentTeamId = player.teamId;
+    if (!currentTeamId) {
       excluded += 1;
       countReason("missing_current_team_assignment");
       continue;
     }
-    if (!slateTeams.has(player.teamId)) {
+    if (!slateTeams.has(currentTeamId)) {
       excluded += 1;
       countReason("team_not_in_nearest_upcoming_week");
       continue;
@@ -361,11 +408,12 @@ export function buildUpcomingPlayerReadinessAudit(input: {
       continue;
     }
 
-    const verifiedRoster = verifiedRosterByPlayer.get(`${player.playerId}:${player.teamId}`);
+    const verifiedRoster = rosterAssignment;
     const playerRosterTimestamp = toDate(verifiedRoster?.observedAt);
     const playerRosterAge = playerRosterTimestamp ? ageHours(playerRosterTimestamp, input.asOf) : null;
-    const playerRosterIsFresh = playerRosterAge !== null && playerRosterAge <= 48;
-    const injury = injuriesByPair.get(`${player.playerId}:${player.teamId}`);
+    const playerRosterIsFresh = verifiedRoster?.teamId === currentTeamId
+      && playerRosterAge !== null && playerRosterAge <= 48;
+    const injury = injuriesByPair.get(`${player.playerId}:${currentTeamId}`);
     const injuryTimestamp = toDate(injury?.sourceUpdatedAt);
     const injuryAge = injuryTimestamp ? ageHours(injuryTimestamp, input.asOf) : null;
     const rosterStatusUnavailable = playerRosterIsFresh && statusIsUnavailable(verifiedRoster?.activeStatus);
@@ -379,7 +427,7 @@ export function buildUpcomingPlayerReadinessAudit(input: {
       continue;
     }
 
-    const depth = depthsByPair.get(`${player.playerId}:${player.teamId}`);
+    const depth = depthsByPair.get(`${player.playerId}:${currentTeamId}`);
     const depthTimestamp = toDate(depth?.snapshotTimestamp);
     const depthAge = depthTimestamp ? ageHours(depthTimestamp, input.asOf) : null;
     const reasonsForUncertainty: string[] = [];
@@ -399,9 +447,10 @@ export function buildUpcomingPlayerReadinessAudit(input: {
   }
 
   const candidateRosterEvidenceIsFresh = candidatePlayers
-    .filter((player) => player.teamId && slateTeams.has(player.teamId))
+    .filter((player) => slateTeams.has(player.teamId ?? ""))
     .every((player) => {
-      const timestamp = toDate(verifiedRosterByPlayer.get(`${player.playerId}:${player.teamId}`)?.observedAt);
+      const assignment = verifiedRosterByPlayer.get(player.playerId);
+      const timestamp = assignment?.teamId === player.teamId ? toDate(assignment.observedAt) : null;
       const age = timestamp ? ageHours(timestamp, input.asOf) : null;
       return age !== null && age <= 48;
     });
@@ -465,7 +514,6 @@ export async function readDevelopmentUpcomingPlayerReadiness(asOf = new Date()) 
     depthCharts,
     playerStatSources,
     providerRuns,
-    sleeperRows,
   ] = await Promise.all([
     db.select({
       gameId: gamesTable.gameId,
@@ -520,16 +568,15 @@ export async function readDevelopmentUpcomingPlayerReadiness(asOf = new Date()) 
       .where(and(eq(nflverseSourceFilesTable.dataset, "player_stats"), gte(nflverseSourceFilesTable.season, 2026)))
       .orderBy(desc(nflverseSourceFilesTable.completedAt)),
     db.select({
+      id: dataSyncRunsTable.id,
       provider: dataSyncRunsTable.provider,
       status: dataSyncRunsTable.status,
       startedAt: dataSyncRunsTable.startedAt,
       completedAt: dataSyncRunsTable.completedAt,
       recordsProcessed: dataSyncRunsTable.recordsProcessed,
       metadata: dataSyncRunsTable.metadata,
-    }).from(dataSyncRunsTable).where(inArray(dataSyncRunsTable.provider, ["espn-injuries", "sleeper-players"]))
+    }).from(dataSyncRunsTable).where(inArray(dataSyncRunsTable.provider, ["espn-injuries", "sleeper-players", "espn-complete-rosters"]))
       .orderBy(desc(dataSyncRunsTable.startedAt)).limit(200),
-    db.select({ capturedAt: sleeperPlayerSnapshotsTable.capturedAt })
-      .from(sleeperPlayerSnapshotsTable).orderBy(desc(sleeperPlayerSnapshotsTable.capturedAt)).limit(1),
   ]);
   const latestStatImport = playerStatSources.find((source) => source.completedAt)?.completedAt ?? null;
   // Touch team data in the same read-only audit to ensure schedule team IDs can
@@ -538,6 +585,21 @@ export async function readDevelopmentUpcomingPlayerReadiness(asOf = new Date()) 
   const knownTeams = new Set(teamRows.map((team) => team.teamId));
   const verifiedGames = (games as ReadinessGame[]).filter((game) =>
     knownTeams.has(game.homeTeamId) && knownTeams.has(game.awayTeamId));
+  const latestRosterRun = providerRuns.find((run) =>
+    run.provider === "espn-complete-rosters" && validPlayerObservation(run));
+  const rosterRows = latestRosterRun?.id
+    ? await db.select({
+      runId: espnRosterObservationsTable.runId,
+      playerId: espnRosterObservationsTable.playerId,
+      teamId: espnRosterObservationsTable.teamId,
+      activeStatus: espnRosterObservationsTable.activeStatus,
+      observedAt: espnRosterObservationsTable.observedAt,
+      sourcePath: espnRosterObservationsTable.sourcePath,
+      publicationAt: espnRosterObservationsTable.publicationAt,
+    }).from(espnRosterObservationsTable).where(eq(espnRosterObservationsTable.runId, latestRosterRun.id))
+    : [];
+  const verifiedRosterAssignments = latestRosterRun
+    ? verifiedAssignmentsForRun(latestRosterRun, rosterRows) : [];
   return buildUpcomingPlayerReadinessAudit({
     asOf,
     games: verifiedGames,
@@ -548,10 +610,8 @@ export async function readDevelopmentUpcomingPlayerReadiness(asOf = new Date()) 
     depthCharts,
     playerStatsIngestedAt: latestStatImport,
     providerRuns,
-    sleeperLastChangedAt: sleeperRows[0]?.capturedAt ?? null,
     allPlayerIds: allPlayerRows.map((player) => player.playerId),
-    // The current change-only tables do not preserve a complete as-of roster
-    // observation, even when a sync successfully fetched unchanged rows.
+    verifiedRosterAssignments,
   });
 }
 
@@ -579,7 +639,7 @@ export function renderUpcomingPlayerReadinessMarkdown(report: UpcomingReadinessR
     "|---|---|---:|---|---|---|---|---|---|",
     ...rows,
     "",
-    "Roster freshness is unavailable because no complete timestamped player/team observation is retained. The latest persisted row-change time in the census is not the last provider check and cannot prove assignments were stale or fresh. Injury `source_updated_at` is also change-only and may contain a provider payload time or synchronization fallback; it does not prove the latest successful check. Player-stat source-file completion time represents import ingestion, not independently verified NFLverse publication time.",
+    "Only intact, complete 32-team ESPN roster captures can establish current player/team assignments. A row-change time or Sleeper check cannot do so. Injury `source_updated_at` is change-only and may contain a provider payload time or synchronization fallback; it does not prove the latest successful check. Player-stat source-file completion time represents import ingestion, not independently verified NFLverse publication time.",
     "",
     "## Candidate eligibility",
     "",

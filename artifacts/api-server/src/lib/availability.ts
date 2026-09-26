@@ -4,8 +4,10 @@ import {
   dataSyncRunsTable,
   db,
   depthChartSnapshotsTable,
+  espnRosterObservationsTable,
   injuriesTable,
   playersTable,
+  pool,
   teamsTable,
 } from "@workspace/db";
 import { fetchTeams } from "./espn";
@@ -193,6 +195,146 @@ export async function syncEspnInjuries(options?: { jobKey?: string; scheduledFor
     const message = error instanceof Error ? error.message : String(error);
     await finishRun(runId, "failed", 0, message);
     logger.error({ error }, "ESPN injury synchronization failed");
+    throw error;
+  }
+}
+
+export type EspnRosterEntry = {
+  playerId: string;
+  playerName: string;
+  position: string | null;
+  activeStatus: string | null;
+};
+
+/** ESPN's team roster is grouped by position; reject truncated or unidentified rows. */
+export function parseEspnTeamRoster(payload: RecordValue, teamId: string): EspnRosterEntry[] {
+  const groups = payload.athletes;
+  if (!Array.isArray(groups) || groups.length === 0) throw new Error(`Incomplete ESPN roster for team ${teamId}`);
+  const result: EspnRosterEntry[] = [];
+  const ids = new Set<string>();
+  for (const value of groups) {
+    const group = record(value);
+    if (!Array.isArray(group.items) || group.items.length === 0) {
+      throw new Error(`Incomplete ESPN roster group for team ${teamId}`);
+    }
+    for (const item of group.items) {
+      const athlete = record(item);
+      const id = String(athlete.id ?? "");
+      const name = text(athlete.displayName) ?? text(athlete.fullName);
+      if (!/^\d+$/.test(id) || !name || ids.has(id)) {
+        throw new Error(`Invalid or duplicate ESPN roster identity for team ${teamId}`);
+      }
+      ids.add(id);
+      result.push({
+        playerId: id,
+        playerName: name,
+        position: text(record(athlete.position).abbreviation) ?? text(record(group.position).abbreviation),
+        activeStatus: text(record(athlete.status).name) ?? text(athlete.status),
+      });
+    }
+  }
+  return result;
+}
+
+export const ESPN_ROSTER_CONFIRMATION = "--confirm-development-espn-rosters";
+
+// This is deliberately a manual, development-only command, not a route or
+// scheduled job. Check the destination before creating a run or fetching ESPN.
+export async function assertDevelopmentRosterCaptureTarget(confirmation: string) {
+  if (confirmation !== ESPN_ROSTER_CONFIRMATION
+    || process.env.NODE_ENV !== "development" || process.env.REPLIT_DEPLOYMENT) {
+    throw new Error("ESPN roster capture requires explicit development confirmation and cannot run in a deployment");
+  }
+  const { rows } = await pool.query(`
+    SELECT current_database() AS database_name, current_user AS database_role,
+           pg_is_in_recovery() AS replica, inet_server_addr() IS NULL AS local_proxy,
+           to_regclass('public.espn_roster_observations') IS NOT NULL AS roster_schema_ready
+  `);
+  const identity = rows[0] as
+    | { database_name: string; database_role: string; replica: boolean;
+        local_proxy: boolean; roster_schema_ready: boolean }
+    | undefined;
+  if (rows.length !== 1 || identity?.database_name !== "heliumdb"
+    || identity.database_role !== "postgres" || identity.replica
+    || !identity.local_proxy || !identity.roster_schema_ready) {
+    throw new Error("Refusing ESPN roster capture: the target is not the verified, migrated development database");
+  }
+}
+
+export async function syncEspnCompleteRosters(confirmation: string) {
+  await assertDevelopmentRosterCaptureTarget(confirmation);
+  const runId = await beginRun("espn-complete-rosters");
+  try {
+    const teams = await fetchTeams();
+    if (teams.length !== 32 || new Set(teams.map((team) => team.teamId)).size !== 32
+      || teams.some((team) => !/^\d+$/.test(team.teamId))) {
+      throw new Error("ESPN team listing does not contain 32 distinct identified teams");
+    }
+    const captures: Array<{
+      teamId: string; path: string; entries: EspnRosterEntry[];
+      observedAt: Date; publicationAt: Date | null;
+    }> = [];
+    const allIds = new Set<string>();
+    for (const team of teams) {
+      const path = `/teams/${team.teamId}/roster`;
+      const payload = await fetchJsonWithRetry(path);
+      const observedAt = new Date();
+      const publicationAt = text(payload.timestamp) ? new Date(String(payload.timestamp)) : null;
+      if (publicationAt && (!Number.isFinite(publicationAt.getTime()) || publicationAt > observedAt)) {
+        throw new Error(`Invalid ESPN roster publication time for team ${team.teamId}`);
+      }
+      const payloadTeamId = record(payload.team).id;
+      if (payloadTeamId != null && String(payloadTeamId) !== team.teamId) {
+        throw new Error(`ESPN roster team identity mismatch for team ${team.teamId}`);
+      }
+      const entries = parseEspnTeamRoster(payload, team.teamId);
+      if (entries.length < 30) {
+        throw new Error(`ESPN roster for team ${team.teamId} is too small to establish complete coverage`);
+      }
+      for (const entry of entries) {
+        if (allIds.has(entry.playerId)) {
+          throw new Error(`ESPN roster assigned player ${entry.playerId} to multiple teams`);
+        }
+        allIds.add(entry.playerId);
+      }
+      captures.push({ teamId: team.teamId, path, entries, observedAt, publicationAt });
+    }
+    // An entire 32-team response is one atomic observation; no partial team
+    // capture can be published as a verified run.
+    await db.transaction(async (tx) => {
+      for (const capture of captures) {
+        for (const entry of capture.entries) {
+          await tx.insert(espnRosterObservationsTable).values({
+            runId, playerId: entry.playerId, teamId: capture.teamId,
+            playerName: entry.playerName, position: entry.position,
+            activeStatus: entry.activeStatus, sourcePath: capture.path,
+            sourceHash: hashMaterial({ teamId: capture.teamId, ...entry }),
+            observedAt: capture.observedAt, publicationAt: capture.publicationAt,
+          });
+          await tx.insert(playersTable).values({
+            playerId: entry.playerId, teamId: capture.teamId, name: entry.playerName,
+            position: entry.position, activeStatus: entry.activeStatus,
+            sourceUpdatedAt: capture.observedAt,
+          }).onConflictDoUpdate({
+            target: playersTable.playerId,
+            set: { teamId: capture.teamId, name: entry.playerName, position: entry.position,
+              activeStatus: entry.activeStatus, sourceUpdatedAt: capture.observedAt },
+            setWhere: sql`(${playersTable.teamId}, ${playersTable.name}, ${playersTable.position}, ${playersTable.activeStatus})
+              IS DISTINCT FROM (${capture.teamId}, ${entry.playerName}, ${entry.position}, ${entry.activeStatus})`,
+          });
+        }
+      }
+      await tx.update(dataSyncRunsTable).set({
+        status: "success", recordsProcessed: allIds.size, completedAt: new Date(),
+        metadata: { observationKind: "complete-espn-rosters", responseComplete: true,
+          teamCount: captures.length, teams: captures.map((capture) => capture.teamId),
+          observedCount: allIds.size, retrievedAt: captures[captures.length - 1]!.observedAt.toISOString() },
+      }).where(eq(dataSyncRunsTable.id, runId));
+    });
+    return { status: "success", observed: allIds.size, teams: captures.length };
+  } catch (error) {
+    await finishRun(runId, "failed", 0, error instanceof Error ? error.message : String(error));
+    logger.error({ error }, "ESPN complete roster synchronization failed");
     throw error;
   }
 }

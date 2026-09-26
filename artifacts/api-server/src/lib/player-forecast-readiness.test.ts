@@ -4,6 +4,7 @@ import {
   buildUpcomingPlayerReadinessAudit,
   measureFreshness,
   validPlayerObservation,
+  verifiedAssignmentsForRun,
   type ReadinessDepth,
   type ReadinessGame,
   type ReadinessIdentity,
@@ -183,7 +184,8 @@ test("unchanged complete Sleeper retrieval is fresh, but cannot verify ESPN rost
   assert.equal(validPlayerObservation(run)?.toISOString(), "2026-09-26T09:00:30.000Z");
   const result = audit({ verifiedRosterAssignments: [], providerRuns: [run] });
   assert.equal(result.eligibility.eligible, 0);
-  assert.equal(result.sourceFreshness.roster.validRetrievalAt, "2026-09-26T09:00:30.000Z");
+  assert.equal(result.sourceFreshness.roster.validRetrievalAt, null);
+  assert.match(result.sourceFreshness.roster.status, /Sleeper retrieval/);
   assert.equal(validPlayerObservation({ ...run, metadata: { ...run.metadata, unchanged: 0 } }), null);
   assert.equal(validPlayerObservation({ ...run, status: "partial" }), null);
 });
@@ -204,6 +206,54 @@ test("injury from former team and ambiguous identity fail closed", () => {
     .eligibility.reasons.injury_status_missing, 1);
   assert.equal(audit({ identities: [identity, { ...identity, espnId: "another-espn" }] })
     .eligibility.reasons.ambiguous_gsis_espn_mapping, 1);
+});
+
+test("only an intact complete ESPN capture verifies roster rows", () => {
+  const run = {
+    id: 12, provider: "espn-complete-rosters", status: "success",
+    startedAt: "2026-09-26T09:00:00Z", completedAt: "2026-09-26T09:01:00Z",
+    recordsProcessed: 32,
+    metadata: { observationKind: "complete-espn-rosters", responseComplete: true,
+      teamCount: 32, teams: Array.from({ length: 32 }, (_, i) => String(i + 1)),
+      observedCount: 32, retrievedAt: "2026-09-26T09:00:30Z" },
+  };
+  const rows = Array.from({ length: 32 }, (_, i) => ({
+    runId: 12, playerId: String(i + 100), teamId: String(i + 1),
+    activeStatus: "Active", observedAt: "2026-09-26T09:00:30Z",
+    sourcePath: `/teams/${i + 1}/roster`, publicationAt: null,
+  }));
+  assert.equal(verifiedAssignmentsForRun(run, rows).length, 32);
+  assert.deepEqual(verifiedAssignmentsForRun(run, rows.slice(1)), []);
+  assert.deepEqual(verifiedAssignmentsForRun(run, [{ ...rows[0]!, teamId: "2" }, ...rows.slice(1)]), []);
+  assert.deepEqual(verifiedAssignmentsForRun(run, [{ ...rows[0]!, observedAt: "2026-09-26T09:02:00Z" }, ...rows.slice(1)]), []);
+  assert.deepEqual(verifiedAssignmentsForRun(run, [{ ...rows[0]!, sourcePath: "/injuries" }, ...rows.slice(1)]), []);
+  assert.deepEqual(verifiedAssignmentsForRun({ ...run, status: "partial" }, rows), []);
+  assert.deepEqual(verifiedAssignmentsForRun({ ...run, provider: "espn-injuries" }, rows), []);
+  const scenario = {
+    games: [{ ...upcomingGame, homeTeamId: "1" }],
+    players: [{ ...player, playerId: "100", teamId: "1" }],
+    identities: [{ ...identity, espnId: "100" }],
+    injuries: [{ ...injury, playerId: "100", teamId: "1" }],
+    depthCharts: [{ ...depth, playerId: "100", teamId: "1" }],
+    providerRuns: [run],
+  };
+  assert.equal(audit({ ...scenario, verifiedRosterAssignments: verifiedAssignmentsForRun(run, rows) })
+    .eligibility.eligible, 1);
+  assert.equal(audit({ ...scenario, verifiedRosterAssignments: verifiedAssignmentsForRun(run, rows.slice(1)) })
+    .eligibility.reasons.roster_assignment_not_recently_verified, 1);
+});
+
+test("a newer roster transfer invalidates a prior verified player/team pair", () => {
+  const result = audit({
+    verifiedRosterAssignments: [
+      { playerId: player.playerId, teamId: player.teamId!, activeStatus: "Active",
+        observedAt: "2026-09-26T09:00:00Z" },
+      { playerId: player.playerId, teamId: "former-team", activeStatus: "Active",
+        observedAt: "2026-09-26T10:00:00Z" },
+    ],
+  });
+  assert.equal(result.eligibility.eligible, 0);
+  assert.equal(result.eligibility.reasons.roster_assignment_not_recently_verified, 1);
 });
 
 test("strictly excludes same-week and future-week stats from prior appearance eligibility", () => {
