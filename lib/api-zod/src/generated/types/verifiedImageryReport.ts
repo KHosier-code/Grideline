@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { VerifiedImageryReportCandidatesItem } from './verifiedImageryReportCandidatesItem';
 import type { VerifiedImageryReportCategories } from './verifiedImageryReportCategories';
 import type { VerifiedImageryReportCounts } from './verifiedImageryReportCounts';
 import type { VerifiedImageryReportSources } from './verifiedImageryReportSources';
@@ -18,4 +19,5 @@ export interface VerifiedImageryReport {
   sources: VerifiedImageryReportSources;
   counts: VerifiedImageryReportCounts;
   categories: VerifiedImageryReportCategories;
+  candidates?: VerifiedImageryReportCandidatesItem[];
 }

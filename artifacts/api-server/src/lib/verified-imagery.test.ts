@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { approvedPlayerHeadshotUrl, createImageRefreshGate, IMAGE_PARSER_VERSION, parseImageCsv, PLAYER_HEADSHOT_RIGHTS, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages, validPersistedImageRows } from "./verified-imagery";
+import { approvedPlayerHeadshotUrl, approvedReviewUrl, createImageRefreshGate, IMAGE_PARSER_VERSION, parseImageCsv, PLAYER_HEADSHOT_RIGHTS, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages, validPersistedImageRows } from "./verified-imagery";
 
 test("a cold or timed-out image source never blocks consumer responses and retries are bounded", async () => {
   let finish!: () => void;
@@ -107,6 +107,29 @@ test("NFL-hosted and unknown headshots fail closed despite verified identity", (
   assert.equal(approvedPlayerHeadshotUrl("https://user@static.www.nfl.com/photo"), null);
 });
 
+test("pixel review is player and source specific; rejection and host rights fail closed", () => {
+  const sourceHash = "a".repeat(64);
+  const imageHash = "b".repeat(64);
+  const imageUrl = "https://static.www.nfl.com/player.jpg";
+  const approvals = new Map([["00-1", { sourceHash, imageUrl, imageHash, decision: "approved" }]]);
+  assert.equal(approvedReviewUrl("00-1", imageUrl, sourceHash, approvals), null, "a review cannot override missing rights");
+  // Simulate an explicitly licensed host without changing the production no-rights setting.
+  (PLAYER_HEADSHOT_RIGHTS.approvedHosts as string[]).push("static.www.nfl.com");
+  PLAYER_HEADSHOT_RIGHTS.status = "approved";
+  try {
+    assert.equal(approvedReviewUrl("00-1", imageUrl, sourceHash, approvals), "/api/verified-imagery/player/00-1");
+    const reconciled = reconcilePlayerImages([player("00-1", "100", imageUrl)],
+      [{ gsisId: "00-1", espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null }]);
+    assert.equal(playerHeadshot("100", reconciled, sourceHash, approvals), "/api/verified-imagery/player/100",
+      "typed consumer IDs must use their own identity in the returned URL");
+  } finally { (PLAYER_HEADSHOT_RIGHTS.approvedHosts as string[]).pop(); PLAYER_HEADSHOT_RIGHTS.status = "not_approved"; }
+  assert.equal(approvedReviewUrl("00-2", imageUrl, sourceHash, approvals), null);
+  assert.equal(approvedReviewUrl("00-1", imageUrl, "c".repeat(64), approvals), null);
+  assert.equal(approvedReviewUrl("00-1", "https://static.www.nfl.com/other.jpg", sourceHash, approvals), null);
+  approvals.set("00-1", { sourceHash, imageUrl, imageHash, decision: "rejected" });
+  assert.equal(approvedReviewUrl("00-1", imageUrl, sourceHash, approvals), null);
+});
+
 test("colliding crosswalk IDs and conflicting weekly headshots fail closed", () => {
   const crosswalk = (gsisId: string) => ({
     gsisId, espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null,
@@ -137,6 +160,7 @@ test("missing source stays unavailable; failed refresh only reuses prior verifie
     teamRows: [source("LA", "Los Angeles Rams", url("rams"))],
     crosswalkError: null,
     sourceErrors: [],
+    approvals: new Map(),
   };
   assert.equal(staleVerifiedImages(previous, schedule)?.teams.logos.get("schedule-la"), url("rams"));
   assert.equal(staleVerifiedImages(previous, [team("other", "UNKNOWN", "Other")])?.teams.logos.size, 0);

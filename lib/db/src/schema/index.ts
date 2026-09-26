@@ -3,6 +3,7 @@ export * from "./initial-line-picks";
 export * from "./release-security-evidence";
 export * from "./settings";
 export * from "./player-identity";
+export * from "./imagery-review";
 export * from "./usage-analytics";
 export * from "./game-alerts";
 export * from "./saved-games";

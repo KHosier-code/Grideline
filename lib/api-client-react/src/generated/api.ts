@@ -57,6 +57,8 @@ import type {
   GetConsumerPlayerUsageParams,
   GetConsumerRedZoneOpportunitiesParams,
   GetConsumerTeamAnalyticsParams,
+  GetImageryCandidatePreviewParams,
+  GetPlayerImageryReviewHistory200Item,
   GetPregameFeatureHealthParams,
   GetUsageAnalyticsSummaryParams,
   HealthStatus,
@@ -79,6 +81,8 @@ import type {
   PregameFeatureBuildInput,
   PregameFeatureHealth,
   PregameFeatureRow,
+  ReviewImageryCandidate201,
+  ReviewImageryCandidateBody,
   ScheduleSyncRequest,
   ScheduleSyncResult,
   SleeperIdentityReport,
@@ -181,6 +185,338 @@ export function useGetVerifiedImageryReport<TData = Awaited<ReturnType<typeof ge
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetVerifiedImageryReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetImageryCandidatePreviewUrl = (playerId: string,
+    params: GetImageryCandidatePreviewParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/verified-imagery/candidates/${playerId}/image?${stringifiedParams}` : `/api/admin/verified-imagery/candidates/${playerId}/image`
+}
+
+/**
+ * @summary Inspect the current candidate bytes and SHA-256 before deciding
+ */
+export const getImageryCandidatePreview = async (playerId: string,
+    params: GetImageryCandidatePreviewParams, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetImageryCandidatePreviewUrl(playerId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetImageryCandidatePreviewQueryKey = (playerId: string,
+    params?: GetImageryCandidatePreviewParams,) => {
+    return [
+    `/api/admin/verified-imagery/candidates/${playerId}/image`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetImageryCandidatePreviewQueryOptions = <TData = Awaited<ReturnType<typeof getImageryCandidatePreview>>, TError = ErrorType<void>>(playerId: string,
+    params: GetImageryCandidatePreviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getImageryCandidatePreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetImageryCandidatePreviewQueryKey(playerId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getImageryCandidatePreview>>> = ({ signal }) => getImageryCandidatePreview(playerId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: playerId !== null && playerId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getImageryCandidatePreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetImageryCandidatePreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getImageryCandidatePreview>>>
+export type GetImageryCandidatePreviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Inspect the current candidate bytes and SHA-256 before deciding
+ */
+
+export function useGetImageryCandidatePreview<TData = Awaited<ReturnType<typeof getImageryCandidatePreview>>, TError = ErrorType<void>>(
+ playerId: string,
+    params: GetImageryCandidatePreviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getImageryCandidatePreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetImageryCandidatePreviewQueryOptions(playerId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPlayerImageryReviewHistoryUrl = (playerId: string,) => {
+
+
+
+
+  return `/api/admin/verified-imagery/candidates/${playerId}/history`
+}
+
+/**
+ * @summary Inspect append-only review decisions across source versions
+ */
+export const getPlayerImageryReviewHistory = async (playerId: string, options?: Parameters<typeof customFetch>[1]): Promise<GetPlayerImageryReviewHistory200Item[]> => {
+
+  return customFetch<GetPlayerImageryReviewHistory200Item[]>(getGetPlayerImageryReviewHistoryUrl(playerId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlayerImageryReviewHistoryQueryKey = (playerId: string,) => {
+    return [
+    `/api/admin/verified-imagery/candidates/${playerId}/history`
+    ] as const;
+    }
+
+
+export const getGetPlayerImageryReviewHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getPlayerImageryReviewHistory>>, TError = ErrorType<unknown>>(playerId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlayerImageryReviewHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlayerImageryReviewHistoryQueryKey(playerId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlayerImageryReviewHistory>>> = ({ signal }) => getPlayerImageryReviewHistory(playerId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: playerId !== null && playerId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlayerImageryReviewHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPlayerImageryReviewHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getPlayerImageryReviewHistory>>>
+export type GetPlayerImageryReviewHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Inspect append-only review decisions across source versions
+ */
+
+export function useGetPlayerImageryReviewHistory<TData = Awaited<ReturnType<typeof getPlayerImageryReviewHistory>>, TError = ErrorType<unknown>>(
+ playerId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPlayerImageryReviewHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPlayerImageryReviewHistoryQueryOptions(playerId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReviewImageryCandidateUrl = (playerId: string,) => {
+
+
+
+
+  return `/api/admin/verified-imagery/candidates/${playerId}/review`
+}
+
+/**
+ * @summary Record an append-only human image identity decision
+ */
+export const reviewImageryCandidate = async (playerId: string,
+    reviewImageryCandidateBody: ReviewImageryCandidateBody, options?: Parameters<typeof customFetch>[1]): Promise<ReviewImageryCandidate201> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReviewImageryCandidate201>(getReviewImageryCandidateUrl(playerId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reviewImageryCandidateBody)
+  }
+);}
+
+
+
+
+
+export const getReviewImageryCandidateMutationKey = () => ['reviewImageryCandidate'] as const;
+
+export const getReviewImageryCandidateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewImageryCandidate>>, TError,ReviewImageryCandidateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewImageryCandidate>>, TError,ReviewImageryCandidateMutationVariables, TContext> => {
+
+const mutationKey = getReviewImageryCandidateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewImageryCandidate>>, ReviewImageryCandidateMutationVariables> = (props) => {
+          const {playerId,data} = props ?? {};
+
+          return  reviewImageryCandidate(playerId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewImageryCandidateMutationResult = NonNullable<Awaited<ReturnType<typeof reviewImageryCandidate>>>
+    export type ReviewImageryCandidateMutationBody = BodyType<ReviewImageryCandidateBody>
+    export type ReviewImageryCandidateMutationError = ErrorType<void>
+    export type ReviewImageryCandidateMutationVariables = {playerId: string;data: BodyType<ReviewImageryCandidateBody>}
+
+    /**
+ * @summary Record an append-only human image identity decision
+ */
+export const useReviewImageryCandidate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewImageryCandidate>>, TError,ReviewImageryCandidateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewImageryCandidate>>,
+        TError,
+        ReviewImageryCandidateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewImageryCandidateMutationOptions(options));
+    }
+
+export const getGetReviewedPlayerImageUrl = (playerId: string,) => {
+
+
+
+
+  return `/api/verified-imagery/player/${playerId}`
+}
+
+/**
+ * @summary Serve only the currently approved image bytes
+ */
+export const getReviewedPlayerImage = async (playerId: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetReviewedPlayerImageUrl(playerId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReviewedPlayerImageQueryKey = (playerId: string,) => {
+    return [
+    `/api/verified-imagery/player/${playerId}`
+    ] as const;
+    }
+
+
+export const getGetReviewedPlayerImageQueryOptions = <TData = Awaited<ReturnType<typeof getReviewedPlayerImage>>, TError = ErrorType<void>>(playerId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewedPlayerImage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewedPlayerImageQueryKey(playerId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewedPlayerImage>>> = ({ signal }) => getReviewedPlayerImage(playerId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: playerId !== null && playerId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReviewedPlayerImage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReviewedPlayerImageQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewedPlayerImage>>>
+export type GetReviewedPlayerImageQueryError = ErrorType<void>
+
+
+/**
+ * @summary Serve only the currently approved image bytes
+ */
+
+export function useGetReviewedPlayerImage<TData = Awaited<ReturnType<typeof getReviewedPlayerImage>>, TError = ErrorType<void>>(
+ playerId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewedPlayerImage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReviewedPlayerImageQueryOptions(playerId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
-import { db, identitySourceImportsTable, imagerySourceRowsTable, nflversePlayerIdentitiesTable } from "@workspace/db";
+import { db, identitySourceImportsTable, imageryReviewsTable, imagerySourceRowsTable, nflversePlayerIdentitiesTable } from "@workspace/db";
 import { NFLVERSE_TEAM_ALIASES } from "./personnel-context-derivation";
 
 export const TEAM_IMAGE_SOURCE = "https://github.com/nflverse/nflverse-data/releases/download/teams/teams_colors_logos.csv";
@@ -8,19 +8,19 @@ export const ROSTER_IMAGE_SOURCE = "https://github.com/nflverse/nflverse-data/re
 export const IMAGE_PARSER_VERSION = "verified-imagery-v2";
 
 export const PLAYER_HEADSHOT_RIGHTS = {
-  status: "not_approved",
+  status: "not_approved" as "not_approved" | "approved",
   approvedHosts: [] as string[],
   reviewedHost: "static.www.nfl.com",
   reviewedUse: "Public display of player portraits in Game Detail",
   review: "No grant for NFL-hosted photographs established; use the portrait placeholder.",
   termsUrl: "https://www.nfl.com/legal/terms/",
-} as const;
+};
 type Team = { teamId: string; abbreviation: string; name: string };
 type TeamRow = { team_abbr: string; team_name: string; team_logo_espn: string };
 type RosterRow = { gsis_id: string; espn_id: string; pfr_id: string; pff_id: string; esb_id: string; smart_id: string; headshot_url: string };
 type CrosswalkRow = { gsisId: string; espnId: string | null; pfrId: string | null; pffId: string | null; esbId: string | null; smartId: string | null };
 type Issue = { id: string; reason: string };
-type Source = { url: string; sha256: string; fetchedAt: string; rows: number; version: string; stale?: boolean };
+type Source = { url: string; sha256: string; fetchedAt: string; rows: number; version: string; stale?: boolean; importId?: number };
 
 /** CSV records, including embedded newlines and escaped quotes. Reject malformed or truncated downloads. */
 export function parseImageCsv<T extends string>(csv: string, required: readonly T[]): Record<T, string>[] {
@@ -70,7 +70,8 @@ export function approvedPlayerHeadshotUrl(value: string | null | undefined) {
   const safe = safeImageUrl(value);
   if (!safe) return null;
   const url = new URL(safe);
-  return PLAYER_HEADSHOT_RIGHTS.approvedHosts.includes(url.hostname) && !url.port ? safe : null;
+  return PLAYER_HEADSHOT_RIGHTS.status === "approved" &&
+    PLAYER_HEADSHOT_RIGHTS.approvedHosts.includes(url.hostname) && !url.port ? safe : null;
 }
 const club = (value: string) => NFLVERSE_TEAM_ALIASES[value.trim().toUpperCase()] ?? value.trim().toUpperCase();
 const nameKey = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -162,14 +163,29 @@ export function reconcilePlayerImages(rows: RosterRow[], crosswalk: CrosswalkRow
     unapprovedHosts: [...unapprovedHosts].sort(([a], [b]) => a.localeCompare(b)).map(([host, rows]) => ({ host, rows })) };
 }
 
-export function playerHeadshot(id: string, result: ReturnType<typeof reconcilePlayerImages>) {
-  if (result.photos.has(id)) return approvedPlayerHeadshotUrl(result.photos.get(id));
+export type ImageApproval = { sourceHash: string; imageUrl: string; imageHash: string; decision: string };
+export function approvedReviewUrl(id: string, url: string | undefined, sourceHash: string | undefined, approvals: Map<string, ImageApproval>) {
+  const approval = approvals.get(id);
+  if (!url || !sourceHash || !approvedPlayerHeadshotUrl(url) || approval?.decision !== "approved"
+    || approval.sourceHash !== sourceHash || approval.imageUrl !== url || !/^[a-f0-9]{64}$/.test(approval.imageHash))
+    return null;
+  return `/api/verified-imagery/player/${encodeURIComponent(id)}`;
+}
+
+export function resolvePlayerImageId(id: string, result: ReturnType<typeof reconcilePlayerImages>) {
+  if (result.photos.has(id)) return id;
   // Bare identifiers must resolve to one GSIS across all typed namespaces.
   const targets = new Set<string>();
   for (const namespace of ["espnId", "pfrId", "pffId", "esbId", "smartId"]) {
     for (const gsis of result.byTyped.get(`${namespace}:${id}`) ?? []) targets.add(gsis);
   }
-  return targets.size === 1 ? approvedPlayerHeadshotUrl(result.photos.get([...targets][0]!)) : null;
+  return targets.size === 1 ? [...targets][0]! : null;
+}
+export function playerHeadshot(id: string, result: ReturnType<typeof reconcilePlayerImages>, sourceHash?: string, approvals: Map<string, ImageApproval> = new Map()) {
+  const gsis = resolvePlayerImageId(id, result);
+  if (!gsis) return null;
+  const url = approvedReviewUrl(gsis, result.photos.get(gsis), sourceHash, approvals);
+  return url ? `/api/verified-imagery/player/${encodeURIComponent(id)}` : null;
 }
 
 type ImageState = {
@@ -179,6 +195,7 @@ type ImageState = {
   teamRows: TeamRow[];
   crosswalkError: string | null;
   sourceErrors: string[];
+  approvals: Map<string, ImageApproval>;
 };
 let cached: { state: ImageState; expires: number } | null = null;
 let pending: Promise<ImageState> | null = null;
@@ -201,6 +218,37 @@ export function consumerVerifiedImages(teams: Team[]) {
   scheduleConsumerRefresh(!cached || cached.expires <= Date.now());
   return staleVerifiedImages(cached?.state ?? null, teams);
 }
+export function currentImageEvidence() { return cached?.state ?? null; }
+export function invalidateImageEvidence() { cached = null; }
+
+export async function fetchCandidateImage(url: string) {
+  const safe = safeImageUrl(url);
+  if (!safe || safe !== url || new URL(safe).port || ![PLAYER_HEADSHOT_RIGHTS.reviewedHost, ...PLAYER_HEADSHOT_RIGHTS.approvedHosts].includes(new URL(safe).hostname))
+    throw new Error("Image host is not reviewed");
+  const response = await fetch(safe, { redirect: "error", signal: AbortSignal.timeout(8_000),
+    headers: { "User-Agent": "Gridline/1.0 (imagery review)" } });
+  if (!response.ok || Number(response.headers.get("content-length") || 0) > 3_000_000)
+    throw new Error("Image fetch failed or exceeded size limit");
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  if (!response.body) throw new Error("Image body unavailable");
+  for await (const chunk of response.body) {
+    length += chunk.length;
+    if (length > 3_000_000) { await response.body.cancel(); throw new Error("Image exceeded size limit"); }
+    chunks.push(chunk);
+  }
+  const bytes = Buffer.concat(chunks);
+  const type = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff ? "image/jpeg"
+    : bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ? "image/png"
+    : bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP" ? "image/webp" : null;
+  if (!type) throw new Error("Unsupported image bytes");
+  return { bytes, type, hash: createHash("sha256").update(bytes).digest("hex") };
+}
+
+export async function latestImageReviews() {
+  const rows = await db.select().from(imageryReviewsTable).orderBy(desc(imageryReviewsTable.id));
+  return new Map(rows.map(row => [row.playerId, row] as const).reverse());
+}
 async function download(url: string) {
   const response = await fetch(url, { signal: AbortSignal.timeout(20_000), headers: { "User-Agent": "Gridline/1.0 (verified imagery)" } });
   if (!response.ok) throw new Error(`Image source returned HTTP ${response.status}`);
@@ -215,11 +263,12 @@ type ImageFile = Awaited<ReturnType<typeof download>>;
 export async function verifiedImages(teams: Team[]): Promise<ImageState> {
   // Team mappings depend on the current schedule; cache only immutable source evidence, not schedule joins.
   const evidence = cached && cached.expires > Date.now() ? cached.state : await (pending ??= (async () => {
-    const [teamDownload, rosterDownload, importsResult] = await Promise.allSettled([
+    const [teamDownload, rosterDownload, importsResult, reviewsResult] = await Promise.allSettled([
       download(TEAM_IMAGE_SOURCE), download(ROSTER_IMAGE_SOURCE),
       db.select().from(identitySourceImportsTable)
         .where(eq(identitySourceImportsTable.sourceNamespace, "nflverse"))
         .orderBy(desc(identitySourceImportsTable.id)).limit(1),
+      latestImageReviews(),
     ]);
     const teamFile = teamDownload.status === "fulfilled" ? teamDownload.value : null;
     const rosterFile = rosterDownload.status === "fulfilled" ? rosterDownload.value : null;
@@ -263,11 +312,13 @@ export async function verifiedImages(teams: Team[]): Promise<ImageState> {
     const state: ImageState = {
       sources: { teams: teamEvidence.source,
         roster: rosterEvidence.source,
-        players: imported ? { url: imported.sourceUrl, sha256: imported.sourceContentHash, fetchedAt: imported.importedAt.toISOString(), rows: imported.rowCount, version: imported.parserVersion } : null },
+         players: imported ? { url: imported.sourceUrl, sha256: imported.sourceContentHash, fetchedAt: imported.importedAt.toISOString(), rows: imported.rowCount, version: imported.parserVersion, importId: imported.id } : null },
       teams: reconcileTeamImages([], teamRows), teamRows, sourceErrors,
       crosswalkError: imported ? null : "Versioned nflverse player crosswalk unavailable",
       players: reconcilePlayerImages(rosterRows, crosswalk),
+       approvals: reviewsResult.status === "fulfilled" ? reviewsResult.value : new Map(),
     };
+     if (reviewsResult.status === "rejected") sourceErrors.push("Image review evidence unavailable");
     // Store source rows separately so mapping is recomputed when schedule teams change.
     cached = { state, expires: Date.now() + (sourceErrors.length ? 5 * 60_000 : 6 * 60 * 60_000) };
     lastError = null;

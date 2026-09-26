@@ -32,6 +32,100 @@ paths:
         "401": { description: Authentication required }
         "403": { description: Administrator access required }
         "503": { description: Source evidence unavailable }
+  /admin/verified-imagery/candidates/{playerId}/image:
+    get:
+      operationId: getImageryCandidatePreview
+      tags: [dashboard]
+      summary: Inspect the current candidate bytes and SHA-256 before deciding
+      security: [{ clerk: [] }]
+      parameters:
+        - { in: path, name: playerId, required: true, schema: { type: string } }
+        - { in: query, name: sourceHash, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Image bytes with X-Image-SHA256 header
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+        "409": { description: Candidate changed }
+        "502": { description: Image unavailable }
+  /admin/verified-imagery/candidates/{playerId}/history:
+    get:
+      operationId: getPlayerImageryReviewHistory
+      tags: [dashboard]
+      summary: Inspect append-only review decisions across source versions
+      security: [{ clerk: [] }]
+      parameters:
+        - { in: path, name: playerId, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: All prior decisions for this source player
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                  required: [id, playerId, provider, sourceHash, imageUrl, imageHash, rightsEvidence, decision, reason, reviewerId, reviewedAt]
+                  properties:
+                    id: { type: integer }
+                    playerId: { type: string }
+                    provider: { type: string }
+                    sourceHash: { type: string }
+                    imageUrl: { type: string }
+                    imageHash: { type: string }
+                    rightsEvidence: { type: string }
+                    decision: { type: string }
+                    reason: { type: string }
+                    reviewerId: { type: string }
+                    reviewedAt: { type: string, format: date-time }
+  /admin/verified-imagery/candidates/{playerId}/review:
+    post:
+      operationId: reviewImageryCandidate
+      tags: [dashboard]
+      summary: Record an append-only human image identity decision
+      security: [{ clerk: [] }]
+      parameters:
+        - { in: path, name: playerId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceHash, imageHash, decision, reason]
+              properties:
+                sourceHash: { type: string }
+                imageHash: { type: string }
+                decision: { type: string, enum: [approved, rejected] }
+                reason: { type: string }
+      responses:
+        "201":
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reviewId, decision]
+                properties:
+                  reviewId: { type: integer }
+                  decision: { type: string }
+        "400": { description: Invalid review }
+        "409": { description: Candidate changed or rights unavailable }
+        "503": { description: Review unavailable }
+  /verified-imagery/player/{playerId}:
+    get:
+      operationId: getReviewedPlayerImage
+      tags: [nfl]
+      summary: Serve only the currently approved image bytes
+      parameters:
+        - { in: path, name: playerId, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Reviewed image
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+        "404": { description: No current approved image }
   /admin/confidence/audit:
     get:
       operationId: getConfidenceAudit
@@ -1142,6 +1236,18 @@ components:
             duplicateRosterIds: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
             missingHeadshotUrls: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
             unresolvedConsumerIds: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
+        candidates:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              playerId: { type: string }
+              playerName: { type: ["string", "null"] }
+              sourceEspnId: { type: ["string", "null"] }
+              imageUrl: { type: string }
+              provider: { type: string }
+              sourceHash: { type: ["string", "null"] }
     PlayerRecoveryReceiptCleanupHealth:
       type: object
       additionalProperties: false

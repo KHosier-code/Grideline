@@ -45,6 +45,19 @@ export type VerifiedImageryReportCategories = {
   unresolvedConsumerIds: VerifiedImageryIssue[];
 };
 
+export type VerifiedImageryReportCandidatesItem = {
+  playerId?: string;
+  /** @nullable */
+  playerName?: string | null;
+  /** @nullable */
+  sourceEspnId?: string | null;
+  imageUrl?: string;
+  provider?: string;
+  /** @nullable */
+  sourceHash?: string | null;
+  [key: string]: unknown;
+ };
+
 export interface VerifiedImageryReport {
   status: VerifiedImageryReportStatus;
   /** @nullable */
@@ -53,6 +66,7 @@ export interface VerifiedImageryReport {
   sources: VerifiedImageryReportSources;
   counts: VerifiedImageryReportCounts;
   categories: VerifiedImageryReportCategories;
+  candidates?: VerifiedImageryReportCandidatesItem[];
 }
 
 export type PlayerRecoveryReceiptCleanupHealthStatus = typeof PlayerRecoveryReceiptCleanupHealthStatus[keyof typeof PlayerRecoveryReceiptCleanupHealthStatus];
@@ -886,6 +900,13 @@ export type ConsumerDashboardInitialWeeklyPickPick = {
   probability: number;
   observedAt: string;
 } | null;
+
+export type ConsumerDashboardInitialWeeklyPick = {
+  pick: ConsumerDashboardInitialWeeklyPickPick;
+  /** @nullable */
+  reason: string | null;
+};
+
 export interface ConsumerDashboard {
   status: ConsumerDashboardStatus;
   initialWeeklyPick: ConsumerDashboardInitialWeeklyPick;
@@ -3372,6 +3393,45 @@ export type ConsumerInvalidRequestResponse = ConsumerError;
  */
 export type ConsumerGameNotFoundResponse = ConsumerError;
 
+export type GetImageryCandidatePreviewParams = {
+sourceHash: string;
+};
+
+export type GetPlayerImageryReviewHistory200Item = {
+  id: number;
+  playerId: string;
+  provider: string;
+  sourceHash: string;
+  imageUrl: string;
+  imageHash: string;
+  rightsEvidence: string;
+  decision: string;
+  reason: string;
+  reviewerId: string;
+  reviewedAt: string;
+  [key: string]: unknown;
+ };
+
+export type ReviewImageryCandidateBodyDecision = typeof ReviewImageryCandidateBodyDecision[keyof typeof ReviewImageryCandidateBodyDecision];
+
+
+export const ReviewImageryCandidateBodyDecision = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export type ReviewImageryCandidateBody = {
+  sourceHash: string;
+  imageHash: string;
+  decision: ReviewImageryCandidateBodyDecision;
+  reason: string;
+};
+
+export type ReviewImageryCandidate201 = {
+  reviewId: number;
+  decision: string;
+};
+
 export type AppendConfidenceEvidenceParams = {
 /**
  * @minimum 2000
@@ -3655,9 +3715,3 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
-
-export type ConsumerDashboardInitialWeeklyPick = {
-  pick: ConsumerDashboardInitialWeeklyPickPick;
-  /** @nullable */
-  reason: string | null;
-};

@@ -10,9 +10,10 @@ export function safeApiPlayerPortraitUrl(player: {
 }): string | null {
   if (!player.playerId?.trim() || !player.name?.trim() || !player.headshotUrl) return null;
   try {
-    const url = new URL(player.headshotUrl);
-    return url.protocol === 'https:' && !url.username && !url.password && !url.port
-      ? url.href : null;
+    const url = new URL(player.headshotUrl, window.location.origin);
+    return url.origin === window.location.origin &&
+      url.pathname === `/api/verified-imagery/player/${encodeURIComponent(player.playerId)}` &&
+      !url.search && !url.hash ? url.href : null;
   } catch {
     return null;
   }

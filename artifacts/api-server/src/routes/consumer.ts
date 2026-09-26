@@ -2011,7 +2011,7 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
       .map((player) => ({
         ...eligibleById.get(`${player.teamId}:${player.playerId}`)!,
         headshotUrl: game.season === 2026
-          ? (imagery ? playerHeadshot(player.playerId, imagery.players) : null) : null,
+          ? (imagery ? playerHeadshot(player.playerId, imagery.players, imagery.sources.roster?.sha256, imagery.approvals) : null) : null,
       }));
     const movement = serializeMovement(movementRows, kickoff);
     const teamEvidence = (teamId: string) => {

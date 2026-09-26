@@ -94,6 +94,8 @@ const ConsumerRedZone = lazy(() => import('@/pages/consumer/ConsumerRedZone'));
 const DefenseVsPositionLeague = lazy(() => import('@/components/DefenseVsPosition'));
 const ConsumerTeams = lazy(() => import('@/pages/consumer/ConsumerTeams'));
 const UsageAnalytics = lazy(() => import('@/pages/admin/UsageAnalytics'));
+
+const ImageryReview = lazy(() => import('@/pages/admin/ImageryReview'));
 const AdminDepthChart = lazy(() => import('@/components/AdminDepthChart').then(module => ({ default: module.AdminDepthChart })));
 const AdminPlayerStatsImport = lazy(() => import('@/components/AdminPlayerStatsImport').then(module => ({ default: module.AdminPlayerStatsImport })));
 
@@ -126,6 +128,7 @@ const navGroups = [
     label: 'Review',
     items: [
       { href: '/data-health', label: 'Data health', icon: Database },
+      { href: '/imagery-review', label: 'Image review', icon: UserRound },
       { href: '/feature-audit', label: 'Feature audit', icon: FileSearch },
       { href: '/evaluation-audit', label: 'Evaluation audit', icon: Microscope },
       { href: '/personnel-context', label: 'Personnel & context', icon: UserRound },
@@ -2165,6 +2168,7 @@ function AdminRoutes() {
   return <AdminOnly><Switch>
     <Route path="/admin" component={Dashboard} /><Route path="/admin/this-week" component={ThisWeek} /><Route path="/admin/games/:gameId" component={GameDetail} /><Route path="/admin/live-predictions" component={LivePredictions} />
     <Route path="/admin/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route>
+    <Route path="/admin/imagery-review" component={ImageryReview} />
     <Route path="/admin/feature-audit" component={FeatureAuditPage} /><Route path="/admin/evaluation-audit" component={EvaluationAudit} /><Route path="/admin/personnel-context" component={PersonnelContextPage} /><Route path="/admin/usage-analytics" component={UsageAnalytics} /><Route path="/admin/odds" component={OddsBoard} />
     <Route path="/admin/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices." preferred="odds" /></Route>
     <Route path="/admin/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route>
