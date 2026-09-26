@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
-import { db, playerRecoveryReceiptsTable } from "@workspace/db";
+import { db, playerRecoveryReceiptsTable, playerRecoveryReceiptCleanupTable } from "@workspace/db";
 import type { runAttestedPlayerRecovery } from "./player-feed-recovery";
 import { logger } from "./logger";
 
@@ -7,6 +7,75 @@ export type PlayerRecoveryReceipt = Awaited<ReturnType<typeof runAttestedPlayerR
 export const PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BATCH_SIZE = 500;
+export const PLAYER_RECOVERY_CLEANUP_FAILURE_THRESHOLD = 3;
+
+export function playerRecoveryCleanupAlert(consecutiveFailures: number) {
+  return consecutiveFailures >= PLAYER_RECOVERY_CLEANUP_FAILURE_THRESHOLD
+    ? {
+        code: "repeated_failures" as const,
+        severity: "critical" as const,
+        scope: "player-recovery-receipt-cleanup" as const,
+        title: "Player refresh receipt cleanup repeatedly failing",
+        detail: `Receipt cleanup has failed ${consecutiveFailures} consecutive times. Expired receipts may remain beyond the ${PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS}-day retention period.`,
+      }
+    : null;
+}
+
+export async function getPlayerRecoveryReceiptCleanupHealth(now = new Date()) {
+  const [row] = await db.select().from(playerRecoveryReceiptCleanupTable)
+    .where(eq(playerRecoveryReceiptCleanupTable.id, 1)).limit(1);
+  const lastAttemptStatus = row?.lastAttemptStatus === "success" || row?.lastAttemptStatus === "failed"
+    ? row.lastAttemptStatus : null;
+  const nextCleanupAt = row?.lastAttemptAt
+    ? new Date(row.lastAttemptAt.getTime() + DAY_MS) : null;
+  return {
+    retentionDays: PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS,
+    cleanupIntervalHours: 24,
+    status: lastAttemptStatus === "success" ? "healthy" as const
+      : lastAttemptStatus === "failed" ? "failed" as const : "pending" as const,
+    cleanupState: nextCleanupAt === null ? "pending" as const
+      : nextCleanupAt.getTime() < now.getTime() ? "overdue" as const : "on_time" as const,
+    lastAttemptAt: row?.lastAttemptAt ?? null,
+    lastAttemptStatus,
+    nextCleanupAt,
+    consecutiveFailures: row?.consecutiveFailures ?? 0,
+    firstFailureAt: row?.firstFailureAt ?? null,
+    lastSuccessfulAt: row?.lastSuccessfulAt ?? null,
+    lastSuccessfulDeletedReceipts: row?.lastSuccessfulDeletedReceipts ?? null,
+    alert: lastAttemptStatus === "failed"
+      ? playerRecoveryCleanupAlert(row?.consecutiveFailures ?? 0) : null,
+    workerOwned: true as const,
+  };
+}
+
+async function recordCleanupSuccess(deleted: number, attemptedAt: Date) {
+  await db.insert(playerRecoveryReceiptCleanupTable).values({
+    id: 1, lastAttemptAt: attemptedAt, lastAttemptStatus: "success",
+    consecutiveFailures: 0, firstFailureAt: null,
+    lastSuccessfulAt: attemptedAt, lastSuccessfulDeletedReceipts: deleted,
+  }).onConflictDoUpdate({
+    target: playerRecoveryReceiptCleanupTable.id,
+    set: {
+      lastAttemptAt: attemptedAt, lastAttemptStatus: "success",
+      consecutiveFailures: 0, firstFailureAt: null,
+      lastSuccessfulAt: attemptedAt, lastSuccessfulDeletedReceipts: deleted,
+    },
+  });
+}
+
+async function recordCleanupFailure(attemptedAt: Date) {
+  await db.insert(playerRecoveryReceiptCleanupTable).values({
+    id: 1, lastAttemptAt: attemptedAt, lastAttemptStatus: "failed",
+    consecutiveFailures: 1, firstFailureAt: attemptedAt,
+  }).onConflictDoUpdate({
+    target: playerRecoveryReceiptCleanupTable.id,
+    set: {
+      lastAttemptAt: attemptedAt, lastAttemptStatus: "failed",
+      consecutiveFailures: sql`${playerRecoveryReceiptCleanupTable.consecutiveFailures} + 1`,
+      firstFailureAt: sql`COALESCE(${playerRecoveryReceiptCleanupTable.firstFailureAt}, ${attemptedAt})`,
+    },
+  });
+}
 
 export async function persistPlayerRecoveryReceipt(receipt: PlayerRecoveryReceipt) {
   // An insert-only write: a receipt is never revised when provider rows change.
@@ -71,22 +140,36 @@ export async function deleteExpiredPlayerRecoveryReceipts(now = new Date()) {
 }
 
 /** Persistent worker owns daily cleanup, including a first pass at startup. */
-export function startPlayerRecoveryReceiptRetention() {
+export function startPlayerRecoveryReceiptRetention(options: {
+  cleanup?: () => Promise<number>;
+  intervalMs?: number;
+} = {}) {
   let inFlight = false;
+  const deleteExpired = options.cleanup ?? deleteExpiredPlayerRecoveryReceipts;
   const cleanup = async () => {
     if (inFlight) return;
     inFlight = true;
     try {
-      const deleted = await deleteExpiredPlayerRecoveryReceipts();
+      const deleted = await deleteExpired();
+      try {
+        await recordCleanupSuccess(deleted, new Date());
+      } catch {
+        logger.error("Player recovery receipt cleanup success state could not be persisted");
+      }
       logger.info({ deleted, retentionDays: PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS }, "Player recovery receipt retention completed");
     } catch {
+      try {
+        await recordCleanupFailure(new Date());
+      } catch {
+        logger.error("Player recovery receipt cleanup failure state could not be persisted");
+      }
       logger.error("Player recovery receipt retention failed; will retry on next tick");
     } finally {
       inFlight = false;
     }
   };
   void cleanup();
-  const timer = setInterval(() => { void cleanup(); }, DAY_MS);
+  const timer = setInterval(() => { void cleanup(); }, options.intervalMs ?? DAY_MS);
   timer.unref?.();
   return () => clearInterval(timer);
 }

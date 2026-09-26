@@ -605,6 +605,17 @@ export const playerRecoveryReceiptsTable = pgTable("player_recovery_receipts", {
   index("player_recovery_receipts_completed_idx").on(table.completedAt),
 ]);
 
+// Worker-written singleton. Keep cleanup diagnostics separate from immutable receipts.
+export const playerRecoveryReceiptCleanupTable = pgTable("player_recovery_receipt_cleanup", {
+  id: integer("id").primaryKey().default(1),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+  lastAttemptStatus: text("last_attempt_status"),
+  consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+  firstFailureAt: timestamp("first_failure_at", { withTimezone: true }),
+  lastSuccessfulAt: timestamp("last_successful_at", { withTimezone: true }),
+  lastSuccessfulDeletedReceipts: integer("last_successful_deleted_receipts"),
+});
+
 /**
  * Point-in-time rows from Sleeper's published NFL players feed. Rows are
  * append-only evidence: an unchanged player payload is deduplicated by its

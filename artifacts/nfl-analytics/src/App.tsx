@@ -316,7 +316,7 @@ function formatStatusLabel(status?: string | null) {
 }
 function FreshnessCard({ item }: { item: DataHealth }) {
   const status = item?.status;
-  const cleanupState = item.provider === 'usage-analytics-retention'
+  const cleanupState = (item.provider === 'usage-analytics-retention' || item.provider === 'player-recovery-receipt-cleanup')
     && (item.metadata?.cleanupState === 'pending' || item.metadata?.cleanupState === 'on_time' || item.metadata?.cleanupState === 'overdue')
     ? item.metadata.cleanupState
     : null;

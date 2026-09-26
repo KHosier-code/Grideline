@@ -1,12 +1,79 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { db, playerRecoveryReceiptsTable } from "@workspace/db";
+import { db, pool, playerRecoveryReceiptsTable, playerRecoveryReceiptCleanupTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { RecoveryFeedLockedError, runAttestedPlayerRecovery } from "./player-feed-recovery";
+import dataSyncRouter from "../routes/data-sync";
+import { requireAdmin } from "../middlewares/admin";
 import {
   listPlayerRecoveryReceipts, persistPlayerRecoveryReceipt,
   playerRecoveryReceiptCutoff, PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS,
+  getPlayerRecoveryReceiptCleanupHealth, playerRecoveryCleanupAlert,
+  startPlayerRecoveryReceiptRetention,
 } from "./player-recovery-receipts";
+
+test("the restricted alert is thresholded and never incorporates error text", () => {
+  const healthRoute = (dataSyncRouter as unknown as { stack: Array<{
+    route?: { path: string; stack: Array<{ handle: unknown }> };
+  }> }).stack.find((layer) => layer.route?.path === "/admin/player-recovery/cleanup-health")?.route;
+  assert.equal(healthRoute?.stack[0]?.handle, requireAdmin);
+  assert.equal(playerRecoveryCleanupAlert(2), null);
+  assert.deepEqual(playerRecoveryCleanupAlert(3), {
+    code: "repeated_failures", severity: "critical",
+    scope: "player-recovery-receipt-cleanup",
+    title: "Player refresh receipt cleanup repeatedly failing",
+    detail: "Receipt cleanup has failed 3 consecutive times. Expired receipts may remain beyond the 90-day retention period.",
+  });
+});
+
+test("worker cleanup persists repeated failures, clears the alert on success, and retains no error details", async () => {
+  const client = await pool.connect();
+  await client.query("SELECT pg_advisory_lock(hashtext($1))", ["player-recovery-cleanup-test"]);
+  const [original] = await db.select().from(playerRecoveryReceiptCleanupTable).limit(1);
+  let shouldFail = true;
+  let attempts = 0;
+  let stop: (() => void) | undefined;
+  try {
+    await db.delete(playerRecoveryReceiptCleanupTable);
+    stop = startPlayerRecoveryReceiptRetention({
+      intervalMs: 25,
+      cleanup: async () => {
+        attempts++;
+        if (shouldFail) throw new Error("secret database identity and provider URL");
+        return 4;
+      },
+    });
+    const waitFor = async (predicate: () => Promise<boolean>) => {
+      for (let i = 0; i < 100; i++) {
+        if (await predicate()) return;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      assert.fail("Cleanup state did not reach the expected condition");
+    };
+    await waitFor(async () => (await getPlayerRecoveryReceiptCleanupHealth()).consecutiveFailures >= 3);
+    const failed = await getPlayerRecoveryReceiptCleanupHealth();
+    assert.equal(failed.status, "failed");
+    assert.equal(failed.alert?.code, "repeated_failures");
+    assert(failed.firstFailureAt instanceof Date);
+    assert(!JSON.stringify(failed).includes("secret"));
+    const [stored] = await db.select().from(playerRecoveryReceiptCleanupTable);
+    assert(!JSON.stringify(stored).includes("secret"));
+    shouldFail = false;
+    await waitFor(async () => (await getPlayerRecoveryReceiptCleanupHealth()).status === "healthy");
+    const recovered = await getPlayerRecoveryReceiptCleanupHealth();
+    assert.equal(recovered.alert, null);
+    assert.equal(recovered.consecutiveFailures, 0);
+    assert.equal(recovered.firstFailureAt, null);
+    assert.equal(recovered.lastSuccessfulDeletedReceipts, 4);
+    assert(attempts >= 4);
+  } finally {
+    stop?.();
+    await db.delete(playerRecoveryReceiptCleanupTable);
+    if (original) await db.insert(playerRecoveryReceiptCleanupTable).values(original);
+    await client.query("SELECT pg_advisory_unlock(hashtext($1))", ["player-recovery-cleanup-test"]);
+    client.release();
+  }
+});
 
 test("receipts remain available for 90 days, with an exclusive expiration boundary", () => {
   assert.equal(PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS, 90);

@@ -550,6 +550,30 @@ export const ListPlayerRecoveryReceiptsResponse = zod.object({
 })
 
 /**
+ * @summary Review worker-owned player receipt cleanup health and repeated-failure alert
+ */
+export const GetPlayerRecoveryReceiptCleanupHealthResponse = zod.object({
+  "retentionDays": zod.number().int(),
+  "cleanupIntervalHours": zod.number().int(),
+  "status": zod.enum(['healthy', 'failed', 'pending']),
+  "cleanupState": zod.enum(['pending', 'on_time', 'overdue']),
+  "lastAttemptAt": zod.coerce.date().nullable(),
+  "lastAttemptStatus": zod.union([zod.literal('success'),zod.literal('failed'),zod.literal(null)]).nullable(),
+  "nextCleanupAt": zod.coerce.date().nullable(),
+  "consecutiveFailures": zod.number().int(),
+  "firstFailureAt": zod.coerce.date().nullable(),
+  "lastSuccessfulAt": zod.coerce.date().nullable(),
+  "lastSuccessfulDeletedReceipts": zod.number().int().nullable(),
+  "alert": zod.union([zod.null(),zod.object({
+  "code": zod.enum(['repeated_failures']),
+  "severity": zod.enum(['critical']),
+  "scope": zod.enum(['player-recovery-receipt-cleanup']),
+  "title": zod.string(),
+  "detail": zod.string()
+})]),
+  "workerOwned": zod.boolean()
+})
+/**
  * Performs an explicit ESPN schedule sync and only upserts games; it never deletes schedule history or calls the Odds API.
  * @summary Persist the current and next two exposed NFL weeks
  */

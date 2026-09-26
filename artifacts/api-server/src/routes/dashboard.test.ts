@@ -175,6 +175,21 @@ const dataHealthDependencies = {
     verification: "test fixture",
     note: "Test fixture",
   }),
+  getPlayerRecoveryReceiptCleanupHealth: async () => ({
+    retentionDays: 90,
+    cleanupIntervalHours: 24,
+    status: "pending",
+    cleanupState: "pending",
+    lastAttemptAt: null,
+    lastAttemptStatus: null,
+    nextCleanupAt: null,
+    consecutiveFailures: 0,
+    firstFailureAt: null,
+    lastSuccessfulAt: null,
+    lastSuccessfulDeletedReceipts: null,
+    alert: null,
+    workerOwned: true,
+  }),
   getFeedGameDays: async () => new Set<string>(),
   weatherHealth: async () => ({
     source: "Test fixture",
@@ -240,6 +255,41 @@ function providerByName(body: unknown[], name: string) {
   assert.ok(provider, `the data-health response should include ${name}`);
   return provider;
 }
+
+test("player receipt cleanup alert appears only on protected data-health and contains no raw errors", async () => {
+  const route = (dashboardRouter as unknown as { stack: RouteLayer[] }).stack
+    .find((layer) => layer.route?.path === "/data-health")?.route;
+  assert.equal(route?.stack[0]?.handle, requireAdmin);
+  const handler = createDataHealthHandler({
+    ...dataHealthDependencies,
+    getPlayerRecoveryReceiptCleanupHealth: async () => ({
+      retentionDays: 90,
+      cleanupIntervalHours: 24,
+      status: "failed" as const,
+      cleanupState: "on_time" as const,
+      lastAttemptAt: new Date(),
+      lastAttemptStatus: "failed" as const,
+      nextCleanupAt: new Date(Date.now() + 86_400_000),
+      consecutiveFailures: 3,
+      firstFailureAt: new Date(),
+      lastSuccessfulAt: null,
+      lastSuccessfulDeletedReceipts: null,
+      alert: {
+        code: "repeated_failures" as const,
+        severity: "critical" as const,
+        scope: "player-recovery-receipt-cleanup" as const,
+        title: "Player refresh receipt cleanup repeatedly failing" as const,
+        detail: "Receipt cleanup has failed 3 consecutive times. Expired receipts may remain beyond the 90-day retention period.",
+      },
+      workerOwned: true as const,
+    }),
+  });
+  const card = providerByName(await readDataHealth(handler as unknown as DataHealthHandler), "player-recovery-receipt-cleanup");
+  assert.equal(card.status, "unavailable");
+  assert.match(card.detail, /3 consecutive times/);
+  assert.equal(card.metadata.alert.severity, "critical");
+  assert(!JSON.stringify(card).includes("database identity"));
+});
 
 test("protected data-health returns a bounded unavailable result when a provider hangs", async () => {
   const handler = createDataHealthHandler(

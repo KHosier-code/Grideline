@@ -303,6 +303,21 @@ paths:
         "401": { description: Authentication required }
         "403": { description: Administrator access required }
         "500": { description: Receipt store unavailable }
+  /admin/player-recovery/cleanup-health:
+    get:
+      operationId: getPlayerRecoveryReceiptCleanupHealth
+      tags: [dashboard]
+      summary: Review worker-owned player receipt cleanup health and repeated-failure alert
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Privacy-safe cleanup status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlayerRecoveryReceiptCleanupHealth" }
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
+        "500": { description: Cleanup health unavailable }
   /data-sync/schedule:
     post:
       operationId: syncSchedule
@@ -947,6 +962,35 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    PlayerRecoveryReceiptCleanupHealth:
+      type: object
+      additionalProperties: false
+      required: [retentionDays, cleanupIntervalHours, status, cleanupState, lastAttemptAt, lastAttemptStatus, nextCleanupAt, consecutiveFailures, firstFailureAt, lastSuccessfulAt, lastSuccessfulDeletedReceipts, alert, workerOwned]
+      properties:
+        retentionDays: { type: integer }
+        cleanupIntervalHours: { type: integer }
+        status: { type: string, enum: [healthy, failed, pending] }
+        cleanupState: { type: string, enum: [pending, on_time, overdue] }
+        lastAttemptAt: { type: ["string", "null"], format: date-time }
+        lastAttemptStatus: { type: ["string", "null"], enum: [success, failed, null] }
+        nextCleanupAt: { type: ["string", "null"], format: date-time }
+        consecutiveFailures: { type: integer }
+        firstFailureAt: { type: ["string", "null"], format: date-time }
+        lastSuccessfulAt: { type: ["string", "null"], format: date-time }
+        lastSuccessfulDeletedReceipts: { type: ["integer", "null"] }
+        alert:
+          anyOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              required: [code, severity, scope, title, detail]
+              properties:
+                code: { type: string, enum: [repeated_failures] }
+                severity: { type: string, enum: [critical] }
+                scope: { type: string, enum: [player-recovery-receipt-cleanup] }
+                title: { type: string }
+                detail: { type: string }
+        workerOwned: { type: boolean }
     PlayerRecoveryReceiptsResult:
       type: object
       additionalProperties: false

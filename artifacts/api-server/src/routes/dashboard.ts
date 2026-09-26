@@ -25,6 +25,7 @@ import { weatherHealth } from "../lib/weather";
 import { requireAdmin } from "../middlewares/admin";
 import { getModelArtifactImmutabilityStatus } from "../lib/phase61-release";
 import { getUsageAnalyticsRetentionHealth } from "../lib/usage-analytics-retention";
+import { getPlayerRecoveryReceiptCleanupHealth } from "../lib/player-recovery-receipts";
 import { logger } from "../lib/logger";
 import {
   getCancelledDatabaseQueryCount,
@@ -45,6 +46,7 @@ type DataHealthDependencies = {
   getPregameFeatureHealth: typeof getPregameFeatureHealth;
   getModelArtifactImmutabilityStatus: typeof getModelArtifactImmutabilityStatus;
   getUsageAnalyticsRetentionHealth: typeof getUsageAnalyticsRetentionHealth;
+  getPlayerRecoveryReceiptCleanupHealth: typeof getPlayerRecoveryReceiptCleanupHealth;
   getFeedGameDays: typeof getFeedGameDays;
   nextFeedUpdate: typeof nextFeedUpdate;
   weatherHealth: typeof weatherHealth;
@@ -63,6 +65,7 @@ const defaultDataHealthDependencies: DataHealthDependencies = {
   getPregameFeatureHealth,
   getModelArtifactImmutabilityStatus,
   getUsageAnalyticsRetentionHealth,
+  getPlayerRecoveryReceiptCleanupHealth,
   getFeedGameDays,
   nextFeedUpdate,
   weatherHealth,
@@ -359,6 +362,25 @@ export function createDataHealthHandler(
         workerOwned: true,
       } as Awaited<ReturnType<typeof getUsageAnalyticsRetentionHealth>>,
     );
+    const playerReceiptCleanupCheck = bounded(
+      "player receipt cleanup health",
+      dependencies.getPlayerRecoveryReceiptCleanupHealth,
+      {
+        retentionDays: 90,
+        cleanupIntervalHours: 24,
+        status: "pending",
+        cleanupState: "pending",
+        lastAttemptAt: null,
+        lastAttemptStatus: null,
+        nextCleanupAt: null,
+        consecutiveFailures: 0,
+        firstFailureAt: null,
+        lastSuccessfulAt: null,
+        lastSuccessfulDeletedReceipts: null,
+        alert: null,
+        workerOwned: true,
+      } as Awaited<ReturnType<typeof getPlayerRecoveryReceiptCleanupHealth>>,
+    );
     const gameDaysCheck = bounded(
       "ESPN game calendar",
       () => dependencies.getFeedGameDays(now, { signal: routeAbort.signal }),
@@ -389,6 +411,7 @@ export function createDataHealthHandler(
       featuresResult,
       modelImmutabilityResult,
       usageAnalyticsRetentionResult,
+      playerReceiptCleanupResult,
       gameDaysResult,
       weatherResult,
     ] = await Promise.all([
@@ -405,6 +428,7 @@ export function createDataHealthHandler(
       featuresCheck,
       modelImmutabilityCheck,
       usageAnalyticsRetentionCheck,
+      playerReceiptCleanupCheck,
       gameDaysCheck,
       weatherCheck,
     ]);
@@ -427,6 +451,7 @@ export function createDataHealthHandler(
       ["pregame features", featuresResult.unavailable],
       ["model artifact immutability", modelImmutabilityResult.unavailable],
       ["Usage Lab retention", usageAnalyticsRetentionResult.unavailable],
+      ["player receipt cleanup", playerReceiptCleanupResult.unavailable],
       ["ESPN game calendar", gameDaysResult.unavailable],
       ["NWS weather", weatherResult.unavailable],
     ]
@@ -494,6 +519,7 @@ export function createDataHealthHandler(
     const features = featuresResult.value;
     const modelImmutability = modelImmutabilityResult.value;
     const usageAnalyticsRetention = usageAnalyticsRetentionResult.value;
+    const playerReceiptCleanup = playerReceiptCleanupResult.value;
     const gameDays = gameDaysResult.value;
     const weather = weatherResult.value;
     const schedulerJob = (provider: string) =>
@@ -641,6 +667,37 @@ export function createDataHealthHandler(
             recentRuns: scheduler.runs.slice(0, 40),
             note: scheduler.note,
             ...(schedulerResult.unavailable ? { healthCheck: "failed" } : {}),
+          },
+        },
+        {
+          provider: "player-recovery-receipt-cleanup",
+          label: "Player refresh receipt cleanup",
+          status: playerReceiptCleanupResult.unavailable ? "unavailable"
+            : playerReceiptCleanup.alert ? "unavailable"
+            : playerReceiptCleanup.cleanupState === "overdue" ? "stale"
+            : playerReceiptCleanup.status === "healthy" ? "current"
+            : playerReceiptCleanup.status === "failed" ? "unavailable" : "stale",
+          detail: playerReceiptCleanupResult.unavailable
+            ? healthCheckUnavailable("player receipt cleanup")
+            : playerReceiptCleanup.alert
+              ? `${playerReceiptCleanup.alert.title}: ${playerReceiptCleanup.alert.detail}`
+              : playerReceiptCleanup.cleanupState === "overdue"
+                ? "Player refresh receipt cleanup is overdue; the persistent worker has not recorded its next daily attempt."
+                : playerReceiptCleanup.status === "failed"
+                  ? "The latest player refresh receipt cleanup failed; the worker will retry on its next daily tick."
+                  : playerReceiptCleanup.status === "healthy"
+                    ? `The latest player refresh receipt cleanup completed successfully and deleted ${playerReceiptCleanup.lastSuccessfulDeletedReceipts ?? 0} expired receipts.`
+                    : "The first player refresh receipt cleanup is pending.",
+          schedule: "Every 24 hours; worker-owned",
+          retryPolicy: "A failed cleanup is recorded and retried on the next daily tick.",
+          lastUpdated: playerReceiptCleanup.lastAttemptAt,
+          nextUpdate: playerReceiptCleanup.nextCleanupAt,
+          requestsToday: 0,
+          requestsThisMonth: 0,
+          remainingQuota: "Local database",
+          metadata: {
+            ...playerReceiptCleanup,
+            ...(playerReceiptCleanupResult.unavailable ? { healthCheck: "failed" } : {}),
           },
         },
         {

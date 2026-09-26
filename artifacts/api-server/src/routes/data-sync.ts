@@ -5,6 +5,7 @@ import {
   ListOddsAuditsResponse,
   ListPlayerRecoveryReceiptsQueryParams,
   ListPlayerRecoveryReceiptsResponse,
+  GetPlayerRecoveryReceiptCleanupHealthResponse,
   SyncScheduleBody,
   SyncScheduleResponse,
 } from "@workspace/api-zod";
@@ -14,11 +15,20 @@ import { captureOddsSnapshots, getOddsEventAudits } from "../lib/odds";
 import { syncEspnScheduleCoverage } from "../lib/schedule";
 import { requireAdmin } from "../middlewares/admin";
 import { withFeedLock } from "../lib/feed-scheduler";
-import { listPlayerRecoveryReceipts, PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS } from "../lib/player-recovery-receipts";
+import { getPlayerRecoveryReceiptCleanupHealth, listPlayerRecoveryReceipts, PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS } from "../lib/player-recovery-receipts";
 
 const router: IRouter = Router();
 
 const playerStats2026Url = datasetUrl("player_stats", 2026);
+
+router.get("/admin/player-recovery/cleanup-health", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    res.json(GetPlayerRecoveryReceiptCleanupHealthResponse.parse(await getPlayerRecoveryReceiptCleanupHealth()));
+  } catch {
+    req.log.error("Player recovery receipt cleanup health read failed");
+    res.status(500).json({ error: "Player recovery receipt cleanup health is temporarily unavailable." });
+  }
+});
 
 router.get("/admin/player-recovery/receipts", requireAdmin, async (req, res): Promise<void> => {
   const parsed = ListPlayerRecoveryReceiptsQueryParams.safeParse(req.query);
