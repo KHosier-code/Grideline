@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
-import { approvedPlayerHeadshotUrl, createImageRefreshGate, parseImageCsv, PLAYER_HEADSHOT_RIGHTS, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages } from "./verified-imagery";
+import { approvedPlayerHeadshotUrl, createImageRefreshGate, IMAGE_PARSER_VERSION, parseImageCsv, PLAYER_HEADSHOT_RIGHTS, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages, validPersistedImageRows } from "./verified-imagery";
+import { createImageRefreshGate, IMAGE_PARSER_VERSION, parseImageCsv, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages, validPersistedImageRows } from "./verified-imagery";
 
 test("a cold or timed-out image source never blocks consumer responses and retries are bounded", async () => {
   let finish!: () => void;
@@ -43,10 +45,7 @@ test("CSV parser validates headers, escaped quotes, and completeness", () => {
 });
 
 test("team aliases work in either direction without replacing schedule IDs", () => {
-  const schedule = [
-    team("espn-rams", "LAR", "Los Angeles Rams"), team("espn-chargers", "LAC", "Los Angeles Chargers"),
-    team("espn-was", "WSH", "Washington Commanders"), team("espn-vegas", "LV", "Las Vegas Raiders"),
-  ];
+  const schedule = [team("schedule-la", "LAR", "Los Angeles Rams")];
   const images = reconcileTeamImages(schedule, [
     source("LA", "Los Angeles Rams", url("rams")),
     source("SD", "San Diego Chargers", url("chargers")),
@@ -107,10 +106,7 @@ test("NFL-hosted and unknown headshots fail closed despite verified identity", (
 });
 
 test("colliding crosswalk IDs and conflicting weekly headshots fail closed", () => {
-  const rows = [
-    { gsisId: "00-1", espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null },
-    { gsisId: "00-2", espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null },
-  ];
+  const rows = [source("LA", "Los Angeles Rams", url("rams"))];
   const collision = reconcilePlayerImages([player("", "100", url("someone"))], rows);
   assert.equal(playerHeadshot("100", collision), null);
   assert.equal(collision.photos.size, 0);
@@ -139,4 +135,24 @@ test("missing source stays unavailable; failed refresh only reuses prior verifie
   };
   assert.equal(staleVerifiedImages(previous, schedule)?.teams.logos.get("schedule-la"), url("rams"));
   assert.equal(staleVerifiedImages(previous, [team("other", "UNKNOWN", "Other")])?.teams.logos.size, 0);
+});
+
+test("persisted evidence requires matching source, version, fields and intact rows", () => {
+  const rows = [source("LA", "Los Angeles Rams", url("rams"))];
+  const receipt = {
+    canonicalRowsHash: createHash("sha256").update(JSON.stringify(rows)).digest("hex"),
+    sourceContentHash: "a".repeat(64), rowCount: 1,
+    sourceUrl: "https://example.org/teams.csv", parserVersion: IMAGE_PARSER_VERSION,
+    sourceHeaders: ["team_abbr", "team_name", "team_logo_espn"],
+  };
+  const valid = (payload: unknown, meta = receipt) =>
+    validPersistedImageRows(payload, meta, receipt.sourceUrl, receipt.sourceHeaders);
+  assert.equal(valid(rows), true);
+  assert.equal(valid([{ ...rows[0], team_logo_espn: url("other") }]), false);
+  assert.equal(valid([], { ...receipt, rowCount: 0 }), false);
+  assert.equal(valid(rows, { ...receipt, sourceUrl: "https://example.org/other.csv" }), false);
+  assert.equal(valid(rows, { ...receipt, parserVersion: "verified-imagery-v1" }), false);
+  assert.equal(valid(rows, { ...receipt, sourceHeaders: ["team_abbr"] }), false);
+  assert.equal(valid(rows, { ...receipt, sourceContentHash: "unknown" }), false);
+  assert.equal(valid([{ ...rows[0], team_logo_espn: null }]), false);
 });

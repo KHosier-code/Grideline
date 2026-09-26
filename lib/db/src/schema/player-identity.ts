@@ -30,6 +30,12 @@ export const identitySourceImportsTable = pgTable("identity_source_imports", {
   index("identity_source_imports_namespace_idx").on(table.sourceNamespace, table.importedAt),
 ]);
 
+/** Validated imagery source rows, bound to an immutable source import receipt. */
+export const imagerySourceRowsTable = pgTable("imagery_source_rows", {
+  importId: integer("import_id").primaryKey().references(() => identitySourceImportsTable.id),
+  rows: jsonb("rows").$type<Record<string, string>[]>().notNull(),
+});
+
 /** Typed, authoritative nflverse player identity observations. */
 export const nflversePlayerIdentitiesTable = pgTable("nflverse_player_identities", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

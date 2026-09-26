@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
-import { desc, eq } from "drizzle-orm";
-import { db, identitySourceImportsTable, nflversePlayerIdentitiesTable } from "@workspace/db";
+import { and, desc, eq } from "drizzle-orm";
+import { db, identitySourceImportsTable, imagerySourceRowsTable, nflversePlayerIdentitiesTable } from "@workspace/db";
 import { NFLVERSE_TEAM_ALIASES } from "./personnel-context-derivation";
 
 export const TEAM_IMAGE_SOURCE = "https://github.com/nflverse/nflverse-data/releases/download/teams/teams_colors_logos.csv";
 export const ROSTER_IMAGE_SOURCE = "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2026.csv";
-export const IMAGE_PARSER_VERSION = "verified-imagery-v1";
+export const IMAGE_PARSER_VERSION = "verified-imagery-v2";
 
 export const PLAYER_HEADSHOT_RIGHTS = {
   status: "not_approved",
@@ -20,7 +20,7 @@ type TeamRow = { team_abbr: string; team_name: string; team_logo_espn: string };
 type RosterRow = { gsis_id: string; espn_id: string; pfr_id: string; pff_id: string; esb_id: string; smart_id: string; headshot_url: string };
 type CrosswalkRow = { gsisId: string; espnId: string | null; pfrId: string | null; pffId: string | null; esbId: string | null; smartId: string | null };
 type Issue = { id: string; reason: string };
-type Source = { url: string; sha256: string; fetchedAt: string; rows: number; version: string };
+type Source = { url: string; sha256: string; fetchedAt: string; rows: number; version: string; stale?: boolean };
 
 /** CSV records, including embedded newlines and escaped quotes. Reject malformed or truncated downloads. */
 export function parseImageCsv<T extends string>(csv: string, required: readonly T[]): Record<T, string>[] {
@@ -210,6 +210,8 @@ async function download(url: string) {
 }
 const teamFields = ["team_abbr", "team_name", "team_logo_espn"] as const;
 const rosterFields = ["gsis_id", "espn_id", "pfr_id", "pff_id", "esb_id", "smart_id", "headshot_url"] as const;
+
+type ImageFile = Awaited<ReturnType<typeof download>>;
 export async function verifiedImages(teams: Team[]): Promise<ImageState> {
   // Team mappings depend on the current schedule; cache only immutable source evidence, not schedule joins.
   const evidence = cached && cached.expires > Date.now() ? cached.state : await (pending ??= (async () => {
@@ -227,32 +229,30 @@ export async function verifiedImages(teams: Team[]): Promise<ImageState> {
       try { return parseImageCsv(file.text, fields); }
       catch { sourceErrors.push(`${label} CSV invalid`); return [] as Record<T, string>[]; }
     };
-    const teamRows = parsed(teamFile, teamFields, "teams");
-    const rosterRows = parsed(rosterFile, rosterFields, "2026 roster");
-    if (!teamRows.length && !rosterRows.length) throw new Error(`Both imagery sources unavailable: ${sourceErrors.join("; ")}`);
-    // Retain the exact source fingerprint even across API restarts. These
-    // receipts are separate from the versioned players crosswalk import.
-    const retain = async <T extends string>(label: string, file: typeof teamFile, fields: readonly T[], rows: Record<T, string>[]) => {
-      if (!file || !rows.length) return;
-      await db.insert(identitySourceImportsTable).values({
-        sourceNamespace: `nflverse-imagery-${label}`,
-        sourceUrl: file.url,
-        sourceContentHash: file.sha256,
-        parserVersion: IMAGE_PARSER_VERSION,
-        canonicalRowsHash: createHash("sha256").update(JSON.stringify(rows)).digest("hex"),
-        sourceHeaders: [...fields],
-        rowCount: rows.length,
-        importedAt: new Date(file.fetchedAt),
-        provenance: { fetchedAt: file.fetchedAt, dataset: label, season: label === "roster" ? 2026 : null },
-      }).onConflictDoNothing();
+    const resolve = async <T extends string>(label: ImageLabel, file: ImageFile | null, fields: readonly T[]) => {
+      const rows = parsed(file, fields, label === "roster" ? "2026 roster" : "teams");
+      if (rows.length && file) {
+        try { await storeImageRows(label, file, fields, rows); }
+        catch { sourceErrors.push(`${label} persisted evidence unavailable`); }
+        return { rows, source: { url: file.url, sha256: file.sha256, fetchedAt: file.fetchedAt,
+          rows: rows.length, version: IMAGE_PARSER_VERSION } satisfies Source };
+      }
+      try {
+        const saved = await loadImageRows(label, label === "roster" ? ROSTER_IMAGE_SOURCE : TEAM_IMAGE_SOURCE, fields);
+        if (saved) {
+          sourceErrors.push(`${label} using stale verified evidence from ${saved.source.fetchedAt}`);
+          return saved;
+        }
+        sourceErrors.push(`${label} has no valid persisted evidence`);
+      } catch { sourceErrors.push(`${label} persisted evidence could not be read`); }
+      return { rows: [] as Record<T, string>[], source: null };
     };
-    const receipts = await Promise.allSettled([
-      retain("teams", teamFile, teamFields, teamRows),
-      retain("roster", rosterFile, rosterFields, rosterRows),
+    const [teamEvidence, rosterEvidence] = await Promise.all([
+      resolve("teams", teamFile, teamFields), resolve("roster", rosterFile, rosterFields),
     ]);
-    receipts.forEach((result, index) => {
-      if (result.status === "rejected") sourceErrors.push(`${index ? "2026 roster" : "teams"} provenance receipt unavailable`);
-    });
+    const teamRows = teamEvidence.rows;
+    const rosterRows = rosterEvidence.rows;
+    if (!teamRows.length && !rosterRows.length) throw new Error(`Both imagery sources unavailable: ${sourceErrors.join("; ")}`);
     const imports = importsResult.status === "fulfilled" ? importsResult.value : [];
     const imported = imports[0];
     const crosswalk = imported ? await db.select({
@@ -260,19 +260,16 @@ export async function verifiedImages(teams: Team[]): Promise<ImageState> {
       pfrId: nflversePlayerIdentitiesTable.pfrId, pffId: nflversePlayerIdentitiesTable.pffId,
       esbId: nflversePlayerIdentitiesTable.esbId, smartId: nflversePlayerIdentitiesTable.smartId,
     }).from(nflversePlayerIdentitiesTable).where(eq(nflversePlayerIdentitiesTable.importId, imported.id)) : [];
-    const source = (downloaded: typeof teamFile, rows: number): Source => ({
-      url: downloaded!.url, sha256: downloaded!.sha256, fetchedAt: downloaded!.fetchedAt, rows, version: IMAGE_PARSER_VERSION,
-    });
     const state: ImageState = {
-      sources: { teams: teamRows.length ? source(teamFile, teamRows.length) : null,
-        roster: rosterRows.length ? source(rosterFile, rosterRows.length) : null,
+      sources: { teams: teamEvidence.source,
+        roster: rosterEvidence.source,
         players: imported ? { url: imported.sourceUrl, sha256: imported.sourceContentHash, fetchedAt: imported.importedAt.toISOString(), rows: imported.rowCount, version: imported.parserVersion } : null },
       teams: reconcileTeamImages([], teamRows), teamRows, sourceErrors,
       crosswalkError: imported ? null : "Versioned nflverse player crosswalk unavailable",
       players: reconcilePlayerImages(rosterRows, crosswalk),
     };
     // Store source rows separately so mapping is recomputed when schedule teams change.
-    cached = { state, expires: Date.now() + 6 * 60 * 60_000 };
+    cached = { state, expires: Date.now() + (sourceErrors.length ? 5 * 60_000 : 6 * 60 * 60_000) };
     lastError = null;
     return state;
   })().finally(() => { pending = null; }));
@@ -283,7 +280,11 @@ export async function safeVerifiedImages(teams: Team[]) {
   try { return await verifiedImages(teams); }
   catch (error) {
     lastError = error instanceof Error ? error.message : String(error);
-    return staleVerifiedImages(cached?.state ?? null, teams);
+    const stale = staleVerifiedImages(cached?.state ?? null, teams);
+    return stale ? { ...stale, sourceErrors: [...stale.sourceErrors, `refresh failed: ${lastError}`],
+      sources: { ...stale.sources,
+        teams: stale.sources.teams && { ...stale.sources.teams, stale: true },
+        roster: stale.sources.roster && { ...stale.sources.roster, stale: true } } } : null;
   }
 }
 /** A failed refresh can reuse only previously verified evidence, never ESPN schedule logos. */
@@ -291,3 +292,60 @@ export function staleVerifiedImages(state: ImageState | null, teams: Team[]) {
   return state ? { ...state, teams: reconcileTeamImages(teams, state.teamRows) } : null;
 }
 export function imageryFailure() { return lastError; }
+
+/** Reject malformed, partial, or tampered persisted rows before any identity reconciliation. */
+export function validPersistedImageRows(
+  rows: unknown, receipt: { canonicalRowsHash: string; rowCount: number; sourceContentHash: string; sourceUrl: string; parserVersion: string; sourceHeaders: string[] },
+  url: string, fields: readonly string[],
+): rows is Record<string, string>[] {
+  return receipt.sourceUrl === url && receipt.parserVersion === IMAGE_PARSER_VERSION
+    && /^[a-f0-9]{64}$/.test(receipt.sourceContentHash)
+    && Array.isArray(receipt.sourceHeaders) && fields.every(field => receipt.sourceHeaders.includes(field))
+    && Array.isArray(rows) && rows.length > 0 && rows.length === receipt.rowCount
+    && rows.every(row => row !== null && typeof row === "object" && !Array.isArray(row)
+      && fields.every(field => typeof row[field] === "string"))
+    && hashRows(rows as Record<string, string>[]) === receipt.canonicalRowsHash;
+}
+
+async function loadImageRows<T extends string>(label: ImageLabel, url: string, fields: readonly T[]) {
+  const [receipt] = await db.select().from(identitySourceImportsTable).where(and(
+    eq(identitySourceImportsTable.sourceNamespace, `nflverse-imagery-${label}`),
+    eq(identitySourceImportsTable.sourceUrl, url),
+    eq(identitySourceImportsTable.parserVersion, IMAGE_PARSER_VERSION),
+  )).orderBy(desc(identitySourceImportsTable.importedAt), desc(identitySourceImportsTable.id)).limit(1);
+  if (!receipt) return null;
+  const [payload] = await db.select().from(imagerySourceRowsTable)
+    .where(eq(imagerySourceRowsTable.importId, receipt.id)).limit(1);
+  if (!validPersistedImageRows(payload?.rows, receipt, url, fields)) return null;
+  return {
+    rows: payload!.rows as Record<T, string>[],
+    source: { url, sha256: receipt.sourceContentHash, fetchedAt: receipt.importedAt.toISOString(),
+      rows: receipt.rowCount, version: receipt.parserVersion, stale: true } satisfies Source,
+  };
+}
+
+type ImageLabel = "teams" | "roster";
+
+async function storeImageRows(label: ImageLabel, file: ImageFile, fields: readonly string[], rows: Record<string, string>[]) {
+  await db.transaction(async tx => {
+    const namespace = `nflverse-imagery-${label}`;
+    const [created] = await tx.insert(identitySourceImportsTable).values({
+      sourceNamespace: namespace, sourceUrl: file.url, sourceContentHash: file.sha256,
+      parserVersion: IMAGE_PARSER_VERSION, canonicalRowsHash: hashRows(rows),
+      sourceHeaders: [...fields], rowCount: rows.length, importedAt: new Date(file.fetchedAt),
+      provenance: { fetchedAt: file.fetchedAt, dataset: label, season: label === "roster" ? 2026 : null },
+    }).onConflictDoNothing().returning({ id: identitySourceImportsTable.id });
+    const existing = created ? null : (await tx.select().from(identitySourceImportsTable).where(and(
+      eq(identitySourceImportsTable.sourceNamespace, namespace),
+      eq(identitySourceImportsTable.sourceContentHash, file.sha256),
+      eq(identitySourceImportsTable.parserVersion, IMAGE_PARSER_VERSION),
+    )).limit(1))[0];
+    if (existing && (existing.canonicalRowsHash !== hashRows(rows) || existing.sourceUrl !== file.url))
+      throw new Error("Imagery source receipt mismatch");
+    const id = created?.id ?? existing?.id;
+    if (!id) throw new Error("Imagery source receipt unavailable");
+    await tx.insert(imagerySourceRowsTable).values({ importId: id, rows }).onConflictDoNothing();
+  });
+}
+
+const hashRows = (rows: Record<string, string>[]) => createHash("sha256").update(JSON.stringify(rows)).digest("hex");
