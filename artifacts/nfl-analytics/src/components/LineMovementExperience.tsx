@@ -1,17 +1,9 @@
-import { useMemo, useState } from 'react';
-import type { ConsumerMovement, ConsumerMovementItem, ConsumerMovementQuote } from '@workspace/api-client-react';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import type { ConsumerMovement, ConsumerMovementQuote } from '@workspace/api-client-react';
 import { AlertTriangle, LineChart as LineChartIcon } from 'lucide-react';
 import { preKickoffMovementLabel } from '../lib/consumer-presentation';
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+
+const LineMovementPlot = lazy(() => import('./LineMovementPlot'));
 
 type Market = 'spread' | 'total' | 'moneyline';
 type BookFilter = 'All' | 'DraftKings' | 'FanDuel';
@@ -22,7 +14,6 @@ const markets: Array<{ value: Market; label: string }> = [
   { value: 'moneyline', label: 'Moneyline' },
 ];
 const books: BookFilter[] = ['All', 'DraftKings', 'FanDuel'];
-const colors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 function price(value: number) {
   return value > 0 ? `+${value}` : String(value);
@@ -42,10 +33,6 @@ function observedAt(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(value));
-}
-
-function streamName(stream: ConsumerMovementItem) {
-  return `${stream.sportsbook === 'DraftKings' ? 'DK' : 'FD'} · ${stream.selection}`;
 }
 
 function SummaryValue({
@@ -70,19 +57,7 @@ export function LineMovementExperience({ movement, beforeKickoff }: { movement: 
   const [book, setBook] = useState<BookFilter>('All');
   const streams = useMemo(() => movement.streams.filter((stream) =>
     stream.market === market && (book === 'All' || stream.sportsbook === book)), [movement.streams, market, book]);
-  const chart = useMemo(() => {
-    const rows = new Map<string, Record<string, string | number | null>>();
-    streams.forEach((stream, streamIndex) => {
-      stream.observations.forEach((observation) => {
-        const row = rows.get(observation.capturedAt) ?? { capturedAt: observation.capturedAt };
-        row[`point${streamIndex}`] = observation.point;
-        row[`price${streamIndex}`] = observation.price;
-        rows.set(observation.capturedAt, row);
-      });
-    });
-    return [...rows.values()].sort((left, right) =>
-      String(left.capturedAt).localeCompare(String(right.capturedAt)));
-  }, [streams]);
+  const chartable = streams.some(stream => stream.observations.length > 0);
 
   return <section className="movement-section" data-section="line-movement" aria-labelledby="movement-heading">
     <div className="consumer-section-heading">
@@ -123,58 +98,9 @@ export function LineMovementExperience({ movement, beforeKickoff }: { movement: 
       : streams.length === 0
         ? <div className="movement-empty"><LineChartIcon /><strong>No {markets.find((item) => item.value === market)?.label.toLowerCase()} history</strong><p>No observations are available for this market and sportsbook filter.</p></div>
         : <>
-          <div className="movement-chart" role="img" aria-label={`${markets.find((item) => item.value === market)?.label} movement chart`}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chart} margin={{ top: 16, right: 8, bottom: 8, left: 0 }}>
-                <CartesianGrid stroke="hsl(var(--chart-grid))" strokeDasharray="3 5" />
-                <XAxis
-                  dataKey="capturedAt"
-                  minTickGap={48}
-                  tickFormatter={(value) => observedAt(String(value))}
-                  tick={{ fontSize: 10, fill: 'hsl(var(--chart-axis))' }}
-                />
-                <YAxis yAxisId="point" hide={market === 'moneyline'} tick={{ fontSize: 10, fill: 'hsl(var(--chart-axis))' }} width={42} />
-                <YAxis yAxisId="price" orientation="right" tickFormatter={price} tick={{ fontSize: 10, fill: 'hsl(var(--chart-axis))' }} width={45} />
-                <Tooltip
-                  contentStyle={{ background: 'hsl(var(--tooltip))', border: '1px solid hsl(var(--border))', borderRadius: 9, color: 'hsl(var(--tooltip-foreground))' }}
-                  labelStyle={{ color: 'hsl(var(--tooltip-foreground))' }}
-                  itemStyle={{ color: 'hsl(var(--tooltip-foreground))' }}
-                  labelFormatter={(value) => observedAt(String(value))}
-                  formatter={(value, name) => [String(name).endsWith(' price') ? price(Number(value)) : value, name]}
-                />
-                 <Legend wrapperStyle={{ color: 'hsl(var(--chart-axis))', fontSize: 11 }} />
-                {streams.flatMap((stream, index) => {
-                  const color = colors[index % colors.length];
-                  const name = streamName(stream);
-                  const lines = [
-                    <Line
-                      connectNulls
-                      dataKey={`price${index}`}
-                      dot={{ r: 3 }}
-                      key={`price-${name}`}
-                      name={`${name} price`}
-                      stroke={color}
-                      strokeDasharray="5 4"
-                      type="linear"
-                      yAxisId="price"
-                    />,
-                  ];
-                  if (market !== 'moneyline') lines.unshift(<Line
-                    connectNulls
-                    dataKey={`point${index}`}
-                    dot={{ r: 3 }}
-                    key={`point-${name}`}
-                    name={`${name} point`}
-                    stroke={color}
-                    strokeWidth={2.5}
-                    type="linear"
-                    yAxisId="point"
-                  />);
-                  return lines;
-                })}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {chartable ? <Suspense fallback={<div className="movement-chart" role="status">Loading line history chart…</div>}>
+            <LineMovementPlot streams={streams} market={market} label={markets.find(item => item.value === market)!.label} />
+          </Suspense> : <div className="movement-empty" role="status">No chartable observations are available for this market and sportsbook filter.</div>}
           <div className="movement-streams">
             {streams.map((stream) => <article key={`${stream.sportsbook}-${stream.market}-${stream.selection}`}>
               <header><div><span>{stream.sportsbook}</span><h3>{stream.selection}</h3></div><small>{stream.observations.length} shown</small></header>

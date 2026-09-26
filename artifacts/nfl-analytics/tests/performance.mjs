@@ -11,6 +11,7 @@ const prefix = base === '/' ? '' : `/${base.split('/').filter(Boolean).join('/')
 const port = Number(process.env.PERF_PORT ?? 5198);
 const origin = `http://127.0.0.1:${port}`;
 const routes = ['/', '/games', '/games/perf-not-a-real-game', '/performance'];
+let sparseGameId = null;
 const profiles = {
   mobile: { viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 2, cpu: 4, latency: 150, throughput: 200 * 1024 },
   desktop: { viewport: { width: 1440, height: 900 }, isMobile: false, deviceScaleFactor: 1, cpu: 1, latency: 20, throughput: 5 * 1024 * 1024 },
@@ -43,8 +44,23 @@ try {
           const dashboardResponse = await fetch('http://localhost:80/api/consumer/dashboard');
           if (!dashboardResponse.ok) throw new Error(`Consumer API unavailable (${dashboardResponse.status}); start the API workflow before measuring.`);
           const dashboard = await dashboardResponse.json();
-          if (!dashboard.games?.[0]?.gameId) throw new Error('Consumer dashboard has no game ID for a real Game Detail measurement.');
-          routes[2] = `/games/${encodeURIComponent(dashboard.games[0].gameId)}`;
+          const comparisonLabels = new Set(['Blended pass EPA / dropback', 'Blended rush EPA / carry', 'Offensive red-zone rate', 'Seconds per play']);
+          for (const candidate of dashboard.games ?? []) {
+            if (!candidate.gameId || candidate.prediction) continue;
+            const detailResponse = await fetch(`http://localhost:80/api/consumer/games/${encodeURIComponent(candidate.gameId)}`);
+            if (!detailResponse.ok) throw new Error(`Game Detail unavailable (${detailResponse.status}).`);
+            const detail = await detailResponse.json();
+            const chartableComparison = detail.matchupBoard?.assessments?.some(assessment =>
+              assessment.edge !== 'insufficient' && assessment.confidence !== 'unavailable'
+              && assessment.metrics.some(metric => comparisonLabels.has(metric.label)
+                && Number.isFinite(metric.homeValue) && Number.isFinite(metric.awayValue)));
+            if (!detail.prediction && !chartableComparison && !detail.movement?.streams?.some(stream => stream.observations.length > 0)) {
+              sparseGameId = candidate.gameId;
+              break;
+            }
+          }
+          if (!sparseGameId) throw new Error('Consumer dashboard has no genuinely sparse Game Detail with an unavailable saved projection.');
+          routes[2] = `/games/${encodeURIComponent(sparseGameId)}`;
         }
         const route = routes[index];
         const context = await browser.newContext({ viewport: settings.viewport, isMobile: settings.isMobile, deviceScaleFactor: settings.deviceScaleFactor });
@@ -91,6 +107,9 @@ try {
             jsRequests: scripts.length,
             jsTransferKiB: Math.round(scripts.reduce((sum, e) => sum + e.transferSize, 0) / 1024),
             assets: scripts.map(e => new URL(e.name).pathname.split('/').pop()),
+            chartLoaded: Boolean(document.querySelector('[data-section="pregame-team-comparison"] .recharts-wrapper, [data-section="line-movement"] .recharts-wrapper')),
+            comparisonUnavailable: Boolean(document.querySelector('[data-section="pregame-team-comparison"] [role="status"]')),
+            movementUnavailable: Boolean(document.querySelector('[data-section="line-movement"] .movement-empty')),
           };
         });
         if (settings.isMobile && route !== '/games') await page.getByRole('button', { name: 'Open navigation' }).click();
@@ -105,6 +124,12 @@ try {
             ? url.pathname.startsWith(`${prefix}/games/`)
             : url.pathname === `${prefix}/games`, { timeout: 10_000 });
           interactionMs = Date.now() - clickStart;
+        }
+        if (route === `/games/${encodeURIComponent(sparseGameId)}` && (
+          data.chartLoaded || !data.comparisonUnavailable || !data.movementUnavailable
+          || data.assets.some(asset => /^(generateCategoricalChart|PregameComparisonPlot|LineMovementPlot|LineChart)-/.test(asset))
+        )) {
+          throw new Error('Sparse Game Detail must show both unavailable states without downloading chart code or rendering a chart.');
         }
         results.push({ profile, route, httpStatus: response?.status(), routeReadyMs, interactionMs, ...data });
         await context.close();

@@ -93,6 +93,9 @@ test("NFL-hosted and unknown headshots fail closed despite verified identity", (
   const mapped = reconcilePlayerImages([player("00-1", "100", nflUrl)], [
     { gsisId: "00-1", espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null },
   ]);
+
+  const identity = (gsisId: string, espnId: string) =>
+    ({ gsisId, espnId, pfrId: null, pffId: null, esbId: null, smartId: null });
   assert.deepEqual(PLAYER_HEADSHOT_RIGHTS.approvedHosts, []);
   assert.equal(mapped.photos.get("00-1"), nflUrl);
   assert.deepEqual(mapped.unapprovedHosts, [{ host: "static.www.nfl.com", rows: 1 }]);
@@ -108,7 +111,7 @@ test("colliding crosswalk IDs and conflicting weekly headshots fail closed", () 
   const crosswalk = (gsisId: string) => ({
     gsisId, espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null,
   });
-  const rows = [crosswalk("00-1"), crosswalk("00-2")];
+  const rows = [source("LA", "Los Angeles Rams", url("rams"))];
   const collision = reconcilePlayerImages([player("", "100", url("someone"))], rows);
   assert.equal(playerHeadshot("100", collision), null);
   assert.equal(collision.photos.size, 0);

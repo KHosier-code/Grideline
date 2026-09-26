@@ -1,7 +1,7 @@
 import type { ConsumerMatchupAssessment, ConsumerMatchupBoard, ConsumerMatchupMetric, ConsumerTeam } from '@workspace/api-client-react';
-import { useState } from 'react';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from './ui/chart';
+import { lazy, Suspense, useState } from 'react';
+
+const PregameComparisonPlot = lazy(() => import('./PregameComparisonPlot'));
 
 const comparisonSpecs = [
   { category: 'passing', label: 'Passing', metricLabel: 'Blended pass EPA / dropback' },
@@ -35,10 +35,6 @@ function metricUnit(metric: ConsumerMatchupMetric) {
   return 'seconds/play';
 }
 
-function chartValue(metric: ConsumerMatchupMetric, value: number) {
-  return metric.label === 'Offensive red-zone rate' ? value * 100 : value;
-}
-
 function formatValue(metric: ConsumerMatchupMetric, value: number | null) {
   if (value === null) return 'Unavailable';
   if (metric.label === 'Offensive red-zone rate') return `${(value * 100).toFixed(1)}%`;
@@ -64,16 +60,6 @@ export function ConsumerPregameComparisonChart({ board, away, home }: {
   const plotted = rows.filter((row) => supported(row.metric, row.assessment));
   const selected = plotted.find((row) => row.category === selectedCategory) ?? plotted[0];
   const selectedMetric = selected?.metric;
-  const data = selected && selectedMetric ? [{
-    category: selected.label,
-    awayValue: chartValue(selectedMetric, selectedMetric.awayValue!),
-    homeValue: chartValue(selectedMetric, selectedMetric.homeValue!),
-    metric: selectedMetric,
-  }] : [];
-  const config: ChartConfig = {
-    awayValue: { label: away.abbreviation, color: 'hsl(var(--chart-1))' },
-    homeValue: { label: home.abbreviation, color: 'hsl(var(--chart-2))' },
-  };
   const cutoff = new Date(board.sourceCutoff);
   const cutoffLabel = Number.isNaN(cutoff.getTime()) ? 'Unavailable' : cutoff.toLocaleString();
 
@@ -104,25 +90,9 @@ export function ConsumerPregameComparisonChart({ board, away, home }: {
           {plotted.map((row) => <option key={row.category} value={row.category}>{row.label}</option>)}
         </select>
       </div>
-      <ChartContainer config={config} className="h-52 w-full aspect-auto" aria-label={`${selected.label}: ${metricUnit(selectedMetric)}, ${away.abbreviation} compared with ${home.abbreviation}`}>
-        <BarChart data={data} margin={{ top: 6, right: 8, left: -18, bottom: 0 }} accessibilityLayer>
-          <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-          <XAxis dataKey="category" tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} interval={0} />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-            tickFormatter={(value: number) => selectedMetric.label === 'Offensive red-zone rate' ? `${value}%` : value.toFixed(selectedMetric.unit === 'seconds' ? 1 : 3)}
-            width={48}
-            label={{ value: metricUnit(selectedMetric), angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-          />
-          <ChartTooltip content={<ChartTooltipContent formatter={(value) => (
-            <span>{formatValue(selectedMetric, Number(value))}</span>
-          )} />} />
-          <Bar dataKey="awayValue" name={away.abbreviation} fill="var(--color-awayValue)" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="homeValue" name={home.abbreviation} fill="var(--color-homeValue)" radius={[3, 3, 0, 0]} />
-        </BarChart>
-      </ChartContainer>
+      <Suspense fallback={<div className="h-52" role="status">Loading supported comparison…</div>}>
+        <PregameComparisonPlot label={selected.label} metric={selectedMetric} away={away} home={home} />
+      </Suspense>
     </> : <p className="m-0 rounded-lg bg-secondary/50 px-3 py-3 text-sm text-muted-foreground" role="status">
       No supported two-team values are available for these pregame metrics yet.
     </p>}
