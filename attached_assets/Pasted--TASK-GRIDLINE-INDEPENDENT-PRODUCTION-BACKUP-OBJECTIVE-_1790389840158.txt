@@ -1,0 +1,88 @@
+# TASK — GRIDLINE INDEPENDENT PRODUCTION BACKUP
+
+OBJECTIVE
+
+Prepare a verified, independent backup of Gridline's production PostgreSQL database before any further production publication.
+
+Production is currently operational. Do not interrupt it.
+
+IMPORTANT: This task requires my explicit authorization before accessing production credentials, executing the backup or restoring data anywhere.
+
+PHASE 1 — SECURE BACKUP PREPARATION
+
+1. Confirm PostgreSQL 16 client compatibility.
+2. Identify the approved method for supplying production credentials securely without printing or committing them.
+3. Determine whether a read-only production credential or replica connection is available.
+4. Identify a private backup destination outside the Replit project and deployment environment.
+5. Confirm backup storage capacity and access restrictions.
+6. Provide the exact proposed backup commands for review.
+
+Never print, log, expose or commit connection credentials.
+
+Do not use the development DATABASE_URL.
+
+PHASE 2 — BACKUP EXECUTION
+
+STOP AND REQUEST MY APPROVAL.
+
+Once separately authorized:
+
+- Use pg_dump with PostgreSQL's custom archive format.
+- Maintain a consistent database snapshot.
+- Capture the completion timestamp.
+- Calculate and retain a SHA-256 checksum.
+- Inspect the archive listing.
+- Preserve command exit status and relevant non-sensitive diagnostics.
+- Securely store the backup outside the project.
+
+Stop immediately if database identity does not match the expected production database.
+
+Never modify production tables or database bindings.
+
+PHASE 3 — INDEPENDENT RESTORE
+
+Restore the archive into a separate, disposable PostgreSQL database using pg_restore.
+
+Never restore over production.
+
+Validate:
+- Database schema.
+- Table and index inventory.
+- Important record counts.
+- Historical NFL data.
+- Approved production model metadata.
+- Promotion history.
+- Persisted prediction snapshots.
+- Recent legitimate production records.
+
+Verify model artifact checksums where applicable and confirm that any externally stored artifacts require separate protection.
+
+Record discrepancies without modifying production.
+
+PHASE 4 — RECOVERY DOCUMENTATION
+
+Document:
+
+- Backup timestamp.
+- Source database identity.
+- Backup file location, without exposing secrets.
+- SHA-256 checksum.
+- Restore procedure.
+- Restoration test results.
+- Data validation results.
+- Known recovery limitations.
+- How to preserve or reconcile writes made after the backup.
+
+FINAL REPORT
+
+Return one of:
+
+VERIFIED INDEPENDENT BACKUP
+
+or
+
+BACKUP NOT YET VERIFIED
+
+Do not claim success until the archive has been successfully restored and validated.
+
+Do not publish, modify production data, restart workers or run provider synchronization.
