@@ -1,49 +1,60 @@
-import { logger } from "./lib/logger";
-import { startDataScheduler, stopDataScheduler } from "./lib/scheduler";
-import { startFeedScheduler } from "./lib/feed-scheduler";
-import { startUsageAnalyticsRetention } from "./lib/usage-analytics-retention";
-import { pool } from "@workspace/db";
-import {
-  acquireGlobalWorkerOwnership,
-  isNewWorkerApproved,
-} from "./lib/worker-ownership";
+import { assertDisposableDatabaseIdentity, assertWorkerStartupConfiguration, assertNoRehearsalExecutionAttempts, installRehearsalGuards, rehearsalRequested } from "./lib/worker-rehearsal";
 
-if (!isNewWorkerApproved()) {
-  throw new Error(
-    "Data worker refused to start: GRIDLINE_NEW_WORKER_APPROVED must be exactly 1",
-  );
+// Never import @workspace/db, scheduler, provider modules, or retention before
+// the rehearsal URL and all independent execution switches have been checked.
+const rehearsal = rehearsalRequested(process.env);
+assertWorkerStartupConfiguration(process.env);
+if (rehearsal) installRehearsalGuards(process.env);
+
+const { pool } = await import("@workspace/db");
+if (rehearsal) {
+  try {
+    await assertDisposableDatabaseIdentity(process.env, (statement) => pool.query(statement));
+  } catch (error) {
+    await pool.end();
+    throw error;
+  }
 }
 
-// The ownership lock only coordinates workers running this new build. Older
-// deployed workers do not honor it, so operators must stop them before enabling
-// this worker or overlap remains possible.
-await acquireGlobalWorkerOwnership(pool, {
+const { logger } = await import("./lib/logger");
+const { acquireGlobalWorkerOwnership } = await import("./lib/worker-ownership");
+const { startDataScheduler, stopDataScheduler, rehearseDataSchedulerStartup } = await import("./lib/scheduler");
+
+const release = await acquireGlobalWorkerOwnership(pool, {
   onConnectionLost: (error) => {
     logger.error({ error }, "Global worker ownership connection lost; exiting fail-closed");
     process.exit(1);
   },
 });
 
-process.env.GRIDLINE_SCHEDULER_WORKER = "1";
-await startDataScheduler();
-const stopFeedScheduler = startFeedScheduler();
-const stopUsageAnalyticsRetention = startUsageAnalyticsRetention();
-logger.info(
-  "Gridline data worker is running; scheduled jobs continue independently of the interactive API process.",
-);
-
-// Keep this process alive even when the database driver has no pending socket.
-const keepAlive = setInterval(() => undefined, 60_000);
-
-for (const signal of ["SIGTERM", "SIGINT"] as const) {
-  process.once(signal, () => {
-    // Never unlock while an async job or provider call might still be active.
-    // The process exit closes the PostgreSQL session and releases ownership
-    // only when this worker can no longer initiate any scheduled activity.
-    clearInterval(keepAlive);
-    stopFeedScheduler();
-    stopUsageAnalyticsRetention();
-    stopDataScheduler();
-    process.exit(0);
-  });
+if (rehearsal) {
+  try {
+    // No durable tick, independent feed tick, retention cleanup or provider
+    // adapter is initialized. Preparation and recovery are the real SQL path.
+    await rehearseDataSchedulerStartup(new Date(process.env.GRIDLINE_REHEARSAL_NOW ?? ""));
+    assertNoRehearsalExecutionAttempts();
+    logger.info("Disposable worker startup preparation completed; all execution paths remained inactive");
+  } finally {
+    await release();
+    await pool.end();
+  }
+} else {
+  process.env.GRIDLINE_SCHEDULER_WORKER = "1";
+  await startDataScheduler();
+  const { startFeedScheduler } = await import("./lib/feed-scheduler");
+  const { startUsageAnalyticsRetention } = await import("./lib/usage-analytics-retention");
+  const stopFeedScheduler = startFeedScheduler();
+  const stopUsageAnalyticsRetention = startUsageAnalyticsRetention();
+  logger.info("Gridline data worker is running; scheduled jobs continue independently of the interactive API process.");
+  const keepAlive = setInterval(() => undefined, 60_000);
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, () => {
+      clearInterval(keepAlive);
+      stopFeedScheduler();
+      stopUsageAnalyticsRetention();
+      stopDataScheduler();
+      // Do not release ownership until all active work is unable to run.
+      process.exit(0);
+    });
+  }
 }

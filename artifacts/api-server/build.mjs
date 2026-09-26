@@ -24,6 +24,7 @@ async function buildAll() {
     entryPoints: [
       path.resolve(artifactDir, "src/index.ts"),
       path.resolve(artifactDir, "src/worker.ts"),
+      path.resolve(artifactDir, "src/rehearsal-cli.ts"),
       path.resolve(artifactDir, "src/production.ts"),
       path.resolve(artifactDir, "src/player-stats-dev-cli.ts"),
       path.resolve(artifactDir, "src/market-baseline-cli.ts"),
@@ -67,6 +68,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/production-schema-order.dev.test.ts"),
       path.resolve(artifactDir, "src/lib/production-startup-alert.test.ts"),
       path.resolve(artifactDir, "src/lib/worker-ownership.test.ts"),
+      path.resolve(artifactDir, "src/lib/worker-rehearsal.test.ts"),
     ],
     platform: "node",
     bundle: true,

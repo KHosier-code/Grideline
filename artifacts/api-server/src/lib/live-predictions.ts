@@ -1057,6 +1057,7 @@ export async function freezeOfficialFinalPredictions(
     eq(predictionSnapshotsTable.officialFinalPrediction, false),
     ...(options.gameId ? [eq(predictionSnapshotsTable.gameId, options.gameId)] : []),
     sql`${predictionSnapshotsTable.kickoffTime} is not null`,
+    sql`${predictionSnapshotsTable.kickoffTime} > ${now}`,
     ...(options.gameId ? [] : [lte(predictionSnapshotsTable.kickoffTime, new Date(now.getTime() + CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000))]),
     sql`${predictionSnapshotsTable.predictionTimestamp} < ${predictionSnapshotsTable.kickoffTime}`,
   )).orderBy(asc(predictionSnapshotsTable.gameId), desc(predictionSnapshotsTable.predictionTimestamp));
@@ -1079,7 +1080,7 @@ export async function freezeOfficialFinalPredictions(
       const [home] = game
         ? await db.select().from(teamsTable).where(eq(teamsTable.teamId, game.homeTeamId)).limit(1)
         : [];
-      if (!game || !home) continue;
+      if (!game || !home || !game.kickoffTime || game.kickoffTime <= now) continue;
       // The model snapshot is selected independently from the market stream.
       // Re-read the latest six book/market observations at-or-before the
       // immutable cutoff instead of trusting the market embedded at prediction

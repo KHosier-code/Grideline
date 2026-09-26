@@ -1,0 +1,2996 @@
+{
+  "provenance": "Synthetic keys from the 2026-09-26 read-only report; synthetic teams, fixtures, model coefficients and timestamps. No copy of live rows.",
+  "clock": "2026-09-26T02:09:54.000Z",
+  "before": {
+    "schedulerRuns": 0,
+    "itemized": [
+      {
+        "key": "confidence-24h-401872933",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872934",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872935",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872936",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872937",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872938",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872939",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872940",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872941",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872942",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872943",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872944",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872945",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872946",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872947",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-24h-401872948",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872933",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872934",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872935",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872936",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872937",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872938",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872939",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872940",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872941",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872942",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872943",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872944",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872945",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872946",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872947",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872948",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872932",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872933",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872934",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872935",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872936",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872937",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872938",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872939",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872940",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872941",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872942",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872943",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872944",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872945",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872946",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872947",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872948",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "espn-schedule",
+        "kind": "schedule",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "fixture-future",
+        "kind": "fixture-future",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T17:00:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-friday-afternoon",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-friday-morning",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-monday-final",
+        "kind": "injury-dynamic",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-saturday",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-sunday-late-morning",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-sunday-morning",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-sunday-window-2026-09-20-early",
+        "kind": "injury-kickoff",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-sunday-window-2026-09-20-late",
+        "kind": "injury-kickoff",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-sunday-window-2026-09-20-snf",
+        "kind": "injury-kickoff",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-thursday-afternoon",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-thursday-morning",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-tuesday",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-wednesday",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "models-challenger-weekly",
+        "kind": "model-challenger",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "nflverse-completed-window",
+        "kind": "nflverse",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "odds-adaptive",
+        "kind": "odds-adaptive",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872932",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872933",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872934",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872935",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872936",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872937",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872938",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872939",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872940",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872941",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872942",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872943",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872944",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872945",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872946",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872947",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-18T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872948",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-25T00:15:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "predictions-friday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "predictions-grade",
+        "kind": "prediction-grade",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "predictions-saturday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "predictions-sunday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "predictions-thursday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "predictions-tuesday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "pregame-v3-future-repair",
+        "kind": "pregame-feature-repair",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "pregame-v4-personnel-context",
+        "kind": "personnel-context",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "sleeper-players",
+        "kind": "sleeper-players",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-17T18:20:00.000Z",
+        "outcome": "pending",
+        "wouldExecuteLater": false,
+        "runStatus": [],
+        "skipReason": []
+      }
+    ]
+  },
+  "after": {
+    "schedulerRuns": 92,
+    "byKind": {
+      "confidence-capture": {
+        "original": 49,
+        "skipped": 49,
+        "disabled": 49,
+        "rearmed": 0,
+        "wouldExecuteLater": 0
+      },
+      "schedule": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      },
+      "injury": {
+        "original": 9,
+        "skipped": 9,
+        "disabled": 0,
+        "rearmed": 9,
+        "wouldExecuteLater": 9
+      },
+      "injury-dynamic": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      },
+      "injury-kickoff": {
+        "original": 3,
+        "skipped": 3,
+        "disabled": 3,
+        "rearmed": 0,
+        "wouldExecuteLater": 0
+      },
+      "model-challenger": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      },
+      "nflverse": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      },
+      "odds-adaptive": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      },
+      "prediction-freeze": {
+        "original": 17,
+        "skipped": 17,
+        "disabled": 17,
+        "rearmed": 0,
+        "wouldExecuteLater": 0
+      },
+      "prediction": {
+        "original": 5,
+        "skipped": 5,
+        "disabled": 0,
+        "rearmed": 5,
+        "wouldExecuteLater": 5
+      },
+      "prediction-grade": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      },
+      "pregame-feature-repair": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      },
+      "personnel-context": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      },
+      "sleeper-players": {
+        "original": 1,
+        "skipped": 1,
+        "disabled": 0,
+        "rearmed": 1,
+        "wouldExecuteLater": 1
+      }
+    },
+    "newlyReconciled": [
+      {
+        "key": "confidence-24h-rehearsal-future-1",
+        "kind": "confidence-capture",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T17:00:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-rehearsal-future-1",
+        "kind": "confidence-capture",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T11:00:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-rehearsal-future-1",
+        "kind": "confidence-capture",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T15:45:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-sunday-window-2026-09-27-early",
+        "kind": "injury-kickoff",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T15:45:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-canonical-rehearsal-future-1",
+        "kind": "prediction-canonical",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T16:30:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      }
+    ],
+    "historicalFreezes": [
+      {
+        "key": "prediction-freeze-401872932",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872933",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872934",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872935",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872936",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872937",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872938",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872939",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872940",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872941",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872942",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872943",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872944",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872945",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872946",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872947",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872948",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      }
+    ],
+    "itemized": [
+      {
+        "key": "confidence-24h-401872933",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872934",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872935",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872936",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872937",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872938",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872939",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872940",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872941",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872942",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872943",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872944",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872945",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872946",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872947",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-401872948",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-24h-rehearsal-future-1",
+        "kind": "confidence-capture",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T17:00:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-6h-401872933",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872934",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872935",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872936",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872937",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872938",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872939",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872940",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872941",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872942",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872943",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872944",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872945",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872946",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872947",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-401872948",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-6h-rehearsal-future-1",
+        "kind": "confidence-capture",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T11:00:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "confidence-75m-401872932",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872933",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872934",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872935",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872936",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872937",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872938",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872939",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872940",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872941",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872942",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872943",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872944",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872945",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872946",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872947",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-401872948",
+        "kind": "confidence-capture",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "confidence-75m-rehearsal-future-1",
+        "kind": "confidence-capture",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T15:45:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "espn-schedule",
+        "kind": "schedule",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T02:39:54.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "fixture-future",
+        "kind": "fixture-future",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T17:00:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-friday-afternoon",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-10-02T19:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-friday-morning",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-10-02T13:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-monday-final",
+        "kind": "injury-dynamic",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-28T22:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed kickoff-relative slot retired during startup reconciliation; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-saturday",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T16:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-sunday-late-morning",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T15:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-sunday-morning",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T12:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-sunday-window-2026-09-20-early",
+        "kind": "injury-kickoff",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Expired legacy kickoff injury window retired during startup reconciliation; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-sunday-window-2026-09-20-late",
+        "kind": "injury-kickoff",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Expired legacy kickoff injury window retired during startup reconciliation; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-sunday-window-2026-09-20-snf",
+        "kind": "injury-kickoff",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Expired legacy kickoff injury window retired during startup reconciliation; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-sunday-window-2026-09-27-early",
+        "kind": "injury-kickoff",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T15:45:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "injury-thursday-afternoon",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-10-01T19:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-thursday-morning",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-10-01T13:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-tuesday",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-29T14:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "injury-wednesday",
+        "kind": "injury",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-30T16:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "models-challenger-weekly",
+        "kind": "model-challenger",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-29T08:30:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "nflverse-completed-window",
+        "kind": "nflverse",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-29T08:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "odds-adaptive",
+        "kind": "odds-adaptive",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T14:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "prediction-canonical-rehearsal-future-1",
+        "kind": "prediction-canonical",
+        "originalOverdue": false,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T16:30:00.000Z",
+        "outcome": "newly_reconciled_or_future",
+        "wouldExecuteLater": true,
+        "runStatus": [],
+        "skipReason": []
+      },
+      {
+        "key": "prediction-freeze-401872932",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872933",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872934",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872935",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872936",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872937",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872938",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872939",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872940",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872941",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872942",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872943",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872944",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872945",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872946",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872947",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "prediction-freeze-401872948",
+        "kind": "prediction-freeze",
+        "originalOverdue": true,
+        "enabled": false,
+        "nextRunAt": null,
+        "outcome": "skipped_disabled",
+        "wouldExecuteLater": false,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Authoritative kickoff elapsed; historical freeze retired without a late lock."
+        ]
+      },
+      {
+        "key": "predictions-friday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-10-02T16:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "predictions-grade",
+        "kind": "prediction-grade",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-28T09:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "predictions-saturday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T16:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "predictions-sunday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-27T15:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "predictions-thursday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-10-01T16:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "predictions-tuesday",
+        "kind": "prediction",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-29T15:00:00.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "pregame-v3-future-repair",
+        "kind": "pregame-feature-repair",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T02:39:54.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "pregame-v4-personnel-context",
+        "kind": "personnel-context",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T02:39:54.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      },
+      {
+        "key": "sleeper-players",
+        "kind": "sleeper-players",
+        "originalOverdue": true,
+        "enabled": true,
+        "nextRunAt": "2026-09-26T02:39:54.000Z",
+        "outcome": "skipped_rearmed",
+        "wouldExecuteLater": true,
+        "runStatus": [
+          "skipped"
+        ],
+        "skipReason": [
+          "Missed while the scheduler process was stopped; no catch-up request was made."
+        ]
+      }
+    ],
+    "providerContacts": 0,
+    "scheduledExecutions": 0,
+    "retentionDeletions": 0,
+    "liveDatabaseWrites": 0
+  },
+  "writer": {
+    "writer": {
+      "status": "success",
+      "snapshotsCreated": 1,
+      "gamesConsidered": 1,
+      "skippedNoVector": 0,
+      "skippedIncompleteInputs": 0,
+      "skippedNoHomeTeam": 0,
+      "skippedNonFinite": 0,
+      "firstNonFinite": null,
+      "productionModels": [
+        {
+          "family": "totals",
+          "modelVersion": "fixture-totals-36facde14518",
+          "algorithm": "linear_regression",
+          "featureVersion": "pregame-v3",
+          "trainingCutoff": "2025-12-31"
+        },
+        {
+          "family": "moneyline",
+          "modelVersion": "fixture-moneyline-1b87c251b020",
+          "algorithm": "linear_regression",
+          "featureVersion": "pregame-v3",
+          "trainingCutoff": "2025-12-31"
+        },
+        {
+          "family": "spread",
+          "modelVersion": "fixture-spread-4a74f2a993cd",
+          "algorithm": "linear_regression",
+          "featureVersion": "pregame-v3",
+          "trainingCutoff": "2025-12-31"
+        }
+      ]
+    },
+    "selectedId": 2,
+    "versions": {
+      "spread": "fixture-spread-4a74f2a993cd",
+      "moneyline": "fixture-moneyline-1b87c251b020",
+      "totals": "fixture-totals-36facde14518"
+    },
+    "featureCount": 27,
+    "missingCount": 0,
+    "vectorFinite": true,
+    "orderedNames": [
+      "last_3.defensive_success_rate",
+      "last_3.epa_per_play",
+      "last_3.explosive_pass_rate",
+      "last_3.explosive_rush_rate",
+      "last_3.offensive_success_rate",
+      "last_3.red_zone_touchdown_rate",
+      "last_3.turnover_rate",
+      "last_3.yards_per_play",
+      "last_5.defensive_success_rate",
+      "last_5.epa_per_play",
+      "last_5.explosive_pass_rate",
+      "last_5.explosive_rush_rate",
+      "last_5.offensive_success_rate",
+      "last_5.red_zone_touchdown_rate",
+      "last_5.turnover_rate",
+      "last_5.yards_per_play",
+      "last_8.defensive_success_rate",
+      "last_8.epa_per_play",
+      "last_8.explosive_pass_rate",
+      "last_8.explosive_rush_rate",
+      "last_8.offensive_success_rate",
+      "last_8.red_zone_touchdown_rate",
+      "last_8.turnover_rate",
+      "last_8.yards_per_play",
+      "home_low_sample",
+      "away_low_sample",
+      "qb_confidence_difference"
+    ],
+    "schemaFingerprint": "d3549f1cba54adab375bfa051a20cb1997db448fce1fd136caf0251b881ceb42",
+    "sourceRows": 2,
+    "negativeCases": [
+      "missingVector",
+      "missingNames",
+      "missingSchema",
+      "missingSource",
+      "missingCount",
+      "nonzeroMissingCount",
+      "missingSpreadVersion",
+      "missingMoneylineVersion",
+      "missingTotalsVersion",
+      "wrongSchema",
+      "wrongNamesOrder",
+      "missingEvidenceRow",
+      "wrongPromotion",
+      "wrongChronology",
+      "postKickoff"
+    ],
+    "promotionMismatchExcluded": true,
+    "persistedNegativeRowsRejected": 15,
+    "lateFreezeRejected": true
+  }
+}

@@ -43,3 +43,4 @@
 - [Headless keyboard review](headless-keyboard-review.md) — focus and activate the target tab before CDP key input; wait for React's next render before asserting disclosure state.
 - [Consumer TSX tests](consumer-tsx-test-runtime.md) — outside Vite, transform JSX automatically; server-rendering Wouter links needs router support.
 - [Cross-source chart coverage](cross-source-chart-coverage.md) — raw team-stat counts do not prove chart readiness; reconcile season, schedule game, canonical teams and finals first.
+- [Disposable PostgreSQL rehearsals](disposable-postgres-rehearsal.md) — keep local server and test in one shell invocation; loopback identity may include /32.
