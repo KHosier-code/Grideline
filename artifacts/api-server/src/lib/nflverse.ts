@@ -3,18 +3,31 @@ import { mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   dataSyncRunsTable,
   db,
+  gamesTable,
   historicalDepthChartTable,
+  nflversePlayerIdentitiesTable,
   nflverseSourceFilesTable,
   playerGameStatsTable,
+  playersTable,
+  redZonePlayerGameFactsTable,
+  redZoneTeamGameFactsTable,
   snapCountsTable,
+  teamsTable,
   teamGameStatsTable,
   qbGameStatsTable,
 } from "@workspace/db";
 import { logger } from "./logger";
+import { nflverseTeamCandidates } from "./personnel-context-derivation";
+import {
+  deriveRedZoneGameFacts,
+  hasPlayerStatAppearance,
+  redZoneReplacementGameIds,
+  type RedZonePlay,
+} from "./red-zone-opportunities";
 
 export const nflverseBaseUrl = "https://github.com/nflverse/nflverse-data/releases/download";
 const cacheDirectory = join(process.cwd(), ".cache", "nflverse");
@@ -582,6 +595,199 @@ async function ingestPlayByPlay(season: number, filePath: string) {
   return { sourceRows: rows, records: values.length, quarterbackRecords: qbValues.length };
 }
 
+/**
+ * Build the consumer-only red-zone facts from an already acquired local PBP
+ * file. All parsing and validation completes before replacement begins; a bad
+ * read therefore leaves the last valid per-game facts intact.
+ */
+export async function deriveAndPersistRedZoneOpportunities(season: number, filePath: string) {
+  const teamRows = await db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable);
+  const abbreviationBySource = new Map<string, string>();
+  for (const team of teamRows) {
+    const abbreviation = team.abbreviation.toUpperCase();
+    for (const source of nflverseTeamCandidates(abbreviation)) abbreviationBySource.set(source, abbreviation);
+    // nflverse uses WAS while ESPN's current schedule uses WSH.
+    if (abbreviation === "WSH") abbreviationBySource.set("WAS", abbreviation);
+  }
+  const schedule = await db.select({
+    gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week,
+    homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId,
+    kickoffTime: gamesTable.kickoffTime, gameStatus: gamesTable.gameStatus,
+  }).from(gamesTable).where(eq(gamesTable.season, season));
+  const abbreviationByTeamId = new Map(teamRows.map((team) => [team.teamId, team.abbreviation.toUpperCase()]));
+  const scheduleByMatchup = new Map<string, (typeof schedule)[number]>();
+  for (const game of schedule) {
+    if (game.gameStatus !== "STATUS_FINAL" || !game.kickoffTime) continue;
+    const home = abbreviationByTeamId.get(game.homeTeamId);
+    const away = abbreviationByTeamId.get(game.awayTeamId);
+    if (home && away) scheduleByMatchup.set(`${game.season}:${game.week}:${home}:${away}`, game);
+  }
+  const plays: RedZonePlay[] = [];
+  const sourceGames = new Set<string>();
+  const rows = await forEachCsvRow(filePath, (row, rowNumber) => {
+    if (rowNumber === 1) {
+      const required = ["game_id", "play_id", "season", "week", "season_type", "posteam", "defteam",
+        "home_team", "away_team", "yardline_100", "pass_attempt", "rush_attempt",
+        "receiver_player_id", "rusher_player_id"];
+      const absent = required.filter((field) => !(field in row));
+      if (absent.length) throw new Error(`pbp ${season}: required red-zone columns missing: ${absent.join(", ")}`);
+    }
+    if (integerValue(row.season) !== season || row.season_type?.toUpperCase() !== "REG") return;
+    const sourceHome = abbreviationBySource.get(row.home_team?.toUpperCase());
+    const sourceAway = abbreviationBySource.get(row.away_team?.toUpperCase());
+    const offense = abbreviationBySource.get(row.posteam?.toUpperCase());
+    const defense = abbreviationBySource.get(row.defteam?.toUpperCase());
+    const game = scheduleByMatchup.get(`${season}:${integerValue(row.week)}:${sourceHome}:${sourceAway}`);
+    if (!row.game_id || !row.play_id || !game || !offense || !defense
+      || (offense !== sourceHome && offense !== sourceAway)
+      || (defense !== sourceHome && defense !== sourceAway)) return;
+    const yardline100 = numberValue(row.yardline_100);
+    const noPlay = boolNumber(row.no_play) || row.play_type?.toLowerCase() === "no_play"
+      || boolNumber(row.play_deleted) || boolNumber(row.nullified_play);
+    plays.push({
+      gameId: game.gameId,
+      sourceGameId: row.game_id,
+      season,
+      week: integerValue(row.week) ?? game.week,
+      seasonType: "REG",
+      playId: row.play_id,
+      teamId: offense,
+      opponentTeamId: defense,
+      yardline100,
+      passAttempt: boolNumber(row.pass_attempt),
+      rushAttempt: boolNumber(row.rush_attempt),
+      receiverId: row.receiver_player_id || null,
+      rusherId: row.rusher_player_id || null,
+      receiverName: row.receiver_player_name || null,
+      rusherName: row.rusher_player_name || null,
+      noPlay,
+      twoPointAttempt: boolNumber(row.two_point_attempt),
+      kneel: boolNumber(row.qb_kneel),
+      spike: boolNumber(row.qb_spike),
+      passTouchdown: boolNumber(row.pass_touchdown),
+      rushTouchdown: boolNumber(row.rush_touchdown),
+    });
+    sourceGames.add(row.game_id);
+  });
+  if (!rows) throw new Error(`pbp ${season}: source file could not be read`);
+  if (!plays.length) throw new Error(`pbp ${season}: no completed regular-season games matched the canonical schedule`);
+  const derived = deriveRedZoneGameFacts(plays);
+  let gameIds: string[];
+  try {
+    gameIds = redZoneReplacementGameIds(derived.teams);
+  } catch {
+    throw new Error(`pbp ${season}: matched source games contained no usable red-zone denominator evidence`);
+  }
+  const playerFactsByKey = new Map(derived.players.map((fact) =>
+    [`${fact.gameId}:${fact.teamId}:${fact.playerId}:${fact.zone}`, fact]));
+  const gameByWeekAndMatchup = new Map<string, (typeof schedule)[number]>();
+  for (const game of schedule) {
+    const home = abbreviationByTeamId.get(game.homeTeamId);
+    const away = abbreviationByTeamId.get(game.awayTeamId);
+    if (home && away && gameIds.includes(game.gameId)) {
+      gameByWeekAndMatchup.set(`${game.week}:${home}:${away}`, game);
+      gameByWeekAndMatchup.set(`${game.week}:${away}:${home}`, game);
+    }
+  }
+  const playerStats = await db.select().from(playerGameStatsTable).where(eq(playerGameStatsTable.season, season));
+  const appearanceIdentity = new Map<string, { playerName: string; position: string | null }>();
+  const sourceGameByCanonicalId = new Map(plays.map((play) => [play.gameId, play.sourceGameId]));
+  const addAppearance = (
+    gameId: string,
+    playerId: string,
+    teamId: string,
+    opponentTeamId: string,
+    playerName: string,
+    position: string | null,
+    week: number,
+  ) => {
+    if (!playerId) return;
+    const game = schedule.find((entry) => entry.gameId === gameId);
+    if (!game) return;
+    appearanceIdentity.set(`${gameId}:${teamId}:${playerId}`, { playerName, position });
+    for (const zone of [20, 10, 5] as const) {
+      const key = `${gameId}:${teamId}:${playerId}:${zone}`;
+      if (!playerFactsByKey.has(key)) playerFactsByKey.set(key, {
+        gameId, sourceGameId: sourceGameByCanonicalId.get(gameId) ?? "",
+        season, week, seasonType: "REG", playerId, playerName, teamId, opponentTeamId,
+        zone, targets: 0, carries: 0, receivingTouchdowns: 0, rushingTouchdowns: 0,
+      });
+    }
+  };
+  for (const row of playerStats) {
+    if (row.seasonType.toUpperCase() !== "REG"
+      || !hasPlayerStatAppearance(row)
+      || !row.teamId || !row.opponentTeamId) continue;
+    const team = abbreviationBySource.get(row.teamId.toUpperCase());
+    const opponent = abbreviationBySource.get(row.opponentTeamId.toUpperCase());
+    const game = team && opponent ? gameByWeekAndMatchup.get(`${row.week}:${team}:${opponent}`) : undefined;
+    if (game) addAppearance(game.gameId, row.playerId, team!, opponent!, row.playerName, row.position, row.week);
+  }
+  const snapRows = await db.select().from(snapCountsTable).where(eq(snapCountsTable.season, season));
+  const pfrIds = [...new Set(snapRows.map((row) => row.playerId))];
+  const identities = pfrIds.length ? await db.select({
+    gsisId: nflversePlayerIdentitiesTable.gsisId,
+    pfrId: nflversePlayerIdentitiesTable.pfrId,
+  }).from(nflversePlayerIdentitiesTable)
+    .where(inArray(nflversePlayerIdentitiesTable.pfrId, pfrIds))
+    .orderBy(desc(nflversePlayerIdentitiesTable.observedAt)) : [];
+  const gsisByPfrId = new Map<string, string>();
+  for (const row of identities) {
+    if (row.pfrId && !gsisByPfrId.has(row.pfrId)) gsisByPfrId.set(row.pfrId, row.gsisId);
+  }
+  for (const row of snapRows) {
+    if (!row.teamId || !row.opponentTeamId || (row.offenseSnaps ?? 0) <= 0) continue;
+    const team = abbreviationBySource.get(row.teamId.toUpperCase());
+    const opponent = abbreviationBySource.get(row.opponentTeamId.toUpperCase());
+    const game = team && opponent ? gameByWeekAndMatchup.get(`${row.week}:${team}:${opponent}`) : undefined;
+    const playerId = gsisByPfrId.get(row.playerId);
+    if (game && playerId) addAppearance(game.gameId, playerId, team!, opponent!, row.playerName, row.position, row.week);
+  }
+  const playerIds = [...new Set([...playerFactsByKey.values()].map((fact) => fact.playerId))];
+  const playerMetadata = playerIds.length
+    ? await db.select({ playerId: playersTable.playerId, name: playersTable.name, position: playersTable.position })
+      .from(playersTable).where(inArray(playersTable.playerId, playerIds))
+    : [];
+  const metadataById = new Map(playerMetadata.map((item) => [item.playerId, item]));
+  const ingestedAt = new Date();
+  const playerValues = [...playerFactsByKey.values()].map((fact) => {
+    const metadata = metadataById.get(fact.playerId);
+    const identity = appearanceIdentity.get(`${fact.gameId}:${fact.teamId}:${fact.playerId}`);
+    return {
+      ...fact,
+      playerName: fact.playerName ?? identity?.playerName ?? metadata?.name ?? null,
+      position: identity?.position ?? metadata?.position ?? null,
+      source: "nflverse_pbp",
+      sourceUpdatedAt: null,
+      ingestedAt,
+    };
+  });
+  const teamValues = derived.teams.map((fact) => ({
+    ...fact,
+    source: "nflverse_pbp",
+    sourceUpdatedAt: null,
+    ingestedAt,
+  }));
+  await db.transaction(async (tx) => {
+    await tx.delete(redZonePlayerGameFactsTable).where(inArray(redZonePlayerGameFactsTable.gameId, gameIds));
+    await tx.delete(redZoneTeamGameFactsTable).where(inArray(redZoneTeamGameFactsTable.gameId, gameIds));
+    for (let index = 0; index < playerValues.length; index += 200) {
+      await tx.insert(redZonePlayerGameFactsTable).values(playerValues.slice(index, index + 200));
+    }
+    for (let index = 0; index < teamValues.length; index += 250) {
+      await tx.insert(redZoneTeamGameFactsTable).values(teamValues.slice(index, index + 250));
+    }
+  });
+  return {
+    sourceRows: rows,
+    games: gameIds.length,
+    sourceGameIds: [...sourceGames],
+    playerFacts: playerValues.length,
+    teamFacts: teamValues.length,
+    deduplicatedPlays: derived.deduplicatedPlayCount,
+  };
+}
+
 async function ingestPlayerStats(season: number, filePath: string) {
   const values: Array<typeof playerGameStatsTable.$inferInsert> = [];
   let inserted = 0;
@@ -783,9 +989,11 @@ export async function syncNflverseHistory(
   let recordsProcessed = 0;
   try {
     for (const season of seasons) {
+      let pbpFilePath: string | undefined;
       for (const dataset of options?.datasets ?? (["pbp", "player_stats", "snap_counts", "depth_charts"] as const)) {
         try {
           const source = await acquireDataset(dataset, season, { refresh: options?.refresh });
+          if (dataset === "pbp") pbpFilePath = source.filePath;
           const result =
             dataset === "pbp"
               ? await ingestPlayByPlay(season, source.filePath)
@@ -811,6 +1019,18 @@ export async function syncNflverseHistory(
             .set({ status: "failed", errorMessage: message, completedAt: new Date() })
             .where(and(eq(nflverseSourceFilesTable.dataset, dataset), eq(nflverseSourceFilesTable.season, season)));
           logger.error({ error, dataset, season }, "NFLverse dataset ingestion failed");
+        }
+      }
+      if (pbpFilePath) {
+        try {
+          await deriveAndPersistRedZoneOpportunities(season, pbpFilePath);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          failures.push(message);
+          await db.update(nflverseSourceFilesTable)
+            .set({ status: "failed", errorMessage: message, completedAt: new Date() })
+            .where(and(eq(nflverseSourceFilesTable.dataset, "pbp"), eq(nflverseSourceFilesTable.season, season)));
+          logger.error({ error, season }, "NFLverse red-zone opportunity derivation failed");
         }
       }
     }
@@ -856,6 +1076,7 @@ export async function refreshNflversePlayByPlay(seasons = defaultSeasons) {
     try {
       const source = await acquireDataset("pbp", season);
       const result = await ingestPlayByPlay(season, source.filePath);
+      await deriveAndPersistRedZoneOpportunities(season, source.filePath);
       recordsProcessed += result.records;
       await db.update(nflverseSourceFilesTable)
         .set({ status: "success", rowsProcessed: result.sourceRows, completedAt: new Date(), errorMessage: null })

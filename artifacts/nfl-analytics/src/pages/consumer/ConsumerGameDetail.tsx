@@ -79,7 +79,7 @@ export default function ConsumerGameDetail() {
 
     <ConsumerDepthChart context={game.context} />
 
-    <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} />
+    <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
 
     <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
 

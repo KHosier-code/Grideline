@@ -671,8 +671,6 @@ export const GetLiveModelInputIntegrityResponse = zod.object({
   "phase7UsedForValidationOnly": zod.boolean()
 }))
 })
-
-
 /**
  * Requires authenticated administrator access. The optional featureVersion pregame-v4-personnel-context creates additive rows from pregame-v3 and never overwrites v3. Never trains or scores a betting model.
  * @summary Build an immutable version of historical pregame features
@@ -2098,3 +2096,143 @@ export const ListConsumerPlayerUsageGamesResponse = zod.object({
 }))
 })
 
+
+/**
+ * Returns regular-season nflverse play-by-play counts at pre-play yardline thresholds 20, 10, and 5 (overlapping zones). Targets include credited intended receivers on incomplete passes. Carries follow rush_attempt, including credited QB scrambles. Two-point tries, kneels, spikes, no-play/nullified plays, and attempts without a credited player ID are excluded; missing-ID attempts are also excluded from team denominators. last3 uses each player's last three completed appearances identified by regular-season player statistics or positive offensive snaps with a verified GSIS/PFR crosswalk, across teams before results are partitioned into separate playerId/teamId rows. Missing PBP for an appearance is returned as unavailable rather than as a zero count. sourceUpdatedAt is null when nflverse does not publish a source update timestamp. A game parameter sets a pre-kickoff cutoff and excludes that game; it does not require prediction or market data.
+ * @summary Read cutoff-safe, source-backed red-zone opportunities
+ */
+export const getConsumerRedZoneOpportunitiesQuerySeasonMin = 2000;
+export const getConsumerRedZoneOpportunitiesQuerySeasonMax = 2100;
+
+export const getConsumerRedZoneOpportunitiesQueryPeriodDefault = `season`;
+
+export const GetConsumerRedZoneOpportunitiesQueryParams = zod.object({
+  "season": zod.coerce.number().int().min(getConsumerRedZoneOpportunitiesQuerySeasonMin).max(getConsumerRedZoneOpportunitiesQuerySeasonMax).optional(),
+  "team": zod.coerce.string().optional(),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE']).optional(),
+  "zone": zod.union([zod.literal(20),zod.literal(10),zod.literal(5)]).optional().describe('Pre-play yardline_100 threshold; zones overlap.'),
+  "period": zod.enum(['season', 'last3']).default(getConsumerRedZoneOpportunitiesQueryPeriodDefault),
+  "game": zod.coerce.string().optional().describe('Gridline game ID used as the excluded-game pre-kickoff cutoff.')
+})
+
+export const getConsumerRedZoneOpportunitiesResponseCoverageCompletedGamesMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponseCoverageGamesWithPbpMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesPlayedMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemOffenseSnapsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemOffensePctMin = 0;
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemOffensePctMax = 1;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemSnapGamesMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageRequestedGamesMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageIncludedGamesMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemOffenseSnapsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemOffensePctMin = 0;
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemOffensePctMax = 1;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTargetsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemCarriesMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemReceivingTouchdownsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemRushingTouchdownsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTeamTargetsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTeamCarriesMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTargetShareMin = 0;
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTargetShareMax = 1;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemCarryShareMin = 0;
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemCarryShareMax = 1;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTargetsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarriesMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemReceivingTouchdownsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemRushingTouchdownsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTeamTargetsMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTeamCarriesMin = 0;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTargetShareMin = 0;
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTargetShareMax = 1;
+
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMin = 0;
+export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMax = 1;
+
+
+
+export const GetConsumerRedZoneOpportunitiesResponse = zod.object({
+  "status": zod.enum(['available', 'partial', 'unavailable']),
+  "season": zod.number().int(),
+  "seasonType": zod.enum(['REG']),
+  "period": zod.enum(['season', 'last3']),
+  "zone": zod.union([zod.literal(20),zod.literal(10),zod.literal(5),zod.literal(null)]).nullable(),
+  "source": zod.literal("nflverse play-by-play"),
+  "sourceUpdatedAt": zod.coerce.date().nullable(),
+  "ingestedAt": zod.coerce.date().nullable(),
+  "coverage": zod.object({
+  "status": zod.enum(['available', 'partial', 'unavailable']),
+  "completedGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponseCoverageCompletedGamesMin),
+  "gamesWithPbp": zod.number().int().min(getConsumerRedZoneOpportunitiesResponseCoverageGamesWithPbpMin),
+  "missingGames": zod.array(zod.string()),
+  "note": zod.string()
+}),
+  "players": zod.array(zod.object({
+  "playerId": zod.string(),
+  "playerName": zod.string(),
+  "position": zod.string().nullable(),
+  "teamId": zod.string().nullable(),
+  "gamesPlayed": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesPlayedMin),
+  "offenseSnaps": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemOffenseSnapsMin).nullable(),
+  "offensePct": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemOffensePctMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemOffensePctMax).nullable(),
+  "snapGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemSnapGamesMin),
+  "sourceCoverage": zod.object({
+  "requestedGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageRequestedGamesMin),
+  "includedGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageIncludedGamesMin),
+  "missingGames": zod.array(zod.string())
+}),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "week": zod.number().int().nullable(),
+  "teamId": zod.string().nullable(),
+  "offenseSnaps": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemOffenseSnapsMin).nullable(),
+  "offensePct": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemOffensePctMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemOffensePctMax).nullable(),
+  "zones": zod.array(zod.object({
+  "zone": zod.union([zod.literal(20),zod.literal(10),zod.literal(5)]),
+  "targets": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTargetsMin).nullable(),
+  "carries": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemCarriesMin).nullable(),
+  "receivingTouchdowns": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemReceivingTouchdownsMin).nullable(),
+  "rushingTouchdowns": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemRushingTouchdownsMin).nullable(),
+  "teamTargets": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTeamTargetsMin).nullable(),
+  "teamCarries": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTeamCarriesMin).nullable(),
+  "targetShare": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTargetShareMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemTargetShareMax).nullable(),
+  "carryShare": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemCarryShareMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemZonesItemCarryShareMax).nullable()
+}))
+})),
+  "zones": zod.array(zod.object({
+  "zone": zod.union([zod.literal(20),zod.literal(10),zod.literal(5)]),
+  "targets": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTargetsMin).nullable(),
+  "carries": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarriesMin).nullable(),
+  "receivingTouchdowns": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemReceivingTouchdownsMin).nullable(),
+  "rushingTouchdowns": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemRushingTouchdownsMin).nullable(),
+  "teamTargets": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTeamTargetsMin).nullable(),
+  "teamCarries": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTeamCarriesMin).nullable(),
+  "targetShare": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTargetShareMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTargetShareMax).nullable(),
+  "carryShare": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMax).nullable()
+}))
+}))
+})

@@ -675,6 +675,55 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerPlayerUsageGames" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/red-zone-opportunities:
+    get:
+      operationId: getConsumerRedZoneOpportunities
+      tags: [nfl]
+      summary: Read cutoff-safe, source-backed red-zone opportunities
+      description: >
+        Returns regular-season nflverse play-by-play counts at pre-play yardline
+        thresholds 20, 10, and 5 (overlapping zones). Targets include credited
+        intended receivers on incomplete passes. Carries follow rush_attempt,
+        including credited QB scrambles. Two-point tries, kneels, spikes,
+        no-play/nullified plays, and attempts without a credited player ID are
+        excluded; missing-ID attempts are also excluded from team denominators.
+        last3 uses each player's last three completed appearances identified by
+        regular-season player statistics or positive offensive snaps with a
+        verified GSIS/PFR crosswalk, across teams before results are partitioned
+        into separate playerId/teamId rows. Missing PBP for an appearance is
+        returned as unavailable rather than as a zero count.
+        sourceUpdatedAt is null when nflverse does not publish a source update
+        timestamp. A game parameter sets a pre-kickoff cutoff and excludes that
+        game; it does not require prediction or market data.
+      parameters:
+        - name: season
+          in: query
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - name: team
+          in: query
+          schema: { type: string }
+        - name: position
+          in: query
+          schema: { type: string, enum: [QB, RB, WR, TE] }
+        - name: zone
+          in: query
+          description: Pre-play yardline_100 threshold; zones overlap.
+          schema: { type: integer, enum: [20, 10, 5] }
+        - name: period
+          in: query
+          schema: { type: string, enum: [season, last3], default: season }
+        - name: game
+          in: query
+          description: Gridline game ID used as the excluded-game pre-kickoff cutoff.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Player red-zone counts, team shares, and PBP coverage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerRedZoneOpportunities" }
+        "400": { $ref: "#/components/responses/ConsumerInvalidRequest" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -1528,6 +1577,72 @@ components:
             requestedGames: { type: integer }
             includedGames: { type: integer }
             partialReasons: { type: array, items: { type: string } }
+    ConsumerRedZoneMetric:
+      type: object
+      required: [zone, targets, carries, receivingTouchdowns, rushingTouchdowns, teamTargets, teamCarries, targetShare, carryShare]
+      properties:
+        zone: { type: integer, enum: [20, 10, 5] }
+        targets: { type: ["integer", "null"], minimum: 0 }
+        carries: { type: ["integer", "null"], minimum: 0 }
+        receivingTouchdowns: { type: ["integer", "null"], minimum: 0 }
+        rushingTouchdowns: { type: ["integer", "null"], minimum: 0 }
+        teamTargets: { type: ["integer", "null"], minimum: 0 }
+        teamCarries: { type: ["integer", "null"], minimum: 0 }
+        targetShare: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        carryShare: { type: ["number", "null"], minimum: 0, maximum: 1 }
+    ConsumerRedZoneGame:
+      type: object
+      required: [gameId, week, teamId, offenseSnaps, offensePct, zones]
+      properties:
+        gameId: { type: string }
+        week: { type: ["integer", "null"] }
+        teamId: { type: ["string", "null"] }
+        offenseSnaps: { type: ["integer", "null"], minimum: 0 }
+        offensePct: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        zones: { type: array, items: { $ref: "#/components/schemas/ConsumerRedZoneMetric" } }
+    ConsumerRedZonePlayer:
+      type: object
+      required: [playerId, playerName, position, teamId, gamesPlayed, offenseSnaps, offensePct, snapGames, sourceCoverage, games, zones]
+      properties:
+        playerId: { type: string }
+        playerName: { type: string }
+        position: { type: ["string", "null"] }
+        teamId: { type: ["string", "null"] }
+        gamesPlayed: { type: integer, minimum: 0 }
+        offenseSnaps: { type: ["integer", "null"], minimum: 0 }
+        offensePct: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        snapGames: { type: integer, minimum: 0 }
+        sourceCoverage:
+          type: object
+          required: [requestedGames, includedGames, missingGames]
+          properties:
+            requestedGames: { type: integer, minimum: 0 }
+            includedGames: { type: integer, minimum: 0 }
+            missingGames: { type: array, items: { type: string } }
+        games: { type: array, items: { $ref: "#/components/schemas/ConsumerRedZoneGame" } }
+        zones: { type: array, items: { $ref: "#/components/schemas/ConsumerRedZoneMetric" } }
+    ConsumerRedZoneOpportunities:
+      type: object
+      required: [status, season, seasonType, period, zone, source, sourceUpdatedAt, ingestedAt, coverage, players]
+      properties:
+        status: { type: string, enum: [available, partial, unavailable] }
+        season: { type: integer }
+        seasonType: { type: string, enum: [REG] }
+        period: { type: string, enum: [season, last3] }
+        zone: { type: ["integer", "null"], enum: [20, 10, 5, null] }
+        source: { type: string, const: "nflverse play-by-play" }
+        sourceUpdatedAt: { type: ["string", "null"], format: date-time }
+        ingestedAt: { type: ["string", "null"], format: date-time }
+        coverage:
+          type: object
+          required: [status, completedGames, gamesWithPbp, missingGames, note]
+          properties:
+            status: { type: string, enum: [available, partial, unavailable] }
+            completedGames: { type: integer, minimum: 0 }
+            gamesWithPbp: { type: integer, minimum: 0 }
+            missingGames: { type: array, items: { type: string } }
+            note: { type: string }
+        players: { type: array, items: { $ref: "#/components/schemas/ConsumerRedZonePlayer" } }
     HealthStatus:
       type: object
       properties:

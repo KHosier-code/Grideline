@@ -5,6 +5,8 @@ import {
   gamesTable,
   nflversePlayerIdentitiesTable,
   playerGameStatsTable,
+  redZonePlayerGameFactsTable,
+  redZoneTeamGameFactsTable,
   snapCountsTable,
   pregameTeamFeaturesTable,
   predictionSnapshotsTable,
@@ -46,6 +48,14 @@ import {
   completeGameMarketObservation,
   consumerMarketFreshnessMinutes,
 } from "../lib/consumer-market-freshness";
+import {
+  cutoffSafeRedZoneGames,
+  groupRedZoneAppearancesByPlayerTeam,
+  hasPlayerStatAppearance,
+  RED_ZONE_VALUES,
+  redZonePlayerFactForAppearance,
+  redZoneShare,
+} from "../lib/red-zone-opportunities";
 export { consumerFinalScore } from "../lib/game-state";
 export { verifyTeamRecords } from "../lib/game-state";
 
@@ -1839,6 +1849,361 @@ router.get("/consumer/trends", async (req, res): Promise<void> => {
 
 router.get("/consumer/props", (_req, res): void => {
   res.json({ status: "unavailable", message: "Player information temporarily unavailable", available: false });
+});
+
+router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> => {
+  const rawSeason = typeof req.query.season === "string" ? Number(req.query.season) : undefined;
+  const rawTeam = typeof req.query.team === "string" ? req.query.team : undefined;
+  const position = typeof req.query.position === "string" ? req.query.position.toUpperCase() : undefined;
+  const rawZone = typeof req.query.zone === "string" ? Number(req.query.zone) : undefined;
+  const rawPeriod = typeof req.query.period === "string" ? req.query.period : undefined;
+  const gameId = typeof req.query.game === "string" ? req.query.game : undefined;
+  if ((rawSeason !== undefined && (!Number.isInteger(rawSeason) || rawSeason < 2000 || rawSeason > 2100))
+    || (position && !["QB", "RB", "WR", "TE"].includes(position))
+    || (rawZone !== undefined && !RED_ZONE_VALUES.includes(rawZone as typeof RED_ZONE_VALUES[number]))
+    || (rawPeriod !== undefined && !["season", "last3"].includes(rawPeriod))) {
+    res.status(400).json({ error: "Choose a valid season, team, position, zone, period, and game filter.", code: "invalid_request" });
+    return;
+  }
+  const period: "season" | "last3" = rawPeriod === "last3" ? "last3" : "season";
+  try {
+    const teams = await db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable);
+    const teamMaps = buildUsageTeamMappings(teams);
+    const canonicalTeam = rawTeam ? teamMaps.canonical(rawTeam) : undefined;
+    if (rawTeam && !canonicalTeam) {
+      res.status(400).json({ error: "Unknown team filter.", code: "invalid_request" });
+      return;
+    }
+    const cutoffGame = gameId
+      ? await db.select().from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1)
+      : [];
+    if (gameId && !cutoffGame[0]) {
+      res.status(400).json({ error: "Unknown game cutoff.", code: "invalid_request" });
+      return;
+    }
+    const cutoff = cutoffGame[0]?.kickoffTime ?? new Date();
+    const season = rawSeason ?? cutoffGame[0]?.season ?? usageSeasonAtCutoff(cutoff);
+    if (cutoffGame[0] && cutoffGame[0].season !== season) {
+      res.status(400).json({ error: "The requested season does not match the game cutoff.", code: "invalid_request" });
+      return;
+    }
+    const scheduleRows = await db.select().from(gamesTable).where(and(
+      eq(gamesTable.season, season),
+      lte(gamesTable.kickoffTime, cutoff),
+    ));
+    const completed = cutoffSafeRedZoneGames(scheduleRows, season, cutoff, gameId);
+    const eligibleGameIds = completed.map((entry) => entry.gameId);
+    const eligibleSet = new Set(eligibleGameIds);
+    const [playerFacts, teamFacts] = eligibleGameIds.length
+      ? await Promise.all([
+          db.select().from(redZonePlayerGameFactsTable).where(and(
+            eq(redZonePlayerGameFactsTable.season, season),
+            eq(redZonePlayerGameFactsTable.seasonType, "REG"),
+            inArray(redZonePlayerGameFactsTable.gameId, eligibleGameIds),
+          )),
+          db.select().from(redZoneTeamGameFactsTable).where(and(
+            eq(redZoneTeamGameFactsTable.season, season),
+            eq(redZoneTeamGameFactsTable.seasonType, "REG"),
+            inArray(redZoneTeamGameFactsTable.gameId, eligibleGameIds),
+          )),
+        ])
+      : [[], []];
+    const applicableTeams = canonicalTeam
+      ? completed.filter((entry) =>
+        teamMaps.scheduleToAbbreviation.get(entry.homeTeamId) === canonicalTeam
+        || teamMaps.scheduleToAbbreviation.get(entry.awayTeamId) === canonicalTeam)
+      : completed;
+    const applicableGameIds = new Set(applicableTeams.map((entry) => entry.gameId));
+    const coveredKeys = new Set(teamFacts.map((fact) => `${fact.gameId}:${fact.teamId}`));
+    const expectedTeamGames = applicableTeams.flatMap((entry) => {
+      const home = teamMaps.scheduleToAbbreviation.get(entry.homeTeamId);
+      const away = teamMaps.scheduleToAbbreviation.get(entry.awayTeamId);
+      return [home, away]
+        .filter((team): team is string => Boolean(team) && (!canonicalTeam || team === canonicalTeam))
+        .map((team) => ({ gameId: entry.gameId, team }));
+    });
+    const missingGames = [...new Set(expectedTeamGames
+      .filter((entry) => !coveredKeys.has(`${entry.gameId}:${entry.team}`))
+      .map((entry) => entry.gameId))];
+    const coveredGameIds = new Set(expectedTeamGames.map((entry) => entry.gameId)
+      .filter((id) => expectedTeamGames.filter((entry) => entry.gameId === id)
+        .every((entry) => coveredKeys.has(`${entry.gameId}:${entry.team}`))));
+    const teamDenominators = new Map(teamFacts.map((fact) => [
+      `${fact.gameId}:${fact.teamId}:${fact.zone}`,
+      { targets: fact.targets, carries: fact.carries },
+    ]));
+    const scheduleById = new Map(completed.map((entry) => [entry.gameId, entry]));
+    const scheduleGameByMatchup = new Map<string, string>();
+    for (const entry of completed) {
+      const home = teamMaps.scheduleToAbbreviation.get(entry.homeTeamId);
+      const away = teamMaps.scheduleToAbbreviation.get(entry.awayTeamId);
+      if (home && away) {
+        scheduleGameByMatchup.set(`${entry.week}:${home}:${away}`, entry.gameId);
+        scheduleGameByMatchup.set(`${entry.week}:${away}:${home}`, entry.gameId);
+      }
+    }
+    const statsAppearances = await db.select({
+      playerId: playerGameStatsTable.playerId,
+      playerName: playerGameStatsTable.playerName,
+      position: playerGameStatsTable.position,
+      completions: playerGameStatsTable.completions,
+      attempts: playerGameStatsTable.attempts,
+      passingYards: playerGameStatsTable.passingYards,
+      passingTds: playerGameStatsTable.passingTds,
+      carries: playerGameStatsTable.carries,
+      rushingYards: playerGameStatsTable.rushingYards,
+      rushingTds: playerGameStatsTable.rushingTds,
+      targets: playerGameStatsTable.targets,
+      receptions: playerGameStatsTable.receptions,
+      receivingYards: playerGameStatsTable.receivingYards,
+      receivingTds: playerGameStatsTable.receivingTds,
+      week: playerGameStatsTable.week,
+      seasonType: playerGameStatsTable.seasonType,
+      teamId: playerGameStatsTable.teamId,
+      opponentTeamId: playerGameStatsTable.opponentTeamId,
+    }).from(playerGameStatsTable).where(eq(playerGameStatsTable.season, season));
+    const snapSources = [...new Set(teams.flatMap((entry) => nflverseTeamCandidates(entry.abbreviation)))];
+    const rawSnapRows = snapSources.length ? await db.select({
+      playerId: snapCountsTable.playerId,
+      playerName: snapCountsTable.playerName,
+      position: snapCountsTable.position,
+      week: snapCountsTable.week,
+      teamId: snapCountsTable.teamId,
+      opponentTeamId: snapCountsTable.opponentTeamId,
+      offenseSnaps: snapCountsTable.offenseSnaps,
+      offensePct: snapCountsTable.offensePct,
+    }).from(snapCountsTable).where(and(
+      eq(snapCountsTable.season, season),
+      inArray(snapCountsTable.teamId, snapSources),
+    )) : [];
+    const snapPfrIds = [...new Set(rawSnapRows.map((snap) => snap.playerId))];
+    const snapIdentities = snapPfrIds.length ? await db.select({
+      gsisId: nflversePlayerIdentitiesTable.gsisId,
+      pfrId: nflversePlayerIdentitiesTable.pfrId,
+    }).from(nflversePlayerIdentitiesTable)
+      .where(inArray(nflversePlayerIdentitiesTable.pfrId, snapPfrIds))
+      .orderBy(desc(nflversePlayerIdentitiesTable.observedAt)) : [];
+    const gsisByPfr = new Map<string, string>();
+    for (const identity of snapIdentities) {
+      if (identity.pfrId && !gsisByPfr.has(identity.pfrId)) gsisByPfr.set(identity.pfrId, identity.gsisId);
+    }
+    const snapByPlayerGame = new Map<string, { offenseSnaps: number | null; offensePct: number | null }>();
+    const appearancesByPlayer = new Map<string, Array<{
+      playerId: string; gameId: string; kickoffTime: Date; week: number; teamId: string;
+    }>>();
+    const sourcePositionByPlayer = new Map<string, string | null>();
+    const sourceNameByPlayer = new Map<string, string>();
+    const addAppearance = (playerId: string | null, gameId: string | undefined, teamId: string | null, week: number) => {
+      if (!playerId || !gameId || !teamId) return;
+      const schedule = scheduleById.get(gameId);
+      if (!schedule?.kickoffTime) return;
+      const appearances = appearancesByPlayer.get(playerId) ?? [];
+      if (!appearances.some((entry) => entry.gameId === gameId && entry.teamId === teamId)) {
+        appearances.push({ playerId, gameId, kickoffTime: schedule.kickoffTime, week, teamId });
+      }
+      appearancesByPlayer.set(playerId, appearances);
+    };
+    for (const row of statsAppearances) {
+      if (row.seasonType.toUpperCase() !== "REG" || !hasPlayerStatAppearance(row)) continue;
+      const team = teamMaps.canonical(row.teamId);
+      const opponent = teamMaps.canonical(row.opponentTeamId);
+      const matchedGameId = team && opponent ? scheduleGameByMatchup.get(`${row.week}:${team}:${opponent}`) : undefined;
+      addAppearance(row.playerId, matchedGameId, team, row.week);
+      if (row.position) sourcePositionByPlayer.set(row.playerId, row.position);
+      if (row.playerName) sourceNameByPlayer.set(row.playerId, row.playerName);
+    }
+    for (const snap of rawSnapRows) {
+      if ((snap.offenseSnaps ?? 0) <= 0) continue;
+      const team = teamMaps.canonical(snap.teamId);
+      const opponent = teamMaps.canonical(snap.opponentTeamId);
+      const matchedGameId = team && opponent ? scheduleGameByMatchup.get(`${snap.week}:${team}:${opponent}`) : undefined;
+      const playerId = gsisByPfr.get(snap.playerId);
+      addAppearance(playerId ?? null, matchedGameId, team, snap.week);
+      if (playerId) {
+        snapByPlayerGame.set(`${playerId}:${matchedGameId}`, {
+          offenseSnaps: snap.offenseSnaps,
+          offensePct: snap.offensePct,
+        });
+        if (snap.position && !sourcePositionByPlayer.has(playerId)) sourcePositionByPlayer.set(playerId, snap.position);
+        if (snap.playerName && !sourceNameByPlayer.has(playerId)) sourceNameByPlayer.set(playerId, snap.playerName);
+      }
+    }
+    for (const fact of playerFacts) {
+      if (!eligibleSet.has(fact.gameId)) continue;
+      addAppearance(fact.playerId, fact.gameId, fact.teamId, fact.week);
+      if (fact.position && !sourcePositionByPlayer.has(fact.playerId)) sourcePositionByPlayer.set(fact.playerId, fact.position);
+      if (fact.playerName && !sourceNameByPlayer.has(fact.playerId)) sourceNameByPlayer.set(fact.playerId, fact.playerName);
+    }
+    const positionMatches = (playerId: string) => {
+      return !position || sourcePositionByPlayer.get(playerId)?.toUpperCase() === position;
+    };
+    const appearanceRows = [...appearancesByPlayer.values()].flat();
+    const playerTeamGroups = groupRedZoneAppearancesByPlayerTeam(
+      appearanceRows.filter((appearance) => positionMatches(appearance.playerId)),
+      period,
+      canonicalTeam ?? undefined,
+    );
+    const playerTeamGroupsByKey = new Map(playerTeamGroups.map((group) => [group.key, group]));
+    const playerIds = [...new Set(playerTeamGroups.map((group) => group.playerId))];
+    const filteredFacts = playerFacts.filter((fact) =>
+      applicableGameIds.has(fact.gameId)
+      && (!canonicalTeam || fact.teamId === canonicalTeam)
+      && positionMatches(fact.playerId));
+    const grouped = new Map<string, typeof filteredFacts>();
+    for (const fact of filteredFacts) {
+      const key = `${fact.playerId}:${fact.teamId}`;
+      const selected = playerTeamGroupsByKey.get(key)?.appearances;
+      if (!selected?.some((appearance) => appearance.gameId === fact.gameId)) continue;
+      grouped.set(key, [...(grouped.get(key) ?? []), fact]);
+    }
+    const metadata = playerIds.length ? await db.select({
+      playerId: playersTable.playerId, name: playersTable.name, position: playersTable.position,
+    }).from(playersTable).where(inArray(playersTable.playerId, playerIds)) : [];
+    const metadataById = new Map(metadata.map((row) => [row.playerId, row]));
+    const latestIngestedAt = [...playerFacts, ...teamFacts]
+      .map((row) => row.ingestedAt).filter((value): value is Date => value instanceof Date)
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+    const playerFactFor = (
+      playerId: string,
+      appearance: { gameId: string; teamId: string },
+      zone: number,
+      facts: typeof playerFacts,
+    ) => {
+      const snap = snapByPlayerGame.get(`${playerId}:${appearance.gameId}`);
+      const denominator = teamDenominators.get(`${appearance.gameId}:${appearance.teamId}:${zone}`);
+      return redZonePlayerFactForAppearance(
+        facts,
+        appearance,
+        zone,
+        snap?.offenseSnaps !== null && snap?.offenseSnaps !== undefined && snap.offenseSnaps > 0,
+        Boolean(denominator),
+      );
+    };
+    const players = playerTeamGroups.map(({ key, playerId, teamId, appearances: selectedAppearances }) => {
+      const facts = grouped.get(key) ?? [];
+      const chronologicalFacts = [...facts].sort((a, b) =>
+        (scheduleById.get(a.gameId)?.kickoffTime?.getTime() ?? 0)
+        - (scheduleById.get(b.gameId)?.kickoffTime?.getTime() ?? 0)
+        || a.gameId.localeCompare(b.gameId)
+        || a.zone - b.zone
+        || a.teamId.localeCompare(b.teamId));
+      const zones = (rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5]).map((zone) => {
+        const rows = selectedAppearances.map((appearance) =>
+          playerFactFor(playerId, appearance, zone, chronologicalFacts));
+        const completePlayerEvidence = rows.every(Boolean);
+        const denominators = selectedAppearances.map((appearance) =>
+          teamDenominators.get(`${appearance.gameId}:${appearance.teamId}:${zone}`));
+        const targets = completePlayerEvidence
+          ? rows.reduce((total, row) => total + row!.targets, 0) : null;
+        const carries = completePlayerEvidence
+          ? rows.reduce((total, row) => total + row!.carries, 0) : null;
+        const receivingTouchdowns = completePlayerEvidence
+          ? rows.reduce((total, row) => total + row!.receivingTouchdowns, 0) : null;
+        const rushingTouchdowns = completePlayerEvidence
+          ? rows.reduce((total, row) => total + row!.rushingTouchdowns, 0) : null;
+        const teamTargets = denominators.every(Boolean)
+          ? denominators.reduce((total, denominator) => total + denominator!.targets, 0) : null;
+        const teamCarries = denominators.every(Boolean)
+          ? denominators.reduce((total, denominator) => total + denominator!.carries, 0) : null;
+        return {
+          zone,
+          targets,
+          carries,
+          receivingTouchdowns,
+          rushingTouchdowns,
+          teamTargets,
+          teamCarries,
+          targetShare: redZoneShare(targets, teamTargets),
+          carryShare: redZoneShare(carries, teamCarries),
+        };
+      });
+      const selectedGames = selectedAppearances.map((appearance) => appearance.gameId);
+      const metricZones = rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5];
+      const gamesWithPlayerEvidence = selectedAppearances.filter((appearance) =>
+        metricZones.every((zone) => Boolean(playerFactFor(playerId, appearance, zone, chronologicalFacts))));
+      const missingPlayerGames = selectedAppearances
+        .filter((appearance) => !gamesWithPlayerEvidence.some((covered) => covered.gameId === appearance.gameId))
+        .map((appearance) => appearance.gameId);
+      const snapHistory = selectedGames.map((selectedGameId) =>
+        snapByPlayerGame.get(`${playerId}:${selectedGameId}`)).filter((snap): snap is NonNullable<typeof snap> => Boolean(snap));
+      const name = sourceNameByPlayer.get(playerId) ?? chronologicalFacts.find((fact) => fact.playerName)?.playerName
+        ?? metadataById.get(playerId)?.name ?? playerId;
+      return {
+        playerId,
+        playerName: name,
+        position: chronologicalFacts.find((fact) => fact.position)?.position
+          ?? sourcePositionByPlayer.get(playerId) ?? metadataById.get(playerId)?.position ?? null,
+        teamId,
+        gamesPlayed: selectedGames.length,
+        offenseSnaps: snapHistory.some((snap) => snap.offenseSnaps !== null)
+          ? snapHistory.reduce((total, snap) => total + (snap.offenseSnaps ?? 0), 0) : null,
+        offensePct: snapHistory.some((snap) => snap.offensePct !== null)
+          ? snapHistory.reduce((total, snap) => total + (snap.offensePct ?? 0), 0)
+            / snapHistory.filter((snap) => snap.offensePct !== null).length
+          : null,
+        snapGames: snapHistory.length,
+        sourceCoverage: {
+          requestedGames: selectedAppearances.length,
+          includedGames: gamesWithPlayerEvidence.length,
+          missingGames: missingPlayerGames,
+        },
+        games: selectedGames.map((selectedGameId) => {
+          const game = scheduleById.get(selectedGameId);
+          const appearance = selectedAppearances.find((entry) => entry.gameId === selectedGameId)!;
+          const gameRows = facts.filter((fact) => fact.gameId === selectedGameId
+            && fact.teamId === appearance.teamId);
+          return {
+            gameId: selectedGameId,
+            week: gameRows[0]?.week ?? appearance.week ?? game?.week ?? null,
+            teamId: appearance.teamId,
+            offenseSnaps: snapByPlayerGame.get(`${playerId}:${selectedGameId}`)?.offenseSnaps ?? null,
+            offensePct: snapByPlayerGame.get(`${playerId}:${selectedGameId}`)?.offensePct ?? null,
+            zones: (rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5]).map((zone) => {
+              const fact = playerFactFor(playerId, appearance, zone, gameRows);
+              const denominator = teamDenominators.get(`${selectedGameId}:${appearance.teamId}:${zone}`);
+              return {
+                zone,
+                targets: fact?.targets ?? null,
+                carries: fact?.carries ?? null,
+                receivingTouchdowns: fact?.receivingTouchdowns ?? null,
+                rushingTouchdowns: fact?.rushingTouchdowns ?? null,
+                teamTargets: denominator?.targets ?? null,
+                teamCarries: denominator?.carries ?? null,
+                targetShare: fact ? redZoneShare(fact.targets, denominator?.targets) : null,
+                carryShare: fact ? redZoneShare(fact.carries, denominator?.carries) : null,
+              };
+            }),
+          };
+        }).sort((a, b) => a.week! - b.week! || a.gameId.localeCompare(b.gameId)),
+        zones,
+      };
+    }).sort((a, b) => a.playerName.localeCompare(b.playerName)
+      || a.teamId.localeCompare(b.teamId) || a.playerId.localeCompare(b.playerId));
+    const expectedGames = new Set(expectedTeamGames.map((entry) => entry.gameId)).size;
+    const coveredGames = coveredGameIds.size;
+    const status = coveredGames === 0 ? "unavailable" : missingGames.length ? "partial" : "available";
+    res.json({
+      status,
+      season,
+      seasonType: "REG",
+      period,
+      zone: rawZone ?? null,
+      source: "nflverse play-by-play",
+      sourceUpdatedAt: null,
+      ingestedAt: latestIngestedAt?.toISOString() ?? null,
+      coverage: {
+        status,
+        completedGames: expectedGames,
+        gamesWithPbp: coveredGames,
+        missingGames,
+        note: "Zero opportunities are observed only for players identified by credited PBP participation, weekly player statistics, or a verified positive-offense-snap GSIS/PFR identity in a completed PBP game. Missing PBP evidence leaves that appearance unavailable. Attempts without a credited receiver or rusher ID are excluded from player counts and team denominators.",
+      },
+      players,
+    });
+  } catch (error) {
+    req.log.error({ error }, "Consumer red-zone opportunities read failed");
+    res.status(503).json({ error: "Red-zone opportunity data is being refreshed", code: "consumer_data_unavailable" });
+  }
 });
 
 router.get("/consumer/player-usage-games", async (req, res): Promise<void> => {

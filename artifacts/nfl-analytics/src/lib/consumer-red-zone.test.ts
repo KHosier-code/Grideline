@@ -1,0 +1,123 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { RED_ZONE_FALLBACK_LABEL, formatRedZoneValue, normalizeRedZoneResponse, scheduleTeamAbbreviation, selectRedZoneFallback, sortRedZonePlayers } from './consumer-red-zone.ts';
+
+test('missing and unavailable fields remain unavailable while verified zero is displayed', () => {
+  const data = normalizeRedZoneResponse({
+    season: 2026, status: 'partial', sourceUpdatedAt: '2026-09-17T12:00:00Z', ingestedAt: '2026-09-18T12:00:00Z',
+    players: [{ playerId: 'p1', playerName: 'A. Receiver', teamId: 'BUF', position: 'WR', windows: {
+      season: { gamesPlayed: 2, sampleGames: 3, status: 'partial', metrics: {
+        targets: { available: true, value: 0 }, carries: { available: false, value: 4 }, receivingTds: 1,
+      } },
+      last3: { gamesPlayed: 1, status: 'available', metrics: { targets: 2 } },
+    } }],
+  });
+  assert.equal(data.players[0]?.season.stats.targets, 0);
+  assert.equal(data.players[0]?.season.stats.carries, null);
+  assert.equal(data.players[0]?.season.stats.snaps, null);
+  assert.equal(data.players[0]?.season.gamesPlayed, 2);
+  assert.equal(data.players[0]?.last3.gamesPlayed, 1);
+  assert.equal(formatRedZoneValue(data.players[0]!.season.stats.targets), '0');
+  assert.equal(formatRedZoneValue(data.players[0]!.season.stats.snaps), '—');
+  assert.equal(formatRedZoneValue(0.472, true), '47.2%');
+});
+
+test('selected period maps flat server rows and unavailable sorts last in either direction', () => {
+  const data = normalizeRedZoneResponse({ players: [
+    { playerId: 'a', playerName: 'Alpha', teamId: 'MIA', gamesPlayed: 3, metrics: { targets: 5 } },
+    { playerId: 'b', playerName: 'Beta', teamId: 'MIA', gamesPlayed: 1, metrics: { targets: null } },
+    { playerId: 'c', playerName: 'Charlie', teamId: 'MIA', gamesPlayed: 2, metrics: { targets: 1 } },
+  ] }, 'last3');
+  assert.equal(data.players[0]?.last3.stats.targets, 5);
+  assert.deepEqual(sortRedZonePlayers(data.players, 'last3', 'targets', 'desc').map(p => p.playerName), ['Alpha', 'Charlie', 'Beta']);
+  assert.deepEqual(sortRedZonePlayers(data.players, 'last3', 'targets', 'asc').map(p => p.playerName), ['Charlie', 'Alpha', 'Beta']);
+  assert.equal(data.players[1]?.season.stats.targets, null);
+});
+
+test('live endpoint shape selects only the requested overlapping zone and identifies partial snap sample', () => {
+  const data = normalizeRedZoneResponse({
+    season: 2026, status: 'partial', coverage: { missingGames: ['g2'] },
+    players: [{ playerId: 'gsis-1', playerName: 'A. Runner', teamId: 'MIA', gamesPlayed: 2,
+      offenseSnaps: 39, offensePct: 0.672, snapGames: 1,
+      sourceCoverage: { requestedGames: 2, includedGames: 1, missingGames: ['g2'] },
+      zones: [
+        { zone: 20, targets: 4, carries: 5, receivingTouchdowns: 1, rushingTouchdowns: 2, targetShare: 0.472, carryShare: 0.25 },
+        { zone: 5, targets: null, carries: null, receivingTouchdowns: null, rushingTouchdowns: null, targetShare: null, carryShare: null },
+      ],
+    }],
+  }, 'season', 5);
+  assert.equal(data.players[0]?.season.stats.targets, null);
+  assert.equal(data.players[0]?.season.stats.carries, null);
+  assert.equal(data.players[0]?.season.stats.snapPct, 0.672);
+  assert.equal(data.players[0]?.season.snapGames, 1);
+  assert.equal(data.players[0]?.season.status, 'partial');
+  assert.equal(data.players[0]?.season.includedGames, 1);
+  assert.equal(data.players[0]?.season.sampleGames, 2);
+  assert.equal(data.players[0]?.season.reason, '1 appearance without verified play-by-play');
+  assert.match(data.partialReasons[0]!, /1 completed game/);
+});
+
+test('actual response retains separate player/team rows after a trade and uses player-specific availability', () => {
+  const response = {
+    status: 'partial', season: 2026, seasonType: 'REG', period: 'last3', zone: 20,
+    source: 'nflverse play-by-play', sourceUpdatedAt: null, ingestedAt: '2026-09-25T12:00:00Z',
+    coverage: { status: 'partial', completedGames: 3, gamesWithPbp: 2, missingGames: ['week3'], note: 'Source evidence limited.' },
+    players: [
+      { playerId: 'gsis-traded', playerName: 'R. Receiver', position: 'WR', teamId: 'BUF', gamesPlayed: 2,
+        offenseSnaps: 45, offensePct: 0.62, snapGames: 1,
+        sourceCoverage: { requestedGames: 2, includedGames: 1, missingGames: ['week3'] }, games: [],
+        zones: [{ zone: 20, targets: null, carries: null, receivingTouchdowns: null, rushingTouchdowns: null, teamTargets: null, teamCarries: null, targetShare: null, carryShare: null }] },
+      { playerId: 'gsis-traded', playerName: 'R. Receiver', position: 'WR', teamId: 'MIA', gamesPlayed: 1,
+        offenseSnaps: null, offensePct: null, snapGames: 0,
+        sourceCoverage: { requestedGames: 1, includedGames: 1, missingGames: [] }, games: [],
+        zones: [{ zone: 20, targets: 0, carries: 0, receivingTouchdowns: 0, rushingTouchdowns: 0, teamTargets: 4, teamCarries: 8, targetShare: 0, carryShare: 0 }] },
+    ],
+  };
+  const data = normalizeRedZoneResponse(response, 'last3', 20);
+  assert.deepEqual(data.players.map(player => [player.playerId, player.team]), [['gsis-traded', 'BUF'], ['gsis-traded', 'MIA']]);
+  assert.equal(data.players[0]?.last3.status, 'partial');
+  assert.equal(data.players[1]?.last3.status, 'available');
+  assert.equal(data.players[0]?.last3.stats.targets, null);
+  assert.equal(data.players[1]?.last3.stats.targets, 0);
+  assert.equal(data.players[1]?.last3.snapGames, 0);
+  assert.equal(data.players[1]?.last3.stats.snaps, null);
+});
+
+test('team options normalize string and team-object schedule payloads', () => {
+  assert.deepEqual(['BUF', { abbreviation: 'MIA', name: 'Miami Dolphins' }, null, { name: 'No abbreviation' }]
+    .map(scheduleTeamAbbreviation).filter(Boolean), ['BUF', 'MIA']);
+});
+
+test('Game Detail red-zone-only fallback selects at most three per team by sourced targets plus carries', () => {
+  const data = normalizeRedZoneResponse({ status: 'partial', period: 'season', players: [
+    { playerId: 'a', playerName: 'A', teamId: 'BUF', gamesPlayed: 1, sourceCoverage: { requestedGames: 1, includedGames: 1, missingGames: [] }, zones: [{ zone: 20, targets: 2, carries: 1 }] },
+    { playerId: 'b', playerName: 'B', teamId: 'BUF', gamesPlayed: 1, sourceCoverage: { requestedGames: 1, includedGames: 1, missingGames: [] }, zones: [{ zone: 20, targets: 0, carries: 0 }] },
+    { playerId: 'c', playerName: 'C', teamId: 'BUF', gamesPlayed: 2, sourceCoverage: { requestedGames: 2, includedGames: 0, missingGames: ['g1', 'g2'] }, zones: [{ zone: 20, targets: null, carries: null }] },
+    { playerId: 'd', playerName: 'D', teamId: 'BUF', gamesPlayed: 1, sourceCoverage: { requestedGames: 1, includedGames: 1, missingGames: [] }, zones: [{ zone: 20, targets: 5, carries: 0 }] },
+    { playerId: 'e', playerName: 'E', teamId: 'BUF', gamesPlayed: 1, sourceCoverage: { requestedGames: 1, includedGames: 1, missingGames: [] }, zones: [{ zone: 20, targets: 1, carries: 1 }] },
+    { playerId: 'opponent', playerName: 'Opponent', teamId: 'MIA', gamesPlayed: 1, zones: [{ zone: 20, targets: 12, carries: 2 }] },
+  ] }, 'season', 20);
+  assert.equal(RED_ZONE_FALLBACK_LABEL, 'Red-zone-only evidence');
+  assert.deepEqual(selectRedZoneFallback(data.players, 'BUF').map(player => player.playerId), ['d', 'a', 'e']);
+  assert.deepEqual(selectRedZoneFallback(data.players, 'MIA').map(player => player.playerId), ['opponent']);
+  assert.equal(data.players[2]!.season.status, 'unavailable');
+  assert.equal(data.players[2]!.season.stats.targets, null);
+  assert.equal(data.players[1]!.season.stats.targets, 0);
+});
+
+test('red zone is publicly routed and game cards request game-scoped windows', () => {
+  const app = readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8');
+  const card = readFileSync(fileURLToPath(new URL('../components/ConsumerKeyPlayers.tsx', import.meta.url)), 'utf8');
+  const page = readFileSync(fileURLToPath(new URL('../pages/consumer/ConsumerRedZone.tsx', import.meta.url)), 'utf8');
+  assert.match(app, /href: '\/red-zone', label: 'Red Zone'/);
+  assert.equal((app.match(/<Route path="\/red-zone">/g) ?? []).length, 2);
+  assert.match(card, /game: gameId, zone: 20, period: 'last3'/);
+  assert.match(card, /game: gameId, zone: 20, period: 'season'/);
+  assert.match(card, /getGetConsumerRedZoneOpportunitiesQueryKey/);
+  assert.match(card, /enabled: Boolean\(gameId\)/);
+  assert.match(card, /if \(fallback\)/);
+  assert.match(page, /useGetConsumerRedZoneOpportunities, useListConsumerPlayerUsageGames.*from '@workspace\/api-client-react'/);
+  assert.match(page, /scheduleTeamAbbreviation\(game\.matchup\.home\)/);
+});

@@ -907,6 +907,60 @@ export const playerGameStatsTable = pgTable("player_game_stats", {
   ),
 ]);
 
+/** Derived, source-play-backed player red-zone facts. Counts are zero only
+ * when a complete game PBP file contains the player's identified appearance. */
+export const redZonePlayerGameFactsTable = pgTable("red_zone_player_game_facts", {
+  gameId: text("game_id").notNull(),
+  sourceGameId: text("source_game_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  seasonType: text("season_type").notNull(),
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name"),
+  position: text("position"),
+  teamId: text("team_id").notNull(),
+  opponentTeamId: text("opponent_team_id").notNull(),
+  zone: integer("zone").notNull(),
+  targets: integer("targets").notNull().default(0),
+  carries: integer("carries").notNull().default(0),
+  receivingTouchdowns: integer("receiving_touchdowns").notNull().default(0),
+  rushingTouchdowns: integer("rushing_touchdowns").notNull().default(0),
+  source: text("source").notNull().default("nflverse_pbp"),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+  ingestedAt: timestamp("ingested_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.gameId, table.playerId, table.teamId, table.zone] }),
+  index("red_zone_player_game_season_idx").on(table.season, table.seasonType, table.playerId, table.week),
+  index("red_zone_player_game_team_idx").on(table.season, table.teamId, table.zone),
+  check("red_zone_player_game_zone_check", sql`${table.zone} in (5, 10, 20)`),
+  check("red_zone_player_game_counts_check", sql`
+    ${table.targets} >= 0 and ${table.carries} >= 0
+    and ${table.receivingTouchdowns} >= 0 and ${table.rushingTouchdowns} >= 0
+  `),
+]);
+
+/** Team denominators include only qualifying attempts with a credited player ID. */
+export const redZoneTeamGameFactsTable = pgTable("red_zone_team_game_facts", {
+  gameId: text("game_id").notNull(),
+  sourceGameId: text("source_game_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  seasonType: text("season_type").notNull(),
+  teamId: text("team_id").notNull(),
+  opponentTeamId: text("opponent_team_id").notNull(),
+  zone: integer("zone").notNull(),
+  targets: integer("targets").notNull().default(0),
+  carries: integer("carries").notNull().default(0),
+  source: text("source").notNull().default("nflverse_pbp"),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+  ingestedAt: timestamp("ingested_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.gameId, table.teamId, table.zone] }),
+  index("red_zone_team_game_season_idx").on(table.season, table.seasonType, table.teamId, table.week),
+  check("red_zone_team_game_zone_check", sql`${table.zone} in (5, 10, 20)`),
+  check("red_zone_team_game_counts_check", sql`${table.targets} >= 0 and ${table.carries} >= 0`),
+]);
+
 export const snapCountsTable = pgTable("snap_counts", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   gameId: text("game_id").notNull(),

@@ -36,12 +36,14 @@ import type {
   ConsumerPlayerUsage,
   ConsumerPlayerUsageGames,
   ConsumerPropsAvailability,
+  ConsumerRedZoneOpportunities,
   ConsumerScheduleSelection,
   ConsumerTrends,
   DashboardSummary,
   DataHealth,
   Game,
   GetConsumerPlayerUsageParams,
+  GetConsumerRedZoneOpportunitiesParams,
   GetPregameFeatureHealthParams,
   GetUsageAnalyticsSummaryParams,
   HealthStatus,
@@ -2892,6 +2894,91 @@ export function useListConsumerPlayerUsageGames<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListConsumerPlayerUsageGamesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerRedZoneOpportunitiesUrl = (params?: GetConsumerRedZoneOpportunitiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/red-zone-opportunities?${stringifiedParams}` : `/api/consumer/red-zone-opportunities`
+}
+
+/**
+ * Returns regular-season nflverse play-by-play counts at pre-play yardline thresholds 20, 10, and 5 (overlapping zones). Targets include credited intended receivers on incomplete passes. Carries follow rush_attempt, including credited QB scrambles. Two-point tries, kneels, spikes, no-play/nullified plays, and attempts without a credited player ID are excluded; missing-ID attempts are also excluded from team denominators. last3 uses each player's last three completed appearances identified by regular-season player statistics or positive offensive snaps with a verified GSIS/PFR crosswalk, across teams before results are partitioned into separate playerId/teamId rows. Missing PBP for an appearance is returned as unavailable rather than as a zero count. sourceUpdatedAt is null when nflverse does not publish a source update timestamp. A game parameter sets a pre-kickoff cutoff and excludes that game; it does not require prediction or market data.
+ * @summary Read cutoff-safe, source-backed red-zone opportunities
+ */
+export const getConsumerRedZoneOpportunities = async (params?: GetConsumerRedZoneOpportunitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerRedZoneOpportunities> => {
+
+  return customFetch<ConsumerRedZoneOpportunities>(getGetConsumerRedZoneOpportunitiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerRedZoneOpportunitiesQueryKey = (params?: GetConsumerRedZoneOpportunitiesParams,) => {
+    return [
+    `/api/consumer/red-zone-opportunities`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerRedZoneOpportunitiesQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(params?: GetConsumerRedZoneOpportunitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerRedZoneOpportunitiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>> = ({ signal }) => getConsumerRedZoneOpportunities(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerRedZoneOpportunitiesQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>>
+export type GetConsumerRedZoneOpportunitiesQueryError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read cutoff-safe, source-backed red-zone opportunities
+ */
+
+export function useGetConsumerRedZoneOpportunities<TData = Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerRedZoneOpportunitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerRedZoneOpportunitiesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

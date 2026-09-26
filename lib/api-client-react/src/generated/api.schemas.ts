@@ -1366,6 +1366,187 @@ export interface ConsumerPlayerUsage {
   sourceCoverage: ConsumerPlayerUsageSourceCoverage;
 }
 
+export type ConsumerRedZoneMetricZone = typeof ConsumerRedZoneMetricZone[keyof typeof ConsumerRedZoneMetricZone];
+
+
+export const ConsumerRedZoneMetricZone = {
+  NUMBER_20: 20,
+  NUMBER_10: 10,
+  NUMBER_5: 5,
+} as const;
+
+export interface ConsumerRedZoneMetric {
+  zone: ConsumerRedZoneMetricZone;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  targets: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  carries: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  receivingTouchdowns: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  rushingTouchdowns: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  teamTargets: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  teamCarries: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  targetShare: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  carryShare: number | null;
+}
+
+export interface ConsumerRedZoneGame {
+  gameId: string;
+  /** @nullable */
+  week: number | null;
+  /** @nullable */
+  teamId: string | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  offenseSnaps: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  offensePct: number | null;
+  zones: ConsumerRedZoneMetric[];
+}
+
+export type ConsumerRedZonePlayerSourceCoverage = {
+  /** @minimum 0 */
+  requestedGames: number;
+  /** @minimum 0 */
+  includedGames: number;
+  missingGames: string[];
+};
+
+export interface ConsumerRedZonePlayer {
+  playerId: string;
+  playerName: string;
+  /** @nullable */
+  position: string | null;
+  /** @nullable */
+  teamId: string | null;
+  /** @minimum 0 */
+  gamesPlayed: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  offenseSnaps: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  offensePct: number | null;
+  /** @minimum 0 */
+  snapGames: number;
+  sourceCoverage: ConsumerRedZonePlayerSourceCoverage;
+  games: ConsumerRedZoneGame[];
+  zones: ConsumerRedZoneMetric[];
+}
+
+export type ConsumerRedZoneOpportunitiesStatus = typeof ConsumerRedZoneOpportunitiesStatus[keyof typeof ConsumerRedZoneOpportunitiesStatus];
+
+
+export const ConsumerRedZoneOpportunitiesStatus = {
+  available: 'available',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerRedZoneOpportunitiesSeasonType = typeof ConsumerRedZoneOpportunitiesSeasonType[keyof typeof ConsumerRedZoneOpportunitiesSeasonType];
+
+
+export const ConsumerRedZoneOpportunitiesSeasonType = {
+  REG: 'REG',
+} as const;
+
+export type ConsumerRedZoneOpportunitiesPeriod = typeof ConsumerRedZoneOpportunitiesPeriod[keyof typeof ConsumerRedZoneOpportunitiesPeriod];
+
+
+export const ConsumerRedZoneOpportunitiesPeriod = {
+  season: 'season',
+  last3: 'last3',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerRedZoneOpportunitiesZone = typeof ConsumerRedZoneOpportunitiesZone[keyof typeof ConsumerRedZoneOpportunitiesZone] | null;
+
+
+export const ConsumerRedZoneOpportunitiesZone = {
+  NUMBER_20: 20,
+  NUMBER_10: 10,
+  NUMBER_5: 5,
+} as const;
+
+export type ConsumerRedZoneOpportunitiesCoverageStatus = typeof ConsumerRedZoneOpportunitiesCoverageStatus[keyof typeof ConsumerRedZoneOpportunitiesCoverageStatus];
+
+
+export const ConsumerRedZoneOpportunitiesCoverageStatus = {
+  available: 'available',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerRedZoneOpportunitiesCoverage = {
+  status: ConsumerRedZoneOpportunitiesCoverageStatus;
+  /** @minimum 0 */
+  completedGames: number;
+  /** @minimum 0 */
+  gamesWithPbp: number;
+  missingGames: string[];
+  note: string;
+};
+
+export interface ConsumerRedZoneOpportunities {
+  status: ConsumerRedZoneOpportunitiesStatus;
+  season: number;
+  seasonType: ConsumerRedZoneOpportunitiesSeasonType;
+  period: ConsumerRedZoneOpportunitiesPeriod;
+  /** @nullable */
+  zone: ConsumerRedZoneOpportunitiesZone;
+  source: 'nflverse play-by-play';
+  /** @nullable */
+  sourceUpdatedAt: string | null;
+  /** @nullable */
+  ingestedAt: string | null;
+  coverage: ConsumerRedZoneOpportunitiesCoverage;
+  players: ConsumerRedZonePlayer[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -2391,4 +2572,50 @@ export const GetConsumerPlayerUsageWindow = {
   last5: 'last5',
   last8: 'last8',
   season: 'season',
+} as const;
+
+export type GetConsumerRedZoneOpportunitiesParams = {
+/**
+ * @minimum 2000
+ * @maximum 2100
+ */
+season?: number;
+team?: string;
+position?: GetConsumerRedZoneOpportunitiesPosition;
+/**
+ * Pre-play yardline_100 threshold; zones overlap.
+ */
+zone?: GetConsumerRedZoneOpportunitiesZone;
+period?: GetConsumerRedZoneOpportunitiesPeriod;
+/**
+ * Gridline game ID used as the excluded-game pre-kickoff cutoff.
+ */
+game?: string;
+};
+
+export type GetConsumerRedZoneOpportunitiesPosition = typeof GetConsumerRedZoneOpportunitiesPosition[keyof typeof GetConsumerRedZoneOpportunitiesPosition];
+
+
+export const GetConsumerRedZoneOpportunitiesPosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+} as const;
+
+export type GetConsumerRedZoneOpportunitiesZone = typeof GetConsumerRedZoneOpportunitiesZone[keyof typeof GetConsumerRedZoneOpportunitiesZone];
+
+
+export const GetConsumerRedZoneOpportunitiesZone = {
+  NUMBER_20: 20,
+  NUMBER_10: 10,
+  NUMBER_5: 5,
+} as const;
+
+export type GetConsumerRedZoneOpportunitiesPeriod = typeof GetConsumerRedZoneOpportunitiesPeriod[keyof typeof GetConsumerRedZoneOpportunitiesPeriod];
+
+
+export const GetConsumerRedZoneOpportunitiesPeriod = {
+  season: 'season',
+  last3: 'last3',
 } as const;
