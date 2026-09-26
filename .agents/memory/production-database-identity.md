@@ -8,3 +8,9 @@ For a release gate, querying Replit's managed production read replica establishe
 **Why:** A deployment may be configured with a different database URL from the managed production replica even when both are reachable. Read-only catalog metadata cannot identify an application connection unless it is tied to a unique observed runtime event.
 
 **How to apply:** During production read-only audits, collect metadata and live-build/worker correlations without printing credentials. If the correlations or shared-environment startup path are unavailable, mark app/worker identity unverified and stop before evaluating a managed-production schema migration as applicable.
+
+For an independent backup, refresh the live build fingerprint immediately before credential-based access and fail closed if it differs from the reviewed baseline; never reuse an earlier assessment's build ID as permanent identity.
+
+**Why:** The production release-evidence row and live log build ID changed during a backup-preparation window as other project work completed. A stale identifier cannot prove the eventual dump came from the expected running release.
+
+**How to apply:** Match a fresh read-only release-evidence row to deployment logs, then require the same non-secret fingerprint plus expected database name and server major in a pre-dump identity query. Reconfirm after unrelated publication or merge activity.
