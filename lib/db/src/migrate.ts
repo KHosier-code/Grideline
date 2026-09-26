@@ -73,6 +73,16 @@ interface HistoryRow {
   status: MigrationStatus;
 }
 
+export function assertDevelopmentDatabaseIdentity(
+  target: { database_name: string; database_role: string; replica: boolean; local_proxy: boolean } | undefined,
+  deployment = process.env.REPLIT_DEPLOYMENT,
+) {
+  if (deployment || target?.database_name !== "heliumdb"
+    || target.database_role !== "postgres" || target.replica || !target.local_proxy) {
+    throw new Error("Refusing development migrations: database identity is not the verified local development database");
+  }
+}
+
 function identifierFromMatch(quoted: string | undefined, bare: string | undefined) {
   return quoted ?? bare;
 }
@@ -175,7 +185,7 @@ export function extractRequirements(sql: string): MigrationRequirements {
       const column = quotedColumn?.[1] ?? bareColumn?.[1];
       if (
         column &&
-        !new Set(["CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN"]).has(
+        !new Set(["CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN", "OR", "AND"]).has(
           column.toUpperCase(),
         )
       ) {
@@ -296,6 +306,16 @@ async function hasTrigger(client: pg.Client, name: string) {
   return result.rowCount === 1;
 }
 
+async function hasTriggerOn(client: pg.Client, table: string, name: string) {
+  const result = await client.query(
+    `SELECT 1 FROM pg_trigger
+       WHERE tgrelid = to_regclass($1) AND tgname = $2
+         AND NOT tgisinternal AND tgenabled <> 'D'`,
+    [`public.${table}`, name],
+  );
+  return result.rowCount === 1;
+}
+
 async function verifyExistingSchema(client: pg.Client, sql: string) {
   const requirements = extractRequirements(sql);
   for (const table of requirements.tables) {
@@ -324,6 +344,49 @@ async function verifyExistingSchema(client: pg.Client, sql: string) {
   for (const constraint of requirements.absentConstraints) {
     if (await hasConstraint(client, constraint)) return false;
   }
+  return true;
+}
+
+// Migration 0045 is execute-once evidence: never replay its full SQL after
+// a partial restore, because the surviving parent trigger would conflict.
+// Only reconstruct a missing weekly selection table (or its guard) when the
+// immutable parent is intact. Never overwrite a surviving selection row.
+export async function recoverWeeklyPickSchema(
+  client: Pick<pg.Client, "query">,
+): Promise<boolean> {
+  const missingWeekly = !(await hasTable(client as pg.Client, "initial_weekly_picks"));
+  const missingGuard = !(await hasTriggerOn(client as pg.Client, "initial_weekly_picks", "initial_weekly_immutable"));
+  if (!missingWeekly && !missingGuard) return false;
+  const parentReady = await hasTable(client as pg.Client, "initial_line_picks")
+    && await hasTriggerOn(client as pg.Client, "initial_line_picks", "initial_line_immutable");
+  const functionReady = await client.query(
+    "SELECT 1 FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND proname = 'reject_initial_pick_mutation'",
+  );
+  if (!parentReady || functionReady.rowCount !== 1) {
+    throw new Error("Cannot recover weekly picks: immutable initial-line parent is incomplete");
+  }
+  if (!missingWeekly) {
+    for (const column of ["season", "week", "game_id", "selected_at"]) {
+      if (!(await hasColumn(client as pg.Client, "initial_weekly_picks", column))) {
+        throw new Error("Cannot recover weekly picks: existing selection table is incomplete");
+      }
+    }
+    if (!(await hasConstraint(client as pg.Client, "initial_weekly_picks_season_week_unique"))) {
+      throw new Error("Cannot recover weekly picks: existing selection table lacks its unique constraint");
+    }
+  }
+  await transaction(client as pg.Client, async () => {
+    if (missingWeekly) {
+      await client.query(`CREATE TABLE public.initial_weekly_picks (
+        season integer NOT NULL, week integer NOT NULL,
+        game_id text NOT NULL REFERENCES public.initial_line_picks(game_id),
+        selected_at timestamptz NOT NULL DEFAULT now(),
+        CONSTRAINT initial_weekly_picks_season_week_unique UNIQUE (season, week)
+      )`);
+    }
+    await client.query(`CREATE TRIGGER initial_weekly_immutable BEFORE UPDATE OR DELETE
+      ON public.initial_weekly_picks FOR EACH ROW EXECUTE FUNCTION public.reject_initial_pick_mutation()`);
+  });
   return true;
 }
 
@@ -434,6 +497,21 @@ export async function runMigrations(options: {
   await client.connect();
   let lockHeld = false;
   try {
+    const identity = await client.query<{
+      database_name: string;
+      database_role: string;
+      replica: boolean;
+      local_proxy: boolean;
+    }>(`SELECT current_database() AS database_name, current_user AS database_role,
+               pg_is_in_recovery() AS replica, inet_server_addr() IS NULL AS local_proxy`);
+    assertDevelopmentDatabaseIdentity(identity.rows[0]);
+    for (const baseTable of ["data_sync_runs", "injuries", "odds_api_requests"]) {
+      if (!(await hasTable(client, baseTable))) {
+        throw new Error(
+          `Development base schema is missing ${baseTable}; provision the base schema before additive migrations. No migration was applied.`,
+        );
+      }
+    }
     await client.query("SELECT pg_advisory_lock(hashtext($1))", [
       ADVISORY_LOCK_KEY,
     ]);
@@ -473,6 +551,20 @@ export async function runMigrations(options: {
     const results: MigrationResult[] = [];
     for (const migration of migrations) {
       const recorded = byName.get(migration.name);
+      if (migration.name === "0045_initial_line_picks.sql"
+        && await hasTable(client, "initial_line_picks")) {
+        if (dryRun) {
+          // No repair DDL in dry-run mode. Report the discrepancy explicitly.
+          if (!(await verifyExistingSchema(client, migration.sql))) {
+            throw new Error("Weekly pick schema needs recovery; run the development migration command");
+          }
+        } else {
+          await recoverWeeklyPickSchema(client);
+          if (!(await verifyExistingSchema(client, migration.sql))) {
+            throw new Error("Weekly pick schema remains incomplete after development recovery");
+          }
+        }
+      }
       if (recorded) {
         results.push({
           name: migration.name,

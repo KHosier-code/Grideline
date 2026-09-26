@@ -2,12 +2,36 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 import {
+  assertDevelopmentDatabaseIdentity,
   assertMigrationSafe,
   computeChecksum,
   extractRequirements,
   sortMigrations,
   validateRecordedChecksum,
 } from "./migrate";
+
+test("development migration target must be the local database, even in dry-run mode", () => {
+  const local = { database_name: "heliumdb", database_role: "postgres", replica: false, local_proxy: true };
+  assert.doesNotThrow(() => assertDevelopmentDatabaseIdentity(local, undefined));
+  for (const target of [
+    undefined,
+    { ...local, database_name: "production" },
+    { ...local, database_role: "readonly" },
+    { ...local, replica: true },
+    { ...local, local_proxy: false },
+  ]) {
+    assert.throws(() => assertDevelopmentDatabaseIdentity(target, undefined), /Refusing development migrations/);
+  }
+  assert.throws(() => assertDevelopmentDatabaseIdentity(local, "1"), /Refusing development migrations/);
+});
+
+test("weekly pick migration requirements do not mistake multiline check logic for columns", () => {
+  const migration = fs.readFileSync(new URL("../migrations/0045_initial_line_picks.sql", import.meta.url), "utf8");
+  const requirements = extractRequirements(migration);
+  assert.ok(requirements.tables.has("initial_weekly_picks"));
+  assert.ok(requirements.triggers.has("initial_weekly_immutable"));
+  assert.ok(!requirements.columns.get("initial_line_picks")?.has("OR"));
+});
 
 test("migration files are ordered by their versioned filename", () => {
   const sorted = sortMigrations([
