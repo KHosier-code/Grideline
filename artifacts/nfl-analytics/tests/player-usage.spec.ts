@@ -37,6 +37,16 @@ async function names(page: Page, mobile: boolean) {
     : page.getByTestId('table-usage-players').locator('tbody tr td:first-child strong').allTextContents();
 }
 
+async function tabToOrderingExplanation(page: Page) {
+  const summary = page.getByTestId('disclosure-usage-relevance').locator('summary');
+  await page.getByTestId('button-usage-reset').focus();
+  for (let i = 0; i < 4 && !await summary.evaluate(element => element === document.activeElement); i++) {
+    await page.keyboard.press('Tab');
+  }
+  await expect(summary).toBeFocused();
+  return summary;
+}
+
 for (const width of [1280, 390]) {
   test(`Player Usage ignores an older position response at ${width}px`, async ({ page }) => {
     const mobile = width < 1024;
@@ -119,6 +129,16 @@ for (const width of [1280, 390]) {
     await expect(list).toBeVisible();
     await expect.poll(() => names(page, mobile)).toEqual(['Dana Dash', 'Aaron Able', 'Blake Blank']);
     await expect(page.getByTestId('text-usage-count')).toContainText('3 of 5 players');
+    const explanation = page.getByTestId('disclosure-usage-relevance').locator('p');
+    const summary = await tabToOrderingExplanation(page);
+    await expect(explanation).toBeHidden();
+    const analyticsBeforeDisclosure = analytics.length;
+    await page.keyboard.press('Enter');
+    await expect(explanation).toBeVisible();
+    await expect(explanation).toContainText('observed volume per covered game');
+    await page.keyboard.press('Space');
+    await expect(explanation).toBeHidden();
+    expect(analytics).toHaveLength(analyticsBeforeDisclosure);
     await search.fill('Cody');
     await expect(page.getByTestId('status-usage-filtered-empty')).toBeVisible();
     await expect(page.getByTestId('text-usage-count')).toHaveText('0 of 5 players visible');
@@ -137,6 +157,13 @@ for (const width of [1280, 390]) {
     }
     await expect.poll(() => names(page, mobile)).toEqual(['Aaron Able', 'Dana Dash', 'Cody Zero', 'Eli Zero', 'Blake Blank']);
     await expect.poll(() => new URL(page.url()).searchParams.get('sort')).toBe('primaryVolume');
+    await expect(page.getByTestId('button-usage-relevance')).toBeVisible();
+    await tabToOrderingExplanation(page);
+    await page.keyboard.press('Space');
+    await expect(explanation).toBeVisible();
+    await expect(summary).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(explanation).toBeHidden();
     // The null-volume player remains last, including when the sort direction reverses.
     if (mobile) {
       await page.getByTestId('button-usage-sort-direction').click();
@@ -187,7 +214,7 @@ for (const width of [1280, 390]) {
     ]));
     for (const body of analytics) {
       const serialized = JSON.stringify(body);
-      expect(serialized).not.toMatch(/Cody|Zero|Able|Blank|Dash|playerId|playerName|search/i);
+      expect(serialized).not.toMatch(/Cody|Zero|Able|Blank|Dash|fixture-|playerId|playerName|gameId|search/i);
     }
     expect(usageRequests.length).toBeGreaterThan(0);
     for (const url of usageRequests) {
