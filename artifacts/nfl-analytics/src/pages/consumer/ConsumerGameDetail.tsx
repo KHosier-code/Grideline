@@ -1,7 +1,6 @@
 import { getGetConsumerGameQueryKey, useGetConsumerGame } from '@workspace/api-client-react';
 import { ChevronLeft, CloudRain, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useLocation, useParams, Link } from 'wouter';
-import { ConsumerLoading, ConsumerMessage, formatKickoff, useConsumerNow } from './consumer-ui';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { LineMovementExperience } from '../../components/LineMovementExperience';
@@ -13,6 +12,7 @@ import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups'
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
 import { GameAlerts } from './GameAlerts';
+import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useConsumerNow } from './consumer-ui';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -37,6 +37,7 @@ export default function ConsumerGameDetail() {
 
   return <div className="consumer-page consumer-detail">
     <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
+    <div className="consumer-detail-save"><SaveGameButton gameId={game.gameId} /></div>
 
     <section className="premium-hero" data-section="game-header" data-testid="premium-hero" aria-label="Game summary">
       <div className="premium-hero-context">

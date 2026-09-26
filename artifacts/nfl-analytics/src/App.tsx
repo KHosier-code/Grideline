@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   BarChart3,
   Bell,
+  Bookmark,
   CalendarDays,
   Check,
   ChevronRight,
@@ -75,6 +76,7 @@ import ConsumerHome from '@/pages/consumer/ConsumerHome';
 import VisitorHome from '@/pages/consumer/VisitorHome';
 import ConsumerGames from '@/pages/consumer/ConsumerGames';
 import ConsumerGameDetail from '@/pages/consumer/ConsumerGameDetail';
+import ConsumerSavedGames from '@/pages/consumer/ConsumerSavedGames';
 import ConsumerPerformance from '@/pages/consumer/ConsumerPerformance';
 import ConsumerTrends from '@/pages/consumer/ConsumerTrends';
 import ConsumerProps from '@/pages/consumer/ConsumerProps';
@@ -472,6 +474,7 @@ function Shell({ children }: { children: ReactNode }) {
 const consumerNav = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/games', label: 'Games', icon: CalendarDays },
+  { href: '/saved-games', label: 'Saved games', icon: Bookmark },
   { href: '/defense-vs-position', label: 'Defense vs Position', icon: ShieldCheck },
   { href: '/teams', label: 'Teams', icon: Gauge },
   { href: '/usage', label: 'Player Usage', icon: ChartNoAxesColumnIncreasing },
@@ -2094,6 +2097,7 @@ function Router() {
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
     <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
+    <Route path="/saved-games"><ConsumerShell><div className="consumer-page"><h1>Saved games</h1><p>Sign in to keep your favorite matchups across visits.</p><Link href="/sign-in" className="button button-primary">Sign in</Link></div></ConsumerShell></Route>
     <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
     <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
@@ -2106,6 +2110,7 @@ function Router() {
       <Route path="/admin/*" component={AdminRoutes} />
       <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
       <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
+      <Route path="/saved-games"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
       <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
       <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>

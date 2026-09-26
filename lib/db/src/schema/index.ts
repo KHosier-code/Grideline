@@ -4,3 +4,4 @@ export * from "./settings";
 export * from "./player-identity";
 export * from "./usage-analytics";
 export * from "./game-alerts";
+export * from "./saved-games";

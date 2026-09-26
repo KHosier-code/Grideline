@@ -685,6 +685,70 @@ paths:
           description: Sign-in required
         "503":
           $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/saved-games/ids:
+    get:
+      operationId: listSavedGameIds
+      tags: [nfl]
+      summary: List the signed-in user's saved game IDs
+      responses:
+        "200":
+          description: Saved game IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+        "401":
+          description: Sign in required
+  /consumer/saved-games:
+    get:
+      operationId: listSavedGames
+      tags: [nfl]
+      summary: Read the signed-in user's saved games with current persisted evidence
+      responses:
+        "200":
+          description: Saved games
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ConsumerGame" }
+        "401":
+          description: Sign in required
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/saved-games/{gameId}:
+    parameters:
+      - name: gameId
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      operationId: saveConsumerGame
+      tags: [nfl]
+      summary: Save a game for the signed-in user
+      responses:
+        "204":
+          description: Saved
+        "400":
+          $ref: "#/components/responses/ConsumerInvalidRequest"
+        "401":
+          description: Sign in required
+        "404":
+          $ref: "#/components/responses/ConsumerGameNotFound"
+        "409":
+          description: Saved game limit reached
+    delete:
+      operationId: removeSavedConsumerGame
+      tags: [nfl]
+      summary: Remove a game from the signed-in user's saves
+      responses:
+        "204":
+          description: Removed or already absent
+        "400":
+          $ref: "#/components/responses/ConsumerInvalidRequest"
+        "401":
+          description: Sign in required
   /consumer/performance:
     get:
       operationId: getConsumerPerformance

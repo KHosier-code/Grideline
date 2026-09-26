@@ -1,5 +1,8 @@
 import type { ConsumerGame, ConsumerMarketQuote } from '@workspace/api-client-react';
-import { AlertTriangle, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
+import { getListSavedGameIdsQueryKey, getListSavedGamesQueryKey, useListSavedGameIds, useSaveConsumerGame, useRemoveSavedConsumerGame } from '@workspace/api-client-react';
+import { useAuth } from '@clerk/react';
+import { useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, Bookmark, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useEffect, useState } from 'react';
 
@@ -38,11 +41,42 @@ export function formatQuote(quote: ConsumerMarketQuote | null, kind: 'spread' | 
 
 const score = (value?: number | null) => value === null || value === undefined ? '—' : value.toFixed(1);
 
+export function SaveGameButton({ gameId }: { gameId: string }) {
+  const { isSignedIn, userId } = useAuth();
+  const client = useQueryClient();
+  const ids = useListSavedGameIds({ query: {
+    queryKey: [...getListSavedGameIdsQueryKey(), userId],
+    enabled: Boolean(isSignedIn && userId),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  } });
+  const refresh = () => {
+    void client.invalidateQueries({ queryKey: getListSavedGameIdsQueryKey() });
+    void client.invalidateQueries({ queryKey: getListSavedGamesQueryKey() });
+  };
+  const save = useSaveConsumerGame({ mutation: { onSuccess: refresh } });
+  const remove = useRemoveSavedConsumerGame({ mutation: { onSuccess: refresh } });
+  if (!isSignedIn) return <Link href="/sign-in" className="save-game-button" aria-label="Sign in to save this game"><Bookmark size={15} aria-hidden="true" /> Sign in to save</Link>;
+  const saved = ids.data?.includes(gameId) ?? false;
+  const pending = save.isPending || remove.isPending;
+  return <span className="save-game-control">
+    <button type="button" className="save-game-button" aria-pressed={saved} disabled={pending || ids.isLoading || ids.isError}
+      onClick={() => saved ? remove.mutate({ gameId }) : save.mutate({ gameId })}>
+      <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" /> {pending ? 'Updating…' : saved ? 'Remove saved game' : 'Save game'}
+    </button>
+    {(ids.isError || save.isError || remove.isError) && <small role="alert">{ids.isError ? 'Saved games unavailable. Reload to retry.' : 'Could not update saved games. Try again.'}</small>}
+  </span>;
+}
+
 export function ConsumerGameCard({ game, compact = false, href = `/games/${game.gameId}` }: { game: ConsumerGame; compact?: boolean; href?: string }) {
   const final = game.finalScore;
   const prediction = game.prediction;
+  const spread = game.marketBoard.comparisons.find((comparison) => comparison.market === 'spread');
+  const spreadQuote = game.recommendation.markets.spread && (!game.kickoffTime || new Date(game.kickoffTime).getTime() > Date.now())
+    ? spread?.selectedQuote ?? null : null;
   return (
-    <Link href={href} className="consumer-game-card">
+    <div className="consumer-game-card">
+    <Link href={href} className="consumer-game-card-link">
       <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : game.dataConfidence.label}</span></div>
       <div className="consumer-matchup">
         <div><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(prediction?.projectedAwayScore)}</b>
@@ -50,10 +84,12 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
       </div>
       {!compact && <div className="consumer-card-metrics">
         <span><small>Projection</small>{prediction ? `${score(prediction.projectedMargin)} margin` : game.availability.prediction ?? 'Updating'}</span>
-        <span><small>Market spread</small>{game.recommendation.markets.spread && (!game.kickoffTime || new Date(game.kickoffTime).getTime() > Date.now()) ? formatQuote(game.marketBoard.comparisons.find((comparison) => comparison.market === 'spread')?.selectedQuote ?? null, 'spread') : 'Current comparison unavailable'}</span>
+         <span><small>Market spread</small>{spreadQuote ? formatQuote(spreadQuote, 'spread') : game.availability.market ?? 'Current comparison unavailable'}</span>
       </div>}
       <div className="consumer-game-card-foot"><span>{game.dataConfidence.reason ?? `${game.dataConfidence.label} data confidence`}</span><ChevronRight className="h-4 w-4" /></div>
     </Link>
+    <div className="consumer-game-card-save"><SaveGameButton gameId={game.gameId} /></div>
+    </div>
   );
 }
 

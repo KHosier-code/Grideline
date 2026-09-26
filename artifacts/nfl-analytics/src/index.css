@@ -505,6 +505,15 @@
 .consumer-game-card, .premium-hero, .terminal-header, .board-disclosure, .consumer-source-health { box-shadow: 0 12px 35px hsl(228 34% 3% / .08); }
 .consumer-game-card { border-radius: 13px; transition: border-color .16s, transform .16s, box-shadow .16s; }
 .consumer-game-card:hover { border-color: hsl(var(--accent) / .7); transform: translateY(-2px); }
+.consumer-game-card-link { display: block; color: inherit; text-decoration: none; }
+.consumer-game-card-save { padding: 10px 17px; border-top: 1px solid hsl(var(--border)); }
+.save-game-button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: 12px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.save-game-button:hover, .save-game-button[aria-pressed="true"] { border-color: hsl(var(--accent)); color: hsl(var(--accent)); }
+.save-game-button:disabled { cursor: not-allowed; opacity: .5; }
+.save-game-control { display: inline-flex; flex-direction: column; gap: 4px; }
+.save-game-control small { max-width: 210px; color: hsl(var(--destructive)); font-size: 11px; }
+.consumer-detail-save { margin: 12px 0; }
+.saved-games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; margin-top: 20px; }
 .consumer-game-card-head, .consumer-game-card-foot { font-size: 10px; letter-spacing: .02em; line-height: 1.5; }
 .consumer-card-metrics { background: hsl(var(--secondary) / .55); }
 .terminal-header { border-radius: 15px; }

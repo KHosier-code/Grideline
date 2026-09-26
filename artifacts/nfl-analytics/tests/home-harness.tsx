@@ -3,6 +3,8 @@
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Route, Router, Switch } from 'wouter';
+import { ClerkProvider } from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
 import { ThemeProvider, useTheme } from '../src/lib/theme';
 import ConsumerHome from '../src/pages/consumer/ConsumerHome';
 import ConsumerGameDetail from '../src/pages/consumer/ConsumerGameDetail';
@@ -25,8 +27,11 @@ function Harness() {
 
 createRoot(document.getElementById('root')!).render(
   <ThemeProvider>
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <Router><Harness /></Router>
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY)}
+      proxyUrl={import.meta.env.VITE_CLERK_PROXY_URL}>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <Router><Harness /></Router>
+      </QueryClientProvider>
+    </ClerkProvider>
   </ThemeProvider>,
 );

@@ -9,7 +9,7 @@ import {
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { Link } from 'wouter';
-import { ConsumerLoading, ConsumerMessage, formatKickoff, formatQuote, useConsumerNow } from './consumer-ui';
+import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, formatQuote, useConsumerNow } from './consumer-ui';
 import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketComparison';
 import { MarketConfidenceSummary } from '../../components/MarketConfidence';
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
@@ -75,6 +75,7 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
           <small>Informational comparisons only.</small>
         </div>
         <div className="tc-action">
+          <SaveGameButton gameId={game.gameId} />
           <button
             type="button"
             className="btn-icon evidence-toggle"

@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, lte, sql } from "drizzle-orm";
+import { getAuth } from "@clerk/express";
 import { Router, type IRouter, type NextFunction, type Request, type Response } from "express";
 import {
   db,
@@ -17,6 +18,7 @@ import {
   playersTable,
   oddsApiRequestsTable,
   oddsEventAuditsTable,
+  savedGamesTable,
 } from "@workspace/db";
 import {
   gameSpecificSnapshot,
@@ -46,7 +48,7 @@ import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
-import { GetConsumerScheduleSelectionResponse } from "@workspace/api-zod";
+import { GetConsumerScheduleSelectionResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 import {
   completeGameMarketObservation,
@@ -97,7 +99,7 @@ const SUPPORTED_CONSUMER_BOOKS = new Set(["DraftKings", "FanDuel"]);
 const SUPPORTED_CONSUMER_MARKETS = new Set(["spread", "total", "moneyline"]);
 const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
 
-type ConsumerFilters = { season?: number; week?: number; gameId?: string; asOf?: Date };
+type ConsumerFilters = { season?: number; week?: number; gameId?: string; gameIds?: string[]; asOf?: Date };
 
 export const USAGE_METRICS = ["snapShare", "attempts", "completions", "passingYards", "passingTds", "targets", "targetShare", "receptions", "receivingYards", "receivingTds", "carries", "rushingYards", "totalTd", "yardsPerTarget", "yardsPerCarry"] as const;
 export const UNSUPPORTED_USAGE_METRICS = ["redZoneTouches", "redZoneTargets", "explosiveRate"] as const;
@@ -1231,7 +1233,8 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
     filters.season === undefined ? undefined : eq(gamesTable.season, filters.season),
     filters.week === undefined ? undefined : eq(gamesTable.week, filters.week),
     filters.gameId === undefined ? undefined : eq(gamesTable.gameId, filters.gameId),
-    filters.season === undefined && filters.week === undefined && filters.gameId === undefined
+    filters.gameIds === undefined ? undefined : inArray(gamesTable.gameId, filters.gameIds),
+    filters.season === undefined && filters.week === undefined && filters.gameId === undefined && filters.gameIds === undefined
       ? gt(gamesTable.kickoffTime, asOf)
       : undefined,
   ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
@@ -1239,7 +1242,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(asc(gamesTable.kickoffTime), asc(gamesTable.gameId))
     .limit(MAX_CONSUMER_GAMES);
-  const games = filters.season === undefined && filters.week === undefined && filters.gameId === undefined
+  const games = filters.season === undefined && filters.week === undefined && filters.gameId === undefined && filters.gameIds === undefined
     ? queriedGames.filter((game) => ["scheduled", "pregame"].includes(interpretNflGameState(game, asOf)))
     : queriedGames;
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
@@ -1583,6 +1586,85 @@ router.get("/consumer/games", async (req, res): Promise<void> => {
     req.log.error({ error }, "Consumer games read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });
   }
+});
+
+// Saved rows identify matchups; projection and market evidence is always read fresh.
+function savedGameUser(req: Request, res: Response): string | null {
+  const userId = getAuth(req).userId;
+  if (!userId) res.status(401).json({ error: "Sign in to save games." });
+  return userId;
+}
+
+router.get("/consumer/saved-games/ids", async (req, res): Promise<void> => {
+  const userId = savedGameUser(req, res);
+  if (!userId) return;
+  const rows = await db.select({ gameId: savedGamesTable.gameId }).from(savedGamesTable)
+    .where(eq(savedGamesTable.userId, userId)).orderBy(desc(savedGamesTable.createdAt), desc(savedGamesTable.gameId));
+  res.set("Cache-Control", "private, no-store");
+  res.json(ListSavedGameIdsResponse.parse(rows.map((row) => row.gameId)));
+});
+
+router.get("/consumer/saved-games", async (req, res): Promise<void> => {
+  const userId = savedGameUser(req, res);
+  if (!userId) return;
+  try {
+    const rows = await db.select({ gameId: savedGamesTable.gameId }).from(savedGamesTable)
+      .where(eq(savedGamesTable.userId, userId)).orderBy(desc(savedGamesTable.createdAt), desc(savedGamesTable.gameId));
+    const ids = rows.map((row) => row.gameId);
+    const games = ids.length ? await consumerGames({ gameIds: ids }) : [];
+    const byId = new Map(games.map((game) => [game.gameId, game]));
+    res.set("Cache-Control", "private, no-store");
+    res.json(ListSavedGamesResponse.parse(ids.flatMap((id) => {
+      const game = byId.get(id);
+      return game ? [game] : [];
+    })));
+  } catch (error) {
+    req.log.error({ error }, "Saved games read failed");
+    res.status(503).json({ error: "Saved games are temporarily unavailable.", code: "consumer_data_unavailable" });
+  }
+});
+
+router.put("/consumer/saved-games/:gameId", async (req, res): Promise<void> => {
+  const userId = savedGameUser(req, res);
+  if (!userId) return;
+  const parsed = SaveConsumerGameParams.safeParse(req.params);
+  if (!parsed.success || !parsed.data.gameId.trim() || parsed.data.gameId.length > 256) {
+    res.status(400).json({ error: "Invalid game ID.", code: "invalid_request" });
+    return;
+  }
+  const gameId = parsed.data.gameId;
+  const [game] = await db.select({ gameId: gamesTable.gameId }).from(gamesTable).where(eq(gamesTable.gameId, gameId));
+  if (!game) {
+    res.status(404).json({ error: "This game is not available.", code: "game_not_found" });
+    return;
+  }
+  const atLimit = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${userId}))`);
+    const [existing] = await tx.select({ gameId: savedGamesTable.gameId }).from(savedGamesTable)
+      .where(and(eq(savedGamesTable.userId, userId), eq(savedGamesTable.gameId, gameId)));
+    if (existing) return false;
+    const [{ total }] = await tx.select({ total: count() }).from(savedGamesTable).where(eq(savedGamesTable.userId, userId));
+    if (total >= MAX_CONSUMER_GAMES) return true;
+    await tx.insert(savedGamesTable).values({ userId, gameId }).onConflictDoNothing();
+    return false;
+  });
+  if (atLimit) {
+    res.status(409).json({ error: "You can save up to 100 games. Remove one before adding another." });
+    return;
+  }
+  res.sendStatus(204);
+});
+
+router.delete("/consumer/saved-games/:gameId", async (req, res): Promise<void> => {
+  const userId = savedGameUser(req, res);
+  if (!userId) return;
+  const parsed = RemoveSavedConsumerGameParams.safeParse(req.params);
+  if (!parsed.success || !parsed.data.gameId.trim() || parsed.data.gameId.length > 256) {
+    res.status(400).json({ error: "Invalid game ID.", code: "invalid_request" });
+    return;
+  }
+  await db.delete(savedGamesTable).where(and(eq(savedGamesTable.userId, userId), eq(savedGamesTable.gameId, parsed.data.gameId)));
+  res.sendStatus(204);
 });
 
 export function consumerGameDetailHandler(loadGames: typeof consumerGames = consumerGames) {
@@ -2193,7 +2275,7 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
         || a.gameId.localeCompare(b.gameId)
         || a.zone - b.zone
         || a.teamId.localeCompare(b.teamId));
-      const zones = (rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5]).map((zone) => {
+      const zones = metricZones.map((zone) => {
         const rows = coveredAppearances.map((appearance) =>
           playerFactFor(playerId, appearance, zone, chronologicalFacts));
         const completePlayerEvidence = rows.length > 0 && rows.every(Boolean);
@@ -2212,13 +2294,8 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
         const teamCarries = coveredAppearances.length > 0 && denominators.every(Boolean)
           ? denominators.reduce((total, denominator) => total + denominator!.carries, 0) : null;
         return {
-          zone,
-          targets,
-          carries,
-          receivingTouchdowns,
-          rushingTouchdowns,
-          teamTargets,
-          teamCarries,
+          zone, targets, carries, receivingTouchdowns, rushingTouchdowns,
+          teamTargets, teamCarries,
           targetShare: redZoneShare(targets, teamTargets),
           carryShare: redZoneShare(carries, teamCarries),
         };
@@ -2273,7 +2350,7 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
             teamId: appearance.teamId,
             offenseSnaps: snapByPlayerGame.get(`${playerId}:${selectedGameId}`)?.offenseSnaps ?? null,
             offensePct: snapByPlayerGame.get(`${playerId}:${selectedGameId}`)?.offensePct ?? null,
-            zones: (rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5]).map((zone) => {
+            zones: metricZones.map((zone) => {
               const fact = playerFactFor(playerId, appearance, zone, gameRows);
               const denominator = teamDenominators.get(`${selectedGameId}:${appearance.teamId}:${zone}`);
               return {
