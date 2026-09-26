@@ -225,3 +225,58 @@ for (const width of [1280, 390]) {
     expect(errors).toEqual([]);
   });
 }
+
+for (const { label, game, valid } of [
+  { label: 'valid', game: '2026_01_BUF_NYJ', valid: true },
+  { label: 'invalid', game: 'missing-game', valid: false },
+]) {
+  test(`Player Usage waits for schedule validation on a ${label} shared game link`, async ({ page }) => {
+    const usageRequests: URL[] = [];
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    let releaseSchedule!: () => void;
+    let scheduleRequests = 0;
+    const scheduleGate = new Promise<void>(resolve => { releaseSchedule = resolve; });
+    await page.route('**/api/consumer/player-usage-games*', async route => {
+      scheduleRequests++;
+      await scheduleGate;
+      // The first navigation is intentionally aborted by the reload.
+      try {
+        await route.fulfill({ json: {
+          status: 'available', season: 2026,
+          games: [{
+            gameId: '2026_01_BUF_NYJ', season: 2026, week: 1,
+            kickoffTime: '2026-09-13T17:00:00Z', matchup: { away: 'BUF', home: 'NYJ' },
+          }],
+        } });
+      } catch (error) {
+        if (!route.request().failure()) throw error;
+      }
+    });
+    await page.route('**/api/consumer/player-usage?*', route => {
+      usageRequests.push(new URL(route.request().url()));
+      return route.fulfill({ json: response });
+    });
+
+    try {
+      await page.goto(`/tests/player-usage.html?game=${game}`);
+      await expect(page.getByText('Validating game context...')).toBeVisible();
+      await page.reload();
+      await expect.poll(() => scheduleRequests).toBeGreaterThanOrEqual(2);
+      await expect(page.getByText('Validating game context...')).toBeVisible();
+      expect(new URL(page.url()).searchParams.get('game')).toBe(game);
+      expect(usageRequests).toHaveLength(0);
+
+      releaseSchedule();
+      await expect.poll(() => new URL(page.url()).searchParams.get('game')).toBe(valid ? game : null);
+      await expect.poll(() => usageRequests.length).toBeGreaterThan(0);
+      expect(usageRequests.every(url => url.searchParams.get('game') === (valid ? game : null))).toBe(true);
+      await page.getByTestId('disclosure-usage-context').locator('summary').click();
+      await expect(page.getByTestId('select-usage-game')).toHaveValue(valid ? game : '');
+      await expect(page.getByTestId('table-usage-players')).toBeVisible();
+      expect(errors).toEqual([]);
+    } finally {
+      releaseSchedule();
+    }
+  });
+}
