@@ -406,3 +406,17 @@ mtime_ms = 1790387471034
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/67bf04fc-8cce-4e59-b2b5-8662d79ab9c6/c2031b20-fd66-44a2-a684-f95a34849d10"
 storage_version_token = "1790387539331663"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "dCS6m5Ng8dEW63od1zRTZ"
+uri = "file://reports/gridline-two-stage-deployment-recovery-assessment.md"
+type = "text"
+title = "Gridline two-stage deployment recovery assessment"
+description = "Current production/development evidence, staging limitations, backup gap, worker risk, and owner actions."
+logical_id = "c173b4ef-bcb2-42ed-b7c7-b5d66f3b1ff5"
+content_hash = "sha256:15927b03b69a4b724a1549f27a6c6d85d2bea19f0c51af742199c9b599040f78"
+size = 11856
+mtime_ms = 1790388018758
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/c173b4ef-bcb2-42ed-b7c7-b5d66f3b1ff5/1c1fd5ae-3f60-46cc-b3bd-c7f40646d4d2"
+storage_version_token = "1790388043947350"
+content_type = "text/markdown"

@@ -1,0 +1,67 @@
+# GRIDLINE — TWO-STAGE DEPLOYMENT RECOVERY PLAN
+
+OBJECTIVE
+
+Determine whether we can safely release the completed red-zone functionality without waiting for Replit Support.
+
+All application-level development gates have passed. Only the managed production migration sequencing remains unresolved.
+
+Investigate a two-stage deployment:
+
+STAGE A: Apply the additive red-zone schema while keeping existing production application behavior unchanged.
+
+STAGE B: Publish the new application and worker code after verifying the schema exists.
+
+Do not assume this approach is supported. Establish its feasibility before proceeding.
+
+REQUIREMENTS
+
+1. Inspect the exact current production revision, development revision, deployment configuration and database state.
+
+2. Determine whether Replit's managed publishing workflow supports deploying the approved additive schema independently of enabling the new application functionality.
+
+3. Evaluate whether a temporary production database branch and preview deployment can safely validate the migration and startup behavior.
+
+4. Prepare an independently verifiable production-data backup or supported recovery checkpoint. Do not treat application rollback as database restoration.
+
+5. Establish how to preserve the existing production application's functionality during Stage A.
+
+6. Identify how to prevent unexpected provider synchronization, worker duplication or changes to Phase 6.1.
+
+7. If a supported two-stage deployment is possible, prepare exact instructions for both stages, with separate owner approval required for each.
+
+8. Define measurable post-deployment checks:
+   - Correct production database identity.
+   - Both new red-zone tables and three indexes present.
+   - Existing production data intact.
+   - API health.
+   - Worker health and single-worker ownership.
+   - Existing Phase 6.1 snapshots intact.
+   - No unexpected provider activity.
+   - Red-zone endpoint functioning.
+   - Authorized Week 2 production refresh and independent fact reconciliation.
+
+9. If Replit's managed workflow cannot support the staged procedure, stop and identify the specific remaining platform limitation.
+
+Do not:
+- Publish.
+- Execute production migrations.
+- Start additional production workers.
+- Roll back production.
+- Change database bindings.
+- Modify Phase 6.1.
+- Trigger production provider synchronization.
+
+FINAL OUTPUT
+
+Return either:
+
+TWO-STAGE RELEASE FEASIBLE — READY FOR OWNER APPROVAL
+
+or
+
+HOLD — NO VERIFIED SAFE DEPLOYMENT PATH
+
+Provide the evidence and exact owner actions.
+
+Do not execute either deployment stage without my separate approval.

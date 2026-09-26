@@ -14,3 +14,9 @@ For Replit-managed PostgreSQL, do **not** turn an unproven Publish ordering guar
 **Why:** The managed database migration guidance explicitly prohibits app-owned production DDL even when a documentation search summary suggests generic pre-deploy migration commands. Such a command would bypass Publish's rename/data-loss review and run on every deployment.
 
 **How to apply:** Distinguish managed from external databases before proposing a separate migration step. For managed databases, recommend only a confirmed platform-supported owner workflow, never a direct SQL workaround.
+
+Do not assume a Publish cutover serializes old and new background workers. The publishing guide describes preparing the new version alongside the current one before URL promotion; it does not guarantee the old process exits before the new worker starts.
+
+**Why:** A schema-first compatibility release would still be a code/worker release, and app-level schema readiness does not prevent overlapping workers from initiating different scheduled jobs.
+
+**How to apply:** Before relying on staged Publish for a worker-backed VM, obtain deployment-specific handover guarantees or independently enforce/process-test singleton ownership, then compare provider run evidence across the cutover. Per-job leases are not a global worker singleton.
