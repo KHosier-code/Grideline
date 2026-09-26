@@ -1458,24 +1458,30 @@ async function tick() {
   return tickInFlight;
 }
 
-export async function startDataScheduler() {
-  if (!schedulerProcessOwnsRecurringJobs()) {
+export async function startDataScheduler(options: {
+  environment?: { GRIDLINE_SCHEDULER_WORKER?: string };
+  prepare?: typeof prepareJobs;
+  recover?: typeof recoverMissedJobs;
+} = {}) {
+  if (!schedulerProcessOwnsRecurringJobs(options.environment)) {
     logger.info("Recurring data scheduler is worker-owned; API process will not start it");
     return;
   }
   if (timer) return;
-  schedulerStartedAt = new Date();
   try {
     const startupNow = new Date();
-    await prepareJobs(startupNow);
-    await recoverMissedJobs(startupNow);
+    await (options.prepare ?? prepareJobs)(startupNow);
+    await (options.recover ?? recoverMissedJobs)(startupNow);
     timer = setInterval(() => {
       void tick();
     }, TICK_MS);
     timer.unref?.();
+    schedulerStartedAt = startupNow;
     logger.info({ timezone: FOOTBALL_TIMEZONE }, "Recurring data scheduler started");
   } catch (error) {
+    stopDataScheduler();
     logger.error({ error }, "Recurring data scheduler could not initialize");
+    throw error;
   }
 }
 

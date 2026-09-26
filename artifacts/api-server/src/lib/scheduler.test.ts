@@ -13,6 +13,8 @@ import {
   shouldRecoverMissedOccurrence,
   shouldRetireFlexedConfidenceOccurrence,
   shouldRearmDynamicOccurrence,
+  startDataScheduler,
+  stopDataScheduler,
   zonedTimeToUtc,
 } from "./scheduler";
 import { shouldInsertLatestState } from "./availability";
@@ -51,6 +53,43 @@ test("startup recovery is separate from normal due execution", () => {
   assert.equal(shouldRecoverMissedOccurrence(new Date("2025-09-07T11:59:00.000Z"), null, now), true);
   assert.equal(shouldRecoverMissedOccurrence(new Date("2025-09-07T12:01:00.000Z"), null, now), false);
   assert.equal(shouldRecoverMissedOccurrence(new Date("2025-09-07T11:59:00.000Z"), new Date("2025-09-07T12:05:00.000Z"), now), false);
+});
+
+test("worker scheduler startup fails closed on preparation and recovery errors, then can retry", async (t) => {
+  t.after(stopDataScheduler);
+  const environment = { GRIDLINE_SCHEDULER_WORKER: "1" };
+  const events: string[] = [];
+  const preparedFailure = new Error("isolated preparation failure");
+  const recoveryFailure = new Error("isolated recovery failure");
+  const prepare = async () => { events.push("prepare"); };
+  const recover = async () => { events.push("recover"); };
+
+  await assert.rejects(startDataScheduler({
+    environment,
+    prepare: async () => { events.push("prepare-failed"); throw preparedFailure; },
+    recover,
+  }), (error) => error === preparedFailure);
+  assert.deepEqual(events, ["prepare-failed"]);
+
+  await assert.rejects(startDataScheduler({
+    environment,
+    prepare,
+    recover: async () => { events.push("recover-failed"); throw recoveryFailure; },
+  }), (error) => error === recoveryFailure);
+  assert.deepEqual(events, ["prepare-failed", "prepare", "recover-failed"]);
+
+  // If either failed attempt had installed a timer, this retry would return
+  // early and never invoke the isolated startup dependencies.
+  await startDataScheduler({ environment, prepare, recover });
+  assert.deepEqual(events, ["prepare-failed", "prepare", "recover-failed", "prepare", "recover"]);
+});
+
+test("API role does not prepare or recover worker scheduler jobs", async () => {
+  await startDataScheduler({
+    environment: { GRIDLINE_SCHEDULER_WORKER: undefined },
+    prepare: async () => { throw new Error("API must not prepare scheduler jobs"); },
+    recover: async () => { throw new Error("API must not recover scheduler jobs"); },
+  });
 });
 
 test("a flexed kickoff rearms only a genuinely new future window", () => {

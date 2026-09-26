@@ -93,7 +93,18 @@ if (rehearsal) {
 } else {
   const { startDataScheduler, stopDataScheduler } = await import("./lib/scheduler");
   process.env.GRIDLINE_SCHEDULER_WORKER = "1";
-  await startDataScheduler();
+  try {
+    await startDataScheduler();
+  } catch (error) {
+    // No independent feed or retention timer may start without the durable
+    // scheduler. Release the ownership connection before failing the worker.
+    try {
+      await release();
+    } finally {
+      await pool.end();
+    }
+    throw error;
+  }
   const { startFeedScheduler } = await import("./lib/feed-scheduler");
   const { startUsageAnalyticsRetention } = await import("./lib/usage-analytics-retention");
   const { startPlayerRecoveryReceiptRetention } = await import("./lib/player-recovery-receipts");
