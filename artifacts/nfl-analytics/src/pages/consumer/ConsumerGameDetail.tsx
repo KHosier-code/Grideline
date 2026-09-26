@@ -13,6 +13,8 @@ import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
 import { GameAlerts } from './GameAlerts';
 import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useConsumerNow } from './consumer-ui';
+import { useEffect } from 'react';
+import { setPublicMetadata } from '../../lib/public-metadata';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -21,6 +23,16 @@ export default function ConsumerGameDetail() {
   const backHref = detailSearch ? `/games${detailSearch}` : '/games';
    const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
   const now = useConsumerNow();
+  useEffect(() => {
+    if (query.data) {
+      const away = query.data.matchup.away.name;
+      const home = query.data.matchup.home.name;
+      setPublicMetadata(`/games/${encodeURIComponent(gameId)}`, `${away} at ${home} | Gridline Game Detail`,
+        `View the ${away} at ${home} matchup, schedule and available saved model evidence. Predictions and market comparisons appear only when eligible data exists.`);
+    } else if (query.isError) {
+      setPublicMetadata(`/games/${encodeURIComponent(gameId)}`, 'Game unavailable | Gridline', 'This matchup could not be verified.', false);
+    }
+  }, [gameId, query.data, query.isError]);
   if (query.isLoading) return <ConsumerLoading label="Loading matchup details…" />;
   if (query.isError || !query.data) return <ConsumerMessage error title="This matchup is unavailable" detail="We couldn’t load this game right now. Return to Games and try again shortly." />;
   const game = query.data;
@@ -38,6 +50,7 @@ export default function ConsumerGameDetail() {
   return <div className="consumer-page consumer-detail">
     <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
     <div className="consumer-detail-save"><SaveGameButton gameId={game.gameId} /></div>
+    <p className="consumer-note mb-5">Saved evidence is not automatically an official prediction. <Link href="/methodology" className="font-semibold text-accent underline">Read how projections and results are verified</Link>.</p>
 
     <section className="premium-hero" data-section="game-header" data-testid="premium-hero" aria-label="Game summary">
       <div className="premium-hero-context">

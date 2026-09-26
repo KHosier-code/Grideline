@@ -64,5 +64,6 @@ export default function ConsumerHome() {
       {slate.games.map(game => <HomeGame key={game.gameId} game={game} now={now} selected={selectedId === game.gameId} onSelect={() => setSelectedId(current => current === game.gameId ? null : game.gameId)} />)}
     </section> : <ConsumerMessage title="No upcoming games are available" detail="The schedule has no future pregame matchups right now. Browse Games to see saved past matchups." />}
     <ConsumerSourceHealth health={health} compact />
+    <p className="consumer-note mt-6">Saved projections and source status are not guarantees. <Link href="/methodology" className="font-semibold text-accent underline">Read how Gridline handles evidence and limitations</Link>.</p>
   </div>;
 }

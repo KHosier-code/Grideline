@@ -17,6 +17,7 @@ import {
   YAxis,
 } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
+import { Link } from 'wouter';
 import { ConsumerLoading, ConsumerMessage, metric } from './consumer-ui';
 import './ConsumerPerformance.css';
 
@@ -174,6 +175,6 @@ export default function ConsumerPerformance() {
       </>}
       <p className="consumer-note">Opening and closing line comparisons are unavailable and are not shown. {chartData.openingClosingReason}</p>
     </section>}
-    <p className="consumer-note">{data.note}</p>
+    <p className="consumer-note">{data.note} <Link href="/methodology" className="font-semibold text-accent underline">How official predictions are graded and limited</Link>.</p>
   </div>;
 }

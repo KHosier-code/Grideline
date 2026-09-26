@@ -49,3 +49,4 @@
 - [Recovery rehearsal evidence](recovery-rehearsal-evidence.md) — bundled logs can hide blocked-fetch errors; verify persisted selected failures and unchanged sentinel rows.
 - [Matchup alert evidence](matchup-alert-evidence.md) — compare overlapping persisted evidence against the last material baseline; missing coverage must not become a change.
 - [Saved-game meaning](saved-game-meaning.md) — following a matchup stores identity, not a projection; keep evidence eligibility current and unavailable states explicit.
+- [Public metadata boundary](public-metadata-boundary.md) — verify game identity at request time for share previews; client head updates alone cannot make social cards accurate.

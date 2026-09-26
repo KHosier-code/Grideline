@@ -2,6 +2,8 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
+import { readFile } from 'node:fs/promises';
+import { documentForPath, injectMetadata } from './metadata.mjs';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
@@ -21,6 +23,32 @@ const basePath = process.env.BASE_PATH ?? '/';
 export default defineConfig({
   base: basePath,
   plugins: [
+    {
+      name: 'gridline-document-metadata',
+      configureServer(server) {
+        server.middlewares.use(async (req, res, next) => {
+          if (req.url?.split('?')[0] === `${basePath.replace(/\/$/, '')}/sitemap.xml`) {
+            const origin = new URL(process.env.PUBLIC_SITE_URL || 'https://gridelineanalytics.com').origin;
+            const prefix = basePath.replace(/\/$/, '');
+            const urls = ['/', '/games', '/methodology', '/performance'].map(p => `<url><loc>${origin}${prefix}${p}</loc></url>`).join('');
+            res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+            res.end(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
+            return;
+          }
+          if (req.method !== 'GET' || !req.headers.accept?.includes('text/html')) return next();
+          const pathname = new URL(req.url || '/', 'http://localhost').pathname;
+          if (/\.[a-z0-9]+$/i.test(pathname)) return next();
+          try {
+            const metadata = await documentForPath(pathname, { apiOrigin: 'http://localhost:80' });
+            const html = await readFile(path.resolve(import.meta.dirname, 'index.html'), 'utf8');
+            res.statusCode = metadata.status;
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-store');
+            res.end(injectMetadata(await server.transformIndexHtml(req.url || '/', html), metadata));
+          } catch (error) { next(error); }
+        });
+      },
+    },
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),

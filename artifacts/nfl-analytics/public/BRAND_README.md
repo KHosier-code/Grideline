@@ -7,6 +7,7 @@ These assets should be used in the production UI:
 - `logo-wordmark.png`: Authoritative wordmark logo. Use for primary branding and headers.
 - `logo-icon.png`: Authoritative compact icon. Use for favicons, small app icons, and tight UI spaces.
 - `control-room-hero.png`: Authoritative marketing and authentication hero image. Use for full-bleed background and split-layout auth screens.
+- `gridline-share.png`: Public 1200×630 share card composed from the approved Gridline wordmark on a plain background; no third-party/team/player imagery.
 
 ## Reference / Inspiration Assets
 - `dashboard-inspiration.png`: Layout inspiration/reference only. Do NOT display fake teams, stats, or imagery from this file in the production application. It serves as a visual system reference for spacing, typography, and density.
