@@ -32,6 +32,12 @@ test("classifies production database startup failures without exposing details",
     ),
     "smoke_query_failed",
   );
+  assert.equal(
+    classifyProductionDatabaseFailure(
+      new Error("Production red-zone schema is not ready: missing or invalid table red_zone_team_game_facts"),
+    ),
+    "schema_not_ready",
+  );
 });
 
 test("alert contains only allow-listed operational metadata", () => {

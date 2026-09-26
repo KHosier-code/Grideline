@@ -3,6 +3,7 @@ export type ProductionDatabaseFailureCategory =
   | "tls_policy_unsafe"
   | "tls_compatibility_warning"
   | "smoke_query_failed"
+  | "schema_not_ready"
   | "database_connection_failed";
 
 type ErrorWithCode = Error & { code?: unknown };
@@ -37,6 +38,9 @@ export function classifyProductionDatabaseFailure(
     "Production database smoke query returned an unexpected result"
   ) {
     return "smoke_query_failed";
+  }
+  if (error.message.startsWith("Production red-zone schema is not ready:")) {
+    return "schema_not_ready";
   }
 
   const code = (error as ErrorWithCode).code;

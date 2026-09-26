@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertRedZoneSchemaReady,
   assertNoPostgresTlsCompatibilityWarnings,
   isPostgresTlsCompatibilityWarning,
   recordReleaseSecurityEvidence,
+  runProductionDatabasePreflight,
   runProductionDatabaseSmokeCheck,
 } from "./production-database-smoke";
+import { startProductionServices } from "./production-startup";
 
 test("uses a metadata-free connectivity query", async () => {
   let query = "";
@@ -88,4 +91,90 @@ test("fails the smoke check when a PostgreSQL TLS warning was captured", () => {
       ]),
     /TLS compatibility warning detected/,
   );
+});
+
+const checkedAt = new Date("2026-09-15T12:00:00.000Z");
+function schemaFixture(missing: { object_type: string; object_name: string }[] = []) {
+  const queries: string[] = [];
+  return {
+    queries,
+    async query(text: string) {
+      queries.push(text);
+      if (text === "SELECT 1 AS connection_check") return { rows: [{ connection_check: 1 }] };
+      if (text.includes("pg_catalog.pg_constraint")) return { rows: missing };
+      if (text.includes("INSERT INTO release_security_evidence")) {
+        return { rows: [{
+          build_id: "build-1", checked_at: checkedAt,
+          select_one_result: 1, verify_full_passed: true,
+        }] };
+      }
+      throw new Error(`Unexpected database operation: ${text}`);
+    },
+  };
+}
+
+test("read-only readiness query checks both tables and their owned, valid constraints and indexes", async () => {
+  const fixture = schemaFixture();
+  await assertRedZoneSchemaReady(fixture);
+  const [query] = fixture.queries;
+  assert.match(query, /red_zone_player_game_facts/);
+  assert.match(query, /red_zone_team_game_facts/);
+  for (const object of [
+    "red_zone_player_game_facts_pkey", "red_zone_player_game_zone_check",
+    "red_zone_player_game_counts_check", "red_zone_team_game_facts_pkey",
+    "red_zone_team_game_zone_check", "red_zone_team_game_counts_check",
+    "red_zone_player_game_season_idx", "red_zone_player_game_team_idx",
+    "red_zone_team_game_season_idx",
+  ]) assert.ok(query.includes(object), `Missing required object ${object}`);
+  assert.match(query, /con\.convalidated/);
+  assert.match(query, /ix\.indisvalid AND ix\.indisready/);
+  assert.match(query, /c\.oid = con\.conrelid/);
+  assert.match(query, /ix\.indrelid/);
+  assert.doesNotMatch(query, /\b(CREATE|ALTER|DROP|TRUNCATE|INSERT|UPDATE|DELETE)\b/i);
+});
+
+test("missing table fixture prevents both production processes and release evidence", async () => {
+  const fixture = schemaFixture([{ object_type: "table", object_name: "red_zone_team_game_facts" }]);
+  const started: string[] = [];
+  await assert.rejects(
+    startProductionServices(
+      () => runProductionDatabasePreflight(fixture, "build-1"),
+      () => { started.push("worker"); },
+      () => { started.push("api"); },
+    ),
+    /Production red-zone schema is not ready: missing or invalid table red_zone_team_game_facts.*Replit Publish/,
+  );
+  assert.deepEqual(started, []);
+  assert.equal(fixture.queries.length, 2);
+  assert.ok(fixture.queries.every((query) => /^\s*(SELECT|WITH)\b/i.test(query)));
+});
+
+test("missing or invalid constraint and index block startup too", async () => {
+  for (const object of [
+    { object_type: "constraint", object_name: "red_zone_player_game_zone_check" },
+    { object_type: "index", object_name: "red_zone_team_game_season_idx" },
+  ]) {
+    const fixture = schemaFixture([object]);
+    await assert.rejects(
+      runProductionDatabasePreflight(fixture, "build-1"),
+      new RegExp(`${object.object_type} ${object.object_name}`),
+    );
+    assert.equal(fixture.queries.length, 2);
+  }
+});
+
+test("migrated fixture starts worker and API after readiness and evidence", async () => {
+  const fixture = schemaFixture();
+  const started: string[] = [];
+  const evidence = await startProductionServices(
+    () => runProductionDatabasePreflight(fixture, "build-1"),
+    () => { started.push("worker"); },
+    () => { started.push("api"); },
+  );
+  assert.deepEqual(started, ["worker", "api"]);
+  assert.deepEqual(fixture.queries.map((query) =>
+    query === "SELECT 1 AS connection_check" ? "connect"
+      : query.includes("pg_catalog.pg_constraint") ? "schema" : "evidence",
+  ), ["connect", "schema", "evidence"]);
+  assert.equal(evidence.buildId, "build-1");
 });

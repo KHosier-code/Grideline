@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { verifyProductionDatabase } from "./lib/production-database-smoke";
 import { createProductionDatabaseAlert } from "./lib/production-startup-alert";
+import { startProductionServices } from "./lib/production-startup";
 
 declare const __GRIDLINE_BUILD_ID__: string;
 
@@ -40,15 +41,17 @@ process.once("SIGTERM", () => stop("SIGTERM"));
 process.once("SIGINT", () => stop("SIGINT"));
 
 try {
-  const evidence = await verifyProductionDatabase(__GRIDLINE_BUILD_ID__);
+  const evidence = await startProductionServices(
+    () => verifyProductionDatabase(__GRIDLINE_BUILD_ID__),
+    () => start("Gridline data worker", workerPath),
+    () => start("Gridline API", apiPath),
+  );
   console.info("Production database smoke check passed", {
     buildId: evidence.buildId,
     checkedAt: evidence.checkedAt.toISOString(),
     selectOneResult: evidence.selectOneResult,
     verifyFullPassed: evidence.verifyFullPassed,
   });
-  start("Gridline data worker", workerPath);
-  start("Gridline API", apiPath);
 } catch (error) {
   console.error(
     "Production database smoke check failed; API and worker were not started",

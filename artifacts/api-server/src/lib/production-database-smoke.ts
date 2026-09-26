@@ -41,6 +41,80 @@ export async function runProductionDatabaseSmokeCheck(
   return 1;
 }
 
+// Names and ownership come from the managed Publish migration. This probe must
+// never repair schema: a failed Publish diff must stop both production services.
+export async function assertRedZoneSchemaReady(pool: QueryablePool): Promise<void> {
+  const result = await pool.query(`
+    WITH required_tables(table_name) AS (
+      VALUES ('red_zone_player_game_facts'), ('red_zone_team_game_facts')
+    ), required_constraints(table_name, object_name, constraint_type) AS (
+      VALUES
+        ('red_zone_player_game_facts', 'red_zone_player_game_facts_pkey', 'p'),
+        ('red_zone_player_game_facts', 'red_zone_player_game_zone_check', 'c'),
+        ('red_zone_player_game_facts', 'red_zone_player_game_counts_check', 'c'),
+        ('red_zone_team_game_facts', 'red_zone_team_game_facts_pkey', 'p'),
+        ('red_zone_team_game_facts', 'red_zone_team_game_zone_check', 'c'),
+        ('red_zone_team_game_facts', 'red_zone_team_game_counts_check', 'c')
+    ), required_indexes(table_name, object_name) AS (
+      VALUES
+        ('red_zone_player_game_facts', 'red_zone_player_game_season_idx'),
+        ('red_zone_player_game_facts', 'red_zone_player_game_team_idx'),
+        ('red_zone_team_game_facts', 'red_zone_team_game_season_idx')
+    )
+    SELECT 'table' AS object_type, t.table_name AS object_name
+    FROM required_tables t
+    WHERE NOT EXISTS (
+      SELECT 1 FROM pg_catalog.pg_class c
+      JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = current_schema() AND c.relname = t.table_name AND c.relkind IN ('r', 'p')
+    )
+    UNION ALL
+    SELECT 'constraint', k.object_name
+    FROM required_constraints k
+    WHERE NOT EXISTS (
+      SELECT 1 FROM pg_catalog.pg_constraint con
+      JOIN pg_catalog.pg_class c ON c.oid = con.conrelid
+      JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = current_schema() AND c.relname = k.table_name
+        AND c.relkind IN ('r', 'p')
+        AND con.conname = k.object_name AND con.contype = k.constraint_type
+        AND con.convalidated
+    )
+    UNION ALL
+    SELECT 'index', i.object_name
+    FROM required_indexes i
+    WHERE NOT EXISTS (
+      SELECT 1 FROM pg_catalog.pg_class idx
+      JOIN pg_catalog.pg_namespace n ON n.oid = idx.relnamespace
+      JOIN pg_catalog.pg_index ix ON ix.indexrelid = idx.oid
+      JOIN pg_catalog.pg_class c ON c.oid = ix.indrelid
+      WHERE n.nspname = current_schema() AND c.relnamespace = n.oid
+        AND c.relname = i.table_name AND idx.relname = i.object_name
+        AND idx.relkind IN ('i', 'I') AND ix.indisvalid AND ix.indisready
+    )
+    ORDER BY object_type, object_name
+  `);
+  const missing = result.rows as { object_type: string; object_name: string }[];
+  if (missing.length) {
+    throw new Error(
+      `Production red-zone schema is not ready: missing or invalid ${missing.map(
+        ({ object_type, object_name }) => `${object_type} ${object_name}`,
+      ).join(", ")}. Apply the managed schema diff through Replit Publish before starting the API and worker.`,
+    );
+  }
+}
+
+export async function runProductionDatabasePreflight(
+  pool: QueryablePool,
+  buildId: string,
+  checkTlsWarnings: () => Promise<void> = async () => {},
+): Promise<ProductionDatabaseEvidence> {
+  const selectOneResult = await runProductionDatabaseSmokeCheck(pool);
+  await assertRedZoneSchemaReady(pool);
+  await checkTlsWarnings();
+  return recordReleaseSecurityEvidence(pool, buildId, selectOneResult);
+}
+
 export async function recordReleaseSecurityEvidence(
   pool: QueryablePool,
   buildId: string,
@@ -103,10 +177,10 @@ export async function verifyProductionDatabase(
   try {
     const database = await import("@workspace/db");
     pool = database.pool;
-    const selectOneResult = await runProductionDatabaseSmokeCheck(pool);
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    assertNoPostgresTlsCompatibilityWarnings(tlsWarnings);
-    return await recordReleaseSecurityEvidence(pool, buildId, selectOneResult);
+    return await runProductionDatabasePreflight(pool, buildId, async () => {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      assertNoPostgresTlsCompatibilityWarnings(tlsWarnings);
+    });
   } finally {
     process.off("warning", onWarning);
     console.warn = originalWarn;
