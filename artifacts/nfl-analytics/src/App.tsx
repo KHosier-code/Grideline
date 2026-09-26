@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { SignIn, SignUp, UserButton, useAuth } from '@clerk/react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { SignIn, SignUp, UserButton, useAuth, useClerk } from '@clerk/react';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Activity,
@@ -84,6 +84,8 @@ import DefenseVsPositionLeague from '@/components/DefenseVsPosition';
 import ConsumerTeams from '@/pages/consumer/ConsumerTeams';
 import UsageAnalytics from '@/pages/admin/UsageAnalytics';
 import { useAdminStatus } from '@/hooks/use-admin-status';
+import { consumerAccountState } from '@/lib/consumer-account-state';
+import { ConsumerAccountAction, ConsumerWorkspaceLink } from '@/components/ConsumerAccountNavigation';
 import './index.css';
 
 import { AdminDepthChart } from '@/components/AdminDepthChart';
@@ -479,22 +481,23 @@ const consumerNav = [
 function ConsumerShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
   const admin = useAdminStatus();
-  const { isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { openUserProfile } = useClerk();
+  const account = consumerAccountState(isLoaded, isSignedIn, admin);
+  useEffect(() => setOpen(false), [location]);
   return <div className="consumer-shell">
     <header className="consumer-topbar">
       <Link href="/" className="consumer-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-6 w-6" /><strong>Gridline</strong></Link>
-      <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin"><ShieldCheck />Admin</Link>}</nav>
+      <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''}><Icon />{item.label}</Link>; })}<ConsumerWorkspaceLink verified={account.adminVerified} /></nav>
       <div className="consumer-account">
         <ThemeToggle />
-        {isSignedIn ? <>
-          <Link href="/admin" className="button button-subtle">Open dashboard</Link>
-          <UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} />
-        </> : <Link href="/sign-in" className="button button-subtle">Sign in</Link>}
-        <button type="button" aria-label="Open navigation" aria-expanded={open} onClick={() => setOpen(!open)}><Menu /></button>
+        <ConsumerAccountAction state={account} mobile={false} accountControl={<UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} />} />
+        <button ref={menuButton} className="consumer-menu-toggle" type="button" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-controls="consumer-mobile-navigation" aria-expanded={open} onClick={() => setOpen(!open)}><Menu aria-hidden="true" /></button>
       </div>
     </header>
-    {open && <nav className="consumer-mobile-nav" aria-label="Mobile navigation">{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</Link>}{isSignedIn ? <Link href="/admin" onClick={() => setOpen(false)}>Open dashboard</Link> : <Link href="/sign-in" onClick={() => setOpen(false)}>Sign in</Link>}<ThemeToggle /></nav>}
+    {open && <nav id="consumer-mobile-navigation" className="consumer-mobile-nav" aria-label="Mobile navigation" onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); } }}>{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}<ConsumerWorkspaceLink verified={account.adminVerified} onNavigate={() => setOpen(false)} /><ConsumerAccountAction state={account} mobile onNavigate={() => setOpen(false)} onManageAccount={() => { setOpen(false); openUserProfile(); }} /><ThemeToggle /></nav>}
     <main className="consumer-main">{children}</main>
   </div>;
 }
