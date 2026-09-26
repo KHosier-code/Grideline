@@ -15,6 +15,7 @@ export function WeeklyPickSection({ initialWeeklyPick, state, headingLevel = 'h1
         : state === 'error' ? <p>Pick unavailable right now. Please try again later.</p>
         : pick ? <><strong data-testid="weekly-pick-team">{pick.teamName}</strong><p>Winner locked from Gridline’s first verified lines for week {pick.week}. Not a guaranteed result.</p></>
         : <p>{initialWeeklyPick?.reason ?? 'Initial-line pick evidence is unavailable.'}</p>}
+      <Link href="/weekly-picks" className="visitor-pick-history">Review past official weekly picks</Link>
     </section>;
 }
 

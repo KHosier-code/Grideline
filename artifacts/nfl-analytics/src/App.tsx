@@ -82,6 +82,7 @@ import { useTheme } from '@/lib/theme';
 
 const ConsumerHome = lazy(() => import('@/pages/consumer/ConsumerHome'));
 const VisitorHome = lazy(() => import('@/pages/consumer/VisitorHome'));
+const ConsumerWeeklyPicks = lazy(() => import('@/pages/consumer/ConsumerWeeklyPicks'));
 const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
 const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
 const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
@@ -2144,6 +2145,7 @@ function Router() {
     <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
     <Route path="/saved-games"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
     <Route path="/methodology"><ConsumerShell><ConsumerMethodology /></ConsumerShell></Route>
+    <Route path="/weekly-picks"><ConsumerShell><ConsumerWeeklyPicks /></ConsumerShell></Route>
     <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
     <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
@@ -2159,6 +2161,7 @@ function Router() {
       <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
       <Route path="/saved-games"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
       <Route path="/methodology"><ConsumerShell><ConsumerMethodology /></ConsumerShell></Route>
+      <Route path="/weekly-picks"><ConsumerShell><ConsumerWeeklyPicks /></ConsumerShell></Route>
       <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
       <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>

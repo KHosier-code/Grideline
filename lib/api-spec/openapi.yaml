@@ -686,6 +686,26 @@ paths:
                 $ref: "#/components/schemas/ConsumerDashboard"
         "503":
           $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/weekly-picks:
+    get:
+      operationId: getConsumerWeeklyPicks
+      tags: [nfl]
+      summary: Read past persisted official weekly selections
+      parameters:
+        - name: season
+          in: query
+          schema: { type: integer, minimum: 2020 }
+      responses:
+        "200":
+          description: Historical weekly picks and unavailable evidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsumerWeeklyPickArchive"
+        "400":
+          description: Invalid season
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
   /consumer/schedule-selection:
     get:
       operationId: getConsumerScheduleSelection
@@ -1687,6 +1707,34 @@ components:
         games:
           type: array
           items: { $ref: "#/components/schemas/ConsumerPlayerUsageGame" }
+    ConsumerWeeklyPickArchive:
+      type: object
+      required: [seasons, season, weeks]
+      properties:
+        seasons: { type: array, items: { type: integer } }
+        season: { type: ["integer", "null"] }
+        weeks:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerArchivedWeeklyPick" }
+    ConsumerArchivedWeeklyPick:
+      type: object
+      required: [season, week, pick, reason]
+      properties:
+        season: { type: integer }
+        week: { type: integer }
+        pick:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [gameId, teamName, season, week, probability, observedAt]
+              properties:
+                gameId: { type: string }
+                teamName: { type: string }
+                season: { type: integer }
+                week: { type: integer }
+                probability: { type: number }
+                observedAt: { type: string, format: date-time }
+        reason: { type: ["string", "null"] }
     ConsumerDashboard:
       type: object
       required: [status, games, note, sourceHealth, initialWeeklyPick]

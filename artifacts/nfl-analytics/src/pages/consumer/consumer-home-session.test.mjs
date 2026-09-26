@@ -12,6 +12,7 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
   try {
     const { default: ConsumerHome, ConsumerHomeContent } = await vite.ssrLoadModule('/src/pages/consumer/ConsumerHome.tsx');
     const { VisitorHomeContent } = await vite.ssrLoadModule('/src/pages/consumer/VisitorHomeContent.tsx');
+    const { WeeklyPickArchiveContent } = await vite.ssrLoadModule('/src/pages/consumer/ConsumerWeeklyPicks.tsx');
     const apiClientPath = fileURLToPath(new URL('../../../../../lib/api-client-react/src/index.ts', import.meta.url));
     const { getGetConsumerDashboardQueryKey } = await vite.ssrLoadModule(`/@fs${apiClientPath}`);
     const client = new QueryClient();
@@ -41,6 +42,8 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
     assert.match(html, /data-testid="weekly-pick-team">Verified Team/);
     assert.match(html, /Winner locked from Gridline’s first verified lines for week 3/);
     assert.match(visitor(dashboard), /<h1>Pick of the week<\/h1>/);
+    assert.match(visitor(dashboard), /href="\/weekly-picks"/);
+    assert.match(html, /href="\/weekly-picks"/);
     assert.equal(html.match(/<section class="visitor-pick"[^>]*>.*?<\/section>/)?.[0]
       .replace('<h2>', '<h1>').replace('</h2>', '</h1>'),
       visitor(dashboard).match(/<section class="visitor-pick"[^>]*>.*?<\/section>/)?.[0]);
@@ -63,6 +66,20 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
     assert.match(error, /Weekly view unavailable/);
     assert.doesNotMatch(error, /weekly-pick-team|Verified Team|No upcoming games are available/);
     assert.match(visitor(dashboard, 'error'), /Pick unavailable right now/);
+    const archive = (data, state = 'ready') => render(createElement(WeeklyPickArchiveContent,
+      { archive: data, state, onSeasonChange: () => {} }));
+    const history = archive({ seasons: [2026, 2025], season: 2025, weeks: [
+      { season: 2025, week: 2, pick: { gameId: 'saved', teamName: 'Historic Winner', season: 2025, week: 2, probability: .7, observedAt: '2025-09-01T00:00:00Z' }, reason: null },
+      { season: 2025, week: 1, pick: null, reason: 'No persisted official weekly selection is available for this week.' },
+    ] });
+    assert.match(history, /2025 · Week 2/);
+    assert.match(history, /Historic Winner/);
+    assert.match(history, /2025 · Week 1/);
+    assert.match(history, /No persisted official weekly selection/);
+    assert.doesNotMatch(history, /Saved projection|saved-outlook/);
+    assert.match(archive({ seasons: [], season: null, weeks: [] }), /No past weeks available/);
+    assert.doesNotMatch(archive(undefined, 'loading'), /Historic Winner/);
+    assert.match(archive(undefined, 'error'), /Pick history unavailable/);
   } finally {
     await vite.close();
   }

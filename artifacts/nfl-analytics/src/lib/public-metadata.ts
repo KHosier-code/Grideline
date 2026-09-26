@@ -5,6 +5,7 @@ const pages: Record<string, [string, string]> = {
   '/': ['Gridline | NFL Games and Model Evidence', 'Explore saved NFL matchups, available model evidence and source status. Missing projections are marked unavailable; predictions are not guaranteed results.'],
   '/games': ['NFL Games and Saved Matchups | Gridline', 'Browse NFL matchups and their saved projections, market evidence and official results where available. Data and comparisons may be incomplete.'],
   '/methodology': ['Methodology and Limitations | Gridline', 'Learn how Gridline sources NFL data, labels saved and official predictions, separates player simulations from forecasts, and grades verified results.'],
+  '/weekly-picks': ['Past Official Weekly Picks | Gridline', 'Review saved official weekly NFL winners by season and week. Weeks without verified first-line selection evidence are marked unavailable.'],
   '/performance': ['Verified Prediction Performance | Gridline', 'Review available graded official NFL predictions, eligible sample counts and model error measures. These are not betting-return claims.'],
 };
 

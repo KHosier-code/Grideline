@@ -884,6 +884,30 @@ export interface ConsumerPlayerUsageGames {
   games: ConsumerPlayerUsageGame[];
 }
 
+export type ConsumerArchivedWeeklyPickPick = {
+  gameId: string;
+  teamName: string;
+  season: number;
+  week: number;
+  probability: number;
+  observedAt: string;
+} | null;
+
+export interface ConsumerArchivedWeeklyPick {
+  season: number;
+  week: number;
+  pick: ConsumerArchivedWeeklyPickPick;
+  /** @nullable */
+  reason: string | null;
+}
+
+export interface ConsumerWeeklyPickArchive {
+  seasons: number[];
+  /** @nullable */
+  season: number | null;
+  weeks: ConsumerArchivedWeeklyPick[];
+}
+
 export type ConsumerDashboardStatus = typeof ConsumerDashboardStatus[keyof typeof ConsumerDashboardStatus];
 
 
@@ -3545,6 +3569,13 @@ week?: number;
  * @maximum 1000
  */
 limit?: number;
+};
+
+export type GetConsumerWeeklyPicksParams = {
+/**
+ * @minimum 2020
+ */
+season?: number;
 };
 
 export type ListConsumerGamesParams = {

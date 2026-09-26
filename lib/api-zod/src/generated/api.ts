@@ -1356,6 +1356,36 @@ export const GetConsumerDashboardResponse = zod.object({
 
 
 /**
+ * @summary Read past persisted official weekly selections
+ */
+export const getConsumerWeeklyPicksQuerySeasonMin = 2020;
+
+
+
+export const GetConsumerWeeklyPicksQueryParams = zod.object({
+  "season": zod.coerce.number().int().min(getConsumerWeeklyPicksQuerySeasonMin).optional()
+})
+
+export const GetConsumerWeeklyPicksResponse = zod.object({
+  "seasons": zod.array(zod.number().int()),
+  "season": zod.number().int().nullable(),
+  "weeks": zod.array(zod.object({
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "pick": zod.union([zod.null(),zod.object({
+  "gameId": zod.string(),
+  "teamName": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "probability": zod.number(),
+  "observedAt": zod.coerce.date()
+})]),
+  "reason": zod.string().nullable()
+}))
+})
+
+
+/**
  * @summary Select a slate from persisted NFL schedule evidence
  */
 export const GetConsumerScheduleSelectionResponse = zod.object({

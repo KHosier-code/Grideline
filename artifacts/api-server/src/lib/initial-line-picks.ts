@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import {
   db, gamesTable, initialLinePicksTable, initialWeeklyPicksTable,
   modelPromotionHistoryTable, modelTrainingRunsTable, oddsApiRequestsTable, sportsbookOddsTable, teamsTable,
@@ -232,4 +232,41 @@ export async function readInitialWeeklyPick(now = new Date()) {
       ? "Waiting for first verified lines for the upcoming slate."
       : "No qualifying initial-line pick is available for this slate.";
   return { pick: null, reason };
+}
+
+/** Archive only weeks whose entire saved slate has kicked off. Never derive a
+ * winner from a later snapshot when the original weekly selection is absent. */
+export async function readInitialWeeklyPickArchive(requestedSeason?: number, now = new Date()) {
+  const slates = await db.select({
+    season: gamesTable.season, week: gamesTable.week,
+  }).from(gamesTable)
+    .groupBy(gamesTable.season, gamesTable.week)
+    .having(sql`count(*) = count(${gamesTable.kickoffTime}) and max(${gamesTable.kickoffTime}) < ${now}`)
+    .orderBy(desc(gamesTable.season), desc(gamesTable.week));
+  const seasons = [...new Set(slates.map((slate) => slate.season))];
+  const season = requestedSeason ?? seasons[0] ?? null;
+  const weeks = slates.filter((slate) => slate.season === season);
+  if (!weeks.length) return { seasons, season, weeks: [] };
+  const selections = await db.select().from(initialWeeklyPicksTable)
+    .where(eq(initialWeeklyPicksTable.season, season!));
+  const rows = selections.length ? await db.select().from(initialLinePicksTable)
+    .where(inArray(initialLinePicksTable.gameId, selections.map((selection) => selection.gameId))) : [];
+  const winners = rows.length ? await db.select({ id: teamsTable.teamId, name: teamsTable.teamName })
+    .from(teamsTable).where(inArray(teamsTable.teamId, rows.map((row) => row.winnerTeamId).filter((id): id is string => id !== null))) : [];
+  const outcomes = [];
+  for (const slate of weeks) {
+    const selection = selections.find((item) => item.week === slate.week);
+    const row = rows.find((item) => item.gameId === selection?.gameId && item.season === season && item.week === slate.week);
+    const verified = row && await verifySavedPick(row);
+    const team = verified ? winners.find((item) => item.id === row.winnerTeamId) : null;
+    outcomes.push({
+      season: slate.season, week: slate.week,
+      pick: team ? { gameId: row!.gameId, teamName: team.name, season: slate.season, week: slate.week,
+        probability: row!.winnerProbability!, observedAt: row!.observedAt.toISOString() } : null,
+      reason: team ? null : selection
+        ? "Saved official weekly pick evidence could not be verified."
+        : "No persisted official weekly selection is available for this week.",
+    });
+  }
+  return { seasons, season, weeks: outcomes };
 }

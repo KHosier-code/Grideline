@@ -47,13 +47,13 @@ import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalSco
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
-import { readInitialWeeklyPick } from "../lib/initial-line-picks";
+import { readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/initial-line-picks";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, readMatchupDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { attachQualifiedScoringTdProbability, buildPlayerPositionMatchup } from "../lib/player-position-matchup";
 import { readDevelopmentPlayerTdForecastReadiness } from "../lib/player-td-forecast-readiness";
 import { GetConsumerPlayerPositionMatchupResponse } from "@workspace/api-zod";
-import { GetConsumerScheduleSelectionResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
+import { GetConsumerScheduleSelectionResponse, GetConsumerWeeklyPicksResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 import { consumerVerifiedImages, playerHeadshot } from "../lib/verified-imagery";
 import {
@@ -1610,6 +1610,22 @@ router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   } catch (error) {
     _req.log.error({ error }, "Consumer dashboard read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/consumer/weekly-picks", async (req, res): Promise<void> => {
+  const value = req.query.season;
+  if (value !== undefined && (typeof value !== "string" || !/^\d{4}$/.test(value) || Number(value) < 2020)) {
+    res.status(400).json({ error: "Choose a valid season.", code: "invalid_request" });
+    return;
+  }
+  try {
+    const archive = await readInitialWeeklyPickArchive(value === undefined ? undefined : Number(value));
+    res.set("Cache-Control", "no-store");
+    res.json(GetConsumerWeeklyPicksResponse.parse(archive));
+  } catch (error) {
+    req.log.error({ error }, "Consumer weekly pick archive read failed");
+    res.status(503).json({ error: "Pick history unavailable", code: "consumer_data_unavailable" });
   }
 });
 

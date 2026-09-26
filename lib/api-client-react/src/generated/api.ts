@@ -48,6 +48,7 @@ import type {
   ConsumerTeamAnalytics,
   ConsumerTrends,
   ConsumerUpcomingPlayerProjections,
+  ConsumerWeeklyPickArchive,
   DashboardSummary,
   DataHealth,
   Game,
@@ -57,6 +58,7 @@ import type {
   GetConsumerPlayerUsageParams,
   GetConsumerRedZoneOpportunitiesParams,
   GetConsumerTeamAnalyticsParams,
+  GetConsumerWeeklyPicksParams,
   GetImageryCandidatePreviewParams,
   GetPlayerImageryReviewHistory200Item,
   GetPregameFeatureHealthParams,
@@ -2854,6 +2856,90 @@ export function useGetConsumerDashboard<TData = Awaited<ReturnType<typeof getCon
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerWeeklyPicksUrl = (params?: GetConsumerWeeklyPicksParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/weekly-picks?${stringifiedParams}` : `/api/consumer/weekly-picks`
+}
+
+/**
+ * @summary Read past persisted official weekly selections
+ */
+export const getConsumerWeeklyPicks = async (params?: GetConsumerWeeklyPicksParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerWeeklyPickArchive> => {
+
+  return customFetch<ConsumerWeeklyPickArchive>(getGetConsumerWeeklyPicksUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerWeeklyPicksQueryKey = (params?: GetConsumerWeeklyPicksParams,) => {
+    return [
+    `/api/consumer/weekly-picks`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerWeeklyPicksQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(params?: GetConsumerWeeklyPicksParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerWeeklyPicksQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>> = ({ signal }) => getConsumerWeeklyPicks(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerWeeklyPicksQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>>
+export type GetConsumerWeeklyPicksQueryError = ErrorType<void | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read past persisted official weekly selections
+ */
+
+export function useGetConsumerWeeklyPicks<TData = Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerWeeklyPicksParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerWeeklyPicksQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
