@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { verifyProductionDatabase } from "./lib/production-database-smoke";
 import { createProductionDatabaseAlert } from "./lib/production-startup-alert";
 import { startProductionServices, waitForApiHealth } from "./lib/production-startup";
+import { startWorkerOnlyWhenApproved } from "./lib/worker-ownership";
 
 declare const __GRIDLINE_BUILD_ID__: string;
 
@@ -54,7 +55,22 @@ try {
       });
       return result;
     },
-    () => start("Gridline data worker", workerPath),
+    () => {
+      const started = startWorkerOnlyWhenApproved(process.env, () => {
+        // Existing deployed workers do not know this approval gate or advisory
+        // lock. Activating a new worker while one remains alive can overlap;
+        // operators must retire the old worker before setting the flag.
+        console.warn(
+          "GRIDLINE_NEW_WORKER_APPROVED=1: starting the new worker. This does not fence older deployed workers; verify they are stopped to avoid overlap.",
+        );
+        start("Gridline data worker", workerPath);
+      });
+      if (!started) {
+        console.info(
+          "Production API is running; new data worker is disabled because GRIDLINE_NEW_WORKER_APPROVED is not exactly 1",
+        );
+      }
+    },
     async () => {
       const port = Number(process.env.PORT);
       if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -67,7 +83,7 @@ try {
         `http://127.0.0.1:${port}/api/healthz`,
         () => !spawnError && api.exitCode === null && api.signalCode === null,
       );
-      console.info("Production API healthy; starting data worker", {
+      console.info("Production API healthy; checking data worker approval", {
         event: "production_api_health_ready",
       });
     },

@@ -11,12 +11,38 @@ import {
 import { GetConsumerRedZoneOpportunitiesResponse } from "@workspace/api-zod";
 import { deriveRedZoneGameFacts, type RedZonePlay } from "../lib/red-zone-opportunities";
 import { logger } from "../lib/logger";
-import consumerRouter from "./consumer";
+import consumerRouter, { redZoneFeatureGate } from "./consumer";
+
+test("disabled red-zone route gate returns unavailable without dispatching the database handler", () => {
+  const previous = process.env.GRIDLINE_RED_ZONE_ENABLED;
+  delete process.env.GRIDLINE_RED_ZONE_ENABLED;
+  let statusCode = 0;
+  let body: unknown;
+  let handlerCalls = 0;
+  const response = {
+    status(code: number) { statusCode = code; return this; },
+    json(value: unknown) { body = value; return this; },
+  };
+  try {
+    redZoneFeatureGate({} as never, response as never, () => { handlerCalls += 1; });
+  } finally {
+    if (previous === undefined) delete process.env.GRIDLINE_RED_ZONE_ENABLED;
+    else process.env.GRIDLINE_RED_ZONE_ENABLED = previous;
+  }
+  assert.equal(statusCode, 503);
+  assert.deepEqual(body, {
+    error: "Red-zone opportunities are temporarily unavailable",
+    code: "red_zone_unavailable",
+  });
+  assert.equal(handlerCalls, 0, "the route database handler must not run while disabled");
+});
 
 test("red-zone HTTP read joins cutoff-safe schedule, stats, PBP and verified snaps without inventing zeroes", async (t) => {
   if (process.env.NODE_ENV !== "development" || process.env.REPLIT_DEPLOYMENT) {
     throw new Error("This fixture test must run against the development database only");
   }
+  const previousRedZoneFlag = process.env.GRIDLINE_RED_ZONE_ENABLED;
+  process.env.GRIDLINE_RED_ZONE_ENABLED = "1";
   const prefix = `rz-route-${randomUUID()}`;
   const season = 2098;
   const a = { id: `${prefix}-a`, code: `A${randomUUID().slice(0, 10).toUpperCase()}` };
@@ -39,6 +65,8 @@ test("red-zone HTTP read joins cutoff-safe schedule, stats, PBP and verified sna
   const address = server.address();
   assert.ok(address && typeof address === "object");
   t.after(async () => {
+    if (previousRedZoneFlag === undefined) delete process.env.GRIDLINE_RED_ZONE_ENABLED;
+    else process.env.GRIDLINE_RED_ZONE_ENABLED = previousRedZoneFlag;
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     // Identity imports/observations are intentionally immutable and remain only in
     // the isolated test namespace; all removable fixture data is cleaned by ID.

@@ -21,6 +21,7 @@ import {
   qbGameStatsTable,
 } from "@workspace/db";
 import { logger } from "./logger";
+import { isRedZoneFeatureEnabled } from "./red-zone-feature-flag";
 import { nflverseTeamCandidates } from "./personnel-context-derivation";
 import {
   deriveRedZoneGameFacts,
@@ -684,6 +685,17 @@ export async function deriveAndPersistRedZoneOpportunities(
   filePath: string,
   options?: { expectedGameIds?: readonly string[]; validateOnly?: boolean },
 ) {
+  if (!isRedZoneFeatureEnabled()) {
+    return {
+      sourceRows: 0,
+      games: 0,
+      sourceGameIds: [],
+      playerFacts: 0,
+      teamFacts: 0,
+      deduplicatedPlays: 0,
+      skipped: true as const,
+    };
+  }
   const teamRows = await db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable);
   const abbreviationBySource = new Map<string, string>();
   for (const team of teamRows) {

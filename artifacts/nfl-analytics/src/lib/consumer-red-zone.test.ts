@@ -157,16 +157,22 @@ test('Game Detail red-zone-only fallback selects at most three per team by sourc
   assert.equal(data.players[1]!.season.stats.targets, 0);
 });
 
-test('red zone is publicly routed and game cards request game-scoped windows', () => {
+test('red-zone navigation, routes, and key-player UI are strict opt-in while consumer pages remain', () => {
   const app = readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8');
   const card = readFileSync(fileURLToPath(new URL('../components/ConsumerKeyPlayers.tsx', import.meta.url)), 'utf8');
   const page = readFileSync(fileURLToPath(new URL('../pages/consumer/ConsumerRedZone.tsx', import.meta.url)), 'utf8');
-  assert.match(app, /href: '\/red-zone', label: 'Red Zone'/);
-  assert.equal((app.match(/<Route path="\/red-zone">/g) ?? []).length, 2);
+  assert.match(app, /VITE_GRIDLINE_RED_ZONE_ENABLED === '1'/);
+  assert.match(app, /redZoneEnabled \? \[\{ href: '\/red-zone', label: 'Red Zone'/);
+  assert.equal((app.match(/\{redZoneEnabled && <Route path="\/red-zone">/g) ?? []).length, 2);
+  assert.match(app, /<Route path="\/games">/);
+  assert.match(app, /<Route path="\/usage">/);
+  assert.match(card, /VITE_GRIDLINE_RED_ZONE_ENABLED === '1'/);
   assert.match(card, /game: gameId, zone: 20, period: 'last3'/);
   assert.match(card, /game: gameId, zone: 20, period: 'season'/);
   assert.match(card, /getGetConsumerRedZoneOpportunitiesQueryKey/);
-  assert.match(card, /enabled: Boolean\(gameId\)/);
+  assert.equal((card.match(/enabled: redZoneEnabled && Boolean\(gameId\)/g) ?? []).length, 2);
+  assert.match(card, /\{redZoneEnabled && <RedZoneFigures/);
+  assert.match(card, /if \(fallback && !redZoneEnabled\) return null/);
   assert.match(card, /if \(fallback\)/);
   assert.match(page, /useGetConsumerRedZoneOpportunities, useListConsumerPlayerUsageGames.*from '@workspace\/api-client-react'/);
   assert.match(page, /scheduleTeamAbbreviation\(game\.matchup\.home\)/);

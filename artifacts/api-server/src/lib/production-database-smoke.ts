@@ -1,3 +1,5 @@
+import { isRedZoneFeatureEnabled } from "./red-zone-feature-flag";
+
 type QueryablePool = {
   query: (text: string, values?: readonly unknown[]) => Promise<{ rows: unknown[] }>;
 };
@@ -110,7 +112,7 @@ export async function runProductionDatabasePreflight(
   checkTlsWarnings: () => Promise<void> = async () => {},
 ): Promise<ProductionDatabaseEvidence> {
   const selectOneResult = await runProductionDatabaseSmokeCheck(pool);
-  await assertRedZoneSchemaReady(pool);
+  if (isRedZoneFeatureEnabled()) await assertRedZoneSchemaReady(pool);
   await checkTlsWarnings();
   return recordReleaseSecurityEvidence(pool, buildId, selectOneResult);
 }

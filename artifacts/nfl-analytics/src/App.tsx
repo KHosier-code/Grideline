@@ -88,6 +88,7 @@ import { AdminPlayerStatsImport } from '@/components/AdminPlayerStatsImport';
 import { useTheme } from '@/lib/theme';
 
 const queryClient = new QueryClient();
+const redZoneEnabled = import.meta.env.VITE_GRIDLINE_RED_ZONE_ENABLED === '1';
 
 type IconType = typeof Activity;
 
@@ -467,7 +468,7 @@ const consumerNav = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/games', label: 'Games', icon: CalendarDays },
   { href: '/usage', label: 'Player Usage', icon: ChartNoAxesColumnIncreasing },
-  { href: '/red-zone', label: 'Red Zone', icon: CircleDot },
+  ...(redZoneEnabled ? [{ href: '/red-zone', label: 'Red Zone', icon: CircleDot }] : []),
 ];
 
 function ConsumerShell({ children }: { children: ReactNode }) {
@@ -2086,7 +2087,7 @@ function Router() {
     <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
     <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
     <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
-    <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
+    {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}
     <Route path="/"><ConsumerShell><ConsumerHome /></ConsumerShell></Route>
     <Route component={SignInPage} />
   </Switch></RoutedErrorBoundary>;
@@ -2096,7 +2097,7 @@ function Router() {
       <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
       <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
-      <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
+      {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}
       <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
       <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><ConsumerProps /></ConsumerShell></Route>

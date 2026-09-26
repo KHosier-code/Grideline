@@ -20,3 +20,9 @@ Do not assume a Publish cutover serializes old and new background workers. The p
 **Why:** A schema-first compatibility release would still be a code/worker release, and app-level schema readiness does not prevent overlapping workers from initiating different scheduled jobs.
 
 **How to apply:** Before relying on staged Publish for a worker-backed VM, obtain deployment-specific handover guarantees or independently enforce/process-test singleton ownership, then compare provider run evidence across the cutover. Per-job leases are not a global worker singleton.
+
+When the live worker predates a new global lock, the lock cannot fence that older process. Keep the new worker disabled by default until the old process is independently confirmed retired; after activation, retain session ownership until the worker can no longer initiate in-flight work.
+
+**Why:** An uncooperative old worker can still schedule a different provider job while the new worker holds its own lock. Explicitly releasing a lock while asynchronous work is still running also permits premature takeover.
+
+**How to apply:** Treat owner activation and old-worker retirement as a separate release gate. Test new/new lock contention and session-loss failover, but do not present those tests as proof of old/new exclusion or remote exactly-once effects.

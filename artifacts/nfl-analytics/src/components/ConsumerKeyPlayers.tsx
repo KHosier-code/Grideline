@@ -3,6 +3,8 @@ import { AlertTriangle, UserRound } from 'lucide-react';
 import { USAGE_METRIC_LABELS, formatUsageMetric, usagePeriodLabel } from '../lib/consumer-presentation';
 import { RED_ZONE_FALLBACK_LABEL, formatRedZoneCoverage, formatRedZoneValue, normalizeRedZoneResponse, readableTime, selectRedZoneFallback, type RedZonePlayer, type RedZonePeriod } from '../lib/consumer-red-zone';
 
+const redZoneEnabled = import.meta.env.VITE_GRIDLINE_RED_ZONE_ENABLED === '1';
+
 function RedZoneFigures({ playerId, season, last3, loading, unavailable, sourceGaps, sourceUpdatedAt, ingestedAt }: {
   playerId: string; season?: RedZonePlayer; last3?: RedZonePlayer; loading: Record<RedZonePeriod, boolean>; unavailable: Record<RedZonePeriod, boolean>; sourceGaps: Record<RedZonePeriod, number[]>; sourceUpdatedAt: string | null; ingestedAt: string | null;
 }) {
@@ -82,7 +84,7 @@ function PlayerUsageCard({ player, testId, redZone }: { player: ConsumerKeyPlaye
           </div>
         )}
       </div>
-      <RedZoneFigures playerId={player.playerId} {...redZone} />
+      {redZoneEnabled && <RedZoneFigures playerId={player.playerId} {...redZone} />}
     </article>
   );
 }
@@ -90,8 +92,8 @@ function PlayerUsageCard({ player, testId, redZone }: { player: ConsumerKeyPlaye
 export function ConsumerKeyPlayers({ players, away, home, season, week, gameId }: { players: ConsumerKeyPlayer[], away: ConsumerTeam, home: ConsumerTeam, season: number, week: number, gameId: string }) {
   const seasonParams: GetConsumerRedZoneOpportunitiesParams = { season, game: gameId, zone: 20, period: 'season' };
   const last3Params: GetConsumerRedZoneOpportunitiesParams = { season, game: gameId, zone: 20, period: 'last3' };
-  const seasonQuery = useGetConsumerRedZoneOpportunities(seasonParams, { query: { enabled: Boolean(gameId), queryKey: getGetConsumerRedZoneOpportunitiesQueryKey(seasonParams), staleTime: 60_000 } });
-  const last3Query = useGetConsumerRedZoneOpportunities(last3Params, { query: { enabled: Boolean(gameId), queryKey: getGetConsumerRedZoneOpportunitiesQueryKey(last3Params), staleTime: 60_000 } });
+  const seasonQuery = useGetConsumerRedZoneOpportunities(seasonParams, { query: { enabled: redZoneEnabled && Boolean(gameId), queryKey: getGetConsumerRedZoneOpportunitiesQueryKey(seasonParams), staleTime: 60_000 } });
+  const last3Query = useGetConsumerRedZoneOpportunities(last3Params, { query: { enabled: redZoneEnabled && Boolean(gameId), queryKey: getGetConsumerRedZoneOpportunitiesQueryKey(last3Params), staleTime: 60_000 } });
   const seasonData = normalizeRedZoneResponse(seasonQuery.data, 'season');
   const last3Data = normalizeRedZoneResponse(last3Query.data, 'last3');
   const redZoneFor = (player: Pick<ConsumerKeyPlayer, 'playerId' | 'teamId'>) => {
@@ -109,6 +111,7 @@ export function ConsumerKeyPlayers({ players, away, home, season, week, gameId }
   const awayPlayers = (players ?? []).filter(p => p.teamId === away.abbreviation);
   const homePlayers = (players ?? []).filter(p => p.teamId === home.abbreviation);
   const fallback = !players?.length;
+  if (fallback && !redZoneEnabled) return null;
   const fallbackPlayers = (team: string) => {
     const seasonLeaders = selectRedZoneFallback(seasonData.players, team);
     return seasonLeaders.length ? seasonLeaders : selectRedZoneFallback(last3Data.players, team, 'last3');

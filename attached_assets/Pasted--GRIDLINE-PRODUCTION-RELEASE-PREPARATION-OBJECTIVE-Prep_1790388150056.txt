@@ -1,0 +1,74 @@
+# GRIDLINE — PRODUCTION RELEASE PREPARATION
+
+OBJECTIVE
+
+Prepare Gridline for a safe production release without changing the existing production deployment.
+
+Do not publish or modify production data.
+
+PART 1 — PRODUCTION RECOVERY
+
+Identify the exact production database currently used by Gridline.
+
+Investigate the available managed point-in-time recovery options and whether a separate, restorable backup or export is supported.
+
+Determine how to preserve both pre-rollback history and subsequent legitimate production writes.
+
+If permitted, perform a non-destructive restore test using an isolated database.
+
+Do not restore over the live production database.
+
+Return evidence that the recovery method works, including its limitations and whether writes made after a recovery point would be lost.
+
+PART 2 — WORKER HANDOVER
+
+Inspect how the old and new production workers could overlap during publication.
+
+Design and implement a global worker-ownership mechanism if existing per-job locks are insufficient.
+
+Ensure that only the authorized worker can initiate scheduled provider activity.
+
+Verify that ownership expires or transfers safely if the active worker crashes.
+
+Preserve existing job-level idempotency and paid API safeguards.
+
+Test simultaneous old/new worker scenarios. Account explicitly for the fact that the currently deployed worker may not implement any newly introduced locking mechanism.
+
+Do not modify or restart the live production worker.
+
+PART 3 — FEATURE-FLAGGED RELEASE
+
+Prepare a red-zone feature flag that defaults to disabled.
+
+Ensure existing Gridline features continue operating if the red-zone schema is absent.
+
+Ensure the worker cannot write red-zone facts while the feature is disabled.
+
+Do not remove existing schema guards where they are required for safety.
+
+Validate this configuration against databases with and without the additive migration.
+
+PART 4 — DEPLOYMENT PREVIEW
+
+Determine whether the current deployment configuration supports Replit's isolated deployment preview.
+
+If supported, prepare a preview of the exact proposed release against an isolated database.
+
+Ensure the preview cannot contact paid providers, send real notifications or affect production.
+
+Test startup, schema migration and worker behavior.
+
+FINAL REPORT
+
+Return:
+
+1. Recovery-point status and restore-test evidence.
+2. Worker-handover test results.
+3. Feature-flag implementation and tests.
+4. Deployment-preview availability and results.
+5. Remaining risks.
+6. Whether a controlled release is ready for approval.
+
+Do not publish or change production.
+
+End with READY FOR RELEASE APPROVAL or HOLD.

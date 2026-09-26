@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lt, lte } from "drizzle-orm";
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type IRouter, type NextFunction, type Request, type Response } from "express";
 import {
   db,
   gamesTable,
@@ -42,6 +42,7 @@ import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalSco
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
+import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { GetConsumerScheduleSelectionResponse } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 import {
@@ -62,6 +63,16 @@ export { consumerFinalScore } from "../lib/game-state";
 export { verifyTeamRecords } from "../lib/game-state";
 
 const router: IRouter = Router();
+export function redZoneFeatureGate(_req: Request, res: Response, next: NextFunction): void {
+  if (!isRedZoneFeatureEnabled()) {
+    res.status(503).json({
+      error: "Red-zone opportunities are temporarily unavailable",
+      code: "red_zone_unavailable",
+    });
+    return;
+  }
+  next();
+}
 export const MAX_CONSUMER_GAMES = 100;
 export const MAX_CONSUMER_MOVEMENT_ROWS = 200;
 export const MAX_CONSUMER_SNAPSHOT_ROWS = MAX_CONSUMER_GAMES;
@@ -1853,7 +1864,7 @@ router.get("/consumer/props", (_req, res): void => {
   res.json({ status: "unavailable", message: "Player information temporarily unavailable", available: false });
 });
 
-router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> => {
+router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, res): Promise<void> => {
   const rawSeason = typeof req.query.season === "string" ? Number(req.query.season) : undefined;
   const rawTeam = typeof req.query.team === "string" ? req.query.team : undefined;
   const position = typeof req.query.position === "string" ? req.query.position.toUpperCase() : undefined;

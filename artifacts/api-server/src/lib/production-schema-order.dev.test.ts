@@ -4,7 +4,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pool } from "@workspace/db";
-import { assertRedZoneSchemaReady, runProductionDatabaseSmokeCheck } from "./production-database-smoke";
+import {
+  assertRedZoneSchemaReady,
+  runProductionDatabasePreflight,
+  runProductionDatabaseSmokeCheck,
+} from "./production-database-smoke";
 import { startProductionServices } from "./production-startup";
 
 // Opt-in development-only experiment. The schema and all five DDL statements
@@ -38,7 +42,10 @@ test("current approved additive diff gates API then worker in an isolated schema
   const client = await pool.connect();
   let inTransaction = false;
   const schema = `gridline_gate_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
-  const queryable = { query: (text: string) => client.query(text) };
+  const queryable = {
+    query: (text: string, values?: readonly unknown[]) => client.query(text, values ? [...values] : undefined),
+  };
+  const previousFlag = process.env.GRIDLINE_RED_ZONE_ENABLED;
   try {
     const { rows: identities } = await client.query(`
       SELECT current_database() AS database_name, current_user AS database_role,
@@ -59,6 +66,19 @@ test("current approved additive diff gates API then worker in an isolated schema
     inTransaction = true;
     await client.query(`CREATE SCHEMA "${schema}"`);
     await client.query(`SET LOCAL search_path TO "${schema}"`);
+    // Test-only stand-in for the already-existing release-evidence table.
+    // The approved Publish diff remains the five statements supplied below.
+    await client.query(`CREATE TABLE release_security_evidence (
+      build_id text PRIMARY KEY, checked_at timestamptz NOT NULL DEFAULT now(),
+      select_one_result integer NOT NULL, verify_full_passed boolean NOT NULL
+    )`);
+    delete process.env.GRIDLINE_RED_ZONE_ENABLED;
+    await runProductionDatabasePreflight(queryable, "isolated-disabled-without-schema");
+    process.env.GRIDLINE_RED_ZONE_ENABLED = "1";
+    await assert.rejects(
+      runProductionDatabasePreflight(queryable, "isolated-enabled-without-schema"),
+      /schema is not ready/,
+    );
     const verify = async () => {
       await runProductionDatabaseSmokeCheck(queryable);
       await assertRedZoneSchemaReady(queryable);
@@ -81,6 +101,7 @@ test("current approved additive diff gates API then worker in an isolated schema
     assert.deepEqual(started, [], "a failed or incomplete migration must not start either process");
 
     await client.query(statements.at(-1) as string);
+    await runProductionDatabasePreflight(queryable, "isolated-enabled-with-schema");
     await startProductionServices(verify, startWorker, startApi);
     assert.deepEqual(started, ["api", "worker"]);
     await client.query("ROLLBACK");
@@ -95,6 +116,8 @@ test("current approved additive diff gates API then worker in an isolated schema
     assert.equal(after.rows[0]?.player_facts, baseline.rows[0]?.player_facts);
     assert.equal(after.rows[0]?.disposable_schema, null);
   } finally {
+    if (previousFlag === undefined) delete process.env.GRIDLINE_RED_ZONE_ENABLED;
+    else process.env.GRIDLINE_RED_ZONE_ENABLED = previousFlag;
     if (inTransaction) await client.query("ROLLBACK").catch(() => {});
     client.release();
     await pool.end();
