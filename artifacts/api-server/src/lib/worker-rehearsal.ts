@@ -12,6 +12,8 @@ export function rehearsalRequested(env: WorkerEnvironment) {
 }
 
 export function assertWorkerStartupConfiguration(env: WorkerEnvironment) {
+  if (Object.keys(env).some((key) => key.startsWith("GRIDLINE_PLAYER_RECOVERY_")))
+    throw new Error("Data worker refused: player recovery controls require an exact selection");
   if (rehearsalRequested(env)) return assertRehearsalConfiguration(env);
   if (env.GRIDLINE_WORKER_REHEARSAL !== undefined
     || env.GRIDLINE_REHEARSAL_NO_PROVIDERS !== undefined

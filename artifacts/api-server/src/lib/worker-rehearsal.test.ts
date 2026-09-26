@@ -49,6 +49,8 @@ test("normal worker remains separately approved; rehearsal flags cannot bleed in
     GRIDLINE_WORKER_REHEARSAL: "0" }));
   assert.throws(() => assertWorkerStartupConfiguration({ GRIDLINE_NEW_WORKER_APPROVED: "1",
     GRIDLINE_REHEARSAL_NO_RETENTION: "1" }));
+  assert.throws(() => assertWorkerStartupConfiguration({ GRIDLINE_NEW_WORKER_APPROVED: "1",
+    GRIDLINE_PLAYER_RECOVERY_APPROVED: "1" }));
 });
 
 test("server identity and marker must both match before ownership", async () => {

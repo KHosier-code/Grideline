@@ -1,34 +1,13 @@
 import { and, desc, eq, gte } from "drizzle-orm";
-import { db, pool, dataSyncRunsTable } from "@workspace/db";
+import { db, dataSyncRunsTable } from "@workspace/db";
 import { syncEspnInjuries } from "./availability";
 import { syncNflverseHistory } from "./nflverse";
 import { syncNwsWeather } from "./weather";
 import { footballTime, latestFeedSlot, shouldAttempt, type Feed } from "./feed-schedule";
 import { logger } from "./logger";
 import { getFeedGameDays } from "./feed-game-days";
-
-// Session locks prevent duplicate jobs across API replicas. Manual syncs share them.
-export async function withFeedLock<T>(feed: Feed, work: () => Promise<T>): Promise<T | null> {
-  const client = await pool.connect();
-  const key = feed === "injuries" ? 731401 : feed === "nflverse" ? 731402 : 731403;
-  let locked = false;
-  try {
-    const result = await client.query("SELECT pg_try_advisory_lock($1) AS locked", [key]);
-    locked = result.rows[0].locked;
-    if (!locked) return null;
-    return await work();
-  } finally {
-    if (locked) {
-      try {
-        await client.query("SELECT pg_advisory_unlock($1)", [key]);
-      } catch (error) {
-        client.release(true);
-        throw error;
-      }
-    }
-    client.release();
-  }
-}
+import { withFeedLock } from "./feed-lock";
+export { withFeedLock } from "./feed-lock";
 
 export async function runScheduledFeed(feed: Feed, now = new Date()) {
   return withFeedLock(feed, async () => {

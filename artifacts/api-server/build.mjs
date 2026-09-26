@@ -72,6 +72,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/production-startup-alert.test.ts"),
       path.resolve(artifactDir, "src/lib/worker-ownership.test.ts"),
       path.resolve(artifactDir, "src/lib/worker-rehearsal.test.ts"),
+      path.resolve(artifactDir, "src/lib/player-feed-recovery.test.ts"),
     ],
     platform: "node",
     bundle: true,
