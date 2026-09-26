@@ -1,0 +1,93 @@
+# TASK — GRIDLINE RED-ZONE RELEASE GATE
+
+**Starting commit:** `a52fc3f46644`
+
+**Objective:** Complete the remaining release verification for the red-zone analytics feature. Do not publish until all required pre-release checks pass and I explicitly authorize publication.
+
+### Phase 1 — Production database verification
+
+Perform read-only checks to establish:
+
+- Which database the production API currently uses.
+- Which database the production worker currently uses.
+- Whether both are connected to the intended production database.
+- Whether the database is Replit-managed.
+- Whether the previously approved Phase 6.1 models and prediction snapshots remain intact.
+
+Use non-sensitive identifiers and metadata. Do not expose database credentials.
+
+If database identity cannot be established, STOP.
+
+### Phase 2 — Schema review
+
+Inspect the proposed Publish schema diff.
+
+Verify both new red-zone fact tables, including:
+- Columns and data types.
+- Primary and foreign keys.
+- Unique constraints.
+- Required indexes.
+- Migration dependencies.
+- Compatibility with existing data.
+
+Confirm the migrations will execute before the updated API or production worker starts.
+
+Identify any unrelated or potentially destructive changes.
+
+Do not apply migrations.
+
+### Phase 3 — Week 2 development validation
+
+Check whether development contains the expected Week 2 data.
+
+Use the existing approved refresh mechanism only after confirming that it targets development, requires no unexpected paid requests, and cannot affect production.
+
+If an immediate development-only refresh is authorized and safe, execute it and validate:
+- All 16 Week 2 games.
+- Expected game identifiers.
+- Derived player-zone facts.
+- Derived team-zone facts.
+- Covered game dates.
+- Season and last-three calculations.
+- Missing-data presentation.
+- Representative play-by-play reconciliations.
+
+Otherwise, document the exact refresh command and request approval before execution.
+
+Never convert missing data into zero-valued statistics.
+
+### Phase 4 — Release readiness
+
+Run the relevant tests, typechecks and local build.
+
+Produce a release-gate table with PASS, FAIL or UNVERIFIED for:
+
+1. Production database identity.
+2. API and worker database consistency.
+3. Schema compatibility.
+4. Migration-before-start ordering.
+5. Phase 6.1 integrity.
+6. Development Week 2 coverage.
+7. Red-zone calculation accuracy.
+8. Missing-data handling.
+9. API and frontend tests.
+10. Worker startup and synchronization safeguards.
+
+Generate:
+
+`reports/gridline-red-zone-final-release-gate.md`
+
+### Final instructions
+
+Return:
+- Exactly which gates passed.
+- Any remaining blockers.
+- Whether a migration is required.
+- Whether publishing will start provider activity.
+- The expected next scheduled refresh.
+- Whether a separate authorized catch-up refresh is necessary.
+- A precise, ordered deployment and post-publish verification procedure.
+
+Do not publish, alter production data, start the production worker, or initiate production provider synchronization.
+
+**End with either READY FOR OWNER APPROVAL or HOLD, supported by evidence.**

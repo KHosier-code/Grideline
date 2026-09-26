@@ -16,6 +16,7 @@
 - [Phase 6 identifier boundary](phase6-identifier-boundary.md) — canonicalize schedule and nflverse team IDs before feature, QB, or score joins.
 - [Immutable model provenance](immutable-model-provenance.md) — a production version must bind schema, preprocessing, and fitted parameters; never refit it during inference.
 - [Production artifact release boundary](production-artifact-release-boundary.md) — verify production rows and triggers after Publish; development artifacts and custom triggers may not transfer.
+- [Production database identity](production-database-identity.md) — a managed read-replica query alone does not identify the live app's database; correlate deployment-specific evidence.
 - [First-run scheduler semantics](first-run-scheduler-semantics.md) — introduce new recurring feeds as future normal occurrences; missed-job recovery intentionally skips catch-up work.
 - [Sleeper identity chronology](sleeper-identity-chronology.md) — map reconstructed point-in-time Sleeper state and fingerprint the complete Gridline evidence set used by each immutable run.
 - [Current depth-mapping readiness](depth-mapping-readiness.md) — gate current canonical-team depth rows and starter roles, not broad historical coverage.

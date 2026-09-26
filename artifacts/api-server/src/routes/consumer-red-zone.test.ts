@@ -139,15 +139,21 @@ test("red-zone HTTP read joins cutoff-safe schedule, stats, PBP and verified sna
   assert.equal(aResult.status, "partial");
   assert.deepEqual(aResult.coverage, {
     status: "partial", completedGames: 3, gamesWithPbp: 2, missingGames: [games[1]],
+    coveredWeeks: [1, 3], missingWeeks: [2],
+    firstCoveredKickoff: kickoff(1), lastCoveredKickoff: kickoff(3),
+    partialReasons: ["Play-by-play coverage: covered weeks 1, 3; unavailable week 2."],
     note: aResult.coverage.note,
   });
   assert.ok(aResult.ingestedAt);
   assert.equal(aResult.sourceUpdatedAt, null);
   const aTraded = aResult.players.find((row) => row.playerId === traded)!;
   assert.equal(aTraded.teamId, a.code);
-  assert.deepEqual(aTraded.games.map((row) => row.gameId), [games[0], games[1]]);
+  assert.deepEqual(aTraded.games.map((row) => row.gameId), [games[0]],
+    "an appearance without PBP is reported in coverage, not shown as a zero-opportunity game");
   assert.deepEqual(aTraded.sourceCoverage, {
     requestedGames: 2, includedGames: 1, missingGames: [games[1]],
+    coveredWeeks: [1], missingWeeks: [2],
+    firstCoveredKickoff: kickoff(1), lastCoveredKickoff: kickoff(1),
   });
   assert.equal(zone(aTraded.games[0]!.zones, 20)?.targets, 2);
   assert.equal(zone(aTraded.games[0]!.zones, 20)?.teamTargets, 3);
@@ -156,19 +162,18 @@ test("red-zone HTTP read joins cutoff-safe schedule, stats, PBP and verified sna
   assert.equal(zone(aTraded.games[0]!.zones, 10)?.targetShare, 1);
   assert.equal(zone(aTraded.games[0]!.zones, 5)?.targets, 0);
   assert.equal(zone(aTraded.games[0]!.zones, 5)?.teamCarries, 1);
-  assert.equal(zone(aTraded.games[1]!.zones, 20)?.targets, null);
-  assert.equal(zone(aTraded.games[1]!.zones, 20)?.teamTargets, null);
-  assert.equal(zone(aTraded.zones, 20)?.targets, null);
+  assert.equal(zone(aTraded.zones, 20)?.targets, 2,
+    "the available game retains observed counts while sourceCoverage marks the missing appearance");
   const aZero = aResult.players.find((row) => row.playerId === zero)!;
   assert.equal(aZero.games[0]?.offenseSnaps, 15);
   assert.equal(zone(aZero.games[0]!.zones, 20)?.targets, 0);
   assert.equal(zone(aZero.games[0]!.zones, 20)?.targetShare, 0);
-  assert.equal(zone(aZero.games[1]!.zones, 20)?.targets, null);
+  assert.deepEqual(aZero.games.map((row) => row.gameId), [games[0]]);
   assert.deepEqual(aZero.sourceCoverage.missingGames, [games[1]]);
   const aMissing = aResult.players.find((row) => row.playerId === missing)!;
-  assert.equal(zone(aMissing.games[0]!.zones, 20)?.targets, null,
-    "weekly stats without a fact or verified positive snap do not prove zero opportunities");
-  assert.equal(zone(aMissing.games[0]!.zones, 20)?.teamTargets, 3);
+  assert.deepEqual(aMissing.games, [],
+    "weekly stats without a player fact or verified positive snap do not prove zero opportunities");
+  assert.deepEqual(aMissing.sourceCoverage.missingGames, [games[0]]);
 
   const bResult = await get({ team: b.code, position: "WR", period: "last3", zone: "20" });
   assert.equal(bResult.coverage.completedGames, 3);
