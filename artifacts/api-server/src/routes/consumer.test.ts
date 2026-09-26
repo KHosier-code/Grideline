@@ -34,13 +34,11 @@ import consumerRouter, {
   buildUsageSnapPlayerAliases,
   buildUsageTeamMappings,
   buildConsumerMarketBoard,
-  compareUsageGameChronology,
   consumerGameDetailHandler,
   consumerGames,
   consumerFinalScore,
   consumerMarket,
   currentModelPersonnelLimitation,
-  deterministicSourceGameId,
   eligibleUsageGames,
   eligibleUsageRows,
   filterUsagePlayers,
@@ -53,6 +51,7 @@ import consumerRouter, {
   usageMatchupIdentity,
   usageSeasonAtCutoff,
   usageSourceGameKeys,
+  usageWithoutSchedule,
   verifyTeamRecords,
 } from "./consumer";
 import { deriveCurrentTeamDepth } from "../lib/current-personnel-derivation";
@@ -657,16 +656,14 @@ test("usage source keys include only eligible game identities and both team alia
   assert.deepEqual(usageSourceGameKeys([], maps), []);
 });
 
-test("source game and snap identities resolve independently of persisted raw game IDs", () => {
+test("snap identities resolve independently of persisted raw game IDs", () => {
   const stat = { season: 2024, seasonType: "REG", week: 3, teamId: "KC", opponentTeamId: "BUF", playerId: "00-0012345" };
-  const sourceGame = deterministicSourceGameId(stat);
-  assert.equal(sourceGame, "source:2024:REG:3:KC:BUF");
+  const sourceGame = "scheduled-game";
   assert.equal(usageCompositeIdentity(stat), "2024:REG:3:KC:BUF:00-0012345");
   const resolvedGames = new Map([[usageMatchupIdentity(stat), sourceGame]]);
   assert.equal(resolvedGames.get(usageMatchupIdentity({
     season: 2024, week: 3, teamId: "KC", opponentTeamId: "BUF",
   })), sourceGame);
-  assert.ok(compareUsageGameChronology({ seasonType: "REG", week: 18 }, { seasonType: "POST", week: 1 }) < 0);
   const aliases = buildUsageSnapPlayerAliases([{ gsisId: stat.playerId, pfrId: "PlayPa00" }]);
   const usage = aggregatePlayerUsage([{
     ...stat, gameId: sourceGame, playerName: "Player", position: "WR",
@@ -737,13 +734,37 @@ test("usage eligibility excludes stale seasons and rows outside completed games"
     { season: 2026, gameId: "future", playerId: "future" },
   ];
   assert.deepEqual(
-    eligibleUsageRows(rows, 2026, new Set(["completed"]), false).map((row) => row.playerId),
+    eligibleUsageRows(rows, 2026, new Set(["completed"])).map((row) => row.playerId),
     ["current"],
   );
   assert.deepEqual(
-    eligibleUsageRows(rows, 2026, new Set(), true).map((row) => row.playerId),
-    ["current", "future"],
+    eligibleUsageRows(rows, 2026, new Set()).map((row) => row.playerId),
+    [],
   );
+});
+
+test("missing schedule coverage withholds source-only usage at a cutoff, including season rollover", () => {
+  const teams = [{ teamId: "12", abbreviation: "kc" }];
+  for (const cutoff of [new Date("2026-09-13T16:00:00Z"), new Date("2027-01-20T12:00:00Z")]) {
+    const season = usageSeasonAtCutoff(cutoff);
+    const payload = usageWithoutSchedule(season, teams, {
+      team: "KC", position: "WR", game: null, window: "last5",
+    });
+    assert.equal(GetConsumerPlayerUsageResponse.safeParse(payload).success, true);
+    assert.equal(payload.status, "unavailable");
+    assert.equal(payload.season, 2026);
+    assert.deepEqual(payload.players, []);
+    assert.equal(payload.sourceCoverage.includedGames, 0);
+    assert.match(payload.sourceCoverage.partialReasons[0]!, /withheld.*schedule kickoff.*final-status.*cutoff safety/);
+    assert.ok(Object.values(payload.metricAvailability).every((available) => !available));
+    assert.deepEqual(payload.availableTeams, [{ teamId: "12", abbreviation: "KC" }]);
+    assert.deepEqual(eligibleUsageRows([
+      { season: 2026, gameId: "prior-week" },
+      { season: 2026, gameId: "same-week-future" },
+      { season: 2025, gameId: "previous-season" },
+    ], season, new Set()), []);
+  }
+  assert.equal(usageSeasonAtCutoff(new Date("2027-03-01T12:00:00Z")), 2027);
 });
 
 test("default usage season follows the NFL season at the cutoff", () => {

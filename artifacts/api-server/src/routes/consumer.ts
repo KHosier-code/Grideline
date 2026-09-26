@@ -157,10 +157,9 @@ export function eligibleUsageRows<T extends { season: number; gameId: string }>(
   rows: T[],
   season: number,
   eligibleGameIds: Set<string>,
-  allowSourceChronology: boolean,
 ) {
   return rows.filter((row) =>
-    row.season === season && (allowSourceChronology || eligibleGameIds.has(row.gameId)));
+    row.season === season && eligibleGameIds.has(row.gameId));
 }
 
 export function eligibleUsageGames<T extends { gameId: string; season: number; kickoffTime: Date | null; gameStatus?: string }>(
@@ -185,6 +184,30 @@ export function usageSeasonAtCutoff(cutoff: Date) {
   return cutoff.getUTCMonth() < 2 ? cutoff.getUTCFullYear() - 1 : cutoff.getUTCFullYear();
 }
 
+/** Source stats and snaps have no verified game completion timestamp. Without
+ * schedule evidence, even a prior week's rows cannot be admitted at a cutoff. */
+export function usageWithoutSchedule(
+  season: number,
+  teams: Array<{ teamId: string; abbreviation: string }>,
+  filters: { team: string | null; position: string | null; game: string | null; window: string },
+) {
+  return {
+    status: "unavailable" as const,
+    season,
+    players: [],
+    availableTeams: teams
+      .map((row) => ({ teamId: row.teamId, abbreviation: row.abbreviation.toUpperCase() }))
+      .sort((left, right) => left.abbreviation.localeCompare(right.abbreviation)),
+    filters,
+    metricAvailability: Object.fromEntries([...USAGE_METRICS, ...UNSUPPORTED_USAGE_METRICS]
+      .map((name) => [name, false])),
+    sourceCoverage: {
+      requestedGames: 0,
+      includedGames: 0,
+      partialReasons: ["Player usage is withheld because schedule kickoff and final-status coverage is unavailable for this season; source game weeks alone cannot prove cutoff safety"],
+    },
+  };
+}
 export function buildUsageTeamMappings(teams: Array<{ teamId: string; abbreviation: string }>) {
   const abbreviationToTeamId = new Map(teams.map((team) => [team.abbreviation.toUpperCase(), team.teamId]));
   const scheduleToAbbreviation = new Map(teams.map((team) => [team.teamId, team.abbreviation.toUpperCase()]));
@@ -252,16 +275,6 @@ export function usageCompositeIdentity(row: { season: number; seasonType: string
 export function usageMatchupIdentity(row: { season: number; week: number; teamId: string | null; opponentTeamId: string | null }) {
   return `${row.season}:${row.week}:${row.teamId ?? ""}:${row.opponentTeamId ?? ""}`;
 }
-
-export function deterministicSourceGameId(row: { season: number; seasonType: string; week: number; teamId: string; opponentTeamId: string }) {
-  return `source:${row.season}:${row.seasonType.toUpperCase()}:${row.week}:${row.teamId}:${row.opponentTeamId}`;
-}
-
-export function compareUsageGameChronology(left: { seasonType: string; week: number }, right: { seasonType: string; week: number }) {
-  const type = (value: string) => value.toUpperCase() === "REG" ? 0 : 1;
-  return type(left.seasonType) - type(right.seasonType) || left.week - right.week;
-}
-
 const metric = (value: number | null, reason: string | null = null) => ({
   value: value !== null && Number.isFinite(value) ? value : null,
   available: value !== null && Number.isFinite(value),
@@ -2674,6 +2687,12 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
     }).from(gamesTable)
       .where(and(eq(gamesTable.season, applicableSeason), lte(gamesTable.kickoffTime, cutoff)))
       .orderBy(asc(gamesTable.season), asc(gamesTable.week), asc(gamesTable.gameId));
+    if (!matchup[0] && selectedGames.length === 0) {
+      res.json(usageWithoutSchedule(applicableSeason, teamRows, {
+        team: canonicalFilter ?? null, position: position ?? null, game: null, window,
+      }));
+      return;
+    }
     const eligibleGames = eligibleUsageGames(selectedGames, applicableSeason, cutoff, game);
     const gameKeys = new Map<string, string>();
     for (const g of eligibleGames) {
@@ -2690,15 +2709,14 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
           return abbreviation ? nflverseTeamCandidates(abbreviation) : [];
         })
         : [];
-    const usesSourceChronology = !matchup[0] && selectedGames.length === 0;
     const sourceKeys = usageSourceGameKeys(eligibleGames, teamMaps)
       .filter((key) => !sourceCandidates.length || sourceCandidates.includes(key.team));
-    const readSource = usesSourceChronology || sourceKeys.length > 0;
+    const readSource = sourceKeys.length > 0;
     const statRows = readSource ? await db.select().from(playerGameStatsTable)
       .where(and(
         eq(playerGameStatsTable.season, applicableSeason),
         sourceCandidates.length ? inArray(playerGameStatsTable.teamId, sourceCandidates) : undefined,
-        usesSourceChronology ? undefined : usageSourceGameCondition(playerGameStatsTable, sourceKeys),
+        usageSourceGameCondition(playerGameStatsTable, sourceKeys),
       )) : [];
     const rawSnaps = statRows.length ? await db.select({
       playerId: snapCountsTable.playerId, season: snapCountsTable.season, week: snapCountsTable.week,
@@ -2706,7 +2724,7 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
     }).from(snapCountsTable).where(and(
       eq(snapCountsTable.season, applicableSeason),
       sourceCandidates.length ? inArray(snapCountsTable.teamId, sourceCandidates) : undefined,
-      usesSourceChronology ? undefined : usageSourceGameCondition(snapCountsTable, sourceKeys),
+      usageSourceGameCondition(snapCountsTable, sourceKeys),
     )) : [];
     const sourceGameIds = new Map<string, string>();
     const usageRows: UsageRow[] = statRows.flatMap((row) => {
@@ -2718,15 +2736,11 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
         && canonicalTeam !== teamMaps.scheduleToAbbreviation.get(matchup[0].awayTeamId)) return [];
       const gameId = row.teamId && row.opponentTeamId
         ? gameKeys.get(`${row.season}:${row.week}:${canonicalTeam}:${canonicalOpponent}`) : undefined;
-      const resolvedId = gameId ?? deterministicSourceGameId({
-        season: row.season, seasonType: row.seasonType, week: row.week,
-        teamId: canonicalTeam ?? row.teamId, opponentTeamId: canonicalOpponent ?? row.opponentTeamId ?? "",
-      });
+      if (!gameId) return [];
       sourceGameIds.set(usageMatchupIdentity({
         season: row.season, week: row.week, teamId: canonicalTeam, opponentTeamId: canonicalOpponent,
-      }), resolvedId);
-      if (matchup[0] && !gameId) return [];
-      return [{ ...row, gameId: resolvedId, playerId: row.playerId, playerName: row.playerName, position: row.position, teamId: canonicalTeam }];
+      }), gameId);
+      return [{ ...row, gameId, playerId: row.playerId, playerName: row.playerName, position: row.position, teamId: canonicalTeam }];
     });
     const snapPlayerAliases = await usageSnapPlayerAliases(usageRows.map((row) => row.playerId));
     const snapRows = rawSnaps.flatMap((snap) => {
@@ -2748,24 +2762,10 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
       orderedGameIdsByTeam.set(home, [...(orderedGameIdsByTeam.get(home) ?? []), eligible.gameId]);
       orderedGameIdsByTeam.set(away, [...(orderedGameIdsByTeam.get(away) ?? []), eligible.gameId]);
     }
-    if (usesSourceChronology) {
-      const sourceGames = new Map<string, { teamId: string; gameId: string; seasonType: string; week: number }>();
-      for (const row of usageRows) sourceGames.set(`${row.teamId}:${row.gameId}`, {
-        teamId: row.teamId ?? "", gameId: row.gameId, seasonType: row.seasonType, week: row.week,
-      });
-      const grouped = new Map<string, Array<{ gameId: string; seasonType: string; week: number }>>();
-      for (const source of sourceGames.values()) grouped.set(source.teamId, [...(grouped.get(source.teamId) ?? []), source]);
-      for (const [teamId, games] of grouped) {
-        const ordered = games.sort(compareUsageGameChronology).map((entry) => entry.gameId);
-        orderedGameIdsByTeam.set(teamId, [...new Set(ordered)]);
-        teamSchedules.set(teamId, new Set(ordered).size);
-      }
-    }
     const verifiedUsageRows = eligibleUsageRows(
       usageRows,
       applicableSeason,
       new Set(eligibleGames.map((eligible) => eligible.gameId)),
-      usesSourceChronology,
     );
     const verifiedPlayerIds = new Set(verifiedUsageRows.map((row) => row.playerId));
     const verifiedSnapRows = snapRows.filter((row) => verifiedPlayerIds.has(row.playerId));
@@ -2782,8 +2782,6 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
       includedGames: players.length ? Math.max(...players.map((p) => p.sourceCoverage.includedGames)) : 0,
       partialReasons: [
         ...(!eligibleGames.length && !usageRows.length ? ["No completed games are available for the requested cutoff"] : []),
-        ...(usesSourceChronology && usageRows.length
-          ? ["Schedule kickoff coverage is unavailable; source game chronology uses season type and week"] : []),
         ...(!players.length && (eligibleGames.length || usageRows.length) ? ["No persisted player-game records match the requested filters"] : []),
         ...(players.some((p) => p.sourceCoverage.partialReasons.length) ? ["Player histories are sparse relative to the requested window"] : []),
         ...(players.some((p) => !p.metricAvailability.snapShare) ? ["Snap coverage is incomplete for some players"] : []),
