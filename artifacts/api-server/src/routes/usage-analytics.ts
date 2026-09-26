@@ -29,7 +29,7 @@ const allowedValues = {
   trend: new Set(["up", "down", "flat", "unavailable"]),
   coverage: new Set(["complete", "partial"]),
   window: new Set(["last3", "last5", "last8", "season"]),
-  sortColumn: new Set(["name", "snapShare", "targets", "receptions", "receivingYards", "carries", "rushingYards", "totalTd", "trend"]),
+  sortColumn: new Set(["name", "primaryVolume", "primaryYards", "snapShare", "targets", "receptions", "receivingYards", "carries", "rushingYards", "totalTd", "trend"]),
   team: new Set(["all", "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LV", "LAC", "LAR", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS"]),
   filterPosition: new Set(["all", "QB", "RB", "WR", "TE"]),
   filterWindow: new Set(["all", "last3", "last5", "last8", "season"]),

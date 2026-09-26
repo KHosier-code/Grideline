@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { sortUsagePlayers, trendLabel, usageChartData } from "./consumer-usage.ts";
+import { primaryUsage, sortUsagePlayers, trendLabel, usageChartData } from "./consumer-usage.ts";
 import { trackEvent } from "./analytics.ts";
 
 test("usage chart transformation preserves unavailable values", () => {
@@ -38,28 +38,53 @@ test("public navigation and signed-out routing expose player usage", () => {
   assert.match(source, /\{ href: '\/usage', label: 'Player Usage'/);
 });
 
-test("player usage displays passing evidence and sorts quarterbacks by passing yards", () => {
+test("position-aware overview uses observed volume and yardage without mixing roles", () => {
   const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
-  for (const name of ["attempts", "completions", "passingYards", "passingTds"]) {
-    assert.match(source, new RegExp(`player\\.aggregate\\.${name}`));
-  }
-  assert.match(source, /value === 'QB' \? 'passingYards' : 'targets'/);
+  for (const name of ["attempts", "completions", "passingYards", "passingTds", "rushingYards", "receivingYards"]) assert.match(source, new RegExp(`['"]${name}['"]`));
+  assert.deepEqual(primaryUsage({ position: "QB" }), { volume: "attempts", volumeLabel: "Att", yards: "passingYards" });
+  assert.deepEqual(primaryUsage({ position: "RB" }), { volume: "carries", volumeLabel: "Carries", yards: "rushingYards" });
+  assert.deepEqual(primaryUsage({ position: "WR" }), { volume: "targets", volumeLabel: "Targets", yards: "receivingYards" });
   const players = [
-    { playerName: "No record", aggregate: { passingYards: { value: null } } },
-    { playerName: "Lower", aggregate: { passingYards: { value: 184 } } },
-    { playerName: "Higher", aggregate: { passingYards: { value: 566 } } },
+    { playerName: "No record", position: "QB", trend: "unavailable" as const, aggregate: { attempts: { value: null }, passingYards: { value: null } } },
+    { playerName: "Runner", position: "RB", trend: "flat" as const, aggregate: { carries: { value: 9 }, rushingYards: { value: 40 } } },
+    { playerName: "Passer", position: "QB", trend: "up" as const, aggregate: { attempts: { value: 25 }, passingYards: { value: 250 } } },
   ];
-  assert.deepEqual(sortUsagePlayers(players, "passingYards", "desc").map((p) => p.playerName), ["Higher", "Lower", "No record"]);
+  assert.deepEqual(sortUsagePlayers(players, "primaryVolume", "desc").map(p => p.playerName), ["Passer", "Runner", "No record"]);
+  assert.deepEqual(sortUsagePlayers(players, "primaryYards", "asc").map(p => p.playerName), ["Runner", "Passer", "No record"]);
 });
 
-test("usage page renders server-validated filters and responsive expandable table evidence", () => {
+test("usage page has a compact filter toolbar, separately readable mobile list and keyboard-accessible details", () => {
   const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
   assert.match(source, /availableTeams\.map/);
-  assert.match(source, /<table/);
-  assert.match(source, /overflow-x-auto/);
-  assert.match(source, /Situational Context/);
+  for (const filter of ["team", "position", "window", "game"]) assert.match(source, new RegExp(`select-usage-${filter}`));
+  assert.match(source, /<details className="mt-3/);
+  assert.match(source, /button-usage-reset/);
+  assert.match(source, /setGame\(''\)/);
+  assert.match(source, /table-usage-players/);
+  assert.match(source, /list-usage-players/);
+  assert.match(source, /hidden lg:block/);
+  assert.match(source, /lg:hidden/);
+  assert.doesNotMatch(source, /min-w-\[1290px\]|colSpan=/);
+  assert.match(source, /aria-sort=/);
+  assert.match(source, /aria-haspopup="dialog"/);
+  assert.match(source, /<Dialog open=/);
+  assert.match(source, /<DialogTitle/);
+  assert.match(source, /<DialogDescription/);
+  assert.match(source, /list-usage-game-history/);
+  assert.match(source, /redZoneAvailable && \(game\.metrics\.redZoneTouches\?\.available/);
   assert.match(source, /sourceCoverage\.includedGames/);
-  assert.match(source, /colSpan=\{15\}/);
+  assert.match(source, /redZoneAvailable/);
+  assert.match(source, /redZoneEnabled && <Link href="\/red-zone"/);
+});
+
+test("usage keeps loading, empty, partial, and missing-stat explanations visible", () => {
+  const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
+  assert.match(source, /query\.isLoading \? <ConsumerLoading/);
+  assert.match(source, /query\.isError/);
+  assert.match(source, /No players found/);
+  assert.match(source, /query\.data\.status === 'partial'/);
+  assert.match(source, /A dash means unavailable, not zero/);
+  assert.match(source, /Observed stats only; no touchdown forecast probabilities/);
 });
 
 test("usage interactions emit bounded analytics without player or game identifiers", () => {

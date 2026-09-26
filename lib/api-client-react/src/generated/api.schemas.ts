@@ -30,6 +30,8 @@ export type UsageAnalyticsEventInputColumn = typeof UsageAnalyticsEventInputColu
 
 export const UsageAnalyticsEventInputColumn = {
   name: 'name',
+  primaryVolume: 'primaryVolume',
+  primaryYards: 'primaryYards',
   snapShare: 'snapShare',
   targets: 'targets',
   receptions: 'receptions',

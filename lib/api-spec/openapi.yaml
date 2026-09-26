@@ -855,7 +855,7 @@ components:
         value: { type: string, maxLength: 32 }
         column:
           type: string
-          enum: [name, snapShare, targets, receptions, receivingYards, carries, rushingYards, totalTd, trend]
+          enum: [name, primaryVolume, primaryYards, snapShare, targets, receptions, receivingYards, carries, rushingYards, totalTd, trend]
         direction: { type: string, enum: [asc, desc] }
         action: { type: string, enum: [expand, collapse] }
         position: { type: string, enum: [QB, RB, WR, TE, unknown] }

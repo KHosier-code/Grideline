@@ -13,6 +13,9 @@ test("accepts each bounded Usage Lab event shape", () => {
     column: "targets",
     direction: "desc",
   }));
+  for (const column of ["primaryVolume", "primaryYards"]) {
+    assert.ok(parseUsageAnalyticsEvent({ eventName: "usage_sort_changed", column, direction: "asc" }));
+  }
   assert.ok(parseUsageAnalyticsEvent({
     eventName: "usage_row_toggled",
     action: "expand",

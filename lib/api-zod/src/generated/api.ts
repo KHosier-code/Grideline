@@ -101,7 +101,7 @@ export const CaptureUsageAnalyticsEventBody = zod.object({
   "eventName": zod.enum(['usage_filter_changed', 'usage_sort_changed', 'usage_row_toggled', 'usage_filters_reset']),
   "filter": zod.enum(['team', 'position', 'window', 'game']).optional(),
   "value": zod.string().max(captureUsageAnalyticsEventBodyValueMax).optional(),
-  "column": zod.enum(['name', 'snapShare', 'targets', 'receptions', 'receivingYards', 'carries', 'rushingYards', 'totalTd', 'trend']).optional(),
+  "column": zod.enum(['name', 'primaryVolume', 'primaryYards', 'snapShare', 'targets', 'receptions', 'receivingYards', 'carries', 'rushingYards', 'totalTd', 'trend']).optional(),
   "direction": zod.enum(['asc', 'desc']).optional(),
   "action": zod.enum(['expand', 'collapse']).optional(),
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'unknown']).optional(),

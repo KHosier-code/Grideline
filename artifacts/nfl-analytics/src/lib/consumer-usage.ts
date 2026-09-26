@@ -6,10 +6,17 @@ type UsageGame = {
 type SortMetric = {
   playerName: string;
   trend: "up" | "down" | "flat" | "unavailable";
+  position?: string | null;
   aggregate: Record<string, { value: number | null }>;
 };
 
-export type UsageSortColumn = "name" | "snapShare" | "attempts" | "completions" | "passingYards" | "passingTds" | "targets" | "receptions" | "receivingYards" | "carries" | "rushingYards" | "totalTd" | "trend";
+export type UsageSortColumn = "name" | "primaryVolume" | "primaryYards" | "snapShare" | "attempts" | "completions" | "passingYards" | "passingTds" | "targets" | "receptions" | "receivingYards" | "carries" | "rushingYards" | "totalTd" | "trend";
+
+export function primaryUsage(player: { position?: string | null }) {
+  if (player.position === "QB") return { volume: "attempts", volumeLabel: "Att", yards: "passingYards" };
+  if (player.position === "RB") return { volume: "carries", volumeLabel: "Carries", yards: "rushingYards" };
+  return { volume: "targets", volumeLabel: "Targets", yards: "receivingYards" };
+}
 
 export function usageChartData(games: UsageGame[]) {
   return games.map((game) => ({
@@ -32,6 +39,8 @@ export function sortUsagePlayers<T extends SortMetric>(players: T[], column: Usa
   const value = (player: T): string | number | null => {
     if (column === "name") return player.playerName.toLocaleLowerCase();
     if (column === "trend") return trendRank[player.trend];
+    if (column === "primaryVolume") return player.aggregate[primaryUsage(player).volume]?.value ?? null;
+    if (column === "primaryYards") return player.aggregate[primaryUsage(player).yards]?.value ?? null;
     return player.aggregate[column]?.value ?? null;
   };
   return [...players].sort((left, right) => {
