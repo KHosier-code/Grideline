@@ -1,5 +1,5 @@
 import { assertDisposableDatabaseIdentity, assertWorkerStartupConfiguration, assertNoRehearsalExecutionAttempts, installRehearsalGuards, rehearsalRequested } from "./lib/worker-rehearsal";
-import { assertPlayerRecoveryConfiguration, attestPlayerRecoveryDatabase, blockRecoveryTestNetwork, recoveryRequested } from "./lib/player-feed-recovery";
+import { assertPlayerRecoveryConfiguration, attestPlayerRecoveryDatabase, blockRecoveryTestNetwork, recoveryRequested, RecoveryFeedLockedError, runAttestedPlayerRecovery } from "./lib/player-feed-recovery";
 
 // Never import @workspace/db, scheduler, provider modules, or retention before
 // the rehearsal URL and all independent execution switches have been checked.
@@ -51,27 +51,22 @@ if (rehearsal) {
   }
 } else if (recovery) {
   try {
-    const failures: string[] = [];
-    for (const feed of recovery.feeds) {
-      try {
-        if (feed === "injuries") {
-          const { withFeedLock } = await import("./lib/feed-lock");
-          const { syncEspnInjuries } = await import("./lib/availability");
-          const result = await withFeedLock("injuries", () =>
-            syncEspnInjuries({ jobKey: "operator-player-recovery" }));
-          if (!result) throw new Error("Injury feed is already locked; recovery stopped");
-          logger.info({ feed, inserted: result.inserted }, "Selected player recovery completed");
-        } else {
-          const { syncSleeperPlayers } = await import("./lib/sleeper");
-          const result = await syncSleeperPlayers({ jobKey: "operator-player-recovery" });
-          logger.info({ feed, inserted: result.inserted }, "Selected player recovery completed");
-        }
-      } catch (error) {
-        failures.push(feed);
-        logger.error({ feed, error }, "Selected player recovery failed");
+    const receipt = await runAttestedPlayerRecovery(recovery, async (feed, jobKey) => {
+      if (feed === "injuries") {
+        const { withFeedLock } = await import("./lib/feed-lock");
+        const { syncEspnInjuries } = await import("./lib/availability");
+        const result = await withFeedLock("injuries", () => syncEspnInjuries({ jobKey }));
+        if (!result) throw new RecoveryFeedLockedError("Injury feed is already locked");
+        return result;
       }
-    }
-    if (failures.length) throw new Error(`Player recovery failed for: ${failures.join(", ")}`);
+      const { syncSleeperPlayers } = await import("./lib/sleeper");
+      return syncSleeperPlayers({ jobKey });
+    });
+    // A single machine-readable line survives the pretty logger and can be
+    // retained alongside the corresponding sync-run rows by operators.
+    process.stdout.write(`${JSON.stringify(receipt)}\n`);
+    if (receipt.status !== "success")
+      throw new Error(`Player recovery ${receipt.status}; receipt ${receipt.receiptId}`);
   } finally {
     await release();
     await pool.end();

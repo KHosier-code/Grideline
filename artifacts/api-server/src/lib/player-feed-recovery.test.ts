@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   assertPlayerRecoveryConfiguration, attestPlayerRecoveryDatabase,
+  RecoveryFeedLockedError, runAttestedPlayerRecovery,
 } from "./player-feed-recovery";
 
 const env = {
@@ -51,4 +52,38 @@ test("the connected server, role, database, oid and primary must match", async (
       async () => ({ rows: [{ ...row, [key]: "wrong" }] })), key);
   }
   await assert.rejects(attestPlayerRecoveryDatabase(config, async () => ({ rows: [] })));
+});
+
+test("receipt shows partial success, links only selected sync runs and excludes target identifiers", async () => {
+  const config = assertPlayerRecoveryConfiguration(env);
+  const called: string[] = [];
+  const receipt = await runAttestedPlayerRecovery(config, async (feed, jobKey) => {
+    called.push(`${feed}:${jobKey}`);
+    if (feed === "sleeper") throw new Error("secret connection detail");
+    return { inserted: 3 };
+  });
+  assert.equal(receipt.status, "partial_success");
+  assert.deepEqual(receipt.approvedFeeds, ["injuries", "sleeper"]);
+  assert.deepEqual(receipt.attempts, [
+    { feed: "injuries", status: "success", inserted: 3 },
+    { feed: "sleeper", status: "failed", reason: "sync_error" },
+  ]);
+  assert.match(receipt.syncRunJobKey, /^operator-player-recovery:[0-9a-f-]{36}$/);
+  assert.equal(called.length, 2);
+  assert(called.every((value) => value.endsWith(receipt.syncRunJobKey)));
+  assert.equal(receipt.target, "attested_development_primary");
+  const serialized = JSON.stringify(receipt);
+  for (const value of [config.database, config.role, config.systemId, String(config.databaseOid),
+    config.serverAddress, "secret connection detail"]) {
+    assert(!serialized.includes(value), `receipt leaked ${value}`);
+  }
+});
+
+test("receipt distinguishes a lock refusal from a sync failure and reports total failure", async () => {
+  const receipt = await runAttestedPlayerRecovery(
+    assertPlayerRecoveryConfiguration({ ...env, GRIDLINE_PLAYER_RECOVERY: "injuries" }),
+    async () => { throw new RecoveryFeedLockedError("locked"); },
+  );
+  assert.equal(receipt.status, "failed");
+  assert.deepEqual(receipt.attempts, [{ feed: "injuries", status: "failed", reason: "locked" }]);
 });

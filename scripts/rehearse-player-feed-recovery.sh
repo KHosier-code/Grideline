@@ -73,10 +73,10 @@ DO $$
 BEGIN
   IF (SELECT count(*) FROM data_sync_runs) <> 4
     OR (SELECT count(*) FROM data_sync_runs WHERE status='failed'
-        AND job_key='operator-player-recovery'
+        AND job_key LIKE 'operator-player-recovery:%'
         AND provider='espn-injuries') <> 2
     OR (SELECT count(*) FROM data_sync_runs WHERE status='failed'
-        AND job_key='operator-player-recovery'
+        AND job_key LIKE 'operator-player-recovery:%'
         AND provider='sleeper-players') <> 2
     OR (SELECT count(*) FROM data_sync_runs WHERE error_message LIKE '%Disposable recovery blocked provider fetch%') <> 2
     OR (SELECT count(*) FROM data_sync_runs WHERE provider='sleeper-players'
@@ -94,4 +94,34 @@ BEGIN
   END IF;
 END $$;
 SQL
-echo "Disposable selective recovery passed: single and combined selections blocked; no scheduler, paid, model, retention or snapshot activity."
+if grep -q '"event":"player_recovery_receipt"' "$TEMP/mismatch.log"; then
+  echo "Identity mismatch produced a receipt without attestation" >&2; exit 1
+fi
+# The stdout receipts must identify exactly the persisted rows from each
+# invocation, including the two independently failed attempts in the combined run.
+for selection in injuries sleeper both; do
+  receipt=$(grep '^{"event":"player_recovery_receipt"' "$TEMP/$selection.log")
+  if [ "$(printf '%s\n' "$receipt" | wc -l)" -ne 1 ]; then
+    echo "Expected one receipt for $selection" >&2; exit 1
+  fi
+  key=$(printf '%s\n' "$receipt" | node -e '
+    let input = ""; process.stdin.on("data", part => input += part);
+    process.stdin.on("end", () => {
+      const r = JSON.parse(input);
+      const expected = process.argv[1] === "both" ? ["injuries", "sleeper"] : [process.argv[1]];
+      if (r.status !== "failed" || r.target !== "attested_disposable_development_primary"
+        || JSON.stringify(r.approvedFeeds) !== JSON.stringify(expected)
+        || JSON.stringify(r.attempts.map(a => [a.feed, a.status, a.reason]))
+          !== JSON.stringify(expected.map(feed => [feed, "failed", "sync_error"])))
+        process.exit(1);
+      process.stdout.write(r.syncRunJobKey);
+    });' "$selection")
+  count=$(psql "$URL" -At -v key="$key" <<'SQL'
+SELECT count(*) FROM data_sync_runs WHERE job_key=:'key' AND status='failed';
+SQL
+)
+  expected=1
+  if [ "$selection" = both ]; then expected=2; fi
+  if [ "$count" != "$expected" ]; then echo "Receipt does not match selected sync runs" >&2; exit 1; fi
+done
+echo "Disposable selective recovery passed: receipts match single and combined failed attempts; no scheduler, paid, model, retention or snapshot activity."

@@ -3,6 +3,7 @@
  * validate intent before opening a connection or loading any feed adapter.
  */
 import net from "node:net";
+import { randomUUID } from "node:crypto";
 
 export type RecoveryFeed = "injuries" | "sleeper";
 export type RecoveryConfig = {
@@ -15,6 +16,54 @@ export type RecoveryConfig = {
   disposable: boolean;
   marker?: string;
 };
+
+export type RecoveryAttempt = {
+  feed: RecoveryFeed;
+  status: "success" | "failed";
+  inserted?: number;
+  reason?: "locked" | "sync_error";
+};
+
+export class RecoveryFeedLockedError extends Error {}
+
+/**
+ * Allowlisted stdout receipt: the unique job key links to data_sync_runs without
+ * copying provider errors, database identifiers, connection URLs or credentials.
+ * Only call after attestation of the connection opened by this worker.
+ */
+export async function runAttestedPlayerRecovery(
+  config: RecoveryConfig,
+  runFeed: (feed: RecoveryFeed, jobKey: string) => Promise<{ inserted: number }>,
+) {
+  const receiptId = randomUUID();
+  const jobKey = `operator-player-recovery:${receiptId}`;
+  const startedAt = new Date().toISOString();
+  const attempts: RecoveryAttempt[] = [];
+  for (const feed of config.feeds) {
+    try {
+      const result = await runFeed(feed, jobKey);
+      attempts.push({ feed, status: "success", inserted: result.inserted });
+    } catch (error) {
+      attempts.push({
+        feed,
+        status: "failed",
+        reason: error instanceof RecoveryFeedLockedError ? "locked" : "sync_error",
+      });
+    }
+  }
+  const successes = attempts.filter((attempt) => attempt.status === "success").length;
+  return {
+    event: "player_recovery_receipt",
+    receiptId,
+    approvedFeeds: config.feeds,
+    target: config.disposable ? "attested_disposable_development_primary" : "attested_development_primary",
+    syncRunJobKey: jobKey,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    status: successes === attempts.length ? "success" : successes ? "partial_success" : "failed",
+    attempts,
+  };
+}
 
 export function recoveryRequested(env: NodeJS.ProcessEnv) {
   return env.GRIDLINE_PLAYER_RECOVERY !== undefined;
