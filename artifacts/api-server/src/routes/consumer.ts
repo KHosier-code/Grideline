@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lt, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, lt, lte, sql } from "drizzle-orm";
 import { Router, type IRouter, type NextFunction, type Request, type Response } from "express";
 import {
   db,
@@ -43,7 +43,7 @@ import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
 import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, interpretNflGameState, verifyTeamRecords } from "../lib/game-state";
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
-import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
+import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { GetConsumerScheduleSelectionResponse } from "@workspace/api-zod";
@@ -1521,16 +1521,39 @@ router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   }
 });
 
-router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
-  try {
-    const schedule = await db.select({
+export function consumerScheduleSummaryQuery(now: Date) {
+    // Match interpretNflGameState: terminal states win over in-progress states,
+    // and a non-terminal game past kickoff is live regardless of its status.
+    const status = sql`lower(btrim(regexp_replace(${gamesTable.gameStatus}, '[_-]+', ' ', 'g')))`;
+    const terminal = sql`(${status} like '%postpon%' or ${status} like '%cancel%'
+      or ${status} like '%final%' or ${status} like '%completed%' or ${status} = 'closed')`;
+    const explicitlyLive = sql`(${status} like '%progress%' or ${status} like '%halftime%'
+      or ${status} like '%in progress%' or ${status} like '%end of%' or ${status} like '%quarter%')`;
+    return db.select({
       season: gamesTable.season,
       week: gamesTable.week,
-      kickoffTime: gamesTable.kickoffTime,
-      gameStatus: gamesTable.gameStatus,
-    }).from(gamesTable);
+      first: sql<string>`min(${gamesTable.kickoffTime})`.as("first"),
+      last: sql<string>`max(${gamesTable.kickoffTime})`.as("last"),
+      live: sql<boolean>`bool_or(${gamesTable.kickoffTime} <= ${now}
+        and ${gamesTable.kickoffTime} >= ${new Date(now.getTime() - 8 * 60 * 60_000)}
+        and not ${terminal})`.as("live"),
+      upcoming: sql<boolean>`bool_or(${gamesTable.kickoffTime} > ${now}
+        and not ${terminal} and not ${explicitlyLive})`.as("upcoming"),
+    }).from(gamesTable)
+      .where(isNotNull(gamesTable.kickoffTime))
+      .groupBy(gamesTable.season, gamesTable.week);
+}
+
+router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
+  try {
+    const schedule = await consumerScheduleSummaryQuery(new Date());
     res.set("Cache-Control", "no-store");
-    res.json(GetConsumerScheduleSelectionResponse.parse(selectConsumerSlate(schedule, new Date())));
+    // Raw Drizzle aggregates are returned as strings, despite a timestamp column.
+    res.json(GetConsumerScheduleSelectionResponse.parse(selectConsumerSlateSummaries(schedule.map((slate) => ({
+      ...slate,
+      first: new Date(slate.first),
+      last: new Date(slate.last),
+    })))));
   } catch (error) {
     req.log.error({ error }, "Consumer schedule selection read failed");
     res.status(503).json({ error: "Schedule evidence unavailable", code: "consumer_data_unavailable" });

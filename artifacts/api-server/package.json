@@ -26,6 +26,7 @@
     "test:production-schema-order:dev": "pnpm run build && NODE_ENV=development GRIDLINE_DISPOSABLE_SCHEMA_TEST=1 node --test ./dist/lib/production-schema-order.dev.test.mjs",
     "test:current-personnel": "pnpm run build && node --test ./dist/lib/current-personnel-derivation.test.mjs ./dist/lib/current-personnel.test.mjs",
     "test:consumer-matchups": "pnpm run build && node --test ./dist/lib/consumer-matchups.test.mjs ./dist/routes/consumer.test.mjs",
+    "test:consumer-schedule-performance": "pnpm run build && node --test ./dist/routes/consumer-schedule-performance.test.mjs",
     "pretypecheck": "if [ \"${WORKSPACE_LIBS_PREBUILT:-0}\" != \"1\" ]; then pnpm --dir ../.. run typecheck:libs; fi",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
