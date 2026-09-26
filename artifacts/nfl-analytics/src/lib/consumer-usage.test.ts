@@ -89,6 +89,16 @@ test("default relevance compares role-adjusted usage and observed coverage with 
   assert.deepEqual(sortUsagePlayers(players, "name", "asc").map(p => p.playerId), ["m", "q", "r", "r2", "p", "w"]);
 });
 
+test("usage overview explains relevance as observed role-adjusted volume with coverage limits", () => {
+  const source = readFileSync(fileURLToPath(new URL("../pages/consumer/ConsumerUsage.tsx", import.meta.url)), "utf8");
+  assert.match(source, /<details[^>]*data-testid="disclosure-usage-relevance"/);
+  assert.match(source, /<summary[^>]*>Why this order\?<\/summary>/);
+  assert.match(source, /observed volume per covered game against typical volume for each role/);
+  assert.match(source, /Fewer covered games out of the requested window lower placement/);
+  assert.match(source, /missing primary volume or no covered games go last/);
+  assert.match(source, /not a forecast or prediction of future performance/);
+});
+
 test("usage-specific metric units preserve zero and unavailable", () => {
   assert.equal(formatUsageMetric(0), "0");
   assert.equal(formatUsageMetric(312.0), "312");

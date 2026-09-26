@@ -232,7 +232,16 @@ export default function ConsumerUsage() {
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Info className="h-4 w-4" /> {query.data.sourceCoverage.includedGames}/{query.data.sourceCoverage.requestedGames} games covered</span>
           </div>
           {query.data.status === 'partial' && <p role="status" className="border-b border-border bg-amber-500/10 px-4 py-2 text-xs text-amber-800 dark:text-amber-300" data-testid="status-usage-partial"><strong>Partial coverage.</strong> {query.data.sourceCoverage.partialReasons.join(' · ') || 'Some metrics are unavailable for this window.'} A dash means unavailable, not zero.</p>}
-           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-xs text-muted-foreground"><span>Volume is pass attempts for QBs, carries for RBs, and targets for WRs/TEs. Yards follow the same roles. TDs are observed totals.</span>{sortCol === 'relevance' ? <span data-testid="text-usage-relevance">Sorted by relevance · observed role and coverage</span> : <button type="button" className="font-semibold text-accent underline" onClick={() => handleSort('relevance')} data-testid="button-usage-relevance">Sort by relevance</button>}</div>
+           <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border px-4 py-3 text-xs text-muted-foreground">
+             <span>Volume is pass attempts for QBs, carries for RBs, and targets for WRs/TEs. Yards follow the same roles. TDs are observed totals.</span>
+             <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
+               {sortCol === 'relevance' ? <span data-testid="text-usage-relevance">Sorted by relevance · observed role and coverage</span> : <button type="button" className="font-semibold text-accent underline" onClick={() => handleSort('relevance')} data-testid="button-usage-relevance">Sort by relevance</button>}
+               <details className="max-w-sm" data-testid="disclosure-usage-relevance">
+                 <summary className="cursor-pointer font-semibold text-accent underline underline-offset-2 focus-visible:outline focus-visible:outline-2">Why this order?</summary>
+                 <p className="mt-2 leading-relaxed">Relevance compares observed volume per covered game against typical volume for each role: QB pass attempts, RB carries, and WR/TE targets. That lets a target-heavy receiver rank above a quarterback without comparing raw targets to pass attempts. Fewer covered games out of the requested window lower placement; missing primary volume or no covered games go last. This is a way to browse past usage, not a forecast or prediction of future performance.</p>
+               </details>
+             </div>
+           </div>
           <div className="flex items-center gap-2 border-b border-border px-4 py-3 lg:hidden">
             <label htmlFor="usage-mobile-sort" className="text-xs font-medium">Sort by</label>
             <select id="usage-mobile-sort" className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm" value={sortCol} onChange={e => handleSort(e.target.value as UsageSortColumn)} data-testid="select-usage-sort">
