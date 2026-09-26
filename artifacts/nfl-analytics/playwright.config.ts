@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 
 const admin = process.env.GRIDLINE_THEME_ADMIN === '1';
 if (admin && !process.env.GRIDLINE_ADMIN_STORAGE_STATE) {
-  throw new Error('Admin browser check requires GRIDLINE_ADMIN_STORAGE_STATE pointing to an authorized Clerk session storage-state file.');
+  throw new Error('Admin browser check requires a fresh provisioned development Clerk session. Run pnpm test:theme instead.');
 }
 
 export default defineConfig({
@@ -17,7 +17,8 @@ export default defineConfig({
     launchOptions: existsSync('/repl/tools/bin/chromium')
       ? { executablePath: '/repl/tools/bin/chromium', args: ['--no-sandbox'] }
       : undefined,
-    trace: 'retain-on-failure',
+    // Traces can include authentication cookies and tokens.
+    trace: admin ? 'off' : 'retain-on-failure',
   },
   reporter: 'list',
 });

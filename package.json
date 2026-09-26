@@ -7,8 +7,8 @@
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "test:fast": "pnpm --filter @workspace/scripts run test:typecheck-script-contract",
     "test:consumer-performance": "pnpm --filter @workspace/nfl-analytics run perf:budget",
-    "test:theme": "playwright test --config artifacts/nfl-analytics/playwright.config.ts",
-    "test:theme:admin": "GRIDLINE_THEME_ADMIN=1 playwright test --config artifacts/nfl-analytics/playwright.config.ts",
+    "test:theme": "node artifacts/nfl-analytics/tests/run-theme-check.mjs",
+    "test:theme:admin": "node artifacts/nfl-analytics/tests/run-theme-check.mjs --admin-only",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && WORKSPACE_LIBS_PREBUILT=1 pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
@@ -17,6 +17,7 @@
     "@replit/connectors-sdk": "^0.4.3"
   },
   "devDependencies": {
+    "@clerk/backend": "3.17.2",
     "@playwright/test": "^1.63.0",
     "prettier": "^3.9.6",
     "typescript": "~5.9.3"

@@ -60,3 +60,4 @@
 - [Cleanup startup evidence](cleanup-startup-evidence.md) — seed first-attempt grace periods before API listen, including schema-first publishes; admin visits cannot start the clock.
 - [Wouter shared-link fixtures](wouter-shared-link-fixtures.md) — navigate cold links directly; mounted history changes can race validation before reload.
 - [Contrast testing surfaces](contrast-testing-surfaces.md) — resolve translucent text surfaces against opaque ancestors; gradient backgrounds need separate image-aware sampling.
+- [Development Admin browser identity](dev-admin-browser-identity.md) — Clerk test-user creation may require valid email and password even for ticket sign-in; keep release grants short-lived and dev-only.

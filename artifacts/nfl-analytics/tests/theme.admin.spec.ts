@@ -3,6 +3,23 @@ import { expectBootstrapTheme, expectKeyboardRing, expectNoHorizontalOverflow, e
 
 test.use({ storageState: process.env.GRIDLINE_ADMIN_STORAGE_STATE! });
 
+test.beforeEach(async ({ page }) => {
+  await page.goto('/admin');
+  await expect.poll(async () => {
+    return page.evaluate(async () => {
+      const clerk = (window as typeof window & { Clerk?: { session?: { getToken(): Promise<string | null> } } }).Clerk;
+      const token = await clerk?.session?.getToken();
+      if (!token) return 401;
+      const response = await fetch('/api/auth/admin-status', {
+        credentials: 'include',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return response.status;
+      return (await response.json()).isAdmin === true ? 200 : 403;
+    });
+  }, { message: 'Development Admin session expired or authorization grant missing' }).toBe(200);
+});
+
 test('Admin navigation, panels and status pills meet normal-text contrast at both widths', async ({ page }) => {
   for (const theme of ['dark', 'light'] as const) {
     for (const width of [1280, 390]) {
