@@ -2991,6 +2991,18 @@
     ],
     "promotionMismatchExcluded": true,
     "persistedNegativeRowsRejected": 15,
-    "lateFreezeRejected": true
+    "lateFreezeRejected": true,
+    "firstObservation": {
+      "requestBound": true,
+      "outcomes": {
+        "rehearsal-future-1": "locked",
+        "rehearsal-legacy": "legacy_unattributed",
+        "rehearsal-no-line": "no_line"
+      },
+      "laterObservationsImmutable": true,
+      "selectedGameId": "rehearsal-future-1",
+      "providerContacts": 0,
+      "liveDatabaseWrites": 0
+    }
   }
 }

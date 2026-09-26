@@ -3,8 +3,10 @@ import { eq } from "drizzle-orm";
 import {
   db, pool, schedulerJobsTable, dataSyncRunsTable, gamesTable,
   teamsTable, predictionSnapshotsTable, modelTrainingRunsTable,
-  modelPromotionHistoryTable, pregameTeamFeaturesTable,
+  modelPromotionHistoryTable, pregameTeamFeaturesTable, oddsApiRequestsTable,
+  sportsbookOddsTable, initialLinePicksTable, initialWeeklyPicksTable,
 } from "@workspace/db";
+import { captureInitialLineOutcome, selectInitialWeeklyPick, readInitialWeeklyPick } from "./initial-line-picks";
 import {
   artifactIdentityFor, PHASE6_VECTOR_FEATURE_NAMES, PHASE6_VECTOR_SCHEMA_FINGERPRINT,
   type FittedModelArtifact,
@@ -187,12 +189,14 @@ async function writer() {
       modelVersion: version, family, algorithm: "linear_regression",
       featureVersion: "pregame-v3", trainingSeasons: [2024, 2025],
       testSeason: 2026, samplePolicy: "include_low_sample", sampleSize: 2,
+      trainedAt: new Date("2026-09-25T00:00:00Z"),
       vectorFeatureNames: names, vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
       modelArtifact: artifact,
     });
     await db.insert(modelPromotionHistoryTable).values({
       modelVersion: version, family, algorithm: "linear_regression", featureVersion: "pregame-v3",
       trainingCutoff: "2025-12-31", promotedBy: "disposable-fixture",
+      promotedAt: new Date("2026-09-25T01:00:00Z"),
     });
   }
   const selected = names.slice(0, -3);
@@ -278,6 +282,47 @@ async function writer() {
   const [unchanged] = await db.select().from(predictionSnapshotsTable).where(eq(predictionSnapshotsTable.id, saved.id));
   assert.deepEqual(unchanged.marketSnapshot, saved.marketSnapshot);
   assert.equal(unchanged.officialFinalPrediction, false);
+  // Model a future *successful* scheduled request, not an upstream call. Its
+  // quotes are already persisted, exactly as the normal odds adapter does
+  // before deciding the first line. An older quote can never be relabeled.
+  const requestedAt = new Date("2026-09-26T02:15:00Z");
+  const observedAt = new Date("2026-09-26T02:15:02Z");
+  const [request] = await db.insert(oddsApiRequestsTable).values({
+    requestedAt, status: "success", intentKey: "odds-adaptive:disposable-future-slot",
+    metadata: { jobKey: "odds-adaptive", scheduledFor: requestedAt.toISOString() },
+  }).returning({ id: oddsApiRequestsTable.id });
+  const quotes = [
+    { sportsbook: "DraftKings", market: "moneyline", selection: "FHO", point: null, price: -135, sourceTimestamp: null },
+    { sportsbook: "DraftKings", market: "moneyline", selection: "FAW", point: null, price: 115, sourceTimestamp: null },
+    { sportsbook: "DraftKings", market: "spread", selection: "FHO", point: -2.5, price: -110, sourceTimestamp: null },
+    { sportsbook: "DraftKings", market: "spread", selection: "FAW", point: 2.5, price: -110, sourceTimestamp: null },
+  ];
+  const legacyId = "rehearsal-legacy", emptyId = "rehearsal-no-line";
+  await db.insert(gamesTable).values([legacyId, emptyId].map((gameId) => ({
+    gameId, season: 2026, week: 3, gameDate: FUTURE, kickoffTime: FUTURE,
+    homeTeamId: "rehearsal-home", awayTeamId: "rehearsal-away", gameStatus: "scheduled",
+  })));
+  await db.insert(sportsbookOddsTable).values([
+    ...[futureId, legacyId].flatMap((gameId) => quotes.map((quote) => ({
+      ...quote, gameId, capturedAt: observedAt,
+    }))),
+    { ...quotes[0]!, gameId: legacyId, capturedAt: new Date(requestedAt.getTime() - 60_000) },
+  ]);
+  const first = { requestId: request!.id, requestedAt, observedAt, quotes };
+  assert.equal(await captureInitialLineOutcome({ ...first, gameId: futureId }), true);
+  assert.equal(await captureInitialLineOutcome({ ...first, gameId: legacyId }), true);
+  assert.equal(await captureInitialLineOutcome({ ...first, gameId: emptyId, quotes: [] }), true);
+  const decisions = await db.select().from(initialLinePicksTable);
+  const statuses = Object.fromEntries(decisions.map((row) => [row.gameId, row.status]));
+  assert.equal(statuses[futureId], "locked");
+  assert.equal(statuses[legacyId], "legacy_unattributed");
+  assert.equal(statuses[emptyId], "no_line");
+  assert.equal(await captureInitialLineOutcome({ ...first, gameId: emptyId }), false);
+  assert.equal(await captureInitialLineOutcome({ ...first, gameId: legacyId }), false);
+  await selectInitialWeeklyPick(2026, 3, observedAt);
+  const [weekly] = await db.select().from(initialWeeklyPicksTable);
+  assert.equal(weekly?.gameId, futureId);
+  assert.equal((await readInitialWeeklyPick(observedAt)).pick?.gameId, futureId);
   return {
     writer: result, selectedId: saved.id, versions: familyVersions,
     featureCount: saved.inputFeatureCount, missingCount: saved.inputMissingFeatureCount,
@@ -287,6 +332,9 @@ async function writer() {
     negativeCases: Object.keys(negative), promotionMismatchExcluded: true,
     persistedNegativeRowsRejected: negativeIds.length,
     lateFreezeRejected: true,
+    firstObservation: { requestBound: true, outcomes: statuses,
+      laterObservationsImmutable: true, selectedGameId: weekly.gameId,
+      providerContacts: 0, liveDatabaseWrites: 0 },
   };
 }
 
