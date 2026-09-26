@@ -1,4 +1,5 @@
 import { createReadStream } from "node:fs";
+import { capturePlayerPositionRelease } from "./player-position-releases";
 import { mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { createGunzip } from "node:zlib";
@@ -1133,6 +1134,17 @@ export async function syncNflverseHistory(
           logger.error({ error, season }, "NFLverse red-zone opportunity derivation failed");
         }
       }
+      if (options?.datasets?.some(dataset => dataset === "pbp" || dataset === "player_stats")
+        || (!options?.datasets && pbpFilePath)) {
+        try {
+          await capturePlayerPositionRelease(season);
+        } catch (error) {
+          // Research archival failure must not masquerade as a successful
+          // audited release, but must not discard a valid source import.
+          logger.error({ error, season }, "Player position source capture failed");
+          failures.push(`Player position source capture failed for ${season}`);
+        }
+      }
     }
     const handledMissingSeason = failures.length > 0 && failures.length === missingDatasets.length;
     const status = failures.length === 0
@@ -1181,6 +1193,7 @@ export async function refreshNflversePlayByPlay(seasons = defaultSeasons) {
       await db.update(nflverseSourceFilesTable)
         .set({ status: "success", rowsProcessed: result.sourceRows, completedAt: new Date(), errorMessage: null })
         .where(and(eq(nflverseSourceFilesTable.dataset, "pbp"), eq(nflverseSourceFilesTable.season, season)));
+      await capturePlayerPositionRelease(season);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       failures.push(message);

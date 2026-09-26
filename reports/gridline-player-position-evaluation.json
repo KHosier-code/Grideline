@@ -1,14 +1,16 @@
 {
-  "version": "player-position-forward-research-v1",
+  "version": "player-position-forward-research-v2",
   "trainSeason": 2025,
   "holdoutSeason": 2025,
   "split": "Training weeks 1–9; forward holdout weeks 10–18",
   "method": "Prior five player appearances on the same team; previous position-game opponent allowances shrink toward zero adjustment as n/(n+5), capped at 25%; coefficient chosen by training MAE. Holdout and ablation use identical eligible rows.",
-  "provenance": "Reconstructed game-time chronology only. Imported mutable source revisions cannot prove historical as-of availability.",
+  "provenance": "Reconstructed game-time chronology only. A later archived capture cannot certify earlier kickoffs; these errors do not qualify an as-of forecast.",
+  "archivedReleases": [],
   "missing": {
     "unreconciledRows": 378,
     "partialDefensiveGames": 10050,
-    "insufficientPlayerHistory": 4216
+    "insufficientPlayerHistory": 4216,
+    "archivedPregameReleaseMissing": 10050
   },
   "metrics": {
     "QB:attempts": {
@@ -16,7 +18,7 @@
       "defenseTrainingN": 0,
       "holdoutN": 262,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 262,
         "mae": 8.577353689567426,
@@ -61,15 +63,112 @@
           "meanActual": 31.829545454545453
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "QB:passingYards": {
       "trainingN": 144,
       "defenseTrainingN": 0,
       "holdoutN": 262,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 262,
         "mae": 73.01100508905853,
@@ -114,15 +213,112 @@
           "meanActual": 229.64772727272728
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "RB:carries": {
       "trainingN": 379,
       "defenseTrainingN": 0,
       "holdoutN": 677,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 677,
         "mae": 3.467479074347617,
@@ -167,15 +363,112 @@
           "meanActual": 14.898230088495575
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "RB:rushingYards": {
       "trainingN": 379,
       "defenseTrainingN": 0,
       "holdoutN": 677,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 677,
         "mae": 19.522058099458416,
@@ -220,15 +513,112 @@
           "meanActual": 64.58849557522124
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "RB:targets": {
       "trainingN": 379,
       "defenseTrainingN": 0,
       "holdoutN": 677,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 677,
         "mae": 1.242885278188084,
@@ -273,15 +663,112 @@
           "meanActual": 3.4911504424778763
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "RB:receivingYards": {
       "trainingN": 379,
       "defenseTrainingN": 0,
       "holdoutN": 677,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 677,
         "mae": 10.354308222550475,
@@ -326,15 +813,112 @@
           "meanActual": 20.287610619469028
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "WR:targets": {
       "trainingN": 604,
       "defenseTrainingN": 0,
       "holdoutN": 1063,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 1063,
         "mae": 1.8816400125431185,
@@ -379,15 +963,112 @@
           "meanActual": 6.673239436619719
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "WR:receivingYards": {
       "trainingN": 604,
       "defenseTrainingN": 0,
       "holdoutN": 1063,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 1063,
         "mae": 21.490733772342463,
@@ -432,15 +1113,112 @@
           "meanActual": 53.66478873239436
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "TE:targets": {
       "trainingN": 283,
       "defenseTrainingN": 0,
       "holdoutN": 557,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 557,
         "mae": 1.4663674446439259,
@@ -485,15 +1263,112 @@
           "meanActual": 5.526881720430108
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     },
     "TE:receivingYards": {
       "trainingN": 283,
       "defenseTrainingN": 0,
       "holdoutN": 557,
       "defenseCoveredN": 0,
-      "fittedWeight": 0,
+      "fittedWeight": null,
       "playerOnly": {
         "n": 557,
         "mae": 15.854847396768392,
@@ -538,8 +1413,105 @@
           "meanActual": 40.413978494623656
         }
       ],
+      "pairedPlayerOnlyCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "pairedDefenseCalibration": [
+        {
+          "bucket": 1,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 2,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        },
+        {
+          "bucket": 3,
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
+        }
+      ],
+      "archivedAsOf": {
+        "trainingN": 0,
+        "pairedHoldoutN": 0,
+        "fittedWeight": null,
+        "playerOnly": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "defenseContext": {
+          "n": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "playerOnlyCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ],
+        "defenseCalibration": [
+          {
+            "bucket": 1,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 2,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          },
+          {
+            "bucket": 3,
+            "n": 0,
+            "meanEstimate": null,
+            "meanActual": null
+          }
+        ]
+      },
       "enabledLive": false,
-      "reason": "Historical source revisions were not archived before their kickoffs; availability and roster evidence are not qualified for live counts."
+      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
     }
   }
 }

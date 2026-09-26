@@ -849,6 +849,19 @@ export const nflverseSourceFilesTable = pgTable("nflverse_source_files", {
   unique("nflverse_source_dataset_season_unique").on(table.dataset, table.season),
 ]);
 
+/** Append-only observed source versions. Capture time is not publisher time;
+ * versions first captured after kickoff cannot qualify that kickoff. */
+export const playerPositionSourceReleasesTable = pgTable("player_position_source_releases", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  season: integer("season").notNull(),
+  capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+  fingerprint: text("fingerprint").notNull(),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+}, (table) => [
+  unique("player_position_source_release_fingerprint_unique").on(table.season, table.fingerprint),
+  index("player_position_source_release_time_idx").on(table.season, table.capturedAt),
+]);
+
 export const teamGameStatsTable = pgTable("team_game_stats", {
   season: integer("season").notNull(),
   week: integer("week").notNull(),

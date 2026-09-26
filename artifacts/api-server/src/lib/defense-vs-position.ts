@@ -34,6 +34,43 @@ export type DefenseInputs = {
   sources: Source[]; teams: Array<{ teamId: string; abbreviation: string }>;
 };
 
+/** Complete position-game evidence is not inferred from one named player's
+ * row. The opposing offense, PBP identities and every position row must agree. */
+export function completePositionGame(input: DefenseInputs, game: Game, offense: string,
+  defense: string, position: Position, metric: string, canonical: (id: string | null) => string | null,
+): { value: number; participants: number } | null {
+  if (game.gameStatus !== "STATUS_FINAL" || !game.kickoffTime || game.week > 18
+    || !["player_stats", "pbp"].every(dataset => input.sources.some(s =>
+      s.season === game.season && s.dataset === dataset && s.status === "success"))) return null;
+  const a = canonical(game.homeTeamId), b = canonical(game.awayTeamId);
+  if (!a || !b || ![[a, b], [b, a]].some(([o, d]) => o === offense && d === defense)) return null;
+  const facts = input.rzTeams.filter(r => r.gameId === game.gameId && r.season === game.season
+    && r.week === game.week && r.seasonType === "REG" && r.zone === 20
+    && ((canonical(r.teamId) === offense && canonical(r.opponentTeamId) === defense)
+      || (canonical(r.teamId) === defense && canonical(r.opponentTeamId) === offense)));
+  if (facts.length !== 2 || new Set(facts.map(r => canonical(r.teamId))).size !== 2) return null;
+  const rows = input.stats.filter(r => r.season === game.season && r.week === game.week
+    && r.seasonType.toUpperCase() === "REG"
+    && ((canonical(r.teamId) === offense && canonical(r.opponentTeamId) === defense)
+      || (canonical(r.teamId) === defense && canonical(r.opponentTeamId) === offense)));
+  const offenseRows = rows.filter(r => canonical(r.teamId) === offense);
+  if (!offenseRows.length || !rows.some(r => canonical(r.teamId) === defense)
+    || offenseRows.some(r => !r.playerId || !r.position?.trim())
+    || new Set(offenseRows.map(r => r.playerId)).size !== offenseRows.length) return null;
+  const participants = offenseRows.filter(r => r.position?.toUpperCase() === position);
+  if (!participants.length || participants.some(r => typeof r[metric as keyof Stat] !== "number"
+    || !Number.isFinite(r[metric as keyof Stat]))) return null;
+  const pbpPlayers = input.rzPlayers.filter(r => r.gameId === game.gameId
+    && r.season === game.season && r.week === game.week && r.seasonType === "REG"
+    && r.zone === 20 && canonical(r.teamId) === offense && canonical(r.opponentTeamId) === defense);
+  const identified = pbpPlayers.filter(r => r.position?.toUpperCase() === position);
+  if (!identified.length || pbpPlayers.some(r => !r.playerId || !r.position?.trim())
+    || new Set(identified.map(r => r.playerId)).size !== identified.length
+    || identified.length !== participants.length
+    || !identified.every(r => participants.some(p => p.playerId === r.playerId))) return null;
+  return { value: participants.reduce((sum, r) => sum + Number(r[metric as keyof Stat]), 0),
+    participants: participants.length };
+}
 /** A covered game requires a completed schedule, both PBP team rows, a successful
  * weekly-stat import, and player-stat evidence for both offenses. A null field
  * on any matching position player makes that metric unavailable for that game. */
