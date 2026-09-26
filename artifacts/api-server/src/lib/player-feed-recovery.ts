@@ -89,6 +89,9 @@ export function assertPlayerRecoveryConfiguration(env: NodeJS.ProcessEnv): Recov
   const disposable = env.GRIDLINE_PLAYER_RECOVERY_TEST_BLOCK_NETWORK === "1";
   if (env.GRIDLINE_PLAYER_RECOVERY_TEST_BLOCK_NETWORK !== undefined && !disposable)
     throw new Error("Player recovery refused: invalid network test mode");
+  if (env.GRIDLINE_PLAYER_RECOVERY_TEST_FIXTURE !== undefined
+    && (!disposable || !["initial", "changed"].includes(env.GRIDLINE_PLAYER_RECOVERY_TEST_FIXTURE)))
+    throw new Error("Player recovery refused: synthetic responses require disposable network test mode");
   if (disposable) {
     const url = new URL(env.DATABASE_URL ?? "");
     if (url.protocol !== "postgresql:" || url.hostname !== "127.0.0.1"
@@ -141,7 +144,7 @@ export async function attestPlayerRecoveryDatabase(
   }
 }
 
-/** Test only: all provider HTTP and non-database sockets fail, even if adapters change. */
+/** Test only: only the local database socket and explicitly selected synthetic HTTP responses work. */
 export function blockRecoveryTestNetwork(env: NodeJS.ProcessEnv) {
   const config = assertPlayerRecoveryConfiguration(env);
   if (!config.disposable) throw new Error("Network blocker is only valid for disposable recovery");
@@ -157,5 +160,35 @@ export function blockRecoveryTestNetwork(env: NodeJS.ProcessEnv) {
       throw new Error("Disposable recovery blocked outbound socket");
     return connect.apply(this, args);
   } as typeof connect;
-  globalThis.fetch = (async () => { throw new Error("Disposable recovery blocked provider fetch"); }) as typeof fetch;
+  const fixture = env.GRIDLINE_PLAYER_RECOVERY_TEST_FIXTURE;
+  globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    if (fixture && typeof input === "string" && (!init?.method || init.method === "GET")) {
+      const changed = fixture === "changed";
+      if (input === "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries") {
+        return Response.json({
+          timestamp: "2026-09-20T12:00:00Z",
+          injuries: [{
+            id: "synthetic-team",
+            injuries: [{
+              athlete: { id: "synthetic-athlete", displayName: "Fixture Runner", position: { abbreviation: "RB" } },
+              status: changed ? "Out" : "Questionable",
+              date: "2026-09-20",
+              details: { type: "Ankle", fantasyStatus: { description: "Limited" } },
+            }],
+          }],
+        });
+      }
+      if (input === "https://api.sleeper.app/v1/players/nfl") {
+        return Response.json({
+          "synthetic-sleeper": {
+            player_id: "synthetic-sleeper", full_name: "Fixture Runner", first_name: "Fixture",
+            last_name: "Runner", team: "ARI", position: "RB", fantasy_positions: ["RB"],
+            depth_chart_position: "RB", depth_chart_order: 1, status: "Active",
+            injury_status: changed ? "Out" : "Questionable", espn_id: "synthetic-athlete",
+          },
+        });
+      }
+    }
+    throw new Error("Disposable recovery blocked provider fetch");
+  }) as typeof fetch;
 }

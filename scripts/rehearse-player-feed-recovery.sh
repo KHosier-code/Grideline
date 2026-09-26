@@ -26,9 +26,14 @@ SYSTEM_ID=$(psql "$URL" -Atqc 'SELECT system_identifier FROM pg_control_system()
 OID=$(psql "$URL" -Atqc 'SELECT oid FROM pg_database WHERE datname=current_database()')
 ADDRESS=$(psql "$URL" -Atqc 'SELECT inet_server_addr()::text')
 run() {
+  local fixture_env=()
+  if [[ $# -gt 1 ]]; then
+    fixture_env=(GRIDLINE_PLAYER_RECOVERY_TEST_FIXTURE="$2")
+  fi
   env -i PATH="$PATH" HOME="$HOME" NODE_ENV=development DATABASE_URL="$URL" \
     GRIDLINE_PLAYER_RECOVERY="$1" GRIDLINE_PLAYER_RECOVERY_APPROVED=1 \
     GRIDLINE_PLAYER_RECOVERY_TEST_BLOCK_NETWORK=1 \
+    "${fixture_env[@]}" \
     GRIDLINE_PLAYER_RECOVERY_DATABASE=gridline_rehearsal \
     GRIDLINE_PLAYER_RECOVERY_ROLE="$(id -un)" \
     GRIDLINE_PLAYER_RECOVERY_SYSTEM_ID="$SYSTEM_ID" \
@@ -46,6 +51,31 @@ psql "$URL" -v ON_ERROR_STOP=1 -qc "
   INSERT INTO usage_analytics_retention (id, last_attempt_status)
   VALUES (1, 'sentinel');
 "
+# Record attempted statements as well as final row counts: an update or a
+# write followed by a delete must not pass merely because a table ends empty.
+psql "$URL" -v ON_ERROR_STOP=1 <<'SQL'
+CREATE TABLE recovery_forbidden_writes (table_name text NOT NULL, operation text NOT NULL);
+CREATE FUNCTION record_recovery_forbidden_write() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO recovery_forbidden_writes VALUES (TG_TABLE_NAME, TG_OP);
+  RETURN NULL;
+END $$;
+DO $$
+DECLARE
+  protected_table text;
+BEGIN
+  FOREACH protected_table IN ARRAY ARRAY[
+    'scheduler_jobs', 'sportsbook_odds', 'odds_api_requests', 'odds_event_audits',
+    'market_baseline_runs', 'market_baseline_events', 'market_baseline_quotes',
+    'model_versions', 'model_training_runs', 'model_evaluation_predictions',
+    'model_promotion_history', 'predictions', 'prediction_snapshots',
+    'usage_analytics_events', 'usage_analytics_retention'
+  ] LOOP
+    EXECUTE format('CREATE TRIGGER recovery_write_audit AFTER INSERT OR UPDATE OR DELETE ON %I
+      FOR EACH STATEMENT EXECUTE FUNCTION record_recovery_forbidden_write()', protected_table);
+  END LOOP;
+END $$;
+SQL
 # Identity mismatch must fail before even a sync-run row is written.
 if env -i PATH="$PATH" HOME="$HOME" NODE_ENV=development DATABASE_URL="$URL" \
     GRIDLINE_PLAYER_RECOVERY=injuries GRIDLINE_PLAYER_RECOVERY_APPROVED=1 \
@@ -90,6 +120,7 @@ BEGIN
         WHERE event_name='disposable-retention-sentinel') <> 1
     OR (SELECT count(*) FROM usage_analytics_retention
         WHERE id=1 AND last_attempt_status='sentinel') <> 1
+    OR (SELECT count(*) FROM recovery_forbidden_writes) <> 0
   THEN RAISE EXCEPTION 'Selective recovery modified an unrelated table or missed a selected observation';
   END IF;
 END $$;
@@ -124,4 +155,78 @@ SQL
   if [ "$selection" = both ]; then expected=2; fi
   if [ "$count" != "$expected" ]; then echo "Receipt does not match selected sync runs" >&2; exit 1; fi
 done
-echo "Disposable selective recovery passed: receipts match single and combined failed attempts; no scheduler, paid, model, retention or snapshot activity."
+# Exercise each selected adapter, then prove that a repeat response is fresh
+# metadata without a duplicate observation, and that A-B-A changes are retained.
+run injuries initial > "$TEMP/success-injuries.log" 2>&1
+run sleeper initial > "$TEMP/success-sleeper.log" 2>&1
+run injuries,sleeper initial > "$TEMP/success-repeat.log" 2>&1
+run injuries,sleeper changed > "$TEMP/success-changed.log" 2>&1
+run injuries,sleeper initial > "$TEMP/success-return.log" 2>&1
+psql "$URL" -v ON_ERROR_STOP=1 <<'SQL'
+DO $$
+DECLARE
+  injury_runs integer[];
+  sleeper_runs integer[];
+BEGIN
+  SELECT array_agg(records_processed ORDER BY id) INTO injury_runs
+  FROM data_sync_runs WHERE provider='espn-injuries' AND status='success';
+  SELECT array_agg(records_processed ORDER BY id) INTO sleeper_runs
+  FROM data_sync_runs WHERE provider='sleeper-players' AND status='success';
+  IF injury_runs IS DISTINCT FROM ARRAY[1,0,1,1]
+    OR sleeper_runs IS DISTINCT FROM ARRAY[1,0,1,1]
+    OR (SELECT count(*) FROM data_sync_runs) <> 12
+    OR (SELECT count(*) FROM data_sync_runs WHERE status='failed') <> 4
+    OR (SELECT count(*) FROM data_sync_runs WHERE status='success'
+        AND job_key LIKE 'operator-player-recovery:%' AND completed_at IS NOT NULL
+        AND error_message IS NULL) <> 8
+    OR (SELECT count(*) FROM injuries WHERE player_id='synthetic-athlete'
+        AND team_id='synthetic-team' AND injury='Ankle' AND practice_status='Limited') <> 3
+    OR (SELECT count(DISTINCT source_hash) FROM injuries) <> 2
+    OR (SELECT count(*) FROM players WHERE player_id='synthetic-athlete'
+        AND name='Fixture Runner' AND active_status='Questionable') <> 1
+    OR (SELECT count(*) FROM sleeper_player_snapshots
+        WHERE sleeper_player_id='synthetic-sleeper' AND team='ARI'
+        AND position='RB' AND provider_ids->>'espn_id'='synthetic-athlete') <> 3
+    OR (SELECT count(DISTINCT source_hash) FROM sleeper_player_snapshots) <> 2
+    OR (SELECT count(*) FROM data_sync_runs WHERE provider='espn-injuries'
+        AND status='success' AND metadata->>'observationKind'='injury-only'
+        AND metadata->>'responseComplete'='true'
+        AND metadata->>'publicationProvenance'='payload'
+        AND metadata->>'publicationAt'='2026-09-20T12:00:00.000Z'
+        AND (metadata->>'observedCount')::int=1
+        AND (metadata->>'groupCount')::int=1
+        AND (metadata->>'unchanged')::int=1) <> 1
+    OR (SELECT count(*) FROM data_sync_runs WHERE provider='sleeper-players'
+        AND status='success' AND (metadata->>'playerCount')::int=1
+        AND (metadata->>'teamCount')::int=1
+        AND metadata->'teams'='["ARI"]'::jsonb
+        AND (metadata->>'depthOrderCount')::int=1
+        AND (metadata->>'unchanged')::int=1
+        AND metadata->>'snapshotId' IS NOT NULL
+        AND metadata->>'sourceCapturedAt' IS NOT NULL) <> 1
+    OR (SELECT count(*) FROM scheduler_jobs) <> 0
+    OR (SELECT count(*) FROM sportsbook_odds) <> 0
+    OR (SELECT count(*) FROM odds_api_requests) <> 0
+    OR (SELECT count(*) FROM odds_event_audits) <> 0
+    OR (SELECT count(*) FROM market_baseline_runs) <> 0
+    OR (SELECT count(*) FROM market_baseline_events) <> 0
+    OR (SELECT count(*) FROM market_baseline_quotes) <> 0
+    OR (SELECT count(*) FROM model_versions) <> 0
+    OR (SELECT count(*) FROM model_training_runs) <> 0
+    OR (SELECT count(*) FROM model_evaluation_predictions) <> 0
+    OR (SELECT count(*) FROM model_promotion_history) <> 0
+    OR (SELECT count(*) FROM predictions) <> 0
+    OR (SELECT count(*) FROM prediction_snapshots) <> 0
+    OR (SELECT count(*) FROM depth_chart_snapshots) <> 0
+    OR (SELECT count(*) FROM usage_analytics_events
+        WHERE event_name='disposable-retention-sentinel') <> 1
+    OR (SELECT count(*) FROM usage_analytics_events) <> 1
+    OR (SELECT count(*) FROM usage_analytics_retention
+        WHERE id=1 AND last_attempt_status='sentinel') <> 1
+    OR (SELECT count(*) FROM usage_analytics_retention) <> 1
+    OR (SELECT count(*) FROM recovery_forbidden_writes) <> 0
+  THEN RAISE EXCEPTION 'Successful selective recovery missed observations/metadata or modified unrelated state';
+  END IF;
+END $$;
+SQL
+echo "Disposable selective recovery passed: blocked and synthetic success cases, change-only observations, provider metadata, unrelated state unchanged."

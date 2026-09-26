@@ -34,6 +34,7 @@ test("recovery requires exact consent and independent database claims", () => {
     { GRIDLINE_REHEARSAL_NO_RETENTION: "1" },
     { REPLIT_DEPLOYMENT: "1" },
     { GRIDLINE_PLAYER_RECOVERY_TEST_BLOCK_NETWORK: "1" },
+    { GRIDLINE_PLAYER_RECOVERY_TEST_FIXTURE: "initial" },
     { GRIDLINE_PLAYER_RECOVERY_DATABASE: "production" },
     { GRIDLINE_PLAYER_RECOVERY_SERVER_ADDRESS: "127.0.0.1" },
   ]) assert.throws(() => assertPlayerRecoveryConfiguration({ ...env, ...change }));
@@ -57,11 +58,10 @@ test("the connected server, role, database, oid and primary must match", async (
 test("receipt shows partial success, links only selected sync runs and excludes target identifiers", async () => {
   const config = assertPlayerRecoveryConfiguration(env);
   const called: string[] = [];
-  const receipt = await runAttestedPlayerRecovery(config, async (feed, jobKey) => {
-    called.push(`${feed}:${jobKey}`);
-    if (feed === "sleeper") throw new Error("secret connection detail");
-    return { inserted: 3 };
-  });
+  const receipt = await runAttestedPlayerRecovery(
+    assertPlayerRecoveryConfiguration({ ...env, GRIDLINE_PLAYER_RECOVERY: "injuries" }),
+    async () => { throw new RecoveryFeedLockedError("locked"); },
+  );
   assert.equal(receipt.status, "partial_success");
   assert.deepEqual(receipt.approvedFeeds, ["injuries", "sleeper"]);
   assert.deepEqual(receipt.attempts, [
