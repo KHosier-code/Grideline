@@ -14,6 +14,12 @@ function normalizedStatus(status: string | null | undefined) {
   return (status ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
 }
 
+export const SUPPORTED_GAME_STATUS_PATTERNS = {
+  scheduled: "^(status )?(scheduled|pre game|unknown)$",
+  terminal: "^(status )?(postponed|canceled|cancelled|final|completed)( in progress)?$|^closed$",
+  live: "^(status )?(in progress|halftime|end of (period|quarter)|([a-z0-9]+ )?quarter)$",
+} as const;
+
 function matchesStatus(status: string, rule: { includes: readonly string[]; exact: readonly string[] }) {
   return rule.includes.some((fragment) => status.includes(fragment))
     || rule.exact.some((value) => status === value);
@@ -122,3 +128,13 @@ export function verifyTeamRecords(
     discrepancies,
   };
 }
+
+export function gameStatusVocabulary(status: string | null | undefined): GameStatusVocabulary {
+  const normalized = normalizedStatus(status);
+  for (const [category, pattern] of Object.entries(SUPPORTED_GAME_STATUS_PATTERNS)) {
+    if (new RegExp(pattern).test(normalized)) return category as GameStatusVocabulary;
+  }
+  return "unknown";
+}
+
+export type GameStatusVocabulary = keyof typeof SUPPORTED_GAME_STATUS_PATTERNS | "unknown";

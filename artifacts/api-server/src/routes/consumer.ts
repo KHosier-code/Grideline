@@ -42,7 +42,7 @@ import retained2025Baseline from "../../../../reports/gridline-2025-market-basel
 import { persistConfidenceMethodology, persistConfidenceResults } from "../lib/confidence-persistence";
 import { getCurrentGamePersonnel } from "../lib/current-personnel";
 import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
-import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, interpretNflGameState, NFL_STATUS_VOCABULARY, verifyTeamRecords } from "../lib/game-state";
+import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, gameStatusVocabulary, interpretNflGameState, NFL_STATUS_VOCABULARY, SUPPORTED_GAME_STATUS_PATTERNS, verifyTeamRecords } from "../lib/game-state";
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
@@ -1563,16 +1563,7 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
 
 router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   try {
-    const games = await db.select({
-      gameId: gamesTable.gameId,
-      season: gamesTable.season,
-      week: gamesTable.week,
-      kickoffTime: gamesTable.kickoffTime,
-      homeTeamId: gamesTable.homeTeamId,
-      awayTeamId: gamesTable.awayTeamId,
-    }).from(gamesTable)
-      .where(eq(gamesTable.season, season))
-      .orderBy(desc(gamesTable.week), desc(gamesTable.kickoffTime), asc(gamesTable.gameId));
+    const games = await consumerGames();
     res.set("Cache-Control", "no-store");
     res.json({ status: games.length ? "available" : "unavailable", games, sourceHealth: games.sourceHealth, note: "Persisted snapshots only; this endpoint never starts model computation or data synchronization." });
   } catch (error) {
@@ -1611,9 +1602,35 @@ export function consumerScheduleSummaryQuery(now: Date) {
       .groupBy(gamesTable.season, gamesTable.week);
 }
 
+export function unfamiliarGameStatusesQuery() {
+  const status = sql`lower(btrim(regexp_replace(${gamesTable.gameStatus}, '[_-]+', ' ', 'g')))`;
+  const known = sql`(${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.scheduled}
+    or ${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.terminal}
+    or ${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.live})`;
+  return db.select({
+    season: sql<number>`max(${gamesTable.season})`.as("season"),
+    week: sql<number>`max(${gamesTable.week})`.as("week"),
+    gameStatus: gamesTable.gameStatus,
+    total: sql<string>`sum(count(*)) over()`.as("total"),
+  }).from(gamesTable)
+    .where(sql`not coalesce(${known}, false)`)
+    .groupBy(gamesTable.gameStatus)
+    .orderBy(sql`max(${gamesTable.season}) desc`)
+    .limit(5);
+}
+
 router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
   try {
     const schedule = await consumerScheduleSummaryQuery(new Date());
+    try {
+      const warning = unfamiliarStatusWarning(await unfamiliarGameStatusesQuery());
+      if (warning && Date.now() - lastUnfamiliarStatusWarning >= 5 * 60_000) {
+        req.log.warn({ warning }, "Unfamiliar persisted game statuses need Games selector review");
+        lastUnfamiliarStatusWarning = Date.now();
+      }
+    } catch {
+      req.log.error("Persisted game status audit failed; review schedule status vocabulary");
+    }
     res.set("Cache-Control", "no-store");
     // Raw Drizzle aggregates are returned as strings, despite a timestamp column.
     res.json(GetConsumerScheduleSelectionResponse.parse(selectConsumerSlateSummaries(schedule.map((slate) => ({
@@ -1629,23 +1646,14 @@ router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
 
 router.get("/consumer/games", async (req, res): Promise<void> => {
   const parseNumber = (value: unknown) => typeof value === "string" && /^\d+$/.test(value) ? Number(value) : undefined;
-  const season = usageSeasonAtCutoff(new Date());
+  const season = parseNumber(req.query.season);
   const week = parseNumber(req.query.week);
   if ((req.query.season !== undefined && (season === undefined || season < 2020)) || (req.query.week !== undefined && (week === undefined || week < 1 || week > 22))) {
     res.status(400).json({ error: "Choose a valid season and week.", code: "invalid_request" });
     return;
   }
   try {
-    const games = await db.select({
-      gameId: gamesTable.gameId,
-      season: gamesTable.season,
-      week: gamesTable.week,
-      kickoffTime: gamesTable.kickoffTime,
-      homeTeamId: gamesTable.homeTeamId,
-      awayTeamId: gamesTable.awayTeamId,
-    }).from(gamesTable)
-      .where(eq(gamesTable.season, season))
-      .orderBy(desc(gamesTable.week), desc(gamesTable.kickoffTime), asc(gamesTable.gameId));
+    const games = await consumerGames({ season, week });
     const summary = summarizeConsumerMarketBoards(games);
     res.set("Cache-Control", "no-store");
     res.json({
@@ -1671,9 +1679,8 @@ function savedGameUser(req: Request, res: Response): string | null {
 router.get("/consumer/saved-games/ids", async (req, res): Promise<void> => {
   const userId = savedGameUser(req, res);
   if (!userId) return;
-  try {
-    const rows = await db.select({ gameId: savedGamesTable.gameId }).from(savedGamesTable)
-      .where(eq(savedGamesTable.userId, userId)).orderBy(desc(savedGamesTable.createdAt), desc(savedGamesTable.gameId));
+  const rows = await db.select({ gameId: savedGamesTable.gameId }).from(savedGamesTable)
+    .where(eq(savedGamesTable.userId, userId)).orderBy(desc(savedGamesTable.createdAt), desc(savedGamesTable.gameId));
   res.set("Cache-Control", "private, no-store");
   res.json(ListSavedGameIdsResponse.parse(rows.map((row) => row.gameId)));
 });
@@ -1685,20 +1692,11 @@ router.get("/consumer/saved-games", async (req, res): Promise<void> => {
     const rows = await db.select({ gameId: savedGamesTable.gameId }).from(savedGamesTable)
       .where(eq(savedGamesTable.userId, userId)).orderBy(desc(savedGamesTable.createdAt), desc(savedGamesTable.gameId));
     const ids = rows.map((row) => row.gameId);
-    const games = await db.select({
-      gameId: gamesTable.gameId,
-      season: gamesTable.season,
-      week: gamesTable.week,
-      kickoffTime: gamesTable.kickoffTime,
-      homeTeamId: gamesTable.homeTeamId,
-      awayTeamId: gamesTable.awayTeamId,
-    }).from(gamesTable)
-      .where(eq(gamesTable.season, season))
-      .orderBy(desc(gamesTable.week), desc(gamesTable.kickoffTime), asc(gamesTable.gameId));
+    const games = ids.length ? await consumerGames({ gameIds: ids }) : [];
     const byId = new Map(games.map((game) => [game.gameId, game]));
     res.set("Cache-Control", "private, no-store");
     res.json(ListSavedGamesResponse.parse(ids.flatMap((id) => {
-  const game = typeof req.query.game === "string" ? req.query.game : undefined;
+      const game = byId.get(id);
       return game ? [game] : [];
     })));
   } catch (error) {
@@ -1710,12 +1708,12 @@ router.get("/consumer/saved-games", async (req, res): Promise<void> => {
 router.put("/consumer/saved-games/:gameId", async (req, res): Promise<void> => {
   const userId = savedGameUser(req, res);
   if (!userId) return;
-  const parsed = RemoveSavedConsumerGameParams.safeParse(req.params);
+  const parsed = SaveConsumerGameParams.safeParse(req.params);
   if (!parsed.success || !parsed.data.gameId.trim() || parsed.data.gameId.length > 256) {
     res.status(400).json({ error: "Invalid game ID.", code: "invalid_request" });
     return;
   }
-  const gameId = typeof req.query.game === "string" ? req.query.game : undefined;
+  const gameId = parsed.data.gameId;
   const [game] = await db.select({ gameId: gamesTable.gameId }).from(gamesTable).where(eq(gamesTable.gameId, gameId));
   if (!game) {
     res.status(404).json({ error: "This game is not available.", code: "game_not_found" });
@@ -2077,8 +2075,8 @@ router.get("/consumer/props", (_req, res): void => {
 });
 
 router.get("/consumer/defense-vs-position", async (req, res): Promise<void> => {
-  const season = usageSeasonAtCutoff(new Date());
-  const window = typeof req.query.window === "string" ? req.query.window : "last5";
+  const season = req.query.season === undefined ? undefined : Number(req.query.season);
+  const window = typeof req.query.window === "string" ? req.query.window : "season";
   const gameId = typeof req.query.game === "string" ? req.query.game : undefined;
   if ((season !== undefined && (!Number.isInteger(season) || season < 2000 || season > 2100))
     || !WINDOWS.includes(window as typeof WINDOWS[number])
@@ -2095,7 +2093,7 @@ router.get("/consumer/defense-vs-position", async (req, res): Promise<void> => {
       return;
     }
     const effectiveSeason = season ?? cutoffGame[0]?.season ?? defaultDefenseSeason();
-    const cutoff = matchup[0]?.kickoffTime ?? new Date();
+    const cutoff = cutoffGame[0]?.kickoffTime ?? new Date();
     res.json(buildDefenseVsPosition(
       await readDefenseInputs(effectiveSeason, cutoff), effectiveSeason, cutoff, gameId,
       window as typeof WINDOWS[number],
@@ -2122,13 +2120,8 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
   }
   const period: "season" | "last3" = rawPeriod === "last3" ? "last3" : "season";
   try {
-    const teams = teamIds.length
-      ? await db.select({
-          teamId: teamsTable.teamId,
-          abbreviation: teamsTable.abbreviation,
-        }).from(teamsTable).where(inArray(teamsTable.teamId, teamIds))
-      : [];
-    const teamMaps = buildUsageTeamMappings(teamRows);
+    const teams = await db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable);
+    const teamMaps = buildUsageTeamMappings(teams);
     const canonicalTeam = rawTeam ? teamMaps.canonical(rawTeam) : undefined;
     if (rawTeam && !canonicalTeam) {
       res.status(400).json({ error: "Unknown team filter.", code: "invalid_request" });
@@ -2141,8 +2134,8 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
       res.status(400).json({ error: "Unknown game cutoff.", code: "invalid_request" });
       return;
     }
-    const cutoff = matchup[0]?.kickoffTime ?? new Date();
-  const season = usageSeasonAtCutoff(new Date());
+    const cutoff = cutoffGame[0]?.kickoffTime ?? new Date();
+    const season = rawSeason ?? cutoffGame[0]?.season ?? usageSeasonAtCutoff(cutoff);
     if (cutoffGame[0] && cutoffGame[0].season !== season) {
       res.status(400).json({ error: "The requested season does not match the game cutoff.", code: "invalid_request" });
       return;
@@ -2214,8 +2207,8 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
     const scheduleById = new Map(completed.map((entry) => [entry.gameId, entry]));
     const scheduleGameByMatchup = new Map<string, string>();
     for (const entry of completed) {
-      const home = teamMaps.scheduleToAbbreviation.get(eligible.homeTeamId) ?? eligible.homeTeamId;
-      const away = teamMaps.scheduleToAbbreviation.get(eligible.awayTeamId) ?? eligible.awayTeamId;
+      const home = teamMaps.scheduleToAbbreviation.get(entry.homeTeamId);
+      const away = teamMaps.scheduleToAbbreviation.get(entry.awayTeamId);
       if (home && away) {
         scheduleGameByMatchup.set(`${entry.week}:${home}:${away}`, entry.gameId);
         scheduleGameByMatchup.set(`${entry.week}:${away}:${home}`, entry.gameId);
@@ -2284,16 +2277,16 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
     };
     for (const row of statsAppearances) {
       if (row.seasonType.toUpperCase() !== "REG" || !hasPlayerStatAppearance(row)) continue;
-  const team = typeof req.query.team === "string" ? req.query.team : undefined;
-      const opponent = teamMaps.canonical(snap.opponentTeamId);
-      const matchedGameId = team && opponent ? scheduleGameByMatchup.get(`${snap.week}:${team}:${opponent}`) : undefined;
+      const team = teamMaps.canonical(row.teamId);
+      const opponent = teamMaps.canonical(row.opponentTeamId);
+      const matchedGameId = team && opponent ? scheduleGameByMatchup.get(`${row.week}:${team}:${opponent}`) : undefined;
       addAppearance(row.playerId, matchedGameId, team, row.week);
       if (row.position) sourcePositionByPlayer.set(row.playerId, row.position);
       if (row.playerName) sourceNameByPlayer.set(row.playerId, row.playerName);
     }
     for (const snap of rawSnapRows) {
       if ((snap.offenseSnaps ?? 0) <= 0) continue;
-  const team = typeof req.query.team === "string" ? req.query.team : undefined;
+      const team = teamMaps.canonical(snap.teamId);
       const opponent = teamMaps.canonical(snap.opponentTeamId);
       const matchedGameId = team && opponent ? scheduleGameByMatchup.get(`${snap.week}:${team}:${opponent}`) : undefined;
       const playerId = gsisByPfr.get(snap.playerId);
@@ -2328,7 +2321,7 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
       applicableGameIds.has(fact.gameId)
       && (!canonicalTeam || fact.teamId === canonicalTeam)
       && positionMatches(fact.playerId));
-      const grouped = new Map<string, Array<{ gameId: string; seasonType: string; week: number }>>();
+    const grouped = new Map<string, typeof filteredFacts>();
     for (const fact of filteredFacts) {
       const key = `${fact.playerId}:${fact.teamId}`;
       const selected = playerTeamGroupsByKey.get(key)?.appearances;
@@ -2359,8 +2352,119 @@ router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, r
       );
     };
     const metricZones = rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5];
-    const players = aggregatePlayerUsage(verifiedUsageRows, verifiedSnapRows, eligibleGames.length, window as "last3" | "last5" | "last8" | "season", teamSchedules, orderedGameIdsByTeam)
-      .filter((player) => filterUsagePlayers([player], canonicalFilter ?? undefined, position).length > 0);
+    const players = playerTeamGroups.map(({ key, playerId, teamId, appearances: selectedAppearances }) => {
+      const playerEvidenceFacts = playerFacts.filter((fact) =>
+        fact.playerId === playerId && fact.teamId === teamId && applicableGameIds.has(fact.gameId));
+      const playerCoveredTeamGameKeys = new Set(selectedAppearances.filter((appearance) =>
+        coveredTeamGameKeys.has(`${appearance.gameId}:${appearance.teamId}`)
+        && metricZones.every((zone) =>
+          Boolean(playerFactFor(playerId, appearance, zone, playerEvidenceFacts))))
+        .map((appearance) => `${appearance.gameId}:${appearance.teamId}`));
+      const sourceWindow = coveredRedZoneWindow(selectedAppearances, playerCoveredTeamGameKeys);
+      const coveredAppearances = sourceWindow.included;
+      const facts = grouped.get(key) ?? [];
+      const chronologicalFacts = [...facts].sort((a, b) =>
+        (scheduleById.get(a.gameId)?.kickoffTime?.getTime() ?? 0)
+        - (scheduleById.get(b.gameId)?.kickoffTime?.getTime() ?? 0)
+        || a.gameId.localeCompare(b.gameId)
+        || a.zone - b.zone
+        || a.teamId.localeCompare(b.teamId));
+      const zones = metricZones.map((zone) => {
+        const rows = coveredAppearances.map((appearance) =>
+          playerFactFor(playerId, appearance, zone, chronologicalFacts));
+        const completePlayerEvidence = rows.length > 0 && rows.every(Boolean);
+        const denominators = coveredAppearances.map((appearance) =>
+          teamDenominators.get(`${appearance.gameId}:${appearance.teamId}:${zone}`));
+        const targets = completePlayerEvidence
+          ? rows.reduce((total, row) => total + row!.targets, 0) : null;
+        const carries = completePlayerEvidence
+          ? rows.reduce((total, row) => total + row!.carries, 0) : null;
+        const receivingTouchdowns = completePlayerEvidence
+          ? rows.reduce((total, row) => total + row!.receivingTouchdowns, 0) : null;
+        const rushingTouchdowns = completePlayerEvidence
+          ? rows.reduce((total, row) => total + row!.rushingTouchdowns, 0) : null;
+        const teamTargets = coveredAppearances.length > 0 && denominators.every(Boolean)
+          ? denominators.reduce((total, denominator) => total + denominator!.targets, 0) : null;
+        const teamCarries = coveredAppearances.length > 0 && denominators.every(Boolean)
+          ? denominators.reduce((total, denominator) => total + denominator!.carries, 0) : null;
+        return {
+          zone, targets, carries, receivingTouchdowns, rushingTouchdowns,
+          teamTargets, teamCarries,
+          targetShare: redZoneShare(targets, teamTargets),
+          carryShare: redZoneShare(carries, teamCarries),
+        };
+      });
+      const selectedGames = coveredAppearances.map((appearance) => appearance.gameId);
+      const snapHistory = selectedGames.map((selectedGameId) =>
+        snapByPlayerGame.get(`${playerId}:${selectedGameId}`)).filter((snap): snap is NonNullable<typeof snap> => Boolean(snap));
+      const playerStatus = coveredAppearances.length === 0
+        ? "unavailable"
+        : sourceWindow.missingGames.length > 0 ? "partial" : "available";
+      const name = sourceNameByPlayer.get(playerId) ?? chronologicalFacts.find((fact) => fact.playerName)?.playerName
+        ?? metadataById.get(playerId)?.name ?? playerId;
+      return {
+        playerId,
+        playerName: name,
+        position: chronologicalFacts.find((fact) => fact.position)?.position
+          ?? sourcePositionByPlayer.get(playerId) ?? metadataById.get(playerId)?.position ?? null,
+        teamId,
+        gamesPlayed: selectedGames.length,
+        status: playerStatus,
+        reason: sourceWindow.missingGames.length > 0 || coveredAppearances.length === 0
+          ? redZoneCoveragePeriodLabel(
+              sourceWindow.coveredWeeks,
+              sourceWindow.missingWeeks,
+              "Verified player opportunity evidence",
+            )
+          : null,
+        offenseSnaps: snapHistory.some((snap) => snap.offenseSnaps !== null)
+          ? snapHistory.reduce((total, snap) => total + (snap.offenseSnaps ?? 0), 0) : null,
+        offensePct: snapHistory.some((snap) => snap.offensePct !== null)
+          ? snapHistory.reduce((total, snap) => total + (snap.offensePct ?? 0), 0)
+            / snapHistory.filter((snap) => snap.offensePct !== null).length
+          : null,
+        snapGames: snapHistory.length,
+        sourceCoverage: {
+          requestedGames: sourceWindow.requestedGames,
+          includedGames: sourceWindow.includedGames,
+          missingGames: sourceWindow.missingGames,
+          coveredWeeks: sourceWindow.coveredWeeks,
+          missingWeeks: sourceWindow.missingWeeks,
+          firstCoveredKickoff: sourceWindow.firstCoveredKickoff,
+          lastCoveredKickoff: sourceWindow.lastCoveredKickoff,
+        },
+        games: coveredAppearances.map((appearance) => {
+          const selectedGameId = appearance.gameId;
+          const game = scheduleById.get(selectedGameId);
+          const gameRows = facts.filter((fact) => fact.gameId === selectedGameId
+            && fact.teamId === appearance.teamId);
+          return {
+            gameId: selectedGameId,
+            week: gameRows[0]?.week ?? appearance.week ?? game?.week ?? null,
+            teamId: appearance.teamId,
+            offenseSnaps: snapByPlayerGame.get(`${playerId}:${selectedGameId}`)?.offenseSnaps ?? null,
+            offensePct: snapByPlayerGame.get(`${playerId}:${selectedGameId}`)?.offensePct ?? null,
+            zones: metricZones.map((zone) => {
+              const fact = playerFactFor(playerId, appearance, zone, gameRows);
+              const denominator = teamDenominators.get(`${selectedGameId}:${appearance.teamId}:${zone}`);
+              return {
+                zone,
+                targets: fact?.targets ?? null,
+                carries: fact?.carries ?? null,
+                receivingTouchdowns: fact?.receivingTouchdowns ?? null,
+                rushingTouchdowns: fact?.rushingTouchdowns ?? null,
+                teamTargets: denominator?.targets ?? null,
+                teamCarries: denominator?.carries ?? null,
+                targetShare: fact ? redZoneShare(fact.targets, denominator?.targets) : null,
+                carryShare: fact ? redZoneShare(fact.carries, denominator?.carries) : null,
+              };
+            }),
+          };
+        }).sort((a, b) => a.week! - b.week! || a.gameId.localeCompare(b.gameId)),
+        zones,
+      };
+    }).sort((a, b) => a.playerName.localeCompare(b.playerName)
+      || a.teamId.localeCompare(b.teamId) || a.playerId.localeCompare(b.playerId));
     const expectedGames = new Set(expectedTeamGames.map((entry) => entry.gameId)).size;
     const coveredGames = coveredGameIds.size;
     const status = coveredGames === 0 ? "unavailable" : missingGames.length ? "partial" : "available";
@@ -2463,8 +2567,8 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
     const eligibleGames = eligibleUsageGames(selectedGames, applicableSeason, cutoff, game);
     const gameKeys = new Map<string, string>();
     for (const g of eligibleGames) {
-      const home = teamMaps.scheduleToAbbreviation.get(eligible.homeTeamId) ?? eligible.homeTeamId;
-      const away = teamMaps.scheduleToAbbreviation.get(eligible.awayTeamId) ?? eligible.awayTeamId;
+      const home = teamMaps.scheduleToAbbreviation.get(g.homeTeamId) ?? g.homeTeamId;
+      const away = teamMaps.scheduleToAbbreviation.get(g.awayTeamId) ?? g.awayTeamId;
       gameKeys.set(`${g.season}:${g.week}:${home}:${away}`, g.gameId);
       gameKeys.set(`${g.season}:${g.week}:${away}:${home}`, g.gameId);
     }
@@ -2595,3 +2699,20 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
 });
 
 export default router;
+
+let lastUnfamiliarStatusWarning = 0;
+
+export function unfamiliarStatusWarning(rows: Array<{ season: number; week: number; gameStatus: string | null; total: string }>) {
+  if (!rows.length) return null;
+  return {
+    count: Number(rows[0].total),
+    examples: rows.map((row) => ({
+      season: row.season,
+      week: row.week,
+      // Provider values are untrusted: no raw payload or unbounded string enters logs.
+      status: (row.gameStatus ?? "").slice(0, 48).replace(/[^a-zA-Z0-9 _-]/g, "?") || "(empty)",
+      classification: gameStatusVocabulary(row.gameStatus),
+    })),
+    action: "Review persisted schedule status vocabulary and Games selector eligibility before changing the consumer fallback.",
+  };
+}

@@ -2,9 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 import { pool } from "@workspace/db";
-import { consumerScheduleSummaryQuery } from "./consumer";
+import { consumerScheduleSummaryQuery, unfamiliarGameStatusesQuery, unfamiliarStatusWarning } from "./consumer";
 import { selectConsumerSlate, selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
-import { interpretNflGameState } from "../lib/game-state";
+import { gameStatusVocabulary, interpretNflGameState } from "../lib/game-state";
 
 type ScheduleRow = {
   season: number; week: number; first: Date; last: Date; live: boolean; upcoming: boolean;
@@ -48,6 +48,57 @@ const statusCases = [
   { status: "STATUS_CANCELLED_IN_PROGRESS", state: "cancelled" },
   { status: "STATUS_COMPLETED_IN_PROGRESS", state: "final" },
 ] as const;
+
+test("persisted unfamiliar statuses produce bounded operator evidence without changing the selector fallback", async () => {
+  const client = await pool.connect();
+  const kickoff = new Date("2026-09-20T20:00:00Z");
+  try {
+    await client.query(`CREATE TEMP TABLE games (
+      season integer NOT NULL, week integer NOT NULL,
+      kickoff_time timestamptz, game_status text
+    )`);
+    for (const [index, { status, state }] of statusCases.entries()) {
+      await client.query(
+        "INSERT INTO games (season, week, kickoff_time, game_status) VALUES ($1, 1, $2, $3)",
+        [2100 + index, kickoff, status],
+      );
+      assert.equal(gameStatusVocabulary(status),
+        ["unrecognized provider status", "unclosed"].includes(status) ? "unknown"
+          : state === "pregame" ? "scheduled"
+            : ["final", "postponed", "cancelled"].includes(state) ? "terminal" : "live");
+    }
+    const malicious = "NEW<script>status</script>" + "x".repeat(500);
+    for (let i = 0; i < 8; i++) {
+      await client.query(
+        "INSERT INTO games (season, week, kickoff_time, game_status) VALUES ($1, 2, $2, $3)",
+        [2200 + i, kickoff, i === 7 ? malicious : `STATUS_NEW_${i}`],
+      );
+    }
+    await client.query("INSERT INTO games (season, week, kickoff_time, game_status) VALUES (2209, 2, $1, NULL)", [kickoff]);
+    const compiled = unfamiliarGameStatusesQuery().toSQL();
+    const { rows: rawRows } = await client.query<{
+      season: number; week: number; game_status: string | null; total: string;
+    }>(compiled.sql, compiled.params);
+    const rows = rawRows.map(({ game_status, ...row }) => ({ ...row, gameStatus: game_status }));
+    assert.equal(rows.length, 5);
+    assert.equal(Number(rows[0].total), 11);
+    assert.ok(rows.every((row) => gameStatusVocabulary(row.gameStatus) === "unknown"));
+    const warning = unfamiliarStatusWarning(rows);
+    assert.equal(warning?.count, 11);
+    assert.equal(warning?.examples.length, 5);
+    assert.ok(warning?.examples.every((example) => example.status.length <= 48 && !/[<>]/.test(example.status)));
+    assert.ok(warning?.examples.some((example) => example.status.startsWith("NEW?script?status")), JSON.stringify(warning));
+    assert.equal(unfamiliarStatusWarning([]), null);
+    assert.equal(interpretNflGameState({ gameStatus: malicious, kickoffTime: kickoff }, new Date(kickoff.getTime() - 1)), "pregame");
+    assert.deepEqual(
+      selectConsumerSlate([{ season: 2200, week: 2, kickoffTime: kickoff, gameStatus: malicious }], new Date(kickoff.getTime() - 1)),
+      { selection: { season: 2200, week: 2 }, reason: "upcoming" },
+    );
+  } finally {
+    await client.query("DROP TABLE IF EXISTS pg_temp.games");
+    client.release();
+  }
+});
 
 test("database schedule eligibility matches every supported provider status at kickoff and the eight-hour boundary", async () => {
   const client = await pool.connect();
