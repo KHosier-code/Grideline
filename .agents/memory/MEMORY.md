@@ -51,6 +51,7 @@
 - [Saved-game meaning](saved-game-meaning.md) — following a matchup stores identity, not a projection; keep evidence eligibility current and unavailable states explicit.
 - [Public metadata boundary](public-metadata-boundary.md) — verify game identity at request time for share previews; client head updates alone cannot make social cards accurate.
 - [Optional image refresh](optional-image-refresh.md) — remote enrichment must not block consumer data; cold-path performance runs must not warm the API first.
+- [Imagery host alerts](imagery-host-alerts.md) — compare hosts against validated prior source evidence and deduplicate on durable release identity, not process memory.
 - [Player TD temporal evidence](player-td-temporal-evidence.md) — reconstructed game chronology is not a pregame source-release archive; strong backtests alone cannot activate live TD probabilities.
 - [Bundled API test resolution](bundled-api-test-resolution.md) — use the server build for standalone Node tests that import workspace TS packages; ad-hoc external bundles can fail at runtime.
 - [Player-position release evidence](player-position-release-evidence.md) — holdout player-only errors cannot authorize defense-adjusted live counts without paired coverage and archived pregame releases.

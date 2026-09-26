@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { approvedPlayerHeadshotUrl, approvedReviewUrl, createImageRefreshGate, IMAGE_PARSER_VERSION, parseImageCsv, PLAYER_HEADSHOT_RIGHTS, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages, validPersistedImageRows } from "./verified-imagery";
+import { approvedPlayerHeadshotUrl, approvedReviewUrl, createImageRefreshGate, IMAGE_PARSER_VERSION, newHeadshotHostAlert, parseImageCsv, PLAYER_HEADSHOT_RIGHTS, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages, validPersistedImageRows } from "./verified-imagery";
 
 test("a cold or timed-out image source never blocks consumer responses and retries are bounded", async () => {
   let finish!: () => void;
@@ -105,6 +105,34 @@ test("NFL-hosted and unknown headshots fail closed despite verified identity", (
   assert.equal(approvedPlayerHeadshotUrl("https://static.www.nfl.com.evil.test/photo"), null);
   assert.equal(approvedPlayerHeadshotUrl("http://static.www.nfl.com/photo"), null);
   assert.equal(approvedPlayerHeadshotUrl("https://user@static.www.nfl.com/photo"), null);
+});
+
+test("new roster photo hosts produce bounded operator metadata without opening public access", () => {
+  const previous = [player("1", "", "https://static.www.nfl.com/old.jpg"),
+    player("2", "", "https://old.example.org/old.jpg")];
+  const current = [player("1", "", "https://static.www.nfl.com/next.jpg"),
+    player("2", "", "https://old.example.org/next.jpg"),
+    player("3", "", "https://NEW.example.org/first.jpg?token=private"),
+    player("4", "", "https://new.example.org/second.jpg"),
+    player("5", "", "http://ignored.example.org/photo"),
+    player("6", "", "https://user@ignored.example.org/photo")];
+  const alert = newHeadshotHostAlert(current, previous);
+  assert.deepEqual(alert, {
+    event: "unapproved_player_headshot_hosts_detected", severity: "warning",
+    hosts: [{ host: "new.example.org", rows: 2 }], additionalHostCount: 0,
+  });
+  assert.equal(JSON.stringify(alert).includes("private"), false);
+  assert.equal(newHeadshotHostAlert(current, current), null, "unchanged host sets do not alert");
+  assert.equal(newHeadshotHostAlert([previous[0]!], null), null, "the known NFL host is the initial baseline");
+  assert.deepEqual(newHeadshotHostAlert(current, null)?.hosts, [
+    { host: "new.example.org", rows: 2 }, { host: "old.example.org", rows: 1 },
+  ]);
+  assert.equal(approvedPlayerHeadshotUrl(current[2]!.headshot_url), null);
+  assert.equal(playerHeadshot("3", reconcilePlayerImages(current, [])), null);
+  const many = Array.from({ length: 15 }, (_, i) => player(String(i), "", `https://host${i}.example.org/image`));
+  const bounded = newHeadshotHostAlert(many, null);
+  assert.equal(bounded?.hosts.length, 10);
+  assert.equal(bounded?.additionalHostCount, 5);
 });
 
 test("pixel review is player and source specific; rejection and host rights fail closed", () => {

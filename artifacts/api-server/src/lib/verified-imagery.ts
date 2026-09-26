@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db, identitySourceImportsTable, imageryReviewsTable, imagerySourceRowsTable, nflversePlayerIdentitiesTable } from "@workspace/db";
 import { NFLVERSE_TEAM_ALIASES } from "./personnel-context-derivation";
+import { logger } from "./logger";
 
 export const TEAM_IMAGE_SOURCE = "https://github.com/nflverse/nflverse-data/releases/download/teams/teams_colors_logos.csv";
 export const ROSTER_IMAGE_SOURCE = "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2026.csv";
@@ -73,6 +74,36 @@ export function approvedPlayerHeadshotUrl(value: string | null | undefined) {
   return PLAYER_HEADSHOT_RIGHTS.status === "approved" &&
     PLAYER_HEADSHOT_RIGHTS.approvedHosts.includes(url.hostname) && !url.port ? safe : null;
 }
+export function unapprovedHeadshotHosts(rows: Pick<RosterRow, "headshot_url">[]) {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const safe = safeImageUrl(row.headshot_url);
+    if (!safe || approvedPlayerHeadshotUrl(safe)) continue;
+    const host = new URL(safe).hostname;
+    counts.set(host, (counts.get(host) ?? 0) + 1);
+  }
+  return [...counts].sort(([a], [b]) => a.localeCompare(b)).map(([host, rows]) => ({ host, rows }));
+}
+
+/** Log only previously unseen hosts on a newly persisted release; never include image URLs or player identities. */
+export function newHeadshotHostAlert(
+  current: Pick<RosterRow, "headshot_url">[],
+  previous: Pick<RosterRow, "headshot_url">[] | null,
+) {
+  const known = new Set([PLAYER_HEADSHOT_RIGHTS.reviewedHost, ...PLAYER_HEADSHOT_RIGHTS.approvedHosts,
+    ...unapprovedHeadshotHosts(previous ?? []).map(entry => entry.host)]);
+  const newlySeen = unapprovedHeadshotHosts(current).filter(entry => !known.has(entry.host));
+  if (!newlySeen.length) return null;
+  // Provider-controlled hosts may be numerous or malformed: keep log payloads bounded and DNS-only.
+  const safeHosts = newlySeen.filter(({ host }) => host.length <= 253 &&
+    host.split(".").every(label => label.length > 0 && label.length <= 63 && /^[a-z0-9-]+$/.test(label)));
+  return {
+    event: "unapproved_player_headshot_hosts_detected",
+    severity: "warning",
+    hosts: safeHosts.slice(0, 10),
+    additionalHostCount: newlySeen.length - Math.min(safeHosts.length, 10),
+  } as const;
+}
 const club = (value: string) => NFLVERSE_TEAM_ALIASES[value.trim().toUpperCase()] ?? value.trim().toUpperCase();
 const nameKey = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -105,7 +136,6 @@ export function reconcilePlayerImages(rows: RosterRow[], crosswalk: CrosswalkRow
   const byGsis = new Map<string, RosterRow[]>();
   const byTyped = new Map<string, Set<string>>();
   const ambiguous: Issue[] = [], unmatched: Issue[] = [], missingUrl: Issue[] = [], duplicateRosterIds: Issue[] = [];
-  const unapprovedHosts = new Map<string, number>();
   for (const row of crosswalk) {
     for (const [key, value] of Object.entries(row)) {
       if (!value) continue;
@@ -116,11 +146,6 @@ export function reconcilePlayerImages(rows: RosterRow[], crosswalk: CrosswalkRow
   }
   for (const [key, targets] of byTyped) if (targets.size > 1) ambiguous.push({ id: key, reason: `conflicting crosswalk: ${[...targets].sort().join(", ")}` });
   for (const row of rows) {
-    const safeUrl = safeImageUrl(row.headshot_url);
-    if (safeUrl && !approvedPlayerHeadshotUrl(safeUrl)) {
-      const host = new URL(safeUrl).hostname;
-      unapprovedHosts.set(host, (unapprovedHosts.get(host) ?? 0) + 1);
-    }
     // A direct GSIS ID is preferred; other identifiers may only establish identity when GSIS is absent.
     const candidates = new Set<string>();
     if (row.gsis_id) candidates.add(row.gsis_id);
@@ -160,7 +185,7 @@ export function reconcilePlayerImages(rows: RosterRow[], crosswalk: CrosswalkRow
     else photos.set(gsis, [...urls][0]!);
   }
   return { photos, byTyped, unmatched, ambiguous, missingUrl: [...new Map(missingUrl.map(issue => [issue.id, issue])).values()], duplicateRosterIds,
-    unapprovedHosts: [...unapprovedHosts].sort(([a], [b]) => a.localeCompare(b)).map(([host, rows]) => ({ host, rows })) };
+    unapprovedHosts: unapprovedHeadshotHosts(rows) };
 }
 
 export type ImageApproval = { sourceHash: string; imageUrl: string; imageHash: string; decision: string };
@@ -378,8 +403,15 @@ async function loadImageRows<T extends string>(label: ImageLabel, url: string, f
 type ImageLabel = "teams" | "roster";
 
 async function storeImageRows(label: ImageLabel, file: ImageFile, fields: readonly string[], rows: Record<string, string>[]) {
-  await db.transaction(async tx => {
+  const alert = await db.transaction(async tx => {
     const namespace = `nflverse-imagery-${label}`;
+    if (label === "roster") await tx.execute(sql`select pg_advisory_xact_lock(hashtext('nflverse-imagery-roster-refresh'))`);
+    // The unique source receipt is the cross-process deduplication key. Only its winner alerts.
+    const [previous] = label === "roster" ? await tx.select().from(identitySourceImportsTable).where(and(
+      eq(identitySourceImportsTable.sourceNamespace, namespace),
+      eq(identitySourceImportsTable.sourceUrl, file.url),
+      eq(identitySourceImportsTable.parserVersion, IMAGE_PARSER_VERSION),
+    )).orderBy(desc(identitySourceImportsTable.id)).limit(1) : [];
     const [created] = await tx.insert(identitySourceImportsTable).values({
       sourceNamespace: namespace, sourceUrl: file.url, sourceContentHash: file.sha256,
       parserVersion: IMAGE_PARSER_VERSION, canonicalRowsHash: hashRows(rows),
@@ -396,7 +428,15 @@ async function storeImageRows(label: ImageLabel, file: ImageFile, fields: readon
     const id = created?.id ?? existing?.id;
     if (!id) throw new Error("Imagery source receipt unavailable");
     await tx.insert(imagerySourceRowsTable).values({ importId: id, rows }).onConflictDoNothing();
+    if (label !== "roster" || !created) return null;
+    const [previousPayload] = previous ? await tx.select().from(imagerySourceRowsTable)
+      .where(eq(imagerySourceRowsTable.importId, previous.id)).limit(1) : [];
+    // Invalid prior evidence cannot suppress a new-host warning.
+    const priorRows = previous && validPersistedImageRows(previousPayload?.rows, previous, file.url, fields)
+      ? previousPayload!.rows as RosterRow[] : null;
+    return newHeadshotHostAlert(rows as RosterRow[], priorRows);
   });
+  if (alert) logger.warn(alert, "New unapproved player headshot hosts in roster release");
 }
 
 const hashRows = (rows: Record<string, string>[]) => createHash("sha256").update(JSON.stringify(rows)).digest("hex");
