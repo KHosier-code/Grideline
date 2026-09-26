@@ -1,7 +1,31 @@
 import { test, expect } from '@playwright/test';
-import { expectBootstrapTheme, expectKeyboardRing, expectNoHorizontalOverflow, expectTheme } from './theme.helpers';
+import { expectBootstrapTheme, expectKeyboardRing, expectNoHorizontalOverflow, expectTextContrast, expectTheme } from './theme.helpers';
 
 test.use({ storageState: process.env.GRIDLINE_ADMIN_STORAGE_STATE! });
+
+test('Admin navigation, panels and status pills meet normal-text contrast at both widths', async ({ page }) => {
+  for (const theme of ['dark', 'light'] as const) {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 850 });
+      await page.goto('/admin/data-health');
+      await page.evaluate(value => localStorage.setItem('gridline-theme', value), theme);
+      await page.reload();
+      await expectTheme(page, theme);
+      await expect(page.getByText('Administrator access required')).toHaveCount(0);
+      const context = `${width}px`;
+      if (width === 390) {
+        await page.getByTestId('button-open-navigation').click();
+        await expect(page.locator('.sidebar')).toHaveClass(/sidebar-open/);
+      }
+      await expectTextContrast(page.locator('.sidebar .nav-item-active'), { theme, label: `${context} active Admin navigation` });
+      await expectTextContrast(page.locator('.sidebar .sidebar-theme-toggle'), { theme, label: `${context} Admin theme control` });
+      if (width === 390) await page.getByTestId('button-close-navigation').click();
+      await expectTextContrast(page.locator('.page-header .page-detail'), { theme, label: `${context} Admin page description` });
+      await expectTextContrast(page.locator('.readiness-tile').first().locator('h3'), { theme, label: `${context} Admin card heading` });
+      await expectTextContrast(page.locator('.readiness-tile').first().locator('.status-pill'), { theme, label: `${context} Admin status pill` });
+    }
+  }
+});
 
 test('authorized Admin shell preserves theme across routes and reloads', async ({ page }) => {
   await page.addInitScript(() => {

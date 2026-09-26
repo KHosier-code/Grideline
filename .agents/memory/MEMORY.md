@@ -57,3 +57,4 @@
 - [Game evidence disclosure lifecycle](game-evidence-disclosures.md) — defer first mount, then retain loaded panels across collapse so cached evidence and normal freshness survive.
 - [Vite reference assets](vite-reference-assets.md) — files outside public but inside the Vite app root may still be served in development; keep private references outside the app root.
 - [Wouter shared-link fixtures](wouter-shared-link-fixtures.md) — navigate cold links directly; mounted history changes can race validation before reload.
+- [Contrast testing surfaces](contrast-testing-surfaces.md) — resolve translucent text surfaces against opaque ancestors; gradient backgrounds need separate image-aware sampling.

@@ -1,5 +1,41 @@
 import { test, expect } from '@playwright/test';
-import { expectBootstrapTheme, expectKeyboardRing, expectNoHorizontalOverflow, expectTheme } from './theme.helpers';
+import { expectBootstrapTheme, expectKeyboardRing, expectNoHorizontalOverflow, expectTextContrast, expectTheme } from './theme.helpers';
+
+test('public cards, status text and chart labels meet normal-text contrast at both widths', async ({ page }) => {
+  for (const theme of ['dark', 'light'] as const) {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 850 });
+      await page.goto('/');
+      await page.evaluate(value => localStorage.setItem('gridline-theme', value), theme);
+      await page.reload();
+      await expectTheme(page, theme);
+      const context = `${width}px`;
+      await expectTextContrast(page.locator('.visitor-pick h1'), { theme, label: `${context} Home card heading` });
+      await expectTextContrast(page.locator('.visitor-pick > p:not(.consumer-eyebrow)'), { theme, label: `${context} Home pick status` });
+      await expectTextContrast(page.locator('.visitor-pick .consumer-eyebrow'), { theme, label: `${context} Home card label` });
+      await expectTextContrast(page.locator('.visitor-pick-history'), { theme, label: `${context} Home history link` });
+
+      await page.goto('/games');
+      await expect(page.getByRole('heading', { name: 'Gridline market board' })).toBeVisible();
+      await expectTextContrast(page.locator('.terminal-header .terminal-desc'), { theme, label: `${context} market board card description` });
+
+      await page.goto('/teams');
+      await expect(page.locator('.ct-panel').first()).toBeVisible();
+      await expectTextContrast(page.locator('.ct-panel-heading .ct-tag').first(), { theme, label: `${context} chart coverage status` });
+      // The chart can have no verified points. Still check its actual axis color
+      // token against the chart surface; never make the check depend on live data.
+      const chart = page.locator('.ct-panel').first();
+      await chart.evaluate(panel => {
+        const surface = document.createElement('span');
+        surface.textContent = 'Chart axis sample';
+        surface.style.color = 'hsl(var(--chart-axis))';
+        panel.append(surface);
+      });
+      await expectTextContrast(chart.getByText('Chart axis sample'), { theme, label: `${context} chart axis label` });
+      await chart.getByText('Chart axis sample').evaluate(node => node.remove());
+    }
+  }
+});
 
 test('desktop starts dark before React, keeps both choices on reload and public navigation', async ({ page }) => {
   await expectBootstrapTheme(page, '/', 'dark');
