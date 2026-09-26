@@ -10,6 +10,7 @@
     "perf:budget": "node tests/build-performance.mjs && PERF_ENFORCE=1 node tests/performance.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "test:home-browser": "node --test tests/home.browser.test.mjs",
+    "test:teams-browser": "playwright test --config tests/team-evidence.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
