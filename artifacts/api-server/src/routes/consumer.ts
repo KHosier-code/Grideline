@@ -173,7 +173,7 @@ export function eligibleUsageGames<T extends { gameId: string; season: number; k
     .filter((game) =>
       game.gameId !== excludedGameId
       && game.season === season
-      && (game.gameStatus === undefined || game.gameStatus === "STATUS_FINAL")
+      && (game.gameStatus === undefined || interpretNflGameState({ gameStatus: game.gameStatus, kickoffTime: game.kickoffTime }, cutoff) === "final")
       && game.kickoffTime !== null
       && game.kickoffTime < cutoff)
     .sort((left, right) =>
@@ -1844,7 +1844,6 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
     }).from(gamesTable).where(and(
       eq(gamesTable.season, game.season),
       lt(gamesTable.kickoffTime, sourceCutoff),
-      eq(gamesTable.gameStatus, "STATUS_FINAL"),
       or(
         inArray(gamesTable.homeTeamId, [gameRow.homeTeamId, gameRow.awayTeamId]),
         inArray(gamesTable.awayTeamId, [gameRow.homeTeamId, gameRow.awayTeamId]),

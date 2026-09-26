@@ -355,15 +355,25 @@ test("quarterback passing stats survive aggregation; missing source stays unavai
   assert.equal(missing.aggregate.completions.available, true);
 });
 
-test("usage windows exclude kicked-off games until their final status is recorded", () => {
+test("usage windows recognize provider final spellings but not elapsed non-final games", () => {
   const kickoff = new Date("2026-09-20T18:00:00Z");
   const candidates = [
     { gameId: "final", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_FINAL" },
+    { gameId: "plain-final", season: 2026, kickoffTime: kickoff, gameStatus: "Final" },
+    { gameId: "completed", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_COMPLETED" },
+    { gameId: "closed", season: 2026, kickoffTime: kickoff, gameStatus: "closed" },
     { gameId: "still-playing", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_IN_PROGRESS" },
     { gameId: "scheduled", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_SCHEDULED" },
+    { gameId: "postponed", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_POSTPONED" },
+    { gameId: "cancelled", season: 2026, kickoffTime: kickoff, gameStatus: "STATUS_CANCELLED" },
+    { gameId: "missing-status", season: 2026, kickoffTime: kickoff },
   ];
   assert.deepEqual(eligibleUsageGames(candidates, 2026, new Date("2026-09-21T00:00:00Z"))
-    .map((game) => game.gameId), ["final"]);
+    .map((game) => game.gameId), ["closed", "completed", "final", "missing-status", "plain-final"]);
+  assert.deepEqual(eligibleUsageGames(candidates, 2026, kickoff), [],
+    "even explicitly final games must have kicked off strictly before the cutoff");
+  assert.deepEqual(eligibleUsageGames(candidates, 2026, new Date(kickoff.getTime() + 1), "completed")
+    .map((game) => game.gameId), ["closed", "final", "missing-status", "plain-final"]);
 });
 
 test("usage keeps a player's statistics separate after changing teams", () => {
