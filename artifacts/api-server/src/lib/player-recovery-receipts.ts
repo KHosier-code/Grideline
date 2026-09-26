@@ -8,6 +8,20 @@ export const PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BATCH_SIZE = 500;
 export const PLAYER_RECOVERY_CLEANUP_FAILURE_THRESHOLD = 3;
+export const PLAYER_RECOVERY_CLEANUP_FIRST_ATTEMPT_GRACE_MS = DAY_MS;
+
+export function playerRecoveryCleanupNeverStartedAlert(firstObservedAt: Date, now: Date) {
+  const elapsed = now.getTime() - firstObservedAt.getTime();
+  return Number.isFinite(elapsed) && elapsed >= PLAYER_RECOVERY_CLEANUP_FIRST_ATTEMPT_GRACE_MS
+    ? {
+        code: "never_started" as const,
+        severity: "critical" as const,
+        scope: "player-recovery-receipt-cleanup" as const,
+        title: "Player refresh receipt cleanup has not started",
+        detail: "No cleanup attempt was recorded within 24 hours of the cleanup health marker. Check that the persistent worker is running and approved.",
+      }
+    : null;
+}
 
 export function playerRecoveryCleanupAlert(consecutiveFailures: number) {
   return consecutiveFailures >= PLAYER_RECOVERY_CLEANUP_FAILURE_THRESHOLD
@@ -21,9 +35,21 @@ export function playerRecoveryCleanupAlert(consecutiveFailures: number) {
     : null;
 }
 
+/** Run before the API listens, whether Publish provisioned the table or SQL migrations did. */
+export async function ensurePlayerRecoveryReceiptCleanupMarker() {
+  await db.insert(playerRecoveryReceiptCleanupTable).values({ id: 1 }).onConflictDoNothing();
+  // Fail startup if Publish created an incomplete table rather than silently
+  // starting an unmeasurable grace period on a later admin health request.
+  const [marker] = await db.select({ firstObservedAt: playerRecoveryReceiptCleanupTable.firstObservedAt })
+    .from(playerRecoveryReceiptCleanupTable)
+    .where(eq(playerRecoveryReceiptCleanupTable.id, 1)).limit(1);
+  if (!marker?.firstObservedAt) throw new Error("Receipt cleanup health marker is not ready");
+}
+
 export async function getPlayerRecoveryReceiptCleanupHealth(now = new Date()) {
   const [row] = await db.select().from(playerRecoveryReceiptCleanupTable)
     .where(eq(playerRecoveryReceiptCleanupTable.id, 1)).limit(1);
+  if (!row) throw new Error("Receipt cleanup health marker could not be read");
   const lastAttemptStatus = row?.lastAttemptStatus === "success" || row?.lastAttemptStatus === "failed"
     ? row.lastAttemptStatus : null;
   const nextCleanupAt = row?.lastAttemptAt
@@ -35,6 +61,7 @@ export async function getPlayerRecoveryReceiptCleanupHealth(now = new Date()) {
       : lastAttemptStatus === "failed" ? "failed" as const : "pending" as const,
     cleanupState: nextCleanupAt === null ? "pending" as const
       : nextCleanupAt.getTime() < now.getTime() ? "overdue" as const : "on_time" as const,
+    firstObservedAt: row.firstObservedAt,
     lastAttemptAt: row?.lastAttemptAt ?? null,
     lastAttemptStatus,
     nextCleanupAt,
@@ -43,7 +70,9 @@ export async function getPlayerRecoveryReceiptCleanupHealth(now = new Date()) {
     lastSuccessfulAt: row?.lastSuccessfulAt ?? null,
     lastSuccessfulDeletedReceipts: row?.lastSuccessfulDeletedReceipts ?? null,
     alert: lastAttemptStatus === "failed"
-      ? playerRecoveryCleanupAlert(row?.consecutiveFailures ?? 0) : null,
+      ? playerRecoveryCleanupAlert(row.consecutiveFailures)
+      : lastAttemptStatus === null
+        ? playerRecoveryCleanupNeverStartedAlert(row.firstObservedAt, now) : null,
     workerOwned: true as const,
   };
 }

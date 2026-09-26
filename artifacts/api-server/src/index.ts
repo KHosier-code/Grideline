@@ -2,6 +2,7 @@ import app from "./app";
 import { pool } from "@workspace/db";
 import { logger } from "./lib/logger";
 import { assertWeeklyPickSchemaReady } from "./lib/weekly-pick-schema-readiness";
+import { ensurePlayerRecoveryReceiptCleanupMarker } from "./lib/player-recovery-receipts";
 
 const rawPort = process.env["PORT"];
 
@@ -19,6 +20,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function start() {
   await assertWeeklyPickSchemaReady(pool);
+  await ensurePlayerRecoveryReceiptCleanupMarker();
   app.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");

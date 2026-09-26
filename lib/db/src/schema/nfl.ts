@@ -607,9 +607,11 @@ export const playerRecoveryReceiptsTable = pgTable("player_recovery_receipts", {
   index("player_recovery_receipts_completed_idx").on(table.completedAt),
 ]);
 
-// Worker-written singleton. Keep cleanup diagnostics separate from immutable receipts.
+// Worker-written attempts; migration/API startup seed the first-observed marker.
+// Keep cleanup diagnostics separate from immutable receipts.
 export const playerRecoveryReceiptCleanupTable = pgTable("player_recovery_receipt_cleanup", {
   id: integer("id").primaryKey().default(1),
+  firstObservedAt: timestamp("first_observed_at", { withTimezone: true }).notNull().defaultNow(),
   lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
   lastAttemptStatus: text("last_attempt_status"),
   consecutiveFailures: integer("consecutive_failures").notNull().default(0),

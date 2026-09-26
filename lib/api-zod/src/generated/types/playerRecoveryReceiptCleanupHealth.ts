@@ -15,6 +15,7 @@ export interface PlayerRecoveryReceiptCleanupHealth {
   cleanupIntervalHours: number;
   status: PlayerRecoveryReceiptCleanupHealthStatus;
   cleanupState: PlayerRecoveryReceiptCleanupHealthCleanupState;
+  firstObservedAt: Date;
   /** @nullable */
   lastAttemptAt: Date | null;
   /** @nullable */

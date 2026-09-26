@@ -379,6 +379,7 @@ export function createDataHealthHandler(
         cleanupIntervalHours: 24,
         status: "pending",
         cleanupState: "pending",
+        firstObservedAt: now,
         lastAttemptAt: null,
         lastAttemptStatus: null,
         nextCleanupAt: null,

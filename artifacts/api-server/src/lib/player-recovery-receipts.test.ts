@@ -9,6 +9,7 @@ import {
   listPlayerRecoveryReceipts, persistPlayerRecoveryReceipt,
   playerRecoveryReceiptCutoff, PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS,
   getPlayerRecoveryReceiptCleanupHealth, playerRecoveryCleanupAlert,
+  playerRecoveryCleanupNeverStartedAlert, ensurePlayerRecoveryReceiptCleanupMarker,
   startPlayerRecoveryReceiptRetention,
 } from "./player-recovery-receipts";
 
@@ -26,6 +27,44 @@ test("the restricted alert is thresholded and never incorporates error text", ()
   });
 });
 
+test("first attempt gets a 24-hour grace period before the worker warning", () => {
+  const observed = new Date("2026-09-26T00:00:00.000Z");
+  assert.equal(playerRecoveryCleanupNeverStartedAlert(observed, new Date(observed.getTime() + 86_399_999)), null);
+  assert.equal(playerRecoveryCleanupNeverStartedAlert(observed, new Date(observed.getTime() - 1)), null);
+  assert.deepEqual(playerRecoveryCleanupNeverStartedAlert(observed, new Date(observed.getTime() + 86_400_000)), {
+    code: "never_started", severity: "critical",
+    scope: "player-recovery-receipt-cleanup",
+    title: "Player refresh receipt cleanup has not started",
+    detail: "No cleanup attempt was recorded within 24 hours of the cleanup health marker. Check that the persistent worker is running and approved.",
+  });
+});
+
+test("API startup seeds a schema-first install with no row before the first admin visit", async () => {
+  const client = await pool.connect();
+  await client.query("SELECT pg_advisory_lock(hashtext($1))", ["player-recovery-cleanup-test"]);
+  const [original] = await db.select().from(playerRecoveryReceiptCleanupTable).limit(1);
+  try {
+    await db.delete(playerRecoveryReceiptCleanupTable);
+    await ensurePlayerRecoveryReceiptCleanupMarker();
+    const first = await getPlayerRecoveryReceiptCleanupHealth(new Date());
+    assert.equal(first.status, "pending");
+    assert.equal(first.alert, null);
+    await ensurePlayerRecoveryReceiptCleanupMarker();
+    const overdue = await getPlayerRecoveryReceiptCleanupHealth(
+      new Date(first.firstObservedAt.getTime() + 86_400_000),
+    );
+    assert.equal(overdue.alert?.code, "never_started");
+    assert.equal(overdue.cleanupState, "pending");
+    assert.equal(overdue.firstObservedAt.getTime(), first.firstObservedAt.getTime());
+    assert(!JSON.stringify(overdue).includes("DATABASE_URL"));
+  } finally {
+    await db.delete(playerRecoveryReceiptCleanupTable);
+    if (original) await db.insert(playerRecoveryReceiptCleanupTable).values(original);
+    await client.query("SELECT pg_advisory_unlock(hashtext($1))", ["player-recovery-cleanup-test"]);
+    client.release();
+  }
+});
+
 test("worker cleanup persists repeated failures, clears the alert on success, and retains no error details", async () => {
   const client = await pool.connect();
   await client.query("SELECT pg_advisory_lock(hashtext($1))", ["player-recovery-cleanup-test"]);
@@ -35,6 +74,7 @@ test("worker cleanup persists repeated failures, clears the alert on success, an
   let stop: (() => void) | undefined;
   try {
     await db.delete(playerRecoveryReceiptCleanupTable);
+    await ensurePlayerRecoveryReceiptCleanupMarker();
     stop = startPlayerRecoveryReceiptRetention({
       intervalMs: 25,
       cleanup: async () => {

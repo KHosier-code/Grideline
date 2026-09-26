@@ -184,6 +184,7 @@ const dataHealthDependencies = {
     cleanupIntervalHours: 24,
     status: "pending",
     cleanupState: "pending",
+    firstObservedAt: now,
     lastAttemptAt: null,
     lastAttemptStatus: null,
     nextCleanupAt: null,
@@ -385,6 +386,7 @@ test("player receipt cleanup alert appears only on protected data-health and con
       cleanupIntervalHours: 24,
       status: "failed" as const,
       cleanupState: "on_time" as const,
+      firstObservedAt: new Date(),
       lastAttemptAt: new Date(),
       lastAttemptStatus: "failed" as const,
       nextCleanupAt: new Date(Date.now() + 86_400_000),
@@ -407,6 +409,46 @@ test("player receipt cleanup alert appears only on protected data-health and con
   assert.match(card.detail, /3 consecutive times/);
   assert.equal(card.metadata.alert.severity, "critical");
   assert(!JSON.stringify(card).includes("database identity"));
+});
+
+test("admin data-health distinguishes a new cleanup marker from a missing worker attempt", async () => {
+  const firstObservedAt = new Date("2026-09-24T00:00:00.000Z");
+  const base = await dataHealthDependencies!.getPlayerRecoveryReceiptCleanupHealth!();
+  const pendingHandler = createDataHealthHandler({
+    ...dataHealthDependencies,
+    getPlayerRecoveryReceiptCleanupHealth: async () => ({
+      ...base, firstObservedAt, alert: null,
+    }),
+  });
+  const pending = providerByName(
+    await readDataHealth(pendingHandler as unknown as DataHealthHandler),
+    "player-recovery-receipt-cleanup",
+  );
+  assert.equal(pending.status, "stale");
+  assert.match(pending.detail, /first player refresh receipt cleanup is pending/);
+
+  const warningHandler = createDataHealthHandler({
+    ...dataHealthDependencies,
+    getPlayerRecoveryReceiptCleanupHealth: async () => ({
+      ...base,
+      firstObservedAt,
+      alert: {
+        code: "never_started" as const,
+        severity: "critical" as const,
+        scope: "player-recovery-receipt-cleanup" as const,
+        title: "Player refresh receipt cleanup has not started",
+        detail: "No cleanup attempt was recorded within 24 hours of the cleanup health marker. Check that the persistent worker is running and approved.",
+      },
+    }),
+  });
+  const warning = providerByName(
+    await readDataHealth(warningHandler as unknown as DataHealthHandler),
+    "player-recovery-receipt-cleanup",
+  );
+  assert.equal(warning.status, "unavailable");
+  assert.equal(warning.metadata.alert.code, "never_started");
+  assert.match(warning.detail, /persistent worker is running and approved/);
+  assert(!JSON.stringify(warning).includes("GRIDLINE_NEW_WORKER_APPROVED"));
 });
 
 test("protected data-health returns a bounded unavailable result when a provider hangs", async () => {

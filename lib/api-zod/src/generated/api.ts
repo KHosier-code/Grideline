@@ -703,6 +703,7 @@ export const GetPlayerRecoveryReceiptCleanupHealthResponse = zod.object({
   "cleanupIntervalHours": zod.number().int(),
   "status": zod.enum(['healthy', 'failed', 'pending']),
   "cleanupState": zod.enum(['pending', 'on_time', 'overdue']),
+  "firstObservedAt": zod.coerce.date(),
   "lastAttemptAt": zod.coerce.date().nullable(),
   "lastAttemptStatus": zod.union([zod.literal('success'),zod.literal('failed'),zod.literal(null)]).nullable(),
   "nextCleanupAt": zod.coerce.date().nullable(),
@@ -711,7 +712,7 @@ export const GetPlayerRecoveryReceiptCleanupHealthResponse = zod.object({
   "lastSuccessfulAt": zod.coerce.date().nullable(),
   "lastSuccessfulDeletedReceipts": zod.number().int().nullable(),
   "alert": zod.union([zod.null(),zod.object({
-  "code": zod.enum(['repeated_failures']),
+  "code": zod.enum(['repeated_failures', 'never_started']),
   "severity": zod.enum(['critical']),
   "scope": zod.enum(['player-recovery-receipt-cleanup']),
   "title": zod.string(),

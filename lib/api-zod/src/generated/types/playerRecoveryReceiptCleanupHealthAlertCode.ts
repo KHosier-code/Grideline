@@ -11,4 +11,5 @@ export type PlayerRecoveryReceiptCleanupHealthAlertCode = typeof PlayerRecoveryR
 
 export const PlayerRecoveryReceiptCleanupHealthAlertCode = {
   repeated_failures: 'repeated_failures',
+  never_started: 'never_started',
 } as const;

@@ -1272,12 +1272,13 @@ components:
     PlayerRecoveryReceiptCleanupHealth:
       type: object
       additionalProperties: false
-      required: [retentionDays, cleanupIntervalHours, status, cleanupState, lastAttemptAt, lastAttemptStatus, nextCleanupAt, consecutiveFailures, firstFailureAt, lastSuccessfulAt, lastSuccessfulDeletedReceipts, alert, workerOwned]
+      required: [retentionDays, cleanupIntervalHours, status, cleanupState, firstObservedAt, lastAttemptAt, lastAttemptStatus, nextCleanupAt, consecutiveFailures, firstFailureAt, lastSuccessfulAt, lastSuccessfulDeletedReceipts, alert, workerOwned]
       properties:
         retentionDays: { type: integer }
         cleanupIntervalHours: { type: integer }
         status: { type: string, enum: [healthy, failed, pending] }
         cleanupState: { type: string, enum: [pending, on_time, overdue] }
+        firstObservedAt: { type: string, format: date-time }
         lastAttemptAt: { type: ["string", "null"], format: date-time }
         lastAttemptStatus: { type: ["string", "null"], enum: [success, failed, null] }
         nextCleanupAt: { type: ["string", "null"], format: date-time }
@@ -1292,7 +1293,7 @@ components:
               additionalProperties: false
               required: [code, severity, scope, title, detail]
               properties:
-                code: { type: string, enum: [repeated_failures] }
+                code: { type: string, enum: [repeated_failures, never_started] }
                 severity: { type: string, enum: [critical] }
                 scope: { type: string, enum: [player-recovery-receipt-cleanup] }
                 title: { type: string }

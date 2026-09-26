@@ -103,6 +103,7 @@ export type PlayerRecoveryReceiptCleanupHealthAlertCode = typeof PlayerRecoveryR
 
 export const PlayerRecoveryReceiptCleanupHealthAlertCode = {
   repeated_failures: 'repeated_failures',
+  never_started: 'never_started',
 } as const;
 
 export type PlayerRecoveryReceiptCleanupHealthAlertSeverity = typeof PlayerRecoveryReceiptCleanupHealthAlertSeverity[keyof typeof PlayerRecoveryReceiptCleanupHealthAlertSeverity];
@@ -132,6 +133,7 @@ export interface PlayerRecoveryReceiptCleanupHealth {
   cleanupIntervalHours: number;
   status: PlayerRecoveryReceiptCleanupHealthStatus;
   cleanupState: PlayerRecoveryReceiptCleanupHealthCleanupState;
+  firstObservedAt: string;
   /** @nullable */
   lastAttemptAt: string | null;
   /** @nullable */

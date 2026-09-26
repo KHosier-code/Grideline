@@ -56,5 +56,6 @@
 - [Player-position release evidence](player-position-release-evidence.md) — holdout player-only errors cannot authorize defense-adjusted live counts without paired coverage and archived pregame releases.
 - [Game evidence disclosure lifecycle](game-evidence-disclosures.md) — defer first mount, then retain loaded panels across collapse so cached evidence and normal freshness survive.
 - [Vite reference assets](vite-reference-assets.md) — files outside public but inside the Vite app root may still be served in development; keep private references outside the app root.
+- [Cleanup startup evidence](cleanup-startup-evidence.md) — seed first-attempt grace periods before API listen, including schema-first publishes; admin visits cannot start the clock.
 - [Wouter shared-link fixtures](wouter-shared-link-fixtures.md) — navigate cold links directly; mounted history changes can race validation before reload.
 - [Contrast testing surfaces](contrast-testing-surfaces.md) — resolve translucent text surfaces against opaque ancestors; gradient backgrounds need separate image-aware sampling.
