@@ -15,85 +15,219 @@
 ## Phase 1 evidence and unresolved prerequisites
 
 - The Replit-workspace `pg_dump` and `pg_restore` clients are PostgreSQL **16.10**. Replit's managed production read-only query reports `neondb`, role `neondb_owner`, PostgreSQL **16.15**, and approximately **660 MB** of logical database storage. **The owner confirms `pg_dump`, `pg_restore`, and `psql` are all installed and working at version 16.15 on the BitLocker-protected Windows computer.** Client/server major compatibility is established; a connection from that computer has not been tested. The read-only production metadata query did not access a production credential.
-- The latest production release-evidence build ID is **`7b057630d4a8-2026-09-26T02:31:27.142Z`**; the same ID appears in live deployment logs. This is newer than the previously recorded production build. Recheck it against live logs immediately before any approved dump and fail closed if it changes. A matching name or version alone is not enough to identify Gridline's live database.
+- The latest read-only production release-evidence build ID was reconfirmed as **`7b057630d4a8-2026-09-26T02:31:27.142Z`**; that ID is also present in live deployment logs. This is the reviewed baseline, not an assertion that it cannot change. Recheck the live deployment before the owner runs the backup and fail closed if it changes. A matching name or version alone is not enough to identify Gridline's live database.
 - [Replit documents](https://docs.replit.com/features/data-and-storage/connection-details#connect-an-external-tool) a production connection string in **Database → Production Database → Settings**, usable by an external PostgreSQL client. **The owner inspected those Settings and reports that only the standard production `DATABASE_URL` and its individual variables are visible; no separate read-only or replica connection is shown.** The documentation does not describe one either. This establishes what is visible in Settings, not that no restricted access could ever be provisioned by other means. The Agent's read-only production query interface cannot stream a full `pg_dump` archive. Do not confuse the development shell's `DATABASE_URL` with the production credential.
 - [PostgreSQL documents](https://www.postgresql.org/docs/16/app-pgdump.html) that `pg_dump` creates a consistent export without blocking ordinary readers or writers. It still consumes production read I/O and can conflict with schema DDL; a short lock wait limit should fail rather than stall. A client-side read-only session is possible even if the only available credential itself is write-capable, but **this is not a database-enforced read-only role**.
-- Proposed credential method: the owner uses a private libpq service file (`PGSERVICEFILE`) for connection settings and a private password file (`PGPASSFILE`) **on the BitLocker-protected Windows computer**, in a restricted credentials folder **separate from the archive destination**. The service must require certificate-verified TLS (for example `sslmode=verify-full` with an appropriate trust root), never disabled TLS. PostgreSQL documents both [service files](https://www.postgresql.org/docs/16/libpq-pgservice.html) and [password files](https://www.postgresql.org/docs/16/libpq-pgpass.html) on Windows. The password must never enter this project, backup archive folder, shell history, command arguments, logs, or chat. The owner would configure these files from the **Production** Settings UI only **after** separately authorizing credential access. Do not copy production credentials into Replit development variables or replace `DATABASE_URL`. **Because no read-only connection is visible, treat the standard credential as write-capable** unless its privileges are separately proven restricted. The proposed client session defaults to read-only, but that is not a database-enforced restriction on the credential.
-- **Destination owner-confirmed, not independently inspected:** a private, BitLocker-encrypted Windows computer outside Replit, with **at least 3 GiB free** and access restricted to authorized operators. The exact encrypted drive/folder and ACLs still need local verification before execution; an independent disposable restore target needs its own capacity.
+- Proposed credential method: the owner uses `C:\GridlineCredentials\prod-backup.pg_service.conf` for non-secret connection settings, `C:\GridlineCredentials\prod-backup.pgpass` for the password, and a separately verified trusted CA PEM at `C:\GridlineCredentials\root.crt`. These are on the BitLocker-protected `C:` drive **outside** the archive folder. PostgreSQL documents Windows [service files](https://www.postgresql.org/docs/16/libpq-pgservice.html), [password files](https://www.postgresql.org/docs/16/libpq-pgpass.html), and [CA-file verification](https://www.postgresql.org/docs/16/libpq-ssl.html). PostgreSQL 16's `verify-full` requires a trust root and checks the endpoint hostname; **TLS compatibility has not been proven on the owner's computer** and must fail closed in the local preflight. Do not assume Windows' certificate store is used by libpq 16. The password must never enter the project, archive folder, shell history, application logs, Git, or chat. Do not use Replit development `DATABASE_URL`; treat the standard production credential as potentially write-capable even though the client session is read-only.
+- **Destination owner-confirmed, not independently inspected:** `C:\GridlineBackups` on the owner's BitLocker-protected Windows computer outside Replit. The owner confirmed at least 3 GiB free; local BitLocker status and ACLs still must be checked before the single authorized attempt. The separate credentials folder is `C:\GridlineCredentials`. Any isolated restore target needs its own capacity and separate approval.
 
-## Phase 2: reviewed Windows backup procedure — authorized conditionally, NOT executed
+## Phase 1: Windows folder, credential, and CA preparation — owner only
 
-1. The owner has **already authorized one backup** with the standard potentially write-capable production credential, conditional on the checks below. Production Database → Settings shows no separate read-only or replica connection. Creating a restricted role would itself change production and is **not** authorized. The only database operations in the commands below are a `SELECT` preflight and `pg_dump`'s read-only snapshot. Do not publish, run the application or worker, or synchronize providers as part of this procedure.
-2. On the Windows computer, choose an existing private folder on the confirmed BitLocker-protected drive for the archive (example `X:\Private\Gridline`) and a **different restricted folder** on that drive for the credential files (example `X:\Private\PgCredentials`). Verify the drive has at least 3 GiB free, BitLocker protection is on, and Windows ACLs allow only authorized operators to read either folder. Review folder and credential-file ACLs below: stop if `Everyone`, general `Users`, `Authenticated Users`, or another unapproved principal can read either folder or file, including through inherited permissions. An operator account, local Administrators and SYSTEM may be appropriate only if the owner approves their access. Do not run the dump merely because `Get-Acl` returned results; **inspect them**. These `X:` paths are **examples, not an identified drive or permission grant**. The local computer and capacity are owner-attested; they have not been remotely inspected.
-3. After the conditional destination and ACL checks, the owner transcribes the *production*, not development, host, port, database and user from the Production Settings connection into the private libpq service file. Use a service named `gridline-prod-backup` with certificate-verified TLS (`sslmode=verify-full`, plus a trusted CA path if needed). Its format is shown below; the values are **placeholders**, not actual connection details. Put the password in the separate libpq password file using PostgreSQL's `host:port:database:user:password` format; escape colons and backslashes as PostgreSQL documents. Restrict both files' ACLs to the operator and review them locally, for example with the **read-only** PowerShell commands below. Never paste a URL/password into chat or a PowerShell command, transcript, repository, backup folder, or Replit secret. The service file contains no password. If certificate verification fails, stop rather than weakening TLS.
+Use **Windows PowerShell 5.1** on the owner's BitLocker-protected computer. These steps do not contact the database. No permanent `PATH` edit is needed; PostgreSQL executables are in `C:\Program Files\PostgreSQL\16\bin`. The owner has already conditionally authorized one backup but **not** any restore.
+
+1. Check `Get-BitLockerVolume -MountPoint C:` reports `ProtectionStatus` **On** and `VolumeStatus` **FullyEncrypted**, and `Get-Volume -DriveLetter C` shows at least 3 GiB free. If the BitLocker cmdlet or volume query requires administrator rights, use an **elevated** Windows PowerShell 5.1 window **only for folder setup and this check**; close it before using credentials. The setup window must run as the **same Windows account** that will later run the backup; if elevation switches accounts, stop and have an administrator grant the intended operator's SID instead.
+2. In that elevated same-account window, create **new** folders with restricted ACLs using the following commands. Existing folders are **not modified**; inspect their ACLs and have the owner approve their existing access instead. No credentials belong in these commands.
+
+   ```powershell
+   $BackupDir = 'C:\GridlineBackups'
+   $CredDir = 'C:\GridlineCredentials'
+   $operatorSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+   foreach ($folder in @($BackupDir, $CredDir)) {
+     if (Test-Path -LiteralPath $folder) {
+       if (-not (Test-Path -LiteralPath $folder -PathType Container)) {
+         throw "Expected a folder: $folder"
+       }
+       Write-Output "Existing folder needs ACL review: $folder"
+       continue
+     }
+     New-Item -ItemType Directory -Path $folder -ErrorAction Stop | Out-Null
+     & icacls.exe $folder '/inheritance:r' '/grant:r' `
+       "*$($operatorSid):(OI)(CI)F" '*S-1-5-18:(OI)(CI)F' `
+       '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+     if ($LASTEXITCODE -ne 0) { throw "Folder ACL setup failed: $folder" }
+   }
+   Get-BitLockerVolume -MountPoint 'C:' | Select-Object MountPoint, ProtectionStatus, VolumeStatus
+   Get-Volume -DriveLetter C | Select-Object DriveLetter, SizeRemaining
+   Get-Acl -LiteralPath $BackupDir | Select-Object -ExpandProperty Access
+   Get-Acl -LiteralPath $CredDir | Select-Object -ExpandProperty Access
+   ```
+
+   Inspect both ACLs locally. The only approved allowed principals are the operator, SYSTEM, and local Administrators **if the owner approves administrator access**. Broad groups (Everyone, Users, Authenticated Users), inherited broad access, unknown principals, or a failed permission check mean **stop**. Folder setup may require administrator privileges; **the backup itself should run non-elevated**. Close the elevated window.
+3. Obtain the server's CA trust root as a **PEM** file through an independently trusted CA/provider source; verify its origin/fingerprint out of band and save it as `C:\GridlineCredentials\root.crt`. **Do not trust a certificate merely because it was returned by the database endpoint.** PostgreSQL 16 libpq on Windows expects a CA file; do not assume the Windows certificate store will be used. If the correct chain cannot be established, **stop**. No fallback to `sslmode=require`, `prefer`, or `disable` is allowed.
+4. From a **new, non-elevated** PowerShell window, open `notepad.exe C:\GridlineCredentials\prod-backup.pg_service.conf` and type the following template using **only the production Settings** host, port, database and user. Save as **All Files**, UTF-8 without BOM, with the exact filename; never put the password or URL in the service file or a PowerShell command. Use the production DNS hostname, not a bare IP, for hostname verification.
 
    ```ini
    [gridline-prod-backup]
-   host=PRODUCTION_HOST_FROM_SETTINGS
+   host=PRODUCTION_DNS_HOST_FROM_SETTINGS
    port=PRODUCTION_PORT_FROM_SETTINGS
    dbname=neondb
    user=PRODUCTION_USER_FROM_SETTINGS
    sslmode=verify-full
+   sslrootcert=C:/GridlineCredentials/root.crt
+   gssencmode=disable
    ```
+
+5. Create `C:\GridlineCredentials\prod-backup.pgpass` from a **local masked prompt**, not from a typed command containing the password. Do not enable a PowerShell transcript. The commands below read non-secret connection fields from the service file, prompt for the secret without echoing it, escape PostgreSQL password-file separators, and write UTF-8 **without BOM** into the restricted credentials folder. Password material exists briefly in local process memory and in that private file; it is never printed or entered in PowerShell history. Close this setup window afterwards.
 
    ```powershell
-   # Run locally after files exist; inspect for unexpected inherited or broad access.
-   Get-Acl -LiteralPath 'X:\Private\Gridline' | Select-Object -ExpandProperty Access
-   Get-Acl -LiteralPath 'X:\Private\PgCredentials' | Select-Object -ExpandProperty Access
-   Get-Acl -LiteralPath 'X:\Private\PgCredentials\prod-backup.pg_service.conf' |
-     Select-Object -ExpandProperty Access
-   Get-Acl -LiteralPath 'X:\Private\PgCredentials\prod-backup.pgpass' |
+   $serviceFile = 'C:\GridlineCredentials\prod-backup.pg_service.conf'
+   $passFile = 'C:\GridlineCredentials\prod-backup.pgpass'
+   if (Test-Path -LiteralPath $passFile) { throw 'Password file exists; stop for review' }
+   $config = @{}
+   $headers = @(Get-Content -LiteralPath $serviceFile |
+     Where-Object { $_ -match '^\s*\[' })
+   if ($headers.Count -ne 1 -or $headers[0].Trim() -ne '[gridline-prod-backup]') {
+     throw 'Unexpected service section'
+   }
+   foreach ($line in Get-Content -LiteralPath $serviceFile) {
+     $entry = $line.Trim()
+     if ($entry -eq '' -or $entry.StartsWith('#') -or
+         $entry -eq '[gridline-prod-backup]') { continue }
+     if ($entry -notmatch '^(host|port|dbname|user|sslmode|sslrootcert|gssencmode)=(.+)$') {
+       throw 'Unexpected service setting; stop'
+     }
+     if ($config.ContainsKey($matches[1])) { throw 'Duplicate service setting' }
+     $config[$matches[1]] = $matches[2]
+   }
+   foreach ($key in @('host','port','dbname','user','sslmode','sslrootcert','gssencmode')) {
+     if (-not $config.ContainsKey($key)) { throw "Missing service setting: $key" }
+   }
+   if ($config.dbname -ne 'neondb' -or $config.sslmode -ne 'verify-full' -or
+       $config.sslrootcert -ne 'C:/GridlineCredentials/root.crt' -or
+       $config.gssencmode -ne 'disable' -or
+       -not (Test-Path -LiteralPath 'C:\GridlineCredentials\root.crt')) {
+     throw 'Database or verified TLS configuration does not match the reviewed plan'
+   }
+   function Escape-Pgpass([string] $value) {
+     return $value.Replace('\','\\').Replace(':','\:')
+   }
+   $secret = Read-Host 'Production database password (local masked prompt)' -AsSecureString
+   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret)
+   try {
+     $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+     $line = '{0}:{1}:{2}:{3}:{4}' -f `
+       (Escape-Pgpass $config.host), (Escape-Pgpass $config.port), `
+       (Escape-Pgpass $config.dbname), (Escape-Pgpass $config.user), `
+       (Escape-Pgpass $plain)
+     [IO.File]::WriteAllText($passFile, $line + "`n",
+       (New-Object System.Text.UTF8Encoding($false)))
+   } finally {
+     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+     Remove-Variable plain,line,secret -ErrorAction SilentlyContinue
+   }
+   Get-Acl -LiteralPath $serviceFile | Select-Object -ExpandProperty Access
+   Get-Acl -LiteralPath $passFile | Select-Object -ExpandProperty Access
+   Get-Acl -LiteralPath 'C:\GridlineCredentials\root.crt' |
      Select-Object -ExpandProperty Access
    ```
 
-   If the private folders or restricted ACLs are not already configured, set them up locally with an administrator before entering the password. Do **not** copy the credential files along with the archive.
-4. The dump runs **directly from the production database to the owner's encrypted Windows folder over certificate-verified TLS**. No copy or staging step in Replit is needed or permitted. Recheck the latest production build ID against live deployment logs just before the approved run; if it differs from the frozen `$ExpectedBuildId` below, **stop and review the new baseline**. Do not update the value simply to make the script pass. Run the PowerShell block **once only**, after the destination, credential files, exact command text, and baseline have been reviewed. Close this PowerShell session after success or failure to clear its connection-file environment variables. Keep the resulting archive, status, timestamp, checksum and listing private. An archive listing is **not** a restore test.
+   Check the file ACLs: no broad or inherited **unapproved** read access. Keep the password file outside the archive folder and never share its contents, the URI, or the raw folder ACL output. If a file was accidentally created with a `.txt` suffix, or with incorrect encoding/ACLs, **stop and correct that locally before any database connection**.
 
-Run only on the owner's approved **Windows** computer, in a fresh PowerShell window, using the verified PostgreSQL 16.15 client tools. Replace all `X:` paths with verified BitLocker-protected folders; keep service and password files on the protected volume but outside the archive folder. Inspect ACLs on the folder and files first. The service file's `gridline-prod-backup` section must refer to the production Settings connection, not development. Do not paste its contents into chat. The script refuses a mismatched database, PostgreSQL major, read-only session, TLS state, or reviewed live build ID before dumping. If any guard fails, **stop; do not disable or bypass it**.
+## Phase 2: guarded one-attempt Windows backup — NOT executed
+
+The owner has authorized one local attempt only after Phase 1 passes and the **current live deployment build ID** is confirmed. Read-only production evidence and deployment logs both showed `7b057630d4a8-2026-09-26T02:31:27.142Z` during this review; if the live release changes before execution, **stop and request a fresh reviewed identity baseline** rather than changing the guard to make it pass. The only production database operations below are a read-only `SELECT` and `pg_dump`. The archive streams directly over certificate-verified TLS into `C:\GridlineBackups`; nothing is staged in Replit or written to application logs. The `psql` preflight is the actual local compatibility test: if hostname or certificate-chain verification fails, it cannot pass; the Agent has not tested the owner's Windows trust configuration. Run this complete block in a fresh **non-elevated Windows PowerShell 5.1** window, then close the window after success or failure. If BitLocker or ACL verification cannot be read without elevation, stop for review rather than bypassing checks or automatically elevating the credential-bearing backup process. Do not run provider sync, worker, migration, publish or restore commands.
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-$BackupDir = 'X:\Private\Gridline' # OWNER REPLACES with a confirmed encrypted local folder
+$BackupDir = 'C:\GridlineBackups'
+$CredDir = 'C:\GridlineCredentials'
+$PgBin = 'C:\Program Files\PostgreSQL\16\bin'
+$Psql = Join-Path $PgBin 'psql.exe'
+$PgDump = Join-Path $PgBin 'pg_dump.exe'
+$PgRestore = Join-Path $PgBin 'pg_restore.exe'
 $ExpectedBuildId = '7b057630d4a8-2026-09-26T02:31:27.142Z'
 $Service = 'service=gridline-prod-backup'
-$env:PGSERVICEFILE = 'X:\Private\PgCredentials\prod-backup.pg_service.conf'
-$env:PGPASSFILE = 'X:\Private\PgCredentials\prod-backup.pgpass'
+$env:PGSERVICEFILE = Join-Path $CredDir 'prod-backup.pg_service.conf'
+$env:PGPASSFILE = Join-Path $CredDir 'prod-backup.pgpass'
 $env:PGOPTIONS = '-c default_transaction_read_only=on'
 $env:PGCONNECT_TIMEOUT = '10'
-Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+Remove-Item Env:PGPASSWORD,Env:PGHOST,Env:PGPORT,Env:PGDATABASE,Env:PGUSER,`
+  Env:PGSERVICE,Env:PGSSLMODE,Env:PGSSLROOTCERT -ErrorAction SilentlyContinue
 
-foreach ($tool in @('pg_dump.exe', 'pg_restore.exe', 'psql.exe')) {
-  if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool is missing" }
-}
-foreach ($tool in @('pg_dump.exe', 'pg_restore.exe', 'psql.exe')) {
+foreach ($tool in @($Psql, $PgDump, $PgRestore)) {
+  if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) { throw "Missing client: $tool" }
   $version = & $tool --version
-  if ($LASTEXITCODE -ne 0 -or $version -notmatch 'PostgreSQL\) 16\.') {
-    throw "PostgreSQL 16 client required: $tool"
+  if ($LASTEXITCODE -ne 0 -or $version -notmatch 'PostgreSQL\) 16\.15\b') {
+    throw "PostgreSQL 16.15 client required: $tool"
   }
 }
 if (-not (Test-Path -LiteralPath $BackupDir -PathType Container) -or
+    -not (Test-Path -LiteralPath $CredDir -PathType Container) -or
     -not (Test-Path -LiteralPath $env:PGSERVICEFILE -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $env:PGPASSFILE -PathType Leaf)) {
-  throw 'The approved folder, service file, or private password file is missing'
+    -not (Test-Path -LiteralPath $env:PGPASSFILE -PathType Leaf) -or
+    -not (Test-Path -LiteralPath (Join-Path $CredDir 'root.crt') -PathType Leaf)) {
+  throw 'The approved folders, service/password files, or trusted CA file are missing'
 }
-$drive = [IO.Path]::GetPathRoot((Resolve-Path -LiteralPath $BackupDir).Path).Substring(0,1)
-foreach ($path in @($env:PGSERVICEFILE, $env:PGPASSFILE)) {
-  if ([IO.Path]::GetPathRoot((Resolve-Path -LiteralPath $path).Path).Substring(0,1) -ne $drive) {
-    throw 'Credential files must remain on the same BitLocker-protected volume'
+foreach ($path in @($BackupDir,$CredDir,$env:PGSERVICEFILE,$env:PGPASSFILE,
+                    (Join-Path $CredDir 'root.crt'))) {
+  if ((Get-Item -LiteralPath $path).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+    throw "Symbolic link or junction is not approved: $path"
+  }
+  if ([IO.Path]::GetPathRoot((Resolve-Path -LiteralPath $path).Path) -ne 'C:\') {
+    throw "Not on approved BitLocker C: drive: $path"
   }
 }
-if ((Get-BitLockerVolume -MountPoint "$($drive):").ProtectionStatus -ne 'On') {
-  throw 'Backup destination is not BitLocker-protected'
+$bitlocker = Get-BitLockerVolume -MountPoint 'C:'
+if ($bitlocker.ProtectionStatus -ne 'On' -or
+    $bitlocker.VolumeStatus -ne 'FullyEncrypted') {
+  throw 'C: is not fully encrypted with active BitLocker protection'
 }
-if ((Get-Volume -DriveLetter $drive).SizeRemaining -lt 3GB) {
+if ((Get-Volume -DriveLetter C).SizeRemaining -lt 3GB) {
   throw 'Backup destination has less than 3 GiB free'
+}
+$operatorSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$allowedSids = @($operatorSid,'S-1-5-18','S-1-5-32-544')
+function Assert-RestrictedAcl([string] $path, [bool] $protected) {
+  $acl = Get-Acl -LiteralPath $path
+  if ($protected -and -not $acl.AreAccessRulesProtected) {
+    throw "Folder inherits permissions: $path"
+  }
+  foreach ($ace in $acl.Access) {
+    if ($ace.AccessControlType -eq 'Allow') {
+      $sid = $ace.IdentityReference.Translate(
+        [Security.Principal.SecurityIdentifier]).Value
+      if ($allowedSids -notcontains $sid) {
+        throw "Unapproved ACL principal: $path"
+      }
+    }
+  }
+}
+Assert-RestrictedAcl $BackupDir $true
+Assert-RestrictedAcl $CredDir $true
+foreach ($path in @($env:PGSERVICEFILE,$env:PGPASSFILE,
+                    (Join-Path $CredDir 'root.crt'))) {
+  Assert-RestrictedAcl $path $false
+}
+$config = @{}
+$headers = @(Get-Content -LiteralPath $env:PGSERVICEFILE |
+  Where-Object { $_ -match '^\s*\[' })
+if ($headers.Count -ne 1 -or $headers[0].Trim() -ne '[gridline-prod-backup]') {
+  throw 'Unexpected service section'
+}
+foreach ($line in Get-Content -LiteralPath $env:PGSERVICEFILE) {
+  $entry = $line.Trim()
+  if ($entry -eq '' -or $entry.StartsWith('#') -or
+      $entry -eq '[gridline-prod-backup]') { continue }
+  if ($entry -notmatch '^(host|port|dbname|user|sslmode|sslrootcert|gssencmode)=(.+)$') {
+    throw 'Unexpected service setting'
+  }
+  if ($config.ContainsKey($matches[1])) { throw 'Duplicate service setting' }
+  $config[$matches[1]] = $matches[2]
+}
+foreach ($key in @('host','port','dbname','user','sslmode','sslrootcert','gssencmode')) {
+  if (-not $config.ContainsKey($key)) { throw "Missing service setting: $key" }
+}
+if ($config.dbname -ne 'neondb' -or $config.sslmode -ne 'verify-full' -or
+    $config.sslrootcert -ne 'C:/GridlineCredentials/root.crt' -or
+    $config.gssencmode -ne 'disable') {
+  throw 'Verified TLS or source database configuration changed'
 }
 
 $sql = "SELECT current_database(), current_user, current_setting('server_version_num'), " +
        "current_setting('default_transaction_read_only'), " +
        "(SELECT ssl::text FROM pg_stat_ssl WHERE pid = pg_backend_pid()), " +
        "(SELECT build_id FROM public.release_security_evidence ORDER BY checked_at DESC LIMIT 1)"
-$identity = & psql.exe -X -A -t -F '|' -v ON_ERROR_STOP=1 "--dbname=$Service" --command=$sql
+$identity = & $Psql -X -A -t -F '|' -v ON_ERROR_STOP=1 "--dbname=$Service" --command=$sql
 if ($LASTEXITCODE -ne 0) { throw 'Production identity preflight failed' }
 $fields = (($identity | Where-Object { $_ -match '\|' } | Select-Object -Last 1) -split '\|', 6)
 if ($fields.Count -ne 6 -or $fields[0] -ne 'neondb' -or
@@ -114,7 +248,7 @@ if (Test-Path -LiteralPath $attemptMarker) {
 [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ') |
   Set-Content -LiteralPath $attemptMarker -Encoding Ascii
 $ErrorActionPreference = 'Continue' # preserve native stderr and capture pg_dump exit status
-& pg_dump.exe "--dbname=$Service" --format=custom --serializable-deferrable `
+& $PgDump "--dbname=$Service" --format=custom --serializable-deferrable `
   --lock-wait-timeout=5s "--file=$partial" 2> "$archive.stderr"
 $dumpStatus = $LASTEXITCODE
 $ErrorActionPreference = 'Stop'
@@ -128,7 +262,7 @@ Move-Item -LiteralPath $partial -Destination $archive
 $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
 "$hash  $([IO.Path]::GetFileName($archive))" |
   Set-Content -LiteralPath "$archive.sha256" -Encoding Ascii
-& pg_restore.exe --list $archive > "$archive.toc"
+& $PgRestore --list $archive > "$archive.toc"
 if ($LASTEXITCODE -ne 0 -or (Get-Item -LiteralPath "$archive.toc").Length -eq 0) {
   throw 'Archive listing failed; backup is not verified'
 }
@@ -161,25 +295,31 @@ An archive listing and checksum establish only preliminary integrity; they **do 
 
 1. **Stop for a separate express authorization to restore**, even to a disposable local database. Confirm PostgreSQL 16.15 **server** tools (`initdb.exe`, `pg_ctl.exe`, `createdb.exe`) are available; the owner has confirmed the three client tools, **not** these server tools. If they are absent, stop and provision a separate isolated PostgreSQL 16 server before continuing. Do not point a restore command at Replit, the production host, a development database, or any shared server.
 2. On the BitLocker Windows computer, retain the archive and manifest. Close the backup PowerShell window and open a new one **without production service/password variables**. Disconnect the machine from the network before creating or starting the local restore cluster. Keep it offline until the local server is stopped, so extensions or archived database objects cannot reach production or third parties. Do not start the Gridline API or worker on this cluster.
-3. The following PowerShell plan creates a **new** PostgreSQL 16 cluster in a separate protected folder, listens **only on `127.0.0.1:55432`**, uses password authentication, asserts loopback identity, creates an empty database, and restores the archive. Replace the example `X:` paths with the approved encrypted paths. The cluster's locally prompted password is **not the production password**. If any preflight or restore exits nonzero, mark the backup **NOT VERIFIED** and investigate without touching production.
+3. The following PowerShell plan creates a **new** PostgreSQL 16 cluster in a separate protected folder on the same encrypted `C:` drive, listens **only on `127.0.0.1:55432`**, uses password authentication, asserts loopback identity, creates an empty database, and restores the archive. Replace the example archive filename with the actual one. The cluster's locally prompted password is **not the production password**. If any preflight or restore exits nonzero, mark the backup **NOT VERIFIED** and investigate without touching production.
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-$Archive = 'X:\Private\Gridline\gridline-neondb-REPLACE_WITH_ACTUAL_UTC_TIMESTAMP.dump'
-$RestoreRoot = 'X:\Private\GridlineRestoreCluster' # new, disposable, not the archive folder
+$Archive = 'C:\GridlineBackups\gridline-neondb-REPLACE_WITH_ACTUAL_UTC_TIMESTAMP.dump'
+$RestoreRoot = 'C:\GridlineRestoreCluster' # new, disposable, not the archive folder
 $RestoreUser = 'gridline_restore_admin'
 $RestoreDb = 'gridline_restore_test'
 $RestorePort = '55432'
+$PgBin = 'C:\Program Files\PostgreSQL\16\bin'
+$Initdb = Join-Path $PgBin 'initdb.exe'
+$PgCtl = Join-Path $PgBin 'pg_ctl.exe'
+$Createdb = Join-Path $PgBin 'createdb.exe'
+$PgRestore = Join-Path $PgBin 'pg_restore.exe'
+$Psql = Join-Path $PgBin 'psql.exe'
 
 # This is a NEW PowerShell window on an OFFLINE computer. No production credentials here.
 Remove-Item Env:DATABASE_URL,Env:PGSERVICEFILE,Env:PGPASSFILE,Env:PGOPTIONS,`
   Env:PGPASSWORD,Env:PGHOST,Env:PGPORT,Env:PGDATABASE,Env:PGUSER `
   -ErrorAction SilentlyContinue
-foreach ($tool in @('initdb.exe', 'pg_ctl.exe', 'createdb.exe', 'pg_restore.exe', 'psql.exe')) {
-  if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool is missing" }
+foreach ($tool in @($Initdb, $PgCtl, $Createdb, $PgRestore, $Psql)) {
+  if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) { throw "$tool is missing" }
   $version = & $tool --version
-  if ($LASTEXITCODE -ne 0 -or $version -notmatch 'PostgreSQL\) 16\.') {
-    throw "PostgreSQL 16 server and client tools required: $tool"
+  if ($LASTEXITCODE -ne 0 -or $version -notmatch 'PostgreSQL\) 16\.15\b') {
+    throw "PostgreSQL 16.15 server and client tools required: $tool"
   }
 }
 if (-not (Test-Path -LiteralPath $Archive -PathType Leaf) -or
@@ -208,16 +348,16 @@ if ($sourceToc -match ' SUBSCRIPTION | FOREIGN SERVER | FOREIGN DATA WRAPPER | U
 }
 
 # initdb prompts for a NEW local superuser password; never reuse production credentials.
-& initdb.exe --pgdata=$RestoreRoot --username=$RestoreUser `
+& $Initdb --pgdata=$RestoreRoot --username=$RestoreUser `
   --auth-host=scram-sha-256 --auth-local=scram-sha-256 --pwprompt
 if ($LASTEXITCODE -ne 0) { throw 'Disposable cluster initialization failed' }
-& pg_ctl.exe --pgdata=$RestoreRoot --options="-p $RestorePort -h 127.0.0.1" `
+& $PgCtl --pgdata=$RestoreRoot --options="-p $RestorePort -h 127.0.0.1" `
   --log="$RestoreRoot\server.log" --wait start
 if ($LASTEXITCODE -ne 0) { throw 'Disposable cluster startup failed' }
 
 $localSql = "SELECT current_database(), inet_server_addr()::text, " +
             "inet_server_port()::text, pg_is_in_recovery()::text"
-$localIdentity = & psql.exe -X -A -t -F '|' -v ON_ERROR_STOP=1 -W `
+$localIdentity = & $Psql -X -A -t -F '|' -v ON_ERROR_STOP=1 -W `
   --host=127.0.0.1 "--port=$RestorePort" "--username=$RestoreUser" `
   --dbname=postgres --command=$localSql
 if ($LASTEXITCODE -ne 0) { throw 'Local restore server identity check failed' }
@@ -227,10 +367,10 @@ if ($localFields.Count -ne 4 -or $localFields[0] -ne 'postgres' -or
     $localFields[2] -ne $RestorePort -or $localFields[3] -notin @('f', 'false')) {
   throw 'Not an isolated localhost PostgreSQL server; no restore attempted'
 }
-& createdb.exe -W --host=127.0.0.1 "--port=$RestorePort" `
+& $Createdb -W --host=127.0.0.1 "--port=$RestorePort" `
   "--username=$RestoreUser" --encoding=UTF8 --template=template0 $RestoreDb
 if ($LASTEXITCODE -ne 0) { throw 'Empty restore database creation failed' }
-& pg_restore.exe -W --host=127.0.0.1 "--port=$RestorePort" `
+& $PgRestore -W --host=127.0.0.1 "--port=$RestorePort" `
   "--username=$RestoreUser" "--dbname=$RestoreDb" `
   --single-transaction --exit-on-error --no-owner --no-acl --no-tablespaces $Archive
 $restoreStatus = $LASTEXITCODE
@@ -279,11 +419,11 @@ SELECT id, game_id, prediction_timestamp FROM public.prediction_snapshots
 SELECT build_id, checked_at FROM public.release_security_evidence
   ORDER BY checked_at DESC LIMIT 5;
 '@
-& psql.exe -X -v ON_ERROR_STOP=1 -W --host=127.0.0.1 `
+& $Psql -X -v ON_ERROR_STOP=1 -W --host=127.0.0.1 `
   "--port=$RestorePort" "--username=$RestoreUser" "--dbname=$RestoreDb" `
   --command=$validationSql
 if ($LASTEXITCODE -ne 0) { throw 'Restored-data validation failed' }
-& pg_ctl.exe --pgdata=$RestoreRoot --wait stop
+& $PgCtl --pgdata=$RestoreRoot --wait stop
 if ($LASTEXITCODE -ne 0) { throw 'Local test server did not shut down cleanly' }
 ```
 
