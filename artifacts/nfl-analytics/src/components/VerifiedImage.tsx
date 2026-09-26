@@ -8,8 +8,8 @@ export function imageAvailable(url: string | null, failedUrl: string | null) {
 export function PlayerPortrait({ url, name }: { url: string | null; name: string }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const visible = imageAvailable(url, failedUrl);
-  return <div className="puc-avatar" role="img" aria-label={visible ? `Photo of ${name}` : `Photo unavailable for ${name}`}>
-    {visible ? <img src={url!} alt="" onError={() => setFailedUrl(url)} /> : <UserRound className="h-5 w-5" aria-hidden="true" />}
+  return <div className="puc-avatar" role="img" aria-label={visible ? `Portrait of ${name}` : `Photo unavailable for ${name}`}>
+    {visible ? <img src={url!} alt="" onError={() => setFailedUrl(url)} loading="lazy" decoding="async" /> : <UserRound className="h-5 w-5" aria-hidden="true" />}
   </div>;
 }
 

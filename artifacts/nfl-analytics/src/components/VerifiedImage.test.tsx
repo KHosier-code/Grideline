@@ -11,7 +11,10 @@ test('null and failed headshot URLs render an accessible styled placeholder', ()
   assert.doesNotMatch(missing, /<img/);
   assert.equal(imageAvailable('https://example.org/a.png', 'https://example.org/a.png'), false);
   assert.equal(imageAvailable('https://example.org/b.png', 'https://example.org/a.png'), true);
-  assert.match(renderToStaticMarkup(createElement(PlayerPortrait, { url: 'https://example.org/a.png', name: 'A Player' })), /<img/);
+  const verified = renderToStaticMarkup(createElement(PlayerPortrait, { url: 'https://example.org/a.png', name: 'A Player' }));
+  assert.match(verified, /Portrait of A Player/);
+  assert.match(verified, /<img/);
+  assert.match(verified, /alt=""/);
 });
 
 test('team mark retains readable abbreviation without verified or working URL', () => {

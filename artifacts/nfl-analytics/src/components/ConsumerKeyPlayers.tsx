@@ -1,6 +1,7 @@
 import { getGetConsumerRedZoneOpportunitiesQueryKey, useGetConsumerRedZoneOpportunities, type ConsumerKeyPlayer, type ConsumerTeam, type GetConsumerRedZoneOpportunitiesParams } from '@workspace/api-client-react';
 import { AlertTriangle } from 'lucide-react';
 import { PlayerPortrait } from './VerifiedImage';
+import { safeApiPlayerPortraitUrl } from '../lib/player-portraits';
 import { USAGE_METRIC_LABELS, formatUsageMetric, usagePeriodLabel } from '../lib/consumer-presentation';
 import { RED_ZONE_FALLBACK_LABEL, formatRedZoneCoverage, formatRedZoneValue, normalizeRedZoneResponse, readableTime, selectRedZoneFallback, type RedZonePlayer, type RedZonePeriod } from '../lib/consumer-red-zone';
 
@@ -57,7 +58,7 @@ function PlayerUsageCard({ player, testId, redZone }: { player: ConsumerKeyPlaye
   return (
     <article className="player-usage-card" data-testid={testId}>
       <header className="puc-header">
-        <PlayerPortrait url={player.headshotUrl} name={player.name} />
+        <PlayerPortrait url={safeApiPlayerPortraitUrl(player)} name={player.name} />
         <div className="puc-info">
           <strong>{player.name}</strong>
           <span>

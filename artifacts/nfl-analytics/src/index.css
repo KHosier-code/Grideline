@@ -1517,7 +1517,8 @@
 .status-good .status-dot { background: hsl(var(--status-good)); }
 .status-warn .status-dot { background: hsl(var(--status-warn)); }
 .depth-projected_starter { color: hsl(var(--accent)); }
-.puc-avatar { width: 44px; height: 44px; min-width: 44px; flex: 0 0 44px; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--accent) / .12); color: hsl(var(--accent)); }
+.puc-avatar { width: 44px; height: 44px; min-width: 44px; flex: 0 0 44px; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--accent) / .12); color: hsl(var(--accent)); overflow: hidden; }
+.puc-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; }
 @media (max-width: 640px) {
   .terminal-page { padding: 0; }
   .board-game .tb-evidence { display: block; }
