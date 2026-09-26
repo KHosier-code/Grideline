@@ -535,6 +535,9 @@
 .status-bad { color: hsl(var(--status-bad)); background: hsl(var(--status-bad) / .12); border-color: hsl(var(--status-bad) / .3); }
 .puc-avatar { width: 44px; height: 44px; min-width: 44px; flex: 0 0 44px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--accent) / .12); color: hsl(var(--accent)); overflow: hidden; }
 .puc-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.consumer-team-mark { display: inline-flex; align-items: center; justify-content: center; min-width: 2.4rem; height: 2rem; font-weight: 800; }
+.consumer-team-mark img { max-width: 2.4rem; max-height: 2rem; object-fit: contain; }
+.premium-team-abbr img { display: inline-block; max-width: 3.5rem; max-height: 3.5rem; object-fit: contain; }
 .movement-chart .recharts-cartesian-axis-tick-value, .movement-chart .recharts-legend-item-text { fill: hsl(var(--chart-axis)) !important; color: hsl(var(--chart-axis)) !important; }
 .movement-chart .recharts-cartesian-axis-line, .movement-chart .recharts-cartesian-axis-tick-line { stroke: hsl(var(--chart-grid)); }
 .movement-chart .recharts-default-tooltip { background: hsl(var(--tooltip)) !important; border: 1px solid hsl(var(--border)) !important; border-radius: 9px; color: hsl(var(--tooltip-foreground)) !important; }
@@ -910,6 +913,8 @@
 .tc-time { font-family: var(--app-font-mono); font-size: 10px; text-transform: uppercase; color: hsl(var(--muted-foreground)); font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 4px; }
 .tc-team { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 12px; }
 .tc-team strong { font-family: var(--app-font-serif); font-size: 16px; }
+.tc-team-mark { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 30px; font-family: var(--app-font-serif); font-size: 16px; font-weight: 700; color: hsl(var(--foreground)) !important; }
+.tc-team-mark img { max-width: 32px; max-height: 28px; object-fit: contain; }
 .tc-team span { overflow: hidden; color: hsl(var(--muted-foreground)); text-overflow: ellipsis; white-space: nowrap; }
 .tc-team b { font-family: var(--app-font-mono); font-size: 13px; }
 .tc-team-name { display: flex; align-items: center; gap: 8px; }

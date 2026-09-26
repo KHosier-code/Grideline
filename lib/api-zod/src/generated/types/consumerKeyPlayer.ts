@@ -15,6 +15,8 @@ export interface ConsumerKeyPlayer {
   teamId: string;
   /** @nullable */
   position: string | null;
+  /** @nullable */
+  headshotUrl: string | null;
   eligibility: ConsumerKeyPlayerEligibility;
   recentUsage: ConsumerKeyPlayerRecentUsage;
   currentPersonnel: ConsumerKeyPlayerCurrentPersonnel;

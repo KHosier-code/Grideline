@@ -82,7 +82,8 @@ import type {
   Team,
   UpcomingPlayerProjectionReadiness,
   UsageAnalyticsEventInput,
-  UsageAnalyticsSummary
+  UsageAnalyticsSummary,
+  VerifiedImageryReport
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -111,6 +112,11 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
+export const getGetVerifiedImageryReportUrl = () => {
+
+
+  return `/api/admin/verified-imagery/report`
+}
 export const getGetConfidenceAuditUrl = () => {
 
 
@@ -3522,3 +3528,57 @@ export function useGetConsumerRedZoneOpportunities<TData = Awaited<ReturnType<ty
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetVerifiedImageryReportQueryKey = () => {
+    return [
+    `/api/admin/verified-imagery/report`
+    ] as const;
+    }
+
+export const getGetVerifiedImageryReportQueryOptions = <TData = Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVerifiedImageryReportQueryKey();
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVerifiedImageryReport>>> = ({ signal }) => getVerifiedImageryReport({ signal, ...requestOptions });
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVerifiedImageryReportQueryResult = NonNullable<Awaited<ReturnType<typeof getVerifiedImageryReport>>>
+
+/**
+ * @summary Inspect unmatched and ambiguous nflverse imagery evidence
+ */
+
+export function useGetVerifiedImageryReport<TData = Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVerifiedImageryReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export type GetVerifiedImageryReportQueryError = ErrorType<void>
+
+/**
+ * @summary Inspect unmatched and ambiguous nflverse imagery evidence
+ */
+export const getVerifiedImageryReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<VerifiedImageryReport> => {
+
+  return customFetch<VerifiedImageryReport>(getGetVerifiedImageryReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}

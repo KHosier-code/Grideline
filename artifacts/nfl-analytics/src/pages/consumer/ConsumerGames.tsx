@@ -14,6 +14,7 @@ import { ConsumerMarketComparisonCell } from '../../components/ConsumerMarketCom
 import { MarketConfidenceSummary } from '../../components/MarketConfidence';
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 import { eligibleMarkets, marketBlocker, officialResult, readSlate, type Slate } from '../../lib/consumer-board';
+import { TeamMark } from '../../components/VerifiedImage';
 
 function EvidenceQuote({
   label,
@@ -57,8 +58,8 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
             <span>{formatKickoff(game.kickoffTime)}</span>
             <span>Official status: <b className={`market-state market-state-${game.gameState}`}>{game.gameState}</b></span>
           </div>
-          <div className="tc-team"><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span>{final && <b>{final.away}</b>}</div>
-          <div className="tc-team"><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span>{final && <b>{final.home}</b>}</div>
+          <div className="tc-team"><TeamMark className="tc-team-mark" url={game.matchup.away.logoUrl} abbreviation={game.matchup.away.abbreviation} /><span>{game.matchup.away.name}</span>{final && <b>{final.away}</b>}</div>
+          <div className="tc-team"><TeamMark className="tc-team-mark" url={game.matchup.home.logoUrl} abbreviation={game.matchup.home.abbreviation} /><span>{game.matchup.home.name}</span>{final && <b>{final.home}</b>}</div>
           {final && <small className="board-result">Official final result: {game.matchup.away.abbreviation} {final.away} – {game.matchup.home.abbreviation} {final.home}</small>}
           <p className="board-projection"><strong>Saved Gridline projection:</strong> {prediction
             ? prediction.projectedAwayScore == null || prediction.projectedHomeScore == null

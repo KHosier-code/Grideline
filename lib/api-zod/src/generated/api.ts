@@ -1825,6 +1825,7 @@ export const GetConsumerGameResponse = zod.object({
   "name": zod.string(),
   "teamId": zod.string(),
   "position": zod.string().nullable(),
+  "headshotUrl": zod.string().nullable(),
   "eligibility": zod.object({
   "status": zod.enum(['eligible', 'ineligible', 'unknown']),
   "reason": zod.string().nullable()
@@ -2842,4 +2843,67 @@ export const GetConsumerRedZoneOpportunitiesResponse = zod.object({
   "carryShare": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMax).nullable()
 }))
 }))
+})
+
+/**
+ * @summary Inspect unmatched and ambiguous nflverse imagery evidence
+ */
+export const GetVerifiedImageryReportResponse = zod.object({
+  "status": zod.enum(['ready', 'partial', 'stale']),
+  "reason": zod.string().nullable(),
+  "sourceNotice": zod.string(),
+  "sources": zod.object({
+  "teams": zod.union([zod.object({
+  "url": zod.string(),
+  "sha256": zod.string(),
+  "fetchedAt": zod.coerce.date(),
+  "rows": zod.number().int(),
+  "version": zod.string()
+}),zod.null()]),
+  "roster": zod.union([zod.object({
+  "url": zod.string(),
+  "sha256": zod.string(),
+  "fetchedAt": zod.coerce.date(),
+  "rows": zod.number().int(),
+  "version": zod.string()
+}),zod.null()]),
+  "players": zod.union([zod.object({
+  "url": zod.string(),
+  "sha256": zod.string(),
+  "fetchedAt": zod.coerce.date(),
+  "rows": zod.number().int(),
+  "version": zod.string()
+}),zod.null()])
+}),
+  "counts": zod.record(zod.string(), zod.number().int()),
+  "categories": zod.object({
+  "unmatchedTeams": zod.array(zod.object({
+  "id": zod.string(),
+  "reason": zod.string()
+})),
+  "ambiguousTeams": zod.array(zod.object({
+  "id": zod.string(),
+  "reason": zod.string()
+})),
+  "unresolvedRosterIds": zod.array(zod.object({
+  "id": zod.string(),
+  "reason": zod.string()
+})),
+  "ambiguousIdentities": zod.array(zod.object({
+  "id": zod.string(),
+  "reason": zod.string()
+})),
+  "duplicateRosterIds": zod.array(zod.object({
+  "id": zod.string(),
+  "reason": zod.string()
+})),
+  "missingHeadshotUrls": zod.array(zod.object({
+  "id": zod.string(),
+  "reason": zod.string()
+})),
+  "unresolvedConsumerIds": zod.array(zod.object({
+  "id": zod.string(),
+  "reason": zod.string()
+}))
+})
 })

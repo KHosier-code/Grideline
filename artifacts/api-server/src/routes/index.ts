@@ -14,6 +14,7 @@ import confidenceRouter from "./confidence";
 import usageAnalyticsRouter from "./usage-analytics";
 import playerProjectionsRouter from "./player-projections";
 import gameAlertsRouter from "./game-alerts";
+import verifiedImageryRouter from "./verified-imagery";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,5 @@ router.use(confidenceRouter);
 router.use(usageAnalyticsRouter);
 router.use(playerProjectionsRouter);
 router.use(gameAlertsRouter);
-
+router.use(verifiedImageryRouter);
 export default router;

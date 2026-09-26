@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Bookmark, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useEffect, useState } from 'react';
+import { TeamMark } from '../../components/VerifiedImage';
 
 export function useConsumerNow() {
   const [now, setNow] = useState(Date.now());
@@ -79,8 +80,8 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
     <Link href={href} className="consumer-game-card-link">
       <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : game.dataConfidence.label}</span></div>
       <div className="consumer-matchup">
-        <div><strong>{game.matchup.away.abbreviation}</strong><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(prediction?.projectedAwayScore)}</b>
-        <div><strong>{game.matchup.home.abbreviation}</strong><span>{game.matchup.home.name}</span></div><b>{final ? final.home : score(prediction?.projectedHomeScore)}</b>
+        <div><TeamMark className="consumer-team-mark" url={game.matchup.away.logoUrl} abbreviation={game.matchup.away.abbreviation} /><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(prediction?.projectedAwayScore)}</b>
+        <div><TeamMark className="consumer-team-mark" url={game.matchup.home.logoUrl} abbreviation={game.matchup.home.abbreviation} /><span>{game.matchup.home.name}</span></div><b>{final ? final.home : score(prediction?.projectedHomeScore)}</b>
       </div>
       {!compact && <div className="consumer-card-metrics">
         <span><small>Projection</small>{prediction ? `${score(prediction.projectedMargin)} margin` : game.availability.prediction ?? 'Updating'}</span>

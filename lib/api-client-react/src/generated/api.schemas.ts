@@ -5,6 +5,56 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+export interface VerifiedImageryIssue {
+  id: string;
+  reason: string;
+}
+
+export interface VerifiedImagerySource {
+  url: string;
+  sha256: string;
+  fetchedAt: string;
+  rows: number;
+  version: string;
+}
+
+export type VerifiedImageryReportStatus = typeof VerifiedImageryReportStatus[keyof typeof VerifiedImageryReportStatus];
+
+
+export const VerifiedImageryReportStatus = {
+  ready: 'ready',
+  partial: 'partial',
+  stale: 'stale',
+} as const;
+
+export type VerifiedImageryReportSources = {
+  teams: VerifiedImagerySource | null;
+  roster: VerifiedImagerySource | null;
+  players: VerifiedImagerySource | null;
+};
+
+export type VerifiedImageryReportCounts = {[key: string]: number};
+
+export type VerifiedImageryReportCategories = {
+  unmatchedTeams: VerifiedImageryIssue[];
+  ambiguousTeams: VerifiedImageryIssue[];
+  unresolvedRosterIds: VerifiedImageryIssue[];
+  ambiguousIdentities: VerifiedImageryIssue[];
+  duplicateRosterIds: VerifiedImageryIssue[];
+  missingHeadshotUrls: VerifiedImageryIssue[];
+  unresolvedConsumerIds: VerifiedImageryIssue[];
+};
+
+export interface VerifiedImageryReport {
+  status: VerifiedImageryReportStatus;
+  /** @nullable */
+  reason: string | null;
+  sourceNotice: string;
+  sources: VerifiedImageryReportSources;
+  counts: VerifiedImageryReportCounts;
+  categories: VerifiedImageryReportCategories;
+}
+
 export type PlayerRecoveryReceiptCleanupHealthStatus = typeof PlayerRecoveryReceiptCleanupHealthStatus[keyof typeof PlayerRecoveryReceiptCleanupHealthStatus];
 
 
@@ -1261,6 +1311,8 @@ export interface ConsumerKeyPlayer {
   teamId: string;
   /** @nullable */
   position: string | null;
+  /** @nullable */
+  headshotUrl: string | null;
   eligibility: ConsumerKeyPlayerEligibility;
   recentUsage: ConsumerKeyPlayerRecentUsage;
   currentPersonnel: ConsumerKeyPlayerCurrentPersonnel;
@@ -3338,3 +3390,4 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
+

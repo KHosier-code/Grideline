@@ -50,6 +50,7 @@ import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { GetConsumerScheduleSelectionResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
+import { safeVerifiedImages, playerHeadshot } from "../lib/verified-imagery";
 import {
   completeGameMarketObservation,
   consumerMarketFreshnessMinutes,
@@ -1366,6 +1367,9 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
     asOf,
   );
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
+  const imagery = await safeVerifiedImages(teams.map(team => ({
+    teamId: team.teamId, abbreviation: team.abbreviation, name: team.teamName,
+  })));
   const latestMarketAuditByGame = new Map(
     marketAudits.flatMap((audit) => audit.gameId ? [[audit.gameId, audit] as const] : []),
   );
@@ -1534,8 +1538,8 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       gameState,
       venue: game.stadium,
       matchup: {
-        home: { name: home?.teamName ?? "Team unavailable", abbreviation: home?.abbreviation ?? "—", logoUrl: home?.logoUrl ?? null },
-        away: { name: away?.teamName ?? "Team unavailable", abbreviation: away?.abbreviation ?? "—", logoUrl: away?.logoUrl ?? null },
+        home: { name: home?.teamName ?? "Team unavailable", abbreviation: home?.abbreviation ?? "—", logoUrl: imagery?.teams.logos.get(game.homeTeamId) ?? null },
+        away: { name: away?.teamName ?? "Team unavailable", abbreviation: away?.abbreviation ?? "—", logoUrl: imagery?.teams.logos.get(game.awayTeamId) ?? null },
       },
       finalScore: consumerFinalScore(game, asOf),
       prediction: consumerProjection(snapshot),
@@ -1766,6 +1770,11 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
       homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId,
     }).from(gamesTable).where(eq(gamesTable.gameId, game.gameId)).limit(1);
     const detailTeamRows = await db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable);
+    const imagery = await safeVerifiedImages(detailTeamRows.map(team => ({
+      teamId: team.teamId, abbreviation: team.abbreviation,
+      name: team.teamId === gameRow.homeTeamId ? game.matchup.home.name
+        : team.teamId === gameRow.awayTeamId ? game.matchup.away.name : "",
+    })));
     const detailTeamMaps = buildUsageTeamMappings(detailTeamRows);
     const detailSourceTeams = [gameRow.homeTeamId, gameRow.awayTeamId]
       .map((id) => detailTeamMaps.scheduleToAbbreviation.get(id))
@@ -1976,7 +1985,11 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
       .flatMap((teamId) => rankRecentKeyPlayers(
         recent.filter((player) => eligibleById.has(`${player.teamId}:${player.playerId}`)), teamId,
       ))
-      .map((player) => eligibleById.get(`${player.teamId}:${player.playerId}`)!);
+      .map((player) => ({
+        ...eligibleById.get(`${player.teamId}:${player.playerId}`)!,
+        headshotUrl: game.season === 2026
+          ? (imagery ? playerHeadshot(player.playerId, imagery.players) : null) : null,
+      }));
     const movement = serializeMovement(movementRows, kickoff);
     const teamEvidence = (teamId: string) => {
       const row = contextRows.find((candidate) => candidate.teamId === teamId);

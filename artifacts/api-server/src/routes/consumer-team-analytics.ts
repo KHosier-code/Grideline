@@ -2,6 +2,7 @@ import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { db, gamesTable, teamGameStatsTable, teamsTable } from "@workspace/db";
 import { buildConsumerTeamAnalytics, type TeamAnalyticsWindow } from "../lib/consumer-team-analytics";
+import { safeVerifiedImages } from "../lib/verified-imagery";
 
 const router: IRouter = Router();
 const validWindows = new Set<TeamAnalyticsWindow>(["season", "last3", "last5", "last8"]);
@@ -102,7 +103,13 @@ router.get("/consumer/team-analytics", async (req, res): Promise<void> => {
         lte(teamGameStatsTable.week, throughWeek),
       ))
 
-    res.json(buildConsumerTeamAnalytics(games, stats, canonicalTeams, {
+    const imagery = await safeVerifiedImages(canonicalTeams.map(team => ({
+      teamId: team.teamId, abbreviation: team.abbreviation, name: team.name,
+    })));
+    const verifiedTeams = canonicalTeams.map(team => ({
+      ...team, logoUrl: imagery?.teams.logos.get(team.teamId) ?? null,
+    }));
+    res.json(buildConsumerTeamAnalytics(games, stats, verifiedTeams, {
       season,
       throughWeek,
       window: windowText as TeamAnalyticsWindow,

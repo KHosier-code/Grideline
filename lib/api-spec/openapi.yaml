@@ -17,6 +17,21 @@ tags:
   - name: settings
     description: User-operable model and sportsbook settings
 paths:
+  /admin/verified-imagery/report:
+    get:
+      operationId: getVerifiedImageryReport
+      tags: [dashboard]
+      summary: Inspect unmatched and ambiguous nflverse imagery evidence
+      security: [{ clerk: [] }]
+      responses:
+        "200":
+          description: Source provenance, counts, and unresolved IDs for operator review
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/VerifiedImageryReport" }
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
+        "503": { description: Source evidence unavailable }
   /admin/confidence/audit:
     get:
       operationId: getConfidenceAudit
@@ -1026,6 +1041,58 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    VerifiedImageryIssue:
+      type: object
+      required: [id, reason]
+      properties:
+        id: { type: string }
+        reason: { type: string }
+    VerifiedImagerySource:
+      type: object
+      required: [url, sha256, fetchedAt, rows, version]
+      properties:
+        url: { type: string }
+        sha256: { type: string }
+        fetchedAt: { type: string, format: date-time }
+        rows: { type: integer }
+        version: { type: string }
+    VerifiedImageryReport:
+      type: object
+      required: [status, reason, sources, sourceNotice, counts, categories]
+      properties:
+        status: { type: string, enum: [ready, partial, stale] }
+        reason: { type: ["string", "null"] }
+        sourceNotice: { type: string }
+        sources:
+          type: object
+          required: [teams, roster, players]
+          properties:
+            teams:
+              anyOf:
+                - { $ref: "#/components/schemas/VerifiedImagerySource" }
+                - { type: "null" }
+            roster:
+              anyOf:
+                - { $ref: "#/components/schemas/VerifiedImagerySource" }
+                - { type: "null" }
+            players:
+              anyOf:
+                - { $ref: "#/components/schemas/VerifiedImagerySource" }
+                - { type: "null" }
+        counts:
+          type: object
+          additionalProperties: { type: integer }
+        categories:
+          type: object
+          required: [unmatchedTeams, ambiguousTeams, unresolvedRosterIds, ambiguousIdentities, duplicateRosterIds, missingHeadshotUrls, unresolvedConsumerIds]
+          properties:
+            unmatchedTeams: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
+            ambiguousTeams: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
+            unresolvedRosterIds: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
+            ambiguousIdentities: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
+            duplicateRosterIds: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
+            missingHeadshotUrls: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
+            unresolvedConsumerIds: { type: array, items: { $ref: "#/components/schemas/VerifiedImageryIssue" } }
     PlayerRecoveryReceiptCleanupHealth:
       type: object
       additionalProperties: false
@@ -1761,12 +1828,13 @@ components:
             recommendationSuppressed: { type: boolean }
     ConsumerKeyPlayer:
       type: object
-      required: [playerId, name, teamId, position, recentUsage, currentPersonnel, eligibility]
+      required: [playerId, name, teamId, position, headshotUrl, recentUsage, currentPersonnel, eligibility]
       properties:
         playerId: { type: string }
         name: { type: string }
         teamId: { type: string }
         position: { type: ["string", "null"] }
+        headshotUrl: { type: ["string", "null"] }
         eligibility:
           type: object
           required: [status, reason]

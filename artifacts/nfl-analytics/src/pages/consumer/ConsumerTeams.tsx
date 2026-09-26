@@ -20,6 +20,7 @@ import {
 import { ChartContainer } from '@/components/ui/chart';
 import { ConsumerTeamTrendChart, teamTrendMetrics, trendValueLabel, validTrendValue, type TeamTrendMetric } from '../../components/ConsumerTeamTrendChart';
 import './ConsumerTeams.css';
+import { TeamMark } from '../../components/VerifiedImage';
 
 type Metric = TeamTrendMetric;
 type DotData = ConsumerTeamAnalyticsTeam & { offenseEpa: number; defenseEpa: number };
@@ -31,12 +32,7 @@ const epa = (value: number | null | undefined) => valid(value) ? `${value > 0 ? 
 const valueLabel = trendValueLabel;
 
 function TeamLogo({ team, small = false }: { team: Pick<ConsumerTeamAnalyticsTeam, 'abbreviation' | 'logoUrl'>; small?: boolean }) {
-  const [failed, setFailed] = useState(false);
-  return <span className={small ? 'ct-mini-logo' : 'ct-mini-logo'} aria-hidden="true">
-    {team.logoUrl && !failed
-      ? <img src={team.logoUrl} alt="" onError={() => setFailed(true)} />
-      : team.abbreviation.slice(0, 3)}
-  </span>;
+  return <TeamMark className="ct-mini-logo" url={team.logoUrl} abbreviation={team.abbreviation} />;
 }
 
 function ScatterLogo({
@@ -44,7 +40,7 @@ function ScatterLogo({
 }: {
   cx?: number; cy?: number; payload?: DotData; selected: boolean; onToggle: (code: string) => void;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   if (!valid(cx) || !valid(cy) || !payload) return null;
   return <g
     className="ct-logo-point"
@@ -59,8 +55,8 @@ function ScatterLogo({
     data-testid={`button-scatter-team-${payload.abbreviation}`}
   >
     <circle className="ct-dot-ring" cx={cx} cy={cy} r={19} fill="hsl(var(--card))" stroke={selected ? 'hsl(var(--chart-1))' : 'hsl(var(--border))'} strokeWidth={selected ? 2.5 : 1.5} />
-    {payload.logoUrl && !failed
-      ? <image href={payload.logoUrl} x={cx - 14} y={cy - 14} width={28} height={28} preserveAspectRatio="xMidYMid meet" onError={() => setFailed(true)} />
+    {payload.logoUrl && payload.logoUrl !== failedUrl
+      ? <image href={payload.logoUrl} x={cx - 14} y={cy - 14} width={28} height={28} preserveAspectRatio="xMidYMid meet" onError={() => setFailedUrl(payload.logoUrl)} />
       : <text x={cx} y={cy + 3} textAnchor="middle" fill="hsl(var(--foreground))" fontSize={9} fontWeight={700}>{payload.abbreviation}</text>}
   </g>;
 }

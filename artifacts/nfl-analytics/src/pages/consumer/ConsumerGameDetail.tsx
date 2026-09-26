@@ -15,6 +15,7 @@ import { GameAlerts } from './GameAlerts';
 import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useConsumerNow } from './consumer-ui';
 import { useEffect } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
+import { TeamMark } from '../../components/VerifiedImage';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -67,12 +68,12 @@ export default function ConsumerGameDetail() {
 
       <div className="premium-teams">
         <div className="premium-team premium-away">
-          <span className="premium-team-abbr">{game.matchup.away.abbreviation}</span>
+          <TeamMark className="premium-team-abbr" url={game.matchup.away.logoUrl} abbreviation={game.matchup.away.abbreviation} />
           <span className="premium-team-name">{game.matchup.away.name}</span>
         </div>
         <div className="premium-vs">VS</div>
         <div className="premium-team premium-home">
-          <span className="premium-team-abbr">{game.matchup.home.abbreviation}</span>
+          <TeamMark className="premium-team-abbr" url={game.matchup.home.logoUrl} abbreviation={game.matchup.home.abbreviation} />
           <span className="premium-team-name">{game.matchup.home.name}</span>
         </div>
       </div>

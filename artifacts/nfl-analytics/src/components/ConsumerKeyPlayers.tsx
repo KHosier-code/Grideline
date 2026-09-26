@@ -1,5 +1,6 @@
 import { getGetConsumerRedZoneOpportunitiesQueryKey, useGetConsumerRedZoneOpportunities, type ConsumerKeyPlayer, type ConsumerTeam, type GetConsumerRedZoneOpportunitiesParams } from '@workspace/api-client-react';
-import { AlertTriangle, UserRound } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { PlayerPortrait } from './VerifiedImage';
 import { USAGE_METRIC_LABELS, formatUsageMetric, usagePeriodLabel } from '../lib/consumer-presentation';
 import { RED_ZONE_FALLBACK_LABEL, formatRedZoneCoverage, formatRedZoneValue, normalizeRedZoneResponse, readableTime, selectRedZoneFallback, type RedZonePlayer, type RedZonePeriod } from '../lib/consumer-red-zone';
 
@@ -56,7 +57,7 @@ function PlayerUsageCard({ player, testId, redZone }: { player: ConsumerKeyPlaye
   return (
     <article className="player-usage-card" data-testid={testId}>
       <header className="puc-header">
-        <div className="puc-avatar" role="img" aria-label={`Photo unavailable for ${player.name}`}><UserRound className="h-5 w-5" aria-hidden="true" /></div>
+        <PlayerPortrait url={player.headshotUrl} name={player.name} />
         <div className="puc-info">
           <strong>{player.name}</strong>
           <span>
@@ -129,7 +130,7 @@ export function ConsumerKeyPlayers({ players, away, home, season, week, gameId }
           {loading && !entries.length ? <div className="skeleton h-40 rounded-xl" aria-label={`Loading ${team.name} red-zone opportunities`} /> :
             entries.length ? entries.map(player =>
               <article className="rz-fallback-card" key={`${player.playerId}:${player.team}`} data-testid={`rz-fallback-player-${player.team}-${player.playerId}`}>
-                 <header className="puc-header"><div className="puc-avatar" role="img" aria-label={`Photo unavailable for ${player.playerName}`}><UserRound className="h-5 w-5" aria-hidden="true" /></div>
+                  <header className="puc-header"><PlayerPortrait url={null} name={player.playerName} />
                   <div className="puc-info"><strong>{player.playerName}</strong><span>{player.team} · {player.position}</span></div>
                 </header>
                 <RedZoneFigures playerId={player.playerId} {...redZoneFor({ playerId: player.playerId, teamId: player.team })} />
