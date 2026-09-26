@@ -8,7 +8,7 @@ if (admin && !process.env.GRIDLINE_ADMIN_STORAGE_STATE) {
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: admin ? '**/*.admin.spec.ts' : '**/*.public.spec.ts',
+  testMatch: admin ? '**/*.admin.spec.ts' : ['**/*.public.spec.ts', '**/defense-vs-position.spec.ts'],
   timeout: 30_000,
   workers: 1,
   use: {

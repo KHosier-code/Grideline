@@ -32,7 +32,7 @@ type Game = DefenseInputs["games"][number];
 
 /** The history is grouped by verified schedule game, then by GSIS player and
  * offense. No absent stat line is converted to a zero or a roster assertion. */
-export function buildPlayerPositionMatchup(input: DefenseInputs, game: Game, now: Date, position: Position, window: Window, selectedId?: string) {
+export function buildPlayerPositionMatchup(input: DefenseInputs, game: Game, now: Date, position: Position, window: Exclude<Window, "last2Weeks">, selectedId?: string) {
   if (!game.kickoffTime || game.kickoffTime <= now || game.week < 1 || game.week > 18
     || !/scheduled|pregame/i.test(game.gameStatus)) {
     return null;

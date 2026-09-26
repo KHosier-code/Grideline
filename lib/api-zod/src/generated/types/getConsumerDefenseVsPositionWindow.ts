@@ -10,6 +10,7 @@ export type GetConsumerDefenseVsPositionWindow = typeof GetConsumerDefenseVsPosi
 
 
 export const GetConsumerDefenseVsPositionWindow = {
+  last2Weeks: 'last2Weeks',
   season: 'season',
   last3: 'last3',
   last5: 'last5',

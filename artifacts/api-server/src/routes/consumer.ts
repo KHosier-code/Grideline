@@ -2131,7 +2131,7 @@ router.get("/consumer/props", (_req, res): void => {
 
 router.get("/consumer/defense-vs-position", async (req, res): Promise<void> => {
   const season = typeof req.query.season === "string" ? Number(req.query.season) : undefined;
-  const window = typeof req.query.window === "string" ? req.query.window : "season";
+  const window = typeof req.query.window === "string" ? req.query.window : "last2Weeks";
   const gameId = typeof req.query.game === "string" ? req.query.game : undefined;
   if ((season !== undefined && (!Number.isInteger(season) || season < 2000 || season > 2100))
     || !WINDOWS.includes(window as typeof WINDOWS[number])
@@ -2166,7 +2166,7 @@ router.get("/consumer/player-position-matchup", async (req, res): Promise<void> 
   const window = req.query.window ?? "last5";
   if (!gameId || gameId.length > 128 || (req.query.player !== undefined && (!playerId || playerId.length > 128))
     || typeof position !== "string" || !["QB", "RB", "WR", "TE"].includes(position)
-    || !WINDOWS.includes(window as typeof WINDOWS[number])) {
+    || window === "last2Weeks" || !WINDOWS.includes(window as typeof WINDOWS[number])) {
     res.status(400).json({ error: "Choose a valid upcoming game, position, player and window.", code: "invalid_request" });
     return;
   }
@@ -2180,7 +2180,7 @@ router.get("/consumer/player-position-matchup", async (req, res): Promise<void> 
     }
     const result = buildPlayerPositionMatchup(await readMatchupDefenseInputs(
       game.season, game.kickoffTime, game.homeTeamId, game.awayTeamId),
-      game, now, position as "QB" | "RB" | "WR" | "TE", window as typeof WINDOWS[number], playerId);
+      game, now, position as "QB" | "RB" | "WR" | "TE", window as "season" | "last3" | "last5", playerId);
     if (!result) {
       res.status(400).json({ error: "Matchup identities could not be verified.", code: "invalid_request" });
       return;

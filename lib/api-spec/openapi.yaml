@@ -1021,8 +1021,9 @@ paths:
       description: >
         Read-only retrospective history. Final games strictly before a game's kickoff
         are eligible; metric-specific denominators require complete weekly stats and
-        PBP evidence for both teams. Last-three and last-five select covered games,
-        while missing completed weeks within the selected span remain visible.
+        PBP evidence for both teams. Last-two-weeks selects the latest two
+        schedule-complete weeks before cutoff; last-three and last-five select
+        covered games. Missing games within the selected span remain visible.
         Not a forecast or a historical point-in-time source snapshot.
       parameters:
         - name: season
@@ -1033,7 +1034,7 @@ paths:
           schema: { type: string }
         - name: window
           in: query
-          schema: { type: string, enum: [season, last3, last5], default: season }
+          schema: { type: string, enum: [last2Weeks, season, last3, last5], default: last2Weeks }
       responses:
         "200":
           description: Metric-specific game coverage and observed allowance for each defense
@@ -2476,12 +2477,14 @@ components:
         reason: { type: ["string", "null"] }
     ConsumerDefenseVsPosition:
       type: object
-      required: [season, seasonType, window, cutoff, source, sourceUpdatedAt, ingestedAt, note, unsupported, defenses]
+      required: [season, seasonType, window, cutoff, selectedWeeks, windowReason, source, sourceUpdatedAt, ingestedAt, note, unsupported, defenses]
       properties:
         season: { type: integer }
         seasonType: { type: string, enum: [REG] }
-        window: { type: string, enum: [season, last3, last5] }
+        window: { type: string, enum: [last2Weeks, season, last3, last5] }
         cutoff: { type: string, format: date-time }
+        selectedWeeks: { type: array, items: { type: integer } }
+        windowReason: { type: ["string", "null"] }
         source: { type: string }
         sourceUpdatedAt: { type: ["string", "null"], format: date-time }
         ingestedAt: { type: ["string", "null"], format: date-time }

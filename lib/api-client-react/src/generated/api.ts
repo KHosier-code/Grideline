@@ -4360,7 +4360,7 @@ export const getGetConsumerDefenseVsPositionUrl = (params?: GetConsumerDefenseVs
 }
 
 /**
- * Read-only retrospective history. Final games strictly before a game's kickoff are eligible; metric-specific denominators require complete weekly stats and PBP evidence for both teams. Last-three and last-five select covered games, while missing completed weeks within the selected span remain visible. Not a forecast or a historical point-in-time source snapshot.
+ * Read-only retrospective history. Final games strictly before a game's kickoff are eligible; metric-specific denominators require complete weekly stats and PBP evidence for both teams. Last-two-weeks selects the latest two schedule-complete weeks before cutoff; last-three and last-five select covered games. Missing games within the selected span remain visible. Not a forecast or a historical point-in-time source snapshot.
  * @summary Read observed regular-season defensive allowances by opposing position
  */
 export const getConsumerDefenseVsPosition = async (params?: GetConsumerDefenseVsPositionParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerDefenseVsPosition> => {

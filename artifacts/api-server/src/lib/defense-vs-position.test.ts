@@ -41,10 +41,10 @@ function fixture(): DefenseInputs {
   } as unknown as DefenseInputs;
 }
 
-const defense = (data: DefenseInputs, window: "season" | "last3" | "last5" = "season", excludedGameId?: string, time = cutoff) =>
+const defense = (data: DefenseInputs, window: "season" | "last3" | "last5" | "last2Weeks" = "season", excludedGameId?: string, time = cutoff) =>
   buildDefenseVsPosition(data, 2026, time, excludedGameId, window)
     .defenses.find((team) => team.teamId === "def")!.positions as Record<string, Record<string, {
-      perGame: number | null; total: number | null; coveredGames: number; coveredWeeks: number[]; missingWeeks: number[];
+       perGame: number | null; total: number | null; coveredGames: number; completedGames: number; coveredWeeks: number[]; missingWeeks: number[];
     }>>;
 
 test("two receivers count as one defensive game; completed zero and missing PBP differ", () => {
@@ -103,4 +103,55 @@ test("aliases, trades, distinct TD types and partial red-zone coverage stay sepa
   assert.equal(result.RB.rz10Carries.perGame, 7 / 3);
   data.stats.find((row) => row.playerId === "wr5")!.teamId = "BUF"; // traded record not a LAR opponent
   assert.equal(defense(data).WR.targets.total, 18);
+});
+
+function fullWeeks() {
+  const data = fixture();
+  // Independent final matchups establish the schedule's two 16-game weeks.
+  // Week 3 has one final and fifteen scheduled games, so it cannot displace 2.
+  for (const week of [1, 2, 3]) for (let i = 1; i <= 15; i++) {
+    data.games.push({
+      gameId: `other-${week}-${i}`, season: 2026, week,
+      kickoffTime: new Date(`2026-09-${String(week + 1).padStart(2, "0")}T19:00:00Z`),
+      gameStatus: week === 3 ? "STATUS_SCHEDULED" : "STATUS_FINAL",
+      homeTeamId: `home-${i}`, awayTeamId: `away-${i}`,
+    });
+    if (week === 1) data.teams.push(
+      { teamId: `home-${i}`, abbreviation: `H${i}` },
+      { teamId: `away-${i}`, abbreviation: `A${i}` },
+    );
+  }
+  return data;
+}
+
+test("two globally completed weeks, not two covered games or a partial third week", () => {
+  const data = fullWeeks();
+  const result = buildDefenseVsPosition(data, 2026, cutoff, undefined, "last2Weeks");
+  assert.deepEqual(result.selectedWeeks, [1, 2]);
+  assert.equal(result.windowReason, null);
+  assert.deepEqual(defense(data, "last2Weeks").WR.targets.coveredWeeks, [1, 2]);
+  assert.equal(defense(data, "last2Weeks").WR.targets.total, 8);
+  assert.equal(defense(data, "last2Weeks").WR.targets.completedGames, 2);
+  data.stats.find(r => r.playerId === "wr2-2")!.targets = null;
+  assert.deepEqual(defense(data, "last2Weeks").WR.targets.coveredWeeks, [1]);
+  assert.deepEqual(defense(data, "last2Weeks").WR.targets.missingWeeks, [2]);
+  assert.equal(defense(data, "last2Weeks").WR.targets.total, 3);
+  data.stats.find(r => r.playerId === "wr2-2")!.targets = 0;
+  data.stats.filter(r => r.week === 2 && r.position === "WR").forEach(r => { r.targets = 0; });
+  assert.equal(defense(data, "last2Weeks").WR.targets.total, 3);
+  assert.equal(defense(data, "last2Weeks").WR.targets.coveredGames, 2);
+});
+
+test("pregame cutoffs reject later reimports, while later retrospective reads use observed history", () => {
+  const data = fullWeeks();
+  data.stats.forEach(row => { row.sourceUpdatedAt = new Date("2026-09-26T15:01:51Z"); });
+  const early = new Date("2026-09-26T12:00:00Z");
+  const result = buildDefenseVsPosition(data, 2026, early, undefined, "last2Weeks");
+  assert.deepEqual(result.selectedWeeks, [1, 2]);
+  assert.equal(defense(data, "last2Weeks", undefined, early).WR.targets.coveredGames, 0);
+  assert.match(result.defenses.find(r => r.teamId === "def")!.positions.WR.targets.reason!, /imported after this cutoff/);
+  assert.equal(defense(data, "last2Weeks", undefined, cutoff).WR.targets.total, 8);
+  // A cutoff inside Week 2 cannot treat its final status as a pregame result.
+  const beforeTwo = buildDefenseVsPosition(data, 2026, new Date("2026-09-03T18:30:00Z"), undefined, "last2Weeks");
+  assert.deepEqual(beforeTwo.selectedWeeks, [1]);
 });

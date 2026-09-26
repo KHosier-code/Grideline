@@ -15,6 +15,9 @@ export interface ConsumerDefenseVsPosition {
   seasonType: ConsumerDefenseVsPositionSeasonType;
   window: ConsumerDefenseVsPositionWindow;
   cutoff: Date;
+  selectedWeeks: number[];
+  /** @nullable */
+  windowReason: string | null;
   source: string;
   /** @nullable */
   sourceUpdatedAt: Date | null;

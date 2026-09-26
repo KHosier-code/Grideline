@@ -2797,25 +2797,27 @@ export const GetConsumerUpcomingPlayerProjectionReadinessResponse = zod.object({
 
 
 /**
- * Read-only retrospective history. Final games strictly before a game's kickoff are eligible; metric-specific denominators require complete weekly stats and PBP evidence for both teams. Last-three and last-five select covered games, while missing completed weeks within the selected span remain visible. Not a forecast or a historical point-in-time source snapshot.
+ * Read-only retrospective history. Final games strictly before a game's kickoff are eligible; metric-specific denominators require complete weekly stats and PBP evidence for both teams. Last-two-weeks selects the latest two schedule-complete weeks before cutoff; last-three and last-five select covered games. Missing games within the selected span remain visible. Not a forecast or a historical point-in-time source snapshot.
  * @summary Read observed regular-season defensive allowances by opposing position
  */
 export const getConsumerDefenseVsPositionQuerySeasonMin = 2000;
 export const getConsumerDefenseVsPositionQuerySeasonMax = 2100;
 
-export const getConsumerDefenseVsPositionQueryWindowDefault = `season`;
+export const getConsumerDefenseVsPositionQueryWindowDefault = `last2Weeks`;
 
 export const GetConsumerDefenseVsPositionQueryParams = zod.object({
   "season": zod.coerce.number().int().min(getConsumerDefenseVsPositionQuerySeasonMin).max(getConsumerDefenseVsPositionQuerySeasonMax).optional(),
   "game": zod.coerce.string().optional(),
-  "window": zod.enum(['season', 'last3', 'last5']).default(getConsumerDefenseVsPositionQueryWindowDefault)
+  "window": zod.enum(['last2Weeks', 'season', 'last3', 'last5']).default(getConsumerDefenseVsPositionQueryWindowDefault)
 })
 
 export const GetConsumerDefenseVsPositionResponse = zod.object({
   "season": zod.number().int(),
   "seasonType": zod.enum(['REG']),
-  "window": zod.enum(['season', 'last3', 'last5']),
+  "window": zod.enum(['last2Weeks', 'season', 'last3', 'last5']),
   "cutoff": zod.coerce.date(),
+  "selectedWeeks": zod.array(zod.number().int()),
+  "windowReason": zod.string().nullable(),
   "source": zod.string(),
   "sourceUpdatedAt": zod.coerce.date().nullable(),
   "ingestedAt": zod.coerce.date().nullable(),

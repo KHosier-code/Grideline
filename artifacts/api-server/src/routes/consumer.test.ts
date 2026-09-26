@@ -19,6 +19,7 @@ import {
   GetConsumerPlayerUsageResponse,
   ListConsumerGamesResponse,
   GetConsumerScheduleSelectionResponse,
+  GetConsumerDefenseVsPositionResponse,
 } from "@workspace/api-zod";
 import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
 import consumerRouter, {
@@ -265,6 +266,26 @@ test("market board summary reports partial, stale, absent, and sportsbook covera
   });
   assert.equal(summarizeConsumerMarketBoards([{ marketBoard: stale }]).status, "stale");
   assert.equal(summarizeConsumerMarketBoards([]).status, "absent");
+});
+
+test("defensive route defaults to full weeks and validates its generated response", async (t) => {
+  const app = express();
+  app.use(consumerRouter);
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>(resolve => server.once("listening", resolve));
+  t.after(() => new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const base = `http://127.0.0.1:${address.port}/consumer/defense-vs-position`;
+  const response = await fetch(`${base}?season=2026`);
+  assert.equal(response.status, 200);
+  const payload = GetConsumerDefenseVsPositionResponse.parse(await response.json());
+  assert.equal(payload.window, "last2Weeks");
+  assert.ok(payload.selectedWeeks.length <= 2);
+  assert.ok(payload.defenses.every(team => Object.values(team.positions).every(position =>
+    Object.values(position).every(metric => metric.coveredGames <= metric.completedGames))));
+  const invalid = await fetch(`${base}?window=unknown`);
+  assert.equal(invalid.status, 400);
 });
 
 test("database-backed player usage route isolates the applicable season and supports validated filters", async (t) => {

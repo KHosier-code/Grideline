@@ -2042,6 +2042,7 @@ export type ConsumerDefenseVsPositionWindow = typeof ConsumerDefenseVsPositionWi
 
 
 export const ConsumerDefenseVsPositionWindow = {
+  last2Weeks: 'last2Weeks',
   season: 'season',
   last3: 'last3',
   last5: 'last5',
@@ -2062,6 +2063,9 @@ export interface ConsumerDefenseVsPosition {
   seasonType: ConsumerDefenseVsPositionSeasonType;
   window: ConsumerDefenseVsPositionWindow;
   cutoff: string;
+  selectedWeeks: number[];
+  /** @nullable */
+  windowReason: string | null;
   source: string;
   /** @nullable */
   sourceUpdatedAt: string | null;
@@ -3605,6 +3609,7 @@ export type GetConsumerDefenseVsPositionWindow = typeof GetConsumerDefenseVsPosi
 
 
 export const GetConsumerDefenseVsPositionWindow = {
+  last2Weeks: 'last2Weeks',
   season: 'season',
   last3: 'last3',
   last5: 'last5',

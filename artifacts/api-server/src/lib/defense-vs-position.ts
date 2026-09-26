@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte, or, sql, type SQLWrapper } from "drizzle-orm";
+import { and, eq, inArray, or, sql, type SQLWrapper } from "drizzle-orm";
 import {
   db, gamesTable, nflverseSourceFilesTable, playerGameStatsTable,
   redZonePlayerGameFactsTable, redZoneTeamGameFactsTable, teamsTable,
@@ -6,7 +6,7 @@ import {
 import { buildUsageTeamMappings, usageSeasonAtCutoff } from "../routes/consumer";
 
 export const POSITIONS = ["QB", "RB", "WR", "TE"] as const;
-export const WINDOWS = ["season", "last3", "last5"] as const;
+export const WINDOWS = ["last2Weeks", "season", "last3", "last5"] as const;
 export type Position = typeof POSITIONS[number];
 export type Window = typeof WINDOWS[number];
 export const METRICS: Record<Position, string[]> = {
@@ -76,8 +76,23 @@ export function completePositionGame(input: DefenseInputs, game: Game, offense: 
  * on any matching position player makes that metric unavailable for that game. */
 export function buildDefenseVsPosition(input: DefenseInputs, season: number, cutoff: Date, excludedGameId?: string, window: Window = "season") {
   const maps = buildUsageTeamMappings(input.teams);
+  // Select weeks from the schedule, not from the games that happen to have
+  // statistics. A partially played week must not displace a completed week.
+  const scheduled = input.games.filter(g => g.season === season && g.week >= 1 && g.week <= 18 && g.kickoffTime);
+  const weeks = new Map<number, Game[]>();
+  for (const game of scheduled) weeks.set(game.week, [...(weeks.get(game.week) ?? []), game]);
+  const completeWeeks = [...weeks].filter(([week, games]) => {
+    // The first four weeks have no byes. A truncated schedule cannot certify
+    // completion merely because every game it retained is final.
+    const expected = week <= 4 ? 16 : 13;
+    const identities = games.flatMap(g => [maps.canonical(g.homeTeamId), maps.canonical(g.awayTeamId)]);
+    return games.length >= expected && identities.every(Boolean) && new Set(identities).size === games.length * 2
+      && games.every(g => g.gameStatus === "STATUS_FINAL" && g.kickoffTime! < cutoff);
+  }).map(([week]) => week).sort((a, b) => a - b);
+  const selectedWeeks = completeWeeks.slice(-2);
   const eligible = input.games.filter((g) => g.season === season && g.week <= 18
-    && g.gameStatus === "STATUS_FINAL" && g.kickoffTime && g.kickoffTime < cutoff && g.gameId !== excludedGameId)
+    && g.gameStatus === "STATUS_FINAL" && g.kickoffTime && g.kickoffTime < cutoff && g.gameId !== excludedGameId
+    && (window !== "last2Weeks" || selectedWeeks.includes(g.week)))
     .sort((a, b) => a.kickoffTime!.getTime() - b.kickoffTime!.getTime() || a.gameId.localeCompare(b.gameId));
   const sourceOk = (dataset: string) => input.sources.some((s) => s.dataset === dataset && s.season === season && s.status === "success");
   const statSource = sourceOk("player_stats");
@@ -153,11 +168,28 @@ export function buildDefenseVsPosition(input: DefenseInputs, season: number, cut
           }
           return [{ gameId: game.gameId, week: game.week, value }];
         });
-        const selected = window === "season" ? covered : covered.slice(-Number(window.slice(4)));
+        const selected = window === "season" || window === "last2Weeks" ? covered : covered.slice(-Number(window.slice(4)));
         const selectedIds = new Set(selected.map((g) => g.gameId));
         const firstSelected = selected[0] && allGames.find((g) => g.gameId === selected[0].gameId);
         const missing = allGames.filter((g) => !selectedIds.has(g.gameId) &&
-          (window === "season" || !firstSelected || g.kickoffTime! >= firstSelected.kickoffTime!));
+          (window === "season" || window === "last2Weeks" || !firstSelected || g.kickoffTime! >= firstSelected.kickoffTime!));
+        const gapReasons = [...new Set(missing.map(g => {
+          const offense = maps.canonical(g.homeTeamId) === defense
+            ? maps.canonical(g.awayTeamId) : maps.canonical(g.homeTeamId);
+          if (!offense) return "opponent identity is unavailable";
+          if (!rzTeam.has(`${g.gameId}:${offense}:20`) || !rzTeam.has(`${g.gameId}:${defense}:20`))
+            return input.rzTeams.some(r => r.gameId === g.gameId && r.ingestedAt >= cutoff)
+              ? "PBP facts were imported after this cutoff" : "paired PBP team facts are missing";
+          const rows = stats.get(`${g.gameId}:${offense}`) ?? [];
+          if (!rows.length || !(stats.get(`${g.gameId}:${defense}`)?.length))
+            return input.stats.some(r => r.season === season && r.week === g.week && r.sourceUpdatedAt >= cutoff)
+              ? "weekly player stats were imported after this cutoff" : "opposing weekly player rows are missing";
+          const participants = rows.filter(r => r.position?.toUpperCase() === position);
+          if (!participants.length || rows.some(r => !r.position?.trim()))
+            return `${position} player identity or position rows are missing`;
+          if (name.startsWith("rz")) return "position scoring-area facts are missing";
+          return `${name} has missing player values`;
+        }))];
         return [name, {
           label: METRIC_LABELS[name], unit: name.toLowerCase().includes("yards") ? "yards" : "count",
           perGame: selected.length ? selected.reduce((sum, g) => sum + g.value, 0) / selected.length : null,
@@ -165,7 +197,9 @@ export function buildDefenseVsPosition(input: DefenseInputs, season: number, cut
           coveredGames: selected.length, coveredWeeks: selected.map((g) => g.week),
           missingWeeks: missing.map((g) => g.week), missingGames: missing.map((g) => g.gameId),
           completedGames: allGames.length,
-          reason: !selected.length ? (statSource && pbpSource ? "No completed defensive game has verified metric coverage" : "Weekly stats or PBP source import is unavailable") : missing.length ? "Some completed games lack metric-specific coverage" : null,
+           reason: !statSource || !pbpSource ? "Weekly stats or PBP source import is unavailable"
+             : gapReasons.length ? `${gapReasons.join("; ")}. Missing games are excluded, not counted as zero`
+             : !selected.length ? "No completed defensive game has verified metric coverage" : null,
         }];
       }));
       return [position, metrics];
@@ -175,11 +209,13 @@ export function buildDefenseVsPosition(input: DefenseInputs, season: number, cut
   const latest = (values: Array<Date | null | undefined>) => values.filter((v): v is Date => v instanceof Date)
     .sort((a, b) => b.getTime() - a.getTime())[0]?.toISOString() ?? null;
   return {
-    season, seasonType: "REG", window, cutoff: cutoff.toISOString(),
+     season, seasonType: "REG", window, cutoff: cutoff.toISOString(), selectedWeeks: window === "last2Weeks" ? selectedWeeks : [],
+     windowReason: window === "last2Weeks" && selectedWeeks.length < 2
+       ? "Fewer than two fully completed regular-season weeks are verified before this cutoff" : null,
     source: "NFLverse weekly player stats; NFLverse PBP for game verification and red-zone opportunities; ESPN final schedule",
     sourceUpdatedAt: null,
     ingestedAt: latest([...input.stats.map((r) => r.sourceUpdatedAt), ...input.rzTeams.map((r) => r.ingestedAt)]),
-    note: "Observed history, not a player forecast. Rows ingested at or after the displayed cutoff are excluded; older source revisions are not retained, so historical samples may be unavailable after a later reimport. Small samples are descriptive only. Missing injury entries do not confirm health or starting status.",
+     note: "Observed history, not a player forecast. Selected weeks require a final, reconciled schedule; a partial week is excluded. Rows imported at or after the displayed cutoff are excluded; older source revisions are not retained, so historical samples may be unavailable after a later reimport. Small samples are descriptive only. Missing injury entries do not confirm health or starting status.",
     unsupported: {
       airYards: "Not retained in player-game stats", routes: "No verified route assignments",
       efficiency: "Position-level play attribution is not verified", namedCoverage: "No verified defender assignment",
@@ -193,7 +229,7 @@ export function buildDefenseVsPosition(input: DefenseInputs, season: number, cut
 let cache: { key: string; data: DefenseInputs } | null = null;
 export async function readDefenseInputs(season: number, cutoff: Date): Promise<DefenseInputs> {
   const [games, teams, sources, statRevision, rzRevision, rzPlayerRevision] = await Promise.all([
-    db.select().from(gamesTable).where(and(eq(gamesTable.season, season), lte(gamesTable.kickoffTime, cutoff))),
+    db.select().from(gamesTable).where(eq(gamesTable.season, season)),
     db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable),
     db.select().from(nflverseSourceFilesTable).where(eq(nflverseSourceFilesTable.season, season)),
     db.select({ count: sql<number>`count(*)`, revision: sql<string | null>`max(source_updated_at)` })
@@ -228,7 +264,7 @@ export async function readMatchupDefenseInputs(
   season: number, cutoff: Date, homeTeamId: string, awayTeamId: string,
 ): Promise<DefenseInputs> {
   const [games, teams, sources] = await Promise.all([
-    db.select().from(gamesTable).where(and(eq(gamesTable.season, season), lte(gamesTable.kickoffTime, cutoff))),
+    db.select().from(gamesTable).where(eq(gamesTable.season, season)),
     db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable),
     db.select().from(nflverseSourceFilesTable).where(eq(nflverseSourceFilesTable.season, season)),
   ]);
