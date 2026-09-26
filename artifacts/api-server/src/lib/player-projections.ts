@@ -136,6 +136,22 @@ type ProjectionExample = {
   last8Games: number;
 };
 
+type ProjectionFeatureSet = Pick<
+  ProjectionExample,
+  "priorAppearanceCount" | "priorAppearanceCutoff" | "featureValues" | "missingFeatureNames"
+  | "last3Games" | "last5Games" | "last8Games"
+>;
+
+type ProjectionFeatureContext = {
+  current: Pick<
+    PlayerProjectionObservation,
+    "playerId" | "position" | "season" | "kickoffTime" | "team" | "opponent"
+  >;
+  history: PlayerProjectionObservation[];
+  family: PlayerProjectionFamily;
+  teamGames: PlayerProjectionTeamGame[];
+};
+
 export type PlayerProjectionPrediction = {
   family: PlayerProjectionFamily;
   playerId: string;
@@ -591,7 +607,24 @@ function featuresFor(input: {
   if (!definition.position.includes(current.position)) return null;
   const actual = targetOf(current, family);
   if (actual === null) return null;
+  const features = featureSetFor(input);
+  if (!features) return null;
+
+  return {
+    observation: current,
+    family,
+    actual,
+    volume: features.featureValues.priorLast3VolumeMean,
+    ...features,
+  };
+}
+
+function featureSetFor(input: ProjectionFeatureContext): ProjectionFeatureSet | null {
+  const { current, family } = input;
+  const definition = PLAYER_PROJECTION_FAMILIES[family];
+  if (!definition.position.includes(current.position)) return null;
   const cutoff = current.kickoffTime.getTime();
+  if (!Number.isFinite(cutoff)) return null;
   const history = input.history
     .filter((row) => row.playerId === current.playerId && row.kickoffTime.getTime() < cutoff
       && definition.position.includes(row.position) && targetOf(row, family) !== null)
@@ -632,10 +665,6 @@ function featuresFor(input: {
   };
   const missingFeatureNames = CONTINUOUS_FEATURES.filter((name) => raw[name] === null);
   return {
-    observation: current,
-    family,
-    actual,
-    volume: volumeLast3,
     priorAppearanceCount: history.length,
     priorAppearanceCutoff: new Date(cutoff - 1).toISOString(),
     featureValues: raw,
@@ -646,7 +675,7 @@ function featuresFor(input: {
   };
 }
 
-function finiteValues(example: ProjectionExample): Array<number | null> {
+function finiteValues(example: Pick<ProjectionExample, "featureValues">): Array<number | null> {
   return CONTINUOUS_FEATURES.map((name) => example.featureValues[name]);
 }
 
@@ -1044,7 +1073,10 @@ function assertFrozenBaseline(baseline: FrozenPlayerProjectionBaseline, reportSh
   }
 }
 
-function predictFrozen(example: ProjectionExample, artifact: PlayerProjectionFamilyReport["fittedArtifact"]) {
+function predictFrozen(
+  example: Pick<ProjectionExample, "featureValues">,
+  artifact: PlayerProjectionFamilyReport["fittedArtifact"],
+) {
   const raw = finiteValues(example);
   let value = artifact.coefficients[0]!;
   for (let column = 0; column < raw.length; column += 1) {
@@ -1054,6 +1086,42 @@ function predictFrozen(example: ProjectionExample, artifact: PlayerProjectionFam
     value += artifact.coefficients[2 + column * 2]! * (feature === null ? 1 : 0);
   }
   return Math.max(0, value);
+}
+
+export function forecastUpcomingPlayer(input: {
+  current: Pick<
+    PlayerProjectionObservation,
+    "playerId" | "playerName" | "position" | "season" | "week" | "seasonType" | "gameId"
+    | "kickoffTime" | "team" | "opponent" | "homeAway"
+  >;
+  history: PlayerProjectionObservation[];
+  teamGames: PlayerProjectionTeamGame[];
+  family: PlayerProjectionFamily;
+  baseline: FrozenPlayerProjectionBaseline;
+  baselineReportSha256: string;
+}): {
+  projectedValue: number;
+  priorAppearances: number;
+  recentAverage: number | null;
+  seasonAverage: number | null;
+  missingFeatures: string[];
+  featureValues: FeatureValues;
+  modelVersion: string;
+} | null {
+  assertFrozenBaseline(input.baseline, input.baselineReportSha256);
+  if (input.current.seasonType !== "REG") return null;
+  const features = featureSetFor(input);
+  if (!features) return null;
+  const frozen = input.baseline.families[input.family];
+  return {
+    projectedValue: predictFrozen(features, frozen.fittedArtifact),
+    priorAppearances: features.priorAppearanceCount,
+    recentAverage: features.featureValues.priorLast3TargetMean,
+    seasonAverage: features.featureValues.seasonToDateTargetMean,
+    missingFeatures: features.missingFeatureNames,
+    featureValues: features.featureValues,
+    modelVersion: frozen.modelVersion,
+  };
 }
 
 export function runIndependentPlayerProjectionValidation(input: {

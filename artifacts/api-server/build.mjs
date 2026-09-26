@@ -34,6 +34,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/red-zone-opportunities-dev-cli.ts"),
       path.resolve(artifactDir, "src/red-zone-week2-refresh-dev-cli.ts"),
       path.resolve(artifactDir, "src/lib/sleeper.test.ts"),
+      path.resolve(artifactDir, "src/lib/player-upcoming.test.ts"),
       path.resolve(artifactDir, "src/lib/sleeper-identity-mapping.test.ts"),
       path.resolve(artifactDir, "src/lib/sportsdataio-depth.test.ts"),
       path.resolve(artifactDir, "src/lib/current-personnel-derivation.test.ts"),

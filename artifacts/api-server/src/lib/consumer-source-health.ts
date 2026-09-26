@@ -9,6 +9,7 @@ import {
   sportsbookOddsTable,
 } from "@workspace/db";
 import { consumerMarketFreshnessMinutes } from "./consumer-market-freshness";
+import { validPlayerObservation, type ProviderObservation } from "./player-forecast-readiness";
 
 export type ConsumerSourceStatus = "healthy" | "partial" | "stale" | "unavailable";
 export type ConsumerSourceName = "schedule" | "injuries" | "odds" | "players";
@@ -159,18 +160,11 @@ function aggregateDate(value: Date | string | null | undefined): Date | null {
 
 /** A complete Sleeper response is an observation even if no player changed. */
 export function playerObservationAt(
-  runs: Array<{ status: string; completedAt: Date | null; metadata: unknown }>,
-  snapshotTimestamp: Date | null,
+  runs: ProviderObservation[],
+  _snapshotTimestamp: Date | null,
 ): Date | null {
-  const latest = runs.find((run) => run.status === "success");
-  if (!latest || !latest.metadata || typeof latest.metadata !== "object") return snapshotTimestamp;
-  const metadata = latest.metadata as Record<string, unknown>;
-  const count = metadata.playerCount;
-  const capture = metadata.sourceCapturedAt;
-  const observedAt = typeof capture === "string" ? aggregateDate(capture) : null;
-  if (typeof count !== "number" || count <= 0 || !Number.isInteger(count)
-    || !observedAt || !latest.completedAt || observedAt > latest.completedAt) return snapshotTimestamp;
-  return !snapshotTimestamp || observedAt > snapshotTimestamp ? observedAt : snapshotTimestamp;
+  return runs.map(validPlayerObservation).filter((date): date is Date => date !== null)
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 }
 
 /**
@@ -218,7 +212,9 @@ export async function getConsumerSourceHealth(now = new Date()): Promise<Consume
     db.select({ startedAt: dataSyncRunsTable.startedAt, completedAt: dataSyncRunsTable.completedAt, status: dataSyncRunsTable.status })
       .from(dataSyncRunsTable).where(eq(dataSyncRunsTable.provider, "espn-injuries"))
       .orderBy(desc(dataSyncRunsTable.startedAt), desc(dataSyncRunsTable.id)).limit(100),
-    db.select({ startedAt: dataSyncRunsTable.startedAt, completedAt: dataSyncRunsTable.completedAt, status: dataSyncRunsTable.status, metadata: dataSyncRunsTable.metadata })
+    db.select({ provider: dataSyncRunsTable.provider, startedAt: dataSyncRunsTable.startedAt,
+      completedAt: dataSyncRunsTable.completedAt, status: dataSyncRunsTable.status,
+      recordsProcessed: dataSyncRunsTable.recordsProcessed, metadata: dataSyncRunsTable.metadata })
       .from(dataSyncRunsTable).where(eq(dataSyncRunsTable.provider, "sleeper-players"))
       .orderBy(desc(dataSyncRunsTable.startedAt), desc(dataSyncRunsTable.id)).limit(100),
     db.select({

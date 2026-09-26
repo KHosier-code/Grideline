@@ -2,6 +2,8 @@ import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import {
   db,
   pool,
+  dataSyncRunsTable,
+  sleeperPlayerSnapshotsTable,
   depthChartSnapshotsTable,
   gamesTable,
   injuriesTable,
@@ -11,6 +13,7 @@ import {
   playersTable,
   teamsTable,
 } from "@workspace/db";
+import { SLEEPER_ACTIVE_TEAM_CODES } from "./sleeper";
 
 const SKILL_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
 const FRESHNESS_WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -31,6 +34,11 @@ export type UpcomingReadinessResponse = {
     latestSourceUpdatedAt: string | null;
     ageHours: number | null;
     status: string;
+    lastAttemptAt?: string | null;
+    lastSuccessAt?: string | null;
+    validRetrievalAt?: string | null;
+    lastChangedRowAt?: string | null;
+    publicationAt?: string | null;
   }>;
   blockers: string[];
   forecasts: never[];
@@ -90,6 +98,43 @@ export type ReadinessDepth = {
   starter: boolean;
   snapshotTimestamp: Date | string;
 };
+
+export type ProviderObservation = {
+  provider: string;
+  status: string;
+  startedAt: Date | string;
+  completedAt: Date | string | null;
+  recordsProcessed: number;
+  metadata: Record<string, unknown> | null;
+};
+
+/** A successful insert count is not a full response observation. */
+export function validPlayerObservation(run: ProviderObservation): Date | null {
+  if (run.status !== "success") return null;
+  const meta = run.metadata ?? {};
+  const rawRetrieved = meta.retrievedAt ?? meta.sourceCapturedAt;
+  const retrieved = toDate(rawRetrieved instanceof Date || typeof rawRetrieved === "string" ? rawRetrieved : null);
+  const started = toDate(run.startedAt);
+  const completed = toDate(run.completedAt);
+  if (!retrieved || !started || !completed || retrieved < started || retrieved > completed
+    || run.recordsProcessed < 0) return null;
+  if (run.provider === "sleeper-players") {
+    const teams = meta.teams;
+    return Number.isInteger(meta.playerCount) && (meta.playerCount as number) > 0
+      && meta.teamCount === 32 && Array.isArray(teams)
+      && teams.length === 32 && new Set(teams).size === 32
+      && SLEEPER_ACTIVE_TEAM_CODES.every((team) => teams.includes(team))
+      && typeof meta.unchanged === "number"
+      && meta.unchanged + run.recordsProcessed === meta.playerCount ? retrieved : null;
+  }
+  if (run.provider === "espn-injuries") {
+    return meta.observationKind === "injury-only" && meta.responseComplete === true
+      && typeof meta.observedCount === "number" && meta.observedCount > 0
+      && typeof meta.unchanged === "number"
+      && meta.unchanged + run.recordsProcessed === meta.observedCount ? retrieved : null;
+  }
+  return null;
+}
 
 function toDate(value: Date | string | null | undefined): Date | null {
   if (value == null) return null;
@@ -162,6 +207,8 @@ export function buildUpcomingPlayerReadinessAudit(input: {
   injuries: ReadinessStatus[];
   depthCharts: ReadinessDepth[];
   playerStatsIngestedAt?: Date | string | null;
+  providerRuns?: ProviderObservation[];
+  sleeperLastChangedAt?: Date | string | null;
   allPlayerIds?: string[];
   // Only a complete, independently timestamped player/team observation can
   // verify an unchanged assignment; players.source_updated_at is change-only.
@@ -226,6 +273,21 @@ export function buildUpcomingPlayerReadinessAudit(input: {
     absentStatus: "No complete, independently timestamped current player/team roster observation is retained; players.source_updated_at records changes, not checks",
   });
   const rosterIsFresh = rosterFreshness.ageHours !== null && rosterFreshness.ageHours <= 48;
+  const runsFor = (provider: string) => (input.providerRuns ?? [])
+    .filter((run) => run.provider === provider)
+    .sort((a, b) => (toDate(b.startedAt)?.getTime() ?? 0) - (toDate(a.startedAt)?.getTime() ?? 0));
+  const injuryRuns = runsFor("espn-injuries");
+  const sleeperRuns = runsFor("sleeper-players");
+  const latestValid = (runs: ProviderObservation[]) =>
+    runs.map(validPlayerObservation).filter((date): date is Date => date !== null)
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+  const lastSuccess = (runs: ProviderObservation[]) => runs.find((run) => run.status === "success");
+  rosterFreshness.lastAttemptAt = toDate(sleeperRuns[0]?.startedAt)?.toISOString() ?? null;
+  rosterFreshness.lastSuccessAt = toDate(lastSuccess(sleeperRuns)?.completedAt)?.toISOString() ?? null;
+  rosterFreshness.validRetrievalAt = latestValid(sleeperRuns)?.toISOString() ?? null;
+  rosterFreshness.lastChangedRowAt = toDate(input.sleeperLastChangedAt)?.toISOString() ?? null;
+  rosterFreshness.publicationAt = null;
+  rosterFreshness.status += "; Sleeper retrieval does not verify ESPN roster assignments";
   const latestInjury = latestTimestamp(input.injuries);
   const injuryFreshness = measureFreshness({
     timestamp: latestInjury,
@@ -233,6 +295,15 @@ export function buildUpcomingPlayerReadinessAudit(input: {
     label: "injuries.source_updated_at (ESPN payload observation when supplied)",
     absentStatus: "No ESPN injury source timestamp is recorded",
   });
+  injuryFreshness.lastAttemptAt = toDate(injuryRuns[0]?.startedAt)?.toISOString() ?? null;
+  injuryFreshness.lastSuccessAt = toDate(lastSuccess(injuryRuns)?.completedAt)?.toISOString() ?? null;
+  injuryFreshness.validRetrievalAt = latestValid(injuryRuns)?.toISOString() ?? null;
+  injuryFreshness.lastChangedRowAt = latestTimestamp(input.injuries.map((row) =>
+    ({ sourceUpdatedAt: row.snapshotTimestamp })))?.toISOString() ?? null;
+  const publication = injuryRuns.find((run) =>
+    validPlayerObservation(run) && run.metadata?.publicationProvenance === "payload")?.metadata?.publicationAt;
+  injuryFreshness.publicationAt = toDate(typeof publication === "string" ? publication : null)?.toISOString() ?? null;
+  injuryFreshness.status += "; injury-only rows cannot confirm omitted players healthy; legacy runs lack response validity metadata";
   const statsFreshness = measureFreshness({
     timestamp: input.playerStatsIngestedAt,
     asOf: input.asOf,
@@ -313,7 +384,7 @@ export function buildUpcomingPlayerReadinessAudit(input: {
     const depthAge = depthTimestamp ? ageHours(depthTimestamp, input.asOf) : null;
     const reasonsForUncertainty: string[] = [];
     if (!depth || depthAge === null || depthAge > 48 || !depth.starter) {
-      countReason(!depth ? "starter_status_unknown_no_depth_chart" : "starter_not_freshly_confirmed");
+      reasonsForUncertainty.push(!depth ? "starter_status_unknown_no_depth_chart" : "starter_not_freshly_confirmed");
     }
     if (!rosterIsFresh || !playerRosterIsFresh) reasonsForUncertainty.push("roster_assignment_not_recently_verified");
     if (!injury || injuryAge === null || injuryAge > 48 || !statusConfirmsAvailable(injury.gameStatus)) {
@@ -393,6 +464,8 @@ export async function readDevelopmentUpcomingPlayerReadiness(asOf = new Date()) 
     injuries,
     depthCharts,
     playerStatSources,
+    providerRuns,
+    sleeperRows,
   ] = await Promise.all([
     db.select({
       gameId: gamesTable.gameId,
@@ -446,6 +519,17 @@ export async function readDevelopmentUpcomingPlayerReadiness(asOf = new Date()) 
     }).from(nflverseSourceFilesTable)
       .where(and(eq(nflverseSourceFilesTable.dataset, "player_stats"), gte(nflverseSourceFilesTable.season, 2026)))
       .orderBy(desc(nflverseSourceFilesTable.completedAt)),
+    db.select({
+      provider: dataSyncRunsTable.provider,
+      status: dataSyncRunsTable.status,
+      startedAt: dataSyncRunsTable.startedAt,
+      completedAt: dataSyncRunsTable.completedAt,
+      recordsProcessed: dataSyncRunsTable.recordsProcessed,
+      metadata: dataSyncRunsTable.metadata,
+    }).from(dataSyncRunsTable).where(inArray(dataSyncRunsTable.provider, ["espn-injuries", "sleeper-players"]))
+      .orderBy(desc(dataSyncRunsTable.startedAt)).limit(200),
+    db.select({ capturedAt: sleeperPlayerSnapshotsTable.capturedAt })
+      .from(sleeperPlayerSnapshotsTable).orderBy(desc(sleeperPlayerSnapshotsTable.capturedAt)).limit(1),
   ]);
   const latestStatImport = playerStatSources.find((source) => source.completedAt)?.completedAt ?? null;
   // Touch team data in the same read-only audit to ensure schedule team IDs can
@@ -463,6 +547,8 @@ export async function readDevelopmentUpcomingPlayerReadiness(asOf = new Date()) 
     injuries,
     depthCharts,
     playerStatsIngestedAt: latestStatImport,
+    providerRuns,
+    sleeperLastChangedAt: sleeperRows[0]?.capturedAt ?? null,
     allPlayerIds: allPlayerRows.map((player) => player.playerId),
     // The current change-only tables do not preserve a complete as-of roster
     // observation, even when a sync successfully fetched unchanged rows.
@@ -472,7 +558,7 @@ export async function readDevelopmentUpcomingPlayerReadiness(asOf = new Date()) 
 export function renderUpcomingPlayerReadinessMarkdown(report: UpcomingReadinessResponse) {
   const { sourceFreshness, eligibility } = report;
   const rows = Object.entries(sourceFreshness).map(([source, item]) =>
-    `| ${source} | ${item.latestSourceUpdatedAt ?? "not recorded"} | ${item.ageHours === null ? "unknown" : item.ageHours.toFixed(1)} | ${item.status} |`);
+    `| ${source} | ${item.latestSourceUpdatedAt ?? "not recorded"} | ${item.ageHours === null ? "unknown" : item.ageHours.toFixed(1)} | ${item.lastAttemptAt ?? "unknown"} | ${item.lastSuccessAt ?? "unknown"} | ${item.validRetrievalAt ?? "unverified"} | ${item.lastChangedRowAt ?? "unknown"} | ${item.publicationAt ?? "unverified"} | ${item.status} |`);
   const reasons = Object.entries(eligibility.reasons).sort(([a], [b]) => a.localeCompare(b));
   return [
     "# Upcoming Player Forecast Readiness",
@@ -489,8 +575,8 @@ export function renderUpcomingPlayerReadinessMarkdown(report: UpcomingReadinessR
     "",
     "## Source freshness",
     "",
-    "| Source | Latest timestamp | Age (hours) | Timestamp meaning / status |",
-    "|---|---|---:|---|",
+    "| Source | Source field | Age (hours) | Last attempted | Last success | Valid retrieval | Changed-row write | Provider publication | Meaning / status |",
+    "|---|---|---:|---|---|---|---|---|---|",
     ...rows,
     "",
     "Roster freshness is unavailable because no complete timestamped player/team observation is retained. The latest persisted row-change time in the census is not the last provider check and cannot prove assignments were stale or fresh. Injury `source_updated_at` is also change-only and may contain a provider payload time or synchronization fallback; it does not prove the latest successful check. Player-stat source-file completion time represents import ingestion, not independently verified NFLverse publication time.",

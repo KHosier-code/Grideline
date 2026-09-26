@@ -1,0 +1,41 @@
+# Approved one-time player availability refresh — development only
+
+**Executed:** 2026-09-26 18:58 UTC. **Scope approved:** one Sleeper NFL players retrieval and one ESPN NFL injury-only retrieval, each with at most two retries. Both succeeded on their first request. No other provider, recurring worker, depth-chart job, production database, deployment, or model was invoked.
+
+## Binding and effects
+
+An independent read-only development query established `heliumdb`, role `postgres`, non-replica, local proxy, PostgreSQL system identifier `7685192831018250259`, database OID `16384`, and baseline counts of 475 skill-position player rows, 12,227 Sleeper snapshot rows, 1,587 injury rows and 20 runs for these two providers. The **same one-time process and pool that performed the writes** checked all these values before enabling either approved endpoint; any mismatch would have stopped before a provider call or write. The regular worker was `not_started` before and after. The process's network guard allowed only the two approved URLs, at most three requests per URL. A read-only run inventory for the operation window shows exactly one successful run per provider and no other provider run.
+
+This is development binding evidence for this specific process, not an assertion about a future worker or production. No paid odds request was made. The first attempted launch failed during module loading before preflight, provider contact, or writes; rebuilding with the project's usual bundler allowed the guarded run to proceed.
+
+## Observations and persisted evidence
+
+| Feed | Full response received (UTC) | Stored observation / completion (UTC) | Response coverage | Database effect |
+|---|---|---|---|---|
+| Sleeper `GET /v1/players/nfl` | 18:58:02.183 | source captured 18:58:02.491; success 18:58:03.196 | 12,229 players, all 32 active teams (plus historical `OAK` code); 1 request | Run 213: 544 changed immutable player snapshots, 11,685 unchanged |
+| ESPN `GET /apis/site/v2/sports/football/nfl/injuries` | 18:58:03.554 | payload publication 18:58:03.000; success 18:58:08.828 | 32 groups, 800 injury entries; 1 request | Run 214: 755 changed immutable injury snapshots and corresponding player upserts, 45 unchanged |
+
+The stored ESPN run's `retrievedAt=18:58:08.828` was assigned **after ingestion**, not at HTTP body receipt. The guarded caller separately captured the actual successful response-body time above. Sleeper's `sourceCapturedAt` likewise follows HTTP body receipt and parsing; neither is a provider publication time. ESPN's `publicationAt` comes from its payload. No Sleeper publication time is provided. Response SHA-256 digests and the 512-row direct-ID Sleeper reconciliation are preserved in [the evidence JSON](gridline-player-availability-approved-refresh-evidence.json). Full raw provider bodies were **not** archived; the digests and change-only snapshots cannot reconstruct an unchanged full response. The run metadata preserves full-response counts and retrieval/capture times.
+
+The ESPN payload's athlete identities use links as well as IDs. A temporary raw-ID-only extraction produced an invalid zero pair-match figure; **it is discarded**, not used to infer injury absence. The persisted injury ingest resolves those links. A read-only post-run query confirms 755 new distinct player/team injury pairs, including 368 skill-position pairs; 512/512 current skill players have a historical matching player/team injury row, but only 368 have a newly written one within 48 hours. The other 144 historical matches must not be treated as confirmed present in this response or healthy. The 45 unchanged response entries were not retained as per-player response membership.
+
+## Current cohort and readiness
+
+The injury-only ingest expanded the persisted QB/RB/WR/TE cohort from **475 to 512** (37 additional skill-player rows). All 512 now have canonical team IDs. Comparing **the newly retrieved Sleeper response**, not its changed-row subset, to these current ESPN IDs gives 130 unique direct ESPN-ID matches: **125 exact-code team agreements**, **3 more canonical agreements** after the existing `WSH` ↔ `WAS` alias, **2 missing Sleeper teams**, **0 confirmed different teams**, **0 duplicate direct matches**, and **382 without a direct Sleeper ESPN-ID match**. The evidence JSON retains each raw code and the exact-code comparison; the canonical agreement total is **128**. An agreeing Sleeper assignment is useful corroboration, not a complete independent ESPN roster publication; missing teams and unmatched identities remain unresolved. This direct-ID comparison does not claim that alternate GSIS-based joins are absent.
+
+The development-only audit at **2026-09-26T18:58:23.353Z** covers 15 games in the nearest upcoming week and classifies the **512** candidates as:
+
+| Eligible | Uncertain | Excluded | Forecasts generated |
+|---:|---:|---:|---:|
+| **0** | **367** | **145** | **0** |
+
+The 145 exclusions comprise 98 with fewer than three strictly prior regular-season appearances, 29 whose team is off the nearest slate, and 18 with a recent matching unavailable injury label. The 367 uncertainty cases lack recently verified per-player ESPN roster assignments and starter evidence; 125 also lack fresh, confirmed-available matching injury status. Reason counts overlap within the uncertain group. The current injury response is injury-only: omitted players are **not** healthy by inference. Complete ESPN roster verification is still unavailable, and no depth snapshots exist. See the [timestamped readiness audit](gridline-player-engine-upcoming-readiness.md). Its `validRetrievalAt` for ESPN uses the run metadata's post-ingestion clock; this report records the more precise HTTP body receipt.
+
+## Smallest upcoming-inference implementation for approval — **not implemented**
+
+1. **Gate individual candidates, not the entire league's depth coverage.** Build a per-player, per-upcoming-game evidence record from a unique GSIS↔ESPN mapping, the current canonical team, a newly observed unique Sleeper ESPN-ID/team agreement after existing team-alias normalization, and a source-aware ESPN player/team observation where available. Preserve any future conflicts, missing ESPN confirmation, missing injury status and missing starter/role evidence as explicit unavailable/uncertain states. Decide and test which **per-player** role evidence is sufficient (for example, recent sourced depth order or another already retained, kickoff-safe starter observation); do not require all 32 ESPN depth charts or treat a team-wide successful fetch as proof for each player. Do not turn the 128 agreements alone into eligible players.
+2. **Separate feature assembly from known outcomes.** The historical feature builder currently requires the target game's actual stat line. Extract a target-free upcoming-game feature path using the same feature names, missing-value treatment and strictly pre-kickoff player/team history, joined through canonical schedule and identities. Freeze inputs at an explicit as-of cutoff and prohibit same-game results, future-week rows and late revisions.
+3. **Reuse the four frozen artifacts without fitting.** Load `reports/gridline-player-projection-baseline.json` after its existing SHA-256 and artifact/schema assertions, apply the existing frozen coefficients/means/scales for QB passing yards, RB rushing yards, WR/TE receiving yards and WR/TE receptions, and reject non-finite outputs. No retraining, provider additions, Phase 6 model changes or production path.
+4. **Emit a development-only, read-only forecast result** with game/player/team, family, cutoff, source timestamps, model version/hash, missing-feature and unavailable reasons. Test exact feature parity against held-out historical examples, transferred-team and ambiguous-ID rejection, injury omission, per-player role uncertainty and cutoff chronology before considering any UI or publication.
+
+**Approval point:** This plan changes eligibility and enables inference, so it needs a separate decision. This refresh did not implement it or loosen the existing 48-hour gate.

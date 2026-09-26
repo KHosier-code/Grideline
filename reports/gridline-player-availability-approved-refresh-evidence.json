@@ -1,0 +1,4326 @@
+{
+  "capturedAt": "2026-09-26T18:58:08.853Z",
+  "scope": "one-time approved development-only Sleeper players and ESPN injury-only response; no worker, other provider, or production writes",
+  "target": {
+    "database": "heliumdb",
+    "role": "postgres",
+    "systemId": "7685192831018250259",
+    "databaseOid": 16384
+  },
+  "sleeper": {
+    "bodyReceivedAt": "2026-09-26T18:58:02.183Z",
+    "responseSha256": "1233f49642ffc0b620735a21f5d42148178242fb0fd08e1fdb5be43dd038153b",
+    "attempts": 1,
+    "result": {
+      "status": "success",
+      "inserted": 544,
+      "durationMs": 1418,
+      "playerCount": 12229,
+      "snapshotId": "c15d1381-724f-491c-83a2-466facd24635",
+      "sourceCapturedAt": "2026-09-26T18:58:02.491Z",
+      "teams": [
+        "ARI",
+        "ATL",
+        "BAL",
+        "BUF",
+        "CAR",
+        "CHI",
+        "CIN",
+        "CLE",
+        "DAL",
+        "DEN",
+        "DET",
+        "GB",
+        "HOU",
+        "IND",
+        "JAX",
+        "KC",
+        "LAC",
+        "LAR",
+        "LV",
+        "MIA",
+        "MIN",
+        "NE",
+        "NO",
+        "NYG",
+        "NYJ",
+        "PHI",
+        "PIT",
+        "SEA",
+        "SF",
+        "TB",
+        "TEN",
+        "WAS"
+      ],
+      "teamCount": 32,
+      "rawTeamCount": 33,
+      "unexpectedTeamCodes": [
+        "OAK"
+      ],
+      "depthOrderCount": 1540,
+      "unchanged": 11685,
+      "capturedAt": "2026-09-26T18:58:02.491Z",
+      "cadenceHours": 24
+    }
+  },
+  "injuries": {
+    "bodyReceivedAt": "2026-09-26T18:58:03.554Z",
+    "responseSha256": "7ed3f852d947069ba6a557407eded1714cc15638a9fc503235c7775c2a985fcb",
+    "attempts": 1,
+    "result": {
+      "status": "success",
+      "inserted": 755,
+      "unchanged": 45,
+      "sourceUpdatedAt": "2026-09-26T18:58:03.000Z"
+    },
+    "coverageNote": "Injury-only response had 800 entries (755 changed, 45 unchanged). The temporary raw-ID parser did not support ESPN athlete links, so full response player/team membership was not retained. Newly written pairs are independently countable in immutable injury rows; omitted players are not assumed healthy."
+  },
+  "cohort": {
+    "total": 512,
+    "uniqueSleeperMatches": 130,
+    "matchingSleeperTeams": 125,
+    "nonExactTeamCodes": 5,
+    "canonicalTeamAgreements": 128,
+    "aliasEquivalentTeamCodes": 3,
+    "missingSleeperTeams": 2,
+    "confirmedDifferentTeams": 0,
+    "ambiguousSleeperMatches": 0,
+    "unmatchedSleeperPlayers": 382
+  },
+  "candidates": [
+    {
+      "espnPlayerId": "12483",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [
+        {
+          "sleeperId": "421",
+          "team": "LAR"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "14012",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "829",
+          "team": "PHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "14880",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [
+        {
+          "sleeperId": "1166",
+          "team": "LV"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "15168",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "1737",
+          "team": "CHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "15818",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "1479",
+          "team": "IND"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "15835",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "1339",
+          "team": "PHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "15847",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [
+        {
+          "sleeperId": "1466",
+          "team": "KC"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "15864",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [
+        {
+          "sleeperId": "1373",
+          "team": "NYJ"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "16733",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [
+        {
+          "sleeperId": "2078",
+          "team": "NYG"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "16737",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "2216",
+          "team": "SF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "16800",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [
+        {
+          "sleeperId": "2133",
+          "team": "LAR"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2573079",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3161",
+          "team": "MIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2573401",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3271",
+          "team": "LAR"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2576336",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [
+        {
+          "sleeperId": "2359",
+          "team": "JAX"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2576581",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3269",
+          "team": "BAL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2576925",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [
+        {
+          "sleeperId": "2505",
+          "team": "CAR"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2576980",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [
+        {
+          "sleeperId": "2307",
+          "team": "WAS"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "2577417",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3294",
+          "team": "DAL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2578570",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3257",
+          "team": "ARI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2969939",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [
+        {
+          "sleeperId": "2306",
+          "team": "NYG"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2972515",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4574",
+          "team": "ATL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2973405",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3634",
+          "team": "CHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2976212",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [
+        {
+          "sleeperId": "2449",
+          "team": "WAS"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "2976592",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3200",
+          "team": "NYJ"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2977187",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4039",
+          "team": "SEA"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "2991662",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4177",
+          "team": "NE"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3039707",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3976",
+          "team": "TEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3040151",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4217",
+          "team": "SF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3042519",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4199",
+          "team": "MIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3043078",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3198",
+          "team": "BAL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3043116",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3286",
+          "team": "SF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3043275",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3202",
+          "team": "ATL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3045147",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4137",
+          "team": "ARI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3045523",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4454",
+          "team": "ARI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3046439",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3214",
+          "team": "NE"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3046779",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3163",
+          "team": "DET"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3047876",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5773",
+          "team": "SF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3050481",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5409",
+          "team": "CIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3051738",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5086",
+          "team": "LAC"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3051876",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4066",
+          "team": "DEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3051889",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "3155",
+          "team": "IND"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3052096",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4314",
+          "team": "PHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3052587",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4892",
+          "team": "TB"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3054212",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4144",
+          "team": "GB"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3054850",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4035",
+          "team": "NO"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3059989",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4464",
+          "team": "JAX"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3116164",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4993",
+          "team": "CIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3116165",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4037",
+          "team": "TB"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3116365",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5012",
+          "team": "BAL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3116389",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4147",
+          "team": "CIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3117251",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4034",
+          "team": "SF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3117256",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5001",
+          "team": "HOU"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3121023",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5022",
+          "team": "PHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3121422",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5927",
+          "team": "WAS"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "3122840",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4017",
+          "team": "CLE"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3123075",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5121",
+          "team": "NYG"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3123076",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4033",
+          "team": "LAC"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3126486",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5872",
+          "team": "SF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3126997",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6588",
+          "team": "DET"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3127310",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6001",
+          "team": "CIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3128429",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5045",
+          "team": "DEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3134353",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4351",
+          "team": "NYJ"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3138744",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6529",
+          "team": "LV"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3139477",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4046",
+          "team": "KC"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3149687",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "3676833",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "3843945",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5985",
+          "team": "HOU"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3871102",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6154",
+          "team": "TB"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3886598",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "7049",
+          "team": "MIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3892775",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6136",
+          "team": "DEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3911853",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6869",
+          "team": "DEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3912547",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4943",
+          "team": "SEA"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3915411",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6039",
+          "team": "BUF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3915416",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4983",
+          "team": "BUF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3915486",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5094",
+          "team": null
+        }
+      ],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "3915511",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6770",
+          "team": "CIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3916071",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6045",
+          "team": "LAC"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3916148",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5967",
+          "team": "TEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3916387",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4881",
+          "team": "BAL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3916433",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5947",
+          "team": "JAX"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3916945",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6149",
+          "team": "IND"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3917315",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5849",
+          "team": "MIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3917792",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5870",
+          "team": "IND"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3917914",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6271",
+          "team": "ATL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3918298",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4984",
+          "team": "BUF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3921690",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5973",
+          "team": "MIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3924327",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5854",
+          "team": "SEA"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3925357",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4981",
+          "team": "TEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3926231",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "3929630",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4866",
+          "team": "PHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3929645",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [
+        {
+          "sleeperId": "7002",
+          "team": "NO"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3929785",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "7496",
+          "team": "IND"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "3930086",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5906",
+          "team": "BUF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4032473",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4035537",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4035538",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5892",
+          "team": "HOU"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4035656",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4035671",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "7083",
+          "team": "BAL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4035687",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6819",
+          "team": "PIT"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4036131",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5857",
+          "team": "NO"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4036133",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5844",
+          "team": "MIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4036275",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6964",
+          "team": null
+        }
+      ],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4036378",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6804",
+          "team": "GB"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4037235",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5970",
+          "team": "BUF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4037457",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6012",
+          "team": "PIT"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4038441",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5995",
+          "team": "BAL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4038524",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6011",
+          "team": "ARI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4038815",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [
+        {
+          "sleeperId": "7021",
+          "team": "PIT"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4038941",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6797",
+          "team": "LAC"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4039057",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5938",
+          "team": "DEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4039160",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4040612",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4040655",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [
+        {
+          "sleeperId": "7090",
+          "team": "NYG"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4040715",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6904",
+          "team": "PHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4040761",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6130",
+          "team": "NYG"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4045305",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4995",
+          "team": "LV"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4047365",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5850",
+          "team": "GB"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4047646",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5859",
+          "team": "NE"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4047650",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5846",
+          "team": "PIT"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4048228",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4061956",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6427",
+          "team": "IND"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4212909",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [
+        {
+          "sleeperId": "4274",
+          "team": "CAR"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4239934",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6828",
+          "team": "CAR"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4239944",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4239993",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6801",
+          "team": "CIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4239996",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4240472",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4240603",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4240631",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6931",
+          "team": "MIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4240657",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241263",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241372",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "5848",
+          "team": "PHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4241374",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241389",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6786",
+          "team": "DAL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4241401",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241416",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241457",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241463",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6783",
+          "team": "CLE"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4241464",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241474",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241476",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241478",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241479",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6768",
+          "team": "ATL"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4241820",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4241983",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [
+        {
+          "sleeperId": "7039",
+          "team": "LV"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4241985",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6806",
+          "team": "DEN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4242335",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6813",
+          "team": "IND"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4242355",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4242433",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4242512",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4242557",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6865",
+          "team": "LAR"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4243003",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4243331",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4245144",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4248528",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4249030",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6453",
+          "team": "IND"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4249417",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4249624",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4258173",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4258595",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6826",
+          "team": "CHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4259147",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4259305",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4259545",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6790",
+          "team": "CHI"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4259553",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4260394",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4262921",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6794",
+          "team": "MIN"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4360078",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360086",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360248",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360290",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360310",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360423",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360438",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [
+        {
+          "sleeperId": "6803",
+          "team": "SF"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    },
+    {
+      "espnPlayerId": "4360516",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360569",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360635",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360689",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360761",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360797",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360939",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4360967",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361050",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361088",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361259",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361307",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361370",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361372",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361409",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361411",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361432",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361516",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361529",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361577",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361579",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4361741",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362018",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362238",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362249",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362477",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362478",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362504",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362523",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362619",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362628",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362748",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4362921",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4366031",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4366963",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4367209",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4368003",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4369466",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4371733",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4372016",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4372096",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4372414",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4372716",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4372758",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4372780",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4373273",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4373626",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4373678",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4374302",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4379399",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4382466",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4383351",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4383429",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4383440",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4384852",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4385690",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4386544",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4401805",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426338",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426348",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426354",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426385",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426388",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426485",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426502",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426515",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426553",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426844",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426875",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4426948",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4427095",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4427238",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4427366",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4427728",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4427834",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4428331",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4428396",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4428557",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4428718",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4428850",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4428993",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429013",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429022",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429023",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429025",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429059",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429084",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429086",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429096",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429105",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429148",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429160",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429202",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429205",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429275",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429299",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429435",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429501",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429582",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429615",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429676",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429684",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429795",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429805",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429835",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4429955",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430027",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430034",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430191",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430431",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430539",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430656",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430681",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430684",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430723",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430737",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430802",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430807",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430834",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430841",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430870",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430871",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430878",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4430968",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431142",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431196",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431268",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431280",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431299",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431325",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431431",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431452",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431459",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431465",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431466",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431487",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431492",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431545",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431574",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431580",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431588",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4431611",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432208",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432260",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432577",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432620",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432665",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432708",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432710",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432722",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432734",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432762",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432773",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4432775",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4433959",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4433970",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4433971",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4434153",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4565859",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4567048",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4567096",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4567156",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4567747",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4567750",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4568024",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4568490",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569173",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569371",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569382",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569547",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569559",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569587",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569603",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569618",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569682",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4569987",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4570037",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4570296",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4570738",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4572680",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4573699",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4575131",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4575665",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4576297",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4586312",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4590292",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4595342",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4595348",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4596334",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4596448",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4596472",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4596602",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4597500",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4597703",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4599739",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4600597",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4600981",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4601080",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4602667",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4603186",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4605951",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4608686",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4608810",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4612826",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4613202",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4635008",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4635009",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4678006",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4678008",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4682509",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4682648",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4682745",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4683062",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4683153",
+      "espnTeamId": "2",
+      "espnTeam": "BUF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4683159",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4683243",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4683308",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4683423",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685201",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685246",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685247",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685261",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685278",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685307",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685350",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685382",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685397",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685413",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685415",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685472",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685504",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685512",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685522",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685526",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685553",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685555",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685702",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4685720",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4686104",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4686248",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4686422",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4686468",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4686472",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4686612",
+      "espnTeamId": "24",
+      "espnTeam": "LAC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4686658",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4686728",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4688380",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4688813",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4689114",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4690013",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4690143",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4690923",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4692835",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4695193",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4695404",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4695883",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4696044",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4696700",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4696882",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4696981",
+      "espnTeamId": "19",
+      "espnTeam": "NYG",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4697815",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4698597",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4701936",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4702120",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4702555",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4702559",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4709392",
+      "espnTeamId": "29",
+      "espnTeam": "CAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4710711",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4710714",
+      "espnTeamId": "25",
+      "espnTeam": "SF",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4710855",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4711533",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4714379",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4714771",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4715355",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4722893",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4722908",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4723086",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4723820",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4808759",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4808766",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4808839",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4819231",
+      "espnTeamId": "9",
+      "espnTeam": "GB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4831959",
+      "espnTeamId": "17",
+      "espnTeam": "NE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4832800",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4832846",
+      "espnTeamId": "16",
+      "espnTeam": "MIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4832955",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4833029",
+      "espnTeamId": "14",
+      "espnTeam": "LAR",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4837248",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4869132",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4869645",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4869961",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4870612",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4870653",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4870795",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4870808",
+      "espnTeamId": "22",
+      "espnTeam": "ARI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4870847",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4871023",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4874509",
+      "espnTeamId": "11",
+      "espnTeam": "IND",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4876132",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4877034",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4877706",
+      "espnTeamId": "34",
+      "espnTeam": "HOU",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4879194",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4879250",
+      "espnTeamId": "21",
+      "espnTeam": "PHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4879276",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4880236",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4882093",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4883647",
+      "espnTeamId": "10",
+      "espnTeam": "TEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4885466",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4887558",
+      "espnTeamId": "26",
+      "espnTeam": "SEA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4889929",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4890973",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4892576",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4911851",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4912052",
+      "espnTeamId": "15",
+      "espnTeam": "MIA",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4912218",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4912274",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "4917427",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5065495",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5081338",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5081397",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5081432",
+      "espnTeamId": "28",
+      "espnTeam": "WSH",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5081508",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5081999",
+      "espnTeamId": "18",
+      "espnTeam": "NO",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5082630",
+      "espnTeamId": "12",
+      "espnTeam": "KC",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5083076",
+      "espnTeamId": "5",
+      "espnTeam": "CLE",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5083315",
+      "espnTeamId": "20",
+      "espnTeam": "NYJ",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5083754",
+      "espnTeamId": "6",
+      "espnTeam": "DAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5085024",
+      "espnTeamId": "30",
+      "espnTeam": "JAX",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5085189",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5088338",
+      "espnTeamId": "33",
+      "espnTeam": "BAL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5092508",
+      "espnTeamId": "4",
+      "espnTeam": "CIN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5123663",
+      "espnTeamId": "8",
+      "espnTeam": "DET",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5150247",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5155825",
+      "espnTeamId": "13",
+      "espnTeam": "LV",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5159802",
+      "espnTeamId": "7",
+      "espnTeam": "DEN",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5160110",
+      "espnTeamId": "3",
+      "espnTeam": "CHI",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5220680",
+      "espnTeamId": "27",
+      "espnTeam": "TB",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "5344782",
+      "espnTeamId": "1",
+      "espnTeam": "ATL",
+      "sleeperMatches": [],
+      "uniqueSleeperTeamAgreement": false
+    },
+    {
+      "espnPlayerId": "8439",
+      "espnTeamId": "23",
+      "espnTeam": "PIT",
+      "sleeperMatches": [
+        {
+          "sleeperId": "96",
+          "team": "PIT"
+        }
+      ],
+      "uniqueSleeperTeamAgreement": true
+    }
+  ]
+}

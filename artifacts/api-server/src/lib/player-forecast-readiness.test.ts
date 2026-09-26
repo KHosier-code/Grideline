@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildUpcomingPlayerReadinessAudit,
   measureFreshness,
+  validPlayerObservation,
   type ReadinessDepth,
   type ReadinessGame,
   type ReadinessIdentity,
@@ -10,6 +11,7 @@ import {
   type ReadinessStat,
   type ReadinessStatus,
 } from "./player-forecast-readiness";
+import { SLEEPER_ACTIVE_TEAM_CODES } from "./sleeper";
 
 const asOf = new Date("2026-09-26T12:00:00.000Z");
 const upcomingGame: ReadinessGame = {
@@ -166,11 +168,42 @@ test("missing injury and depth coverage warns and keeps starter uncertain", () =
   assert.match(result.message, /No depth-chart snapshots exist/i);
 });
 
-test("missing depth evidence does not erase established player eligibility", () => {
+test("missing depth evidence prevents confirmed starter eligibility", () => {
   const result = audit({ depthCharts: [] });
-  assert.equal(result.eligibility.eligible, 1);
-  assert.equal(result.eligibility.uncertain, 0);
+  assert.equal(result.eligibility.eligible, 0);
+  assert.equal(result.eligibility.uncertain, 1);
   assert.equal(result.eligibility.reasons.starter_status_unknown_no_depth_chart, 1);
+});
+
+test("unchanged complete Sleeper retrieval is fresh, but cannot verify ESPN roster", () => {
+  const run = { provider: "sleeper-players", status: "success", startedAt: "2026-09-26T09:00:00Z",
+    completedAt: "2026-09-26T09:01:00Z", recordsProcessed: 0,
+    metadata: { sourceCapturedAt: "2026-09-26T09:00:30Z", playerCount: 12227,
+      unchanged: 12227, teamCount: 32, teams: [...SLEEPER_ACTIVE_TEAM_CODES] } };
+  assert.equal(validPlayerObservation(run)?.toISOString(), "2026-09-26T09:00:30.000Z");
+  const result = audit({ verifiedRosterAssignments: [], providerRuns: [run] });
+  assert.equal(result.eligibility.eligible, 0);
+  assert.equal(result.sourceFreshness.roster.validRetrievalAt, "2026-09-26T09:00:30.000Z");
+  assert.equal(validPlayerObservation({ ...run, metadata: { ...run.metadata, unchanged: 0 } }), null);
+  assert.equal(validPlayerObservation({ ...run, status: "partial" }), null);
+});
+
+test("injury-only successful observation cannot make an omitted player healthy", () => {
+  const run = { provider: "espn-injuries", status: "success", startedAt: "2026-09-26T09:00:00Z",
+    completedAt: "2026-09-26T09:01:00Z", recordsProcessed: 0,
+    metadata: { observationKind: "injury-only", responseComplete: true, observedCount: 4,
+      unchanged: 4, retrievedAt: "2026-09-26T09:00:30Z" } };
+  const result = audit({ injuries: [], providerRuns: [run] });
+  assert.ok(validPlayerObservation(run));
+  assert.equal(result.eligibility.reasons.injury_status_missing, 1);
+  assert.equal(validPlayerObservation({ ...run, metadata: { ...run.metadata, responseComplete: false } }), null);
+});
+
+test("injury from former team and ambiguous identity fail closed", () => {
+  assert.equal(audit({ injuries: [{ ...injury, teamId: "former-team" }] })
+    .eligibility.reasons.injury_status_missing, 1);
+  assert.equal(audit({ identities: [identity, { ...identity, espnId: "another-espn" }] })
+    .eligibility.reasons.ambiguous_gsis_espn_mapping, 1);
 });
 
 test("strictly excludes same-week and future-week stats from prior appearance eligibility", () => {

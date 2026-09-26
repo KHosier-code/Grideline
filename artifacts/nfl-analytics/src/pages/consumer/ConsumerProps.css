@@ -106,6 +106,21 @@
 .pp-upcoming-state.is-error p { color: #a25a3f; }
 .pp-upcoming-state .pp-skeleton { height: 28px; margin: 0 0 9px; }
 .pp-upcoming-state button { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 7px 10px; border: 1px solid var(--pp-line); border-radius: 6px; background: hsl(var(--card)); color: hsl(var(--foreground)); font-size: 11px; cursor: pointer; }
+.pp-forecast-list { display: grid; gap: 11px; margin-top: 14px; }
+.pp-forecast-card { padding: 16px; border: 1px solid var(--pp-line); border-radius: 9px; background: hsl(var(--background) / .48); }
+.pp-forecast-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.pp-forecast-card-heading h3 { margin: 0; font: 600 19px var(--app-font-serif); letter-spacing: -.02em; }
+.pp-forecast-card-heading h3 span { color: hsl(var(--muted-foreground)); font: 500 11px var(--app-font-sans); letter-spacing: 0; }
+.pp-forecast-card-heading > div > p:last-child { margin: 5px 0 0; color: hsl(var(--muted-foreground)); font-size: 11px; }
+.pp-forecast-label { margin: 0 0 7px; color: #8a593b; font: 700 9px var(--app-font-mono); letter-spacing: .08em; }
+.dark .pp-forecast-label { color: #edb48d; }
+.pp-forecast-value { flex: none; color: hsl(var(--foreground)); font: 600 25px var(--app-font-serif); }
+.pp-forecast-evidence { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 13px 0 0; padding-top: 11px; border-top: 1px solid var(--pp-line); }
+.pp-forecast-evidence > div { min-width: 0; }
+.pp-forecast-evidence dt { color: hsl(var(--muted-foreground)); font: 700 9px var(--app-font-mono); letter-spacing: .05em; text-transform: uppercase; }
+.pp-forecast-evidence dd { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 11px; line-height: 1.45; }
+.pp-forecast-availability, .pp-forecast-caveats { margin: 11px 0 0; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.5; }
+.pp-forecast-caveats { padding-left: 17px; }
 @keyframes pp-pulse { from { opacity: .5; } to { opacity: 1; } }
 @media (max-width: 1000px) { .pp-workspace { grid-template-columns: 1fr; } .pp-sidebar { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 900px) { .pp-upcoming-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); } .pp-upcoming-summary > div:nth-child(3) { border-right: 0; } .pp-upcoming-summary > div:nth-child(n+4) { border-top: 1px solid var(--pp-line); } }

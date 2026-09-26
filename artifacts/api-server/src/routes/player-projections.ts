@@ -4,11 +4,13 @@ import { Router, type IRouter } from "express";
 import {
   GetConsumerPlayerProjectionsResponse,
   GetConsumerUpcomingPlayerProjectionReadinessResponse,
+  GetConsumerUpcomingPlayerProjectionsResponse,
 } from "@workspace/api-zod";
 import {
   readDevelopmentUpcomingPlayerReadiness,
 } from "../lib/player-forecast-readiness";
 import type { PlayerProjectionReport } from "../lib/player-projections";
+import { readDevelopmentUpcomingPlayerProjections } from "../lib/player-upcoming";
 
 const router: IRouter = Router();
 const reportPath = resolve(process.cwd(), "../../reports/gridline-player-projection-baseline.json");
@@ -129,6 +131,29 @@ router.get("/consumer/player-projections/upcoming-readiness", async (req, res): 
   } catch (error) {
     req.log.error({ error }, "Upcoming player forecast readiness audit unavailable");
     res.status(503).json({ error: "Upcoming player forecast readiness is unavailable", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/consumer/player-projections/upcoming", async (req, res): Promise<void> => {
+  if (process.env.NODE_ENV !== "development" || process.env.REPLIT_DEPLOYMENT) {
+    res.json(GetConsumerUpcomingPlayerProjectionsResponse.parse({
+      status: "unavailable",
+      message: "Conditional upcoming player forecasts are not available outside local development.",
+      asOf: null,
+      upcomingGames: 0,
+      coverage: { direct: 0, crosswalk: 0 },
+      eligibility: { conditional: 0, uncertain: 0, unavailable: 0, reasons: {} },
+      forecasts: [],
+      withheld: [],
+    }));
+    return;
+  }
+  try {
+    const report = await readDevelopmentUpcomingPlayerProjections();
+    res.json(GetConsumerUpcomingPlayerProjectionsResponse.parse(report));
+  } catch (error) {
+    req.log.error({ error }, "Development upcoming player projections unavailable");
+    res.status(503).json({ error: "Upcoming player projections are unavailable", code: "consumer_data_unavailable" });
   }
 });
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildPlayerProjectionScheduleFromTeamGames,
+  forecastUpcomingPlayer,
   hashSortedPlayerProjectionInputs,
   PLAYER_PROJECTION_CONFIG,
   PLAYER_PROJECTION_VERSION,
@@ -623,4 +624,92 @@ test("independent schedule finality requires explicit status, not scores or 0-0 
   });
   assert.deepEqual(result.rows.map((row) => row.gameId), ["explicit-final"]);
   assert.equal(result.excludedNonFinalScheduleRows, 2);
+});
+
+test("target-free frozen inference matches historical pregame features and is deterministic", () => {
+  const data = makeDataset();
+  const historicalTarget = data.observations.find((row) =>
+    row.playerId === "qb-1" && row.season === 2024 && row.week === 5)!;
+  const baseline = makeFrozenBaseline(true);
+  const input = {
+    current: historicalTarget,
+    history: data.observations,
+    teamGames: data.teamGames,
+    family: "qbPassingYards" as const,
+    baseline,
+    baselineReportSha256: "b".repeat(64),
+  };
+  const first = forecastUpcomingPlayer(input);
+  const second = forecastUpcomingPlayer(input);
+  const historical = run(data.observations, data.teamGames).predictions.find((row) =>
+    row.family === "qbPassingYards" && row.playerId === "qb-1"
+      && row.season === 2024 && row.week === 5)!;
+
+  assert.ok(first);
+  assert.deepEqual(second, first);
+  assert.deepEqual(first.featureValues, historical.featureValues);
+  assert.equal(first.priorAppearances, historical.historicalSampleQuality.priorAppearances);
+  assert.equal(first.recentAverage, historical.last3Baseline);
+  assert.equal(first.seasonAverage, historical.seasonToDateBaseline);
+  assert.equal(first.modelVersion, baseline.families.qbPassingYards.modelVersion);
+  assert.ok(Number.isFinite(first.projectedValue));
+});
+
+test("upcoming inference ignores current outcomes and post-cutoff player and team observations", () => {
+  const data = makeDataset();
+  const current = data.observations.find((row) =>
+    row.playerId === "qb-1" && row.season === 2024 && row.week === 3)!;
+  const input = {
+    current,
+    history: data.observations,
+    teamGames: data.teamGames,
+    family: "qbPassingYards" as const,
+    baseline: makeFrozenBaseline(true),
+    baselineReportSha256: "b".repeat(64),
+  };
+  const original = forecastUpcomingPlayer(input);
+  const changedHistory = data.observations.map((row) => row.playerId === current.playerId
+    && row.kickoffTime.getTime() >= current.kickoffTime.getTime()
+    ? { ...row, passingYards: 999_999, passAttempts: 999_999 }
+    : row);
+  const changedTeamGames = data.teamGames.map((row) => row.kickoffTime.getTime() >= current.kickoffTime.getTime()
+    ? { ...row, passRate: 1, defensiveEpaAllowedPerPlay: 999 }
+    : row);
+  const currentWithOutcomeChanged = { ...current, passingYards: 123_456 };
+  const changed = forecastUpcomingPlayer({
+    ...input,
+    current: currentWithOutcomeChanged,
+    history: changedHistory,
+    teamGames: changedTeamGames,
+  });
+
+  assert.ok(original);
+  assert.deepEqual(changed, original);
+  assert.equal(original.featureValues.teamRestDays, 7);
+  assert.equal(original.featureValues.teamSeasonPassRate, 0.58);
+});
+
+test("upcoming inference withholds short history, records missing features, and verifies the baseline hash", () => {
+  const data = makeDataset();
+  const current = data.observations.find((row) =>
+    row.playerId === "qb-1" && row.season === 2024 && row.week === 1)!;
+  const priorRows = data.observations.filter((row) => row.playerId === current.playerId
+    && row.kickoffTime.getTime() < current.kickoffTime.getTime());
+  const baseline = makeFrozenBaseline();
+  const input = {
+    current,
+    history: data.observations,
+    teamGames: [],
+    family: "qbPassingYards" as const,
+    baseline,
+    baselineReportSha256: "b".repeat(64),
+  };
+
+  assert.equal(forecastUpcomingPlayer({ ...input, history: priorRows.slice(0, 2) }), null);
+  const forecast = forecastUpcomingPlayer(input);
+  assert.ok(forecast);
+  assert.ok(forecast.missingFeatures.includes("teamSeasonPassRate"));
+  assert.ok(forecast.missingFeatures.includes("opponentSeasonDefensiveEpaAllowed"));
+  assert.ok(forecast.missingFeatures.includes("teamRestDays"));
+  assert.throws(() => forecastUpcomingPlayer({ ...input, baselineReportSha256: "invalid" }), /SHA-256/);
 });

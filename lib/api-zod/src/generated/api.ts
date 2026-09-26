@@ -2170,6 +2170,73 @@ export const GetConsumerPlayerProjectionsResponse = zod.object({
 
 
 /**
+ * Read-only forecasts from the existing frozen player models for players eligible for conditional projections. An estimate is conditional on participation, is not a guarantee of availability, and is not a betting recommendation or production forecast.
+ * @summary Read development-only upcoming conditional player projections
+ */
+export const getConsumerUpcomingPlayerProjectionsResponseUpcomingGamesMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionsResponseCoverageDirectMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionsResponseCoverageCrosswalkMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionsResponseEligibilityConditionalMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionsResponseEligibilityUncertainMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionsResponseEligibilityUnavailableMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionsResponseEligibilityReasonsMinOne = 0;
+
+export const getConsumerUpcomingPlayerProjectionsResponseForecastsItemPriorAppearancesMin = 0;
+
+
+
+export const GetConsumerUpcomingPlayerProjectionsResponse = zod.object({
+  "status": zod.enum(['unavailable', 'development_forecasts']),
+  "message": zod.string(),
+  "asOf": zod.coerce.date().nullable(),
+  "upcomingGames": zod.number().int().min(getConsumerUpcomingPlayerProjectionsResponseUpcomingGamesMin),
+  "coverage": zod.object({
+  "direct": zod.number().int().min(getConsumerUpcomingPlayerProjectionsResponseCoverageDirectMin),
+  "crosswalk": zod.number().int().min(getConsumerUpcomingPlayerProjectionsResponseCoverageCrosswalkMin)
+}),
+  "eligibility": zod.object({
+  "conditional": zod.number().int().min(getConsumerUpcomingPlayerProjectionsResponseEligibilityConditionalMin),
+  "uncertain": zod.number().int().min(getConsumerUpcomingPlayerProjectionsResponseEligibilityUncertainMin),
+  "unavailable": zod.number().int().min(getConsumerUpcomingPlayerProjectionsResponseEligibilityUnavailableMin),
+  "reasons": zod.record(zod.string(), zod.number().int().min(getConsumerUpcomingPlayerProjectionsResponseEligibilityReasonsMinOne))
+}),
+  "forecasts": zod.array(zod.object({
+  "playerId": zod.string(),
+  "playerName": zod.string(),
+  "position": zod.string(),
+  "teamId": zod.string(),
+  "opponentTeamId": zod.string(),
+  "gameId": zod.string(),
+  "kickoffTime": zod.coerce.date(),
+  "statistic": zod.enum(['qbPassingYards', 'rbRushingYards', 'receiverReceivingYards', 'receiverReceptions']),
+  "projectedValue": zod.number(),
+  "recentAverage": zod.number().nullable(),
+  "seasonAverage": zod.number().nullable(),
+  "priorAppearances": zod.number().int().min(getConsumerUpcomingPlayerProjectionsResponseForecastsItemPriorAppearancesMin),
+  "sampleQuality": zod.enum(['low', 'moderate', 'high']),
+  "modelVersion": zod.string(),
+  "calculatedAt": zod.coerce.date(),
+  "sourceRetrievedAt": zod.coerce.date(),
+  "injuryStatus": zod.string().nullable(),
+  "availabilityUncertain": zod.boolean(),
+  "uncertaintyReasons": zod.array(zod.string()),
+  "missingFeatures": zod.array(zod.string())
+})),
+  "withheld": zod.array(zod.object({
+  "playerId": zod.string(),
+  "statistic": zod.union([zod.literal('qbPassingYards'),zod.literal('rbRushingYards'),zod.literal('receiverReceivingYards'),zod.literal('receiverReceptions'),zod.literal(null)]).nullable(),
+  "reason": zod.string()
+}))
+})
+
+
+/**
  * Read-only audit of the nearest upcoming regular-season week. It never generates forecasts. Provider observation timestamps are distinguished from ingestion timestamps where the source schema permits.
  * @summary Read the development-only upcoming player forecast readiness audit
  */

@@ -1,0 +1,63 @@
+# GRIDLINE — UNBLOCK UPCOMING PLAYER FORECASTS
+
+WORKSTREAM: Player Projection Engine
+
+OBJECTIVE
+
+Complete one controlled recovery of current roster and injury data using Gridline's existing integrations, then reassess upcoming player-forecast eligibility.
+
+The root cause has already been investigated. Do not repeat the investigation or rebuild the projection engine.
+
+STEP 1 — PREPARE A TARGETED REFRESH
+
+Identify the existing operations needed to retrieve:
+
+- A complete current Sleeper player snapshot.
+- Current ESPN team-roster information, if an existing supported integration is available.
+- Current ESPN injury information.
+
+Confirm the exact development database target, provider endpoints, expected request counts and any associated costs.
+
+Show me the proposed operations and request approval before contacting providers.
+
+Do not activate the recurring worker or modify production.
+
+STEP 2 — EXECUTE AFTER APPROVAL
+
+After explicit approval, perform the selected one-time development refresh.
+
+Preserve immutable snapshots and record successful retrieval times.
+
+Verify each relevant player-team assignment against the actual retrieved records, rather than merely recording that an API request succeeded.
+
+Keep Sleeper roster evidence separate from any independent ESPN roster evidence.
+
+Treat ESPN injury reporting according to its actual coverage. Do not infer that an omitted player is healthy.
+
+STEP 3 — GENERATE FORECASTS
+
+Recheck the existing 475 skill-player records and the current upcoming schedule.
+
+Use the existing frozen player models.
+
+Generate development-only projections for players who satisfy the validated eligibility and freshness rules.
+
+Retain explicit unavailable states for players with unresolved identities, conflicting team assignments or insufficient availability evidence.
+
+Report the number of eligible, uncertain and excluded players and the number of actual forecasts generated.
+
+STEP 4 — VERIFY
+
+Test retrieval timestamps, unchanged snapshots, roster changes, injury uncertainty and pregame feature cutoffs.
+
+Confirm that the four player models and all Phase 6.1 production models remain unchanged.
+
+Update GRIDLINE_PROJECT_CONTROL.md with the results.
+
+Do not publish, trigger unrelated integrations, start the recurring worker or change production.
+
+SUCCESS CRITERION
+
+Generate evidence-backed upcoming development forecasts, or identify the precise remaining obstacle after completing the approved refresh.
+
+Do not create another broad investigation or propose a new data provider unless the existing integrations genuinely cannot supply the necessary evidence.

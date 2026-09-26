@@ -1477,6 +1477,112 @@ export interface UpcomingPlayerProjectionReadiness {
   forecasts: unknown[];
 }
 
+export type ConsumerUpcomingPlayerProjectionsStatus = typeof ConsumerUpcomingPlayerProjectionsStatus[keyof typeof ConsumerUpcomingPlayerProjectionsStatus];
+
+
+export const ConsumerUpcomingPlayerProjectionsStatus = {
+  unavailable: 'unavailable',
+  development_forecasts: 'development_forecasts',
+} as const;
+
+export type ConsumerUpcomingPlayerProjectionsCoverage = {
+  /** @minimum 0 */
+  direct: number;
+  /** @minimum 0 */
+  crosswalk: number;
+};
+
+export type ConsumerUpcomingPlayerProjectionsEligibilityReasons = {[key: string]: number};
+
+export type ConsumerUpcomingPlayerProjectionsEligibility = {
+  /** @minimum 0 */
+  conditional: number;
+  /** @minimum 0 */
+  uncertain: number;
+  /** @minimum 0 */
+  unavailable: number;
+  reasons: ConsumerUpcomingPlayerProjectionsEligibilityReasons;
+};
+
+/**
+ * @nullable
+ */
+export type ConsumerUpcomingPlayerProjectionsWithheldItemStatistic = typeof ConsumerUpcomingPlayerProjectionsWithheldItemStatistic[keyof typeof ConsumerUpcomingPlayerProjectionsWithheldItemStatistic] | null;
+
+
+export const ConsumerUpcomingPlayerProjectionsWithheldItemStatistic = {
+  qbPassingYards: 'qbPassingYards',
+  rbRushingYards: 'rbRushingYards',
+  receiverReceivingYards: 'receiverReceivingYards',
+  receiverReceptions: 'receiverReceptions',
+} as const;
+
+export type ConsumerUpcomingPlayerProjectionsWithheldItem = {
+  playerId: string;
+  /** @nullable */
+  statistic: ConsumerUpcomingPlayerProjectionsWithheldItemStatistic;
+  reason: string;
+};
+
+export type ConsumerUpcomingPlayerForecastStatistic = typeof ConsumerUpcomingPlayerForecastStatistic[keyof typeof ConsumerUpcomingPlayerForecastStatistic];
+
+
+export const ConsumerUpcomingPlayerForecastStatistic = {
+  qbPassingYards: 'qbPassingYards',
+  rbRushingYards: 'rbRushingYards',
+  receiverReceivingYards: 'receiverReceivingYards',
+  receiverReceptions: 'receiverReceptions',
+} as const;
+
+export type ConsumerUpcomingPlayerForecastSampleQuality = typeof ConsumerUpcomingPlayerForecastSampleQuality[keyof typeof ConsumerUpcomingPlayerForecastSampleQuality];
+
+
+export const ConsumerUpcomingPlayerForecastSampleQuality = {
+  low: 'low',
+  moderate: 'moderate',
+  high: 'high',
+} as const;
+
+export interface ConsumerUpcomingPlayerForecast {
+  playerId: string;
+  playerName: string;
+  position: string;
+  teamId: string;
+  opponentTeamId: string;
+  gameId: string;
+  kickoffTime: string;
+  statistic: ConsumerUpcomingPlayerForecastStatistic;
+  projectedValue: number;
+  /** @nullable */
+  recentAverage: number | null;
+  /** @nullable */
+  seasonAverage: number | null;
+  /** @minimum 0 */
+  priorAppearances: number;
+  sampleQuality: ConsumerUpcomingPlayerForecastSampleQuality;
+  modelVersion: string;
+  calculatedAt: string;
+  sourceRetrievedAt: string;
+  /** @nullable */
+  injuryStatus: string | null;
+  availabilityUncertain: boolean;
+  uncertaintyReasons: string[];
+  missingFeatures: string[];
+}
+
+export interface ConsumerUpcomingPlayerProjections {
+  status: ConsumerUpcomingPlayerProjectionsStatus;
+  message: string;
+  /** @nullable */
+  asOf: string | null;
+  /** @minimum 0 */
+  upcomingGames: number;
+  coverage: ConsumerUpcomingPlayerProjectionsCoverage;
+  eligibility: ConsumerUpcomingPlayerProjectionsEligibility;
+  forecasts: ConsumerUpcomingPlayerForecast[];
+  withheld: ConsumerUpcomingPlayerProjectionsWithheldItem[];
+}
+
 export interface ConsumerUsageMetric {
   /** @nullable */
   value: number | null;

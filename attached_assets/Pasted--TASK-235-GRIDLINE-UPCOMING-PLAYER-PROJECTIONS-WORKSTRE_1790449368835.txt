@@ -1,0 +1,145 @@
+# TASK #235 — GRIDLINE UPCOMING PLAYER PROJECTIONS
+
+WORKSTREAM: Player Projection Engine
+
+PRIORITY: HIGH
+
+OBJECTIVE
+
+I approve implementing the upcoming inference path for the four existing frozen player-projection models.
+
+The approved one-time Sleeper and ESPN injury refresh has already completed. Do not repeat it or start the recurring worker.
+
+The immediate goal is to produce genuine, development-only upcoming player projections using existing, verifiable data.
+
+Do not require complete ESPN roster coverage, perfect depth charts or an individual injury record for every eligible player.
+
+## 1. ESTABLISH A VIABLE PLAYER COHORT
+
+Begin with the 128 direct Sleeper matches whose team assignments agree with the existing injury records.
+
+Evaluate these players against the upcoming schedule and historical sample requirements.
+
+A matching injury record is corroborating evidence, not proof of current health or confirmed participation.
+
+Determine how many players have sufficient evidence for conditional forecasts.
+
+Next, inspect existing trusted GSIS/Sleeper identity crosswalks to determine whether additional players can be safely mapped.
+
+Do not introduce fuzzy matching or automatically accept ambiguous identities.
+
+Use newly retrieved Sleeper player-team evidence with its actual retrieval timestamp. Distinguish single-source roster evidence from corroborated assignments.
+
+Do not require independent ESPN roster verification when none is available, provided the source-evidence policy explicitly permits a current, successfully validated Sleeper snapshot and there is no known contradictory team evidence.
+
+## 2. SEPARATE ELIGIBILITY FROM AVAILABILITY
+
+Create three distinct statuses:
+
+- Conditional forecast eligible.
+- Participation or availability uncertain.
+- Forecast unavailable.
+
+Unknown injury status must not automatically disqualify an otherwise eligible conditional forecast.
+
+However, clearly reported unavailability, conflicting team assignments, unresolved identity and insufficient statistical history must prevent inappropriate projections.
+
+A conditional projection must never be represented as guaranteed participation.
+
+Preserve the original injury and source-freshness evidence.
+
+## 3. IMPLEMENT UPCOMING INFERENCE
+
+Reuse the four existing frozen models:
+
+- QB passing yards.
+- RB rushing yards.
+- WR/TE receiving yards.
+- WR/TE receptions.
+
+Construct target-free upcoming feature vectors using information demonstrably available at the actual forecast calculation timestamp.
+
+Reuse the existing historical feature definitions and exact ordered model schemas.
+
+Do not include future game results, target statistics or post-kickoff information.
+
+Run existing fitted artifacts without retraining, refitting or tuning.
+
+If the current pregame features cannot be reproduced faithfully, stop for the affected model and identify the missing dependency.
+
+## 4. GENERATE DEVELOPMENT FORECASTS
+
+For each eligible player and market, return:
+
+- Player, current team and opponent.
+- Verified scheduled kickoff.
+- Conditional projection.
+- Model version.
+- Historical sample quality.
+- Recent player averages.
+- Source retrieval and calculation timestamps.
+- Current injury information, if available.
+- Explicit availability uncertainty.
+- Reasons for any withheld forecast.
+
+Never substitute an old historical simulation for an upcoming forecast.
+
+## 5. UPDATE THE EXISTING PROPS PAGE
+
+Display upcoming development forecasts separately from historical simulations.
+
+Label them clearly:
+
+DEVELOPMENT FORECAST — CONDITIONAL ON PARTICIPATION
+
+Include a concise explanation of injury uncertainty, sample quality and source freshness.
+
+Do not activate sportsbook comparisons, betting recommendations or production-facing forecasts.
+
+## 6. VALIDATION
+
+Test:
+
+- Existing direct Sleeper matches.
+- Verified identity crosswalk matches.
+- Team changes and conflicting assignments.
+- Players with no injury entry.
+- Players with reported disqualifying availability.
+- Stale source observations.
+- Missing historical samples.
+- Missing required model features.
+- Upcoming feature vectors with no outcome leakage.
+- Deterministic inference from the frozen artifacts.
+
+Report the number of forecasts produced for each model separately.
+
+Do not force projections for players who fail eligibility requirements.
+
+## 7. REPORT AND PROJECT CONTROL
+
+Update GRIDLINE_PROJECT_CONTROL.md.
+
+Save a short numerical implementation report at:
+
+reports/gridline-upcoming-player-projections.md
+
+Include:
+
+1. Number of upcoming games considered.
+2. Direct and trusted-crosswalk player coverage.
+3. Conditional-forecast eligibility counts.
+4. Availability-uncertainty counts.
+5. Actual forecasts produced per statistical category.
+6. Suppression reasons.
+7. Tests and source-evidence limitations.
+8. Website integration status.
+
+Confirm that Phase 6.1, the four fitted player artifacts and production remain unchanged.
+
+Do not publish, refresh additional providers or activate the recurring worker.
+
+SUCCESS CRITERION
+
+Generate genuine development-only upcoming conditional player projections for eligible players.
+
+If the initial 128 matched players do not produce any eligible forecasts, identify the precise feature or eligibility blocker and its smallest correction. Do not launch another broad infrastructure investigation.

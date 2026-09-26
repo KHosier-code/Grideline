@@ -89,8 +89,20 @@ export async function syncEspnInjuries(options?: { jobKey?: string; scheduledFor
     }
     const sourceUpdatedAt = text(payload.timestamp) ? new Date(String(payload.timestamp)) : new Date();
     const groups = payload.injuries;
+    if (groups.length === 0 || groups.some((value) => !value || typeof value !== "object"
+      || !Array.isArray(record(value).injuries)
+      || (record(value).injuries as unknown[]).some((entry) => {
+        const athlete = record(record(entry).athlete);
+        return !athlete.id && !text(athlete.displayName);
+      }))) {
+      throw new Error("ESPN returned empty or incomplete injury groups");
+    }
+    if (!Number.isFinite(sourceUpdatedAt.getTime())) {
+      throw new Error("ESPN returned an invalid injury publication timestamp");
+    }
     let inserted = 0;
     let unchanged = 0;
+    let observed = 0;
     for (const groupValue of groups) {
       const group = record(groupValue);
       const teamId = String(group.id ?? "unknown");
@@ -98,6 +110,7 @@ export async function syncEspnInjuries(options?: { jobKey?: string; scheduledFor
       for (const entryValue of entries) {
         const entry = record(entryValue);
         const athlete = record(entry.athlete);
+        observed += 1;
         const position = record(athlete.position);
         const details = record(entry.details);
         const playerName = text(athlete.displayName) ?? "Unknown player";
@@ -161,7 +174,20 @@ export async function syncEspnInjuries(options?: { jobKey?: string; scheduledFor
         else unchanged += 1;
       }
     }
-    await finishRun(runId, "success", inserted, null);
+    if (!observed) throw new Error("ESPN returned no injury records");
+    await db.update(dataSyncRunsTable).set({
+      status: "success", recordsProcessed: inserted, completedAt: new Date(),
+      metadata: {
+        observationKind: "injury-only",
+        responseComplete: true,
+        groupCount: groups.length,
+        observedCount: observed,
+        unchanged,
+        retrievedAt: new Date().toISOString(),
+        publicationAt: text(payload.timestamp) ? sourceUpdatedAt.toISOString() : null,
+        publicationProvenance: text(payload.timestamp) ? "payload" : "not_provided",
+      },
+    }).where(eq(dataSyncRunsTable.id, runId));
     return { status: "success", inserted, unchanged, sourceUpdatedAt: sourceUpdatedAt.toISOString() };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

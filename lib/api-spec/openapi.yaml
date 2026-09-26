@@ -700,6 +700,23 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerPlayerProjections" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/player-projections/upcoming:
+    get:
+      operationId: getConsumerUpcomingPlayerProjections
+      tags: [nfl]
+      summary: Read development-only upcoming conditional player projections
+      description: >
+        Read-only forecasts from the existing frozen player models for players
+        eligible for conditional projections. An estimate is conditional on
+        participation, is not a guarantee of availability, and is not a betting
+        recommendation or production forecast.
+      responses:
+        "200":
+          description: Development forecasts or explicit unavailability
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerUpcomingPlayerProjections" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
   /consumer/player-projections/upcoming-readiness:
     get:
       operationId: getConsumerUpcomingPlayerProjectionReadiness
@@ -1765,6 +1782,79 @@ components:
         forecasts:
           type: array
           items: {}
+    ConsumerUpcomingPlayerProjections:
+      type: object
+      required: [status, message, asOf, upcomingGames, coverage, eligibility, forecasts, withheld]
+      properties:
+        status: { type: string, enum: [unavailable, development_forecasts] }
+        message: { type: string }
+        asOf: { type: ["string", "null"], format: date-time }
+        upcomingGames: { type: integer, minimum: 0 }
+        coverage:
+          type: object
+          required: [direct, crosswalk]
+          properties:
+            direct: { type: integer, minimum: 0 }
+            crosswalk: { type: integer, minimum: 0 }
+        eligibility:
+          type: object
+          required: [conditional, uncertain, unavailable, reasons]
+          properties:
+            conditional: { type: integer, minimum: 0 }
+            uncertain: { type: integer, minimum: 0 }
+            unavailable: { type: integer, minimum: 0 }
+            reasons:
+              type: object
+              additionalProperties: { type: integer, minimum: 0 }
+        forecasts:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerUpcomingPlayerForecast" }
+        withheld:
+          type: array
+          items:
+            type: object
+            required: [playerId, statistic, reason]
+            properties:
+              playerId: { type: string }
+              statistic:
+                type: ["string", "null"]
+                enum: [qbPassingYards, rbRushingYards, receiverReceivingYards, receiverReceptions, null]
+              reason: { type: string }
+    ConsumerUpcomingPlayerForecast:
+      type: object
+      required:
+        [playerId, playerName, position, teamId, opponentTeamId, gameId,
+         kickoffTime, statistic, projectedValue, recentAverage, seasonAverage,
+         priorAppearances, sampleQuality, modelVersion, calculatedAt,
+         sourceRetrievedAt, injuryStatus, availabilityUncertain,
+         uncertaintyReasons, missingFeatures]
+      properties:
+        playerId: { type: string }
+        playerName: { type: string }
+        position: { type: string }
+        teamId: { type: string }
+        opponentTeamId: { type: string }
+        gameId: { type: string }
+        kickoffTime: { type: string, format: date-time }
+        statistic:
+          type: string
+          enum: [qbPassingYards, rbRushingYards, receiverReceivingYards, receiverReceptions]
+        projectedValue: { type: number }
+        recentAverage: { type: ["number", "null"] }
+        seasonAverage: { type: ["number", "null"] }
+        priorAppearances: { type: integer, minimum: 0 }
+        sampleQuality: { type: string, enum: [low, moderate, high] }
+        modelVersion: { type: string }
+        calculatedAt: { type: string, format: date-time }
+        sourceRetrievedAt: { type: string, format: date-time }
+        injuryStatus: { type: ["string", "null"] }
+        availabilityUncertain: { type: boolean }
+        uncertaintyReasons:
+          type: array
+          items: { type: string }
+        missingFeatures:
+          type: array
+          items: { type: string }
     ConsumerUsageMetric:
       type: object
       required: [value, available, reason]

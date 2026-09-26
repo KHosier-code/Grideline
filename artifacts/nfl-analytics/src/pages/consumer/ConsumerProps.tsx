@@ -3,11 +3,14 @@ import {
   getGetConsumerPlayerProjectionsQueryKey,
   getGetConsumerPropsAvailabilityQueryKey,
   getGetConsumerUpcomingPlayerProjectionReadinessQueryKey,
+  getGetConsumerUpcomingPlayerProjectionsQueryKey,
   useGetConsumerPlayerProjections,
   useGetConsumerPropsAvailability,
   useGetConsumerUpcomingPlayerProjectionReadiness,
+  useGetConsumerUpcomingPlayerProjections,
   type ConsumerPlayerProjection,
   type ConsumerPlayerProjectionModel,
+  type ConsumerUpcomingPlayerForecast,
 } from '@workspace/api-client-react';
 import { AlertCircle, CalendarDays, ChevronDown, FlaskConical, LockKeyhole, RotateCcw, ShieldAlert } from 'lucide-react';
 import { formatKickoff } from './consumer-ui';
@@ -32,6 +35,42 @@ const label = (value: string) => value
 
 function modelFor(row: ConsumerPlayerProjection, models: ConsumerPlayerProjectionModel[]) {
   return models.find(model => model.modelVersion === row.modelVersion && model.statistic === row.statistic);
+}
+
+function UpcomingForecastRow({ row }: { row: ConsumerUpcomingPlayerForecast }) {
+  return (
+    <article className="pp-forecast-card" data-testid={`upcoming-forecast-${row.playerId}-${row.gameId}-${row.statistic}`}>
+      <div className="pp-forecast-card-heading">
+        <div>
+          <p className="pp-forecast-label">DEVELOPMENT FORECAST — CONDITIONAL ON PARTICIPATION</p>
+          <h3>{row.playerName} <span>{row.position} · {row.teamId} vs {row.opponentTeamId}</span></h3>
+          <p>{label(row.statistic)} · {formatKickoff(row.kickoffTime)}</p>
+        </div>
+        <strong className="pp-forecast-value">{number(row.projectedValue)}</strong>
+      </div>
+      <dl className="pp-forecast-evidence">
+        <div><dt>Recent average</dt><dd>{number(row.recentAverage)}</dd></div>
+        <div><dt>Season average</dt><dd>{number(row.seasonAverage)}</dd></div>
+        <div><dt>Prior appearances</dt><dd>{row.priorAppearances} · {label(row.sampleQuality)} sample</dd></div>
+        <div><dt>Model</dt><dd>{row.modelVersion}</dd></div>
+        <div><dt>Roster source retrieved</dt><dd>{dateTime(row.sourceRetrievedAt)}</dd></div>
+        <div><dt>Calculated</dt><dd>{dateTime(row.calculatedAt)}</dd></div>
+      </dl>
+      <p className="pp-forecast-availability">
+        Injury status: {row.injuryStatus ?? 'No matching injury status recorded; omission does not confirm health'}.
+        {' '}Participation is not confirmed.
+      </p>
+      {(row.availabilityUncertain || row.uncertaintyReasons.length > 0) && (
+        <ul className="pp-forecast-caveats" aria-label="Availability uncertainty">
+          {(row.uncertaintyReasons.length > 0 ? row.uncertaintyReasons : ['Participation or availability has not been confirmed.'])
+            .map((reason, index) => <li key={`${reason}-${index}`}>{reason}</li>)}
+        </ul>
+      )}
+      {row.missingFeatures.length > 0 && (
+        <p className="pp-forecast-availability">Unavailable model inputs: {row.missingFeatures.map(label).join(', ')}.</p>
+      )}
+    </article>
+  );
 }
 
 function ProjectionRow({ row, model, expanded, onToggle }: {
@@ -108,6 +147,9 @@ export default function ConsumerProps() {
   const upcomingReadinessQuery = useGetConsumerUpcomingPlayerProjectionReadiness({
     query: { queryKey: getGetConsumerUpcomingPlayerProjectionReadinessQueryKey(), staleTime: 300_000 },
   });
+  const upcomingForecastsQuery = useGetConsumerUpcomingPlayerProjections({
+    query: { queryKey: getGetConsumerUpcomingPlayerProjectionsQueryKey(), staleTime: 60_000, refetchOnMount: 'always' },
+  });
 
   const data = projectionsQuery.data;
   const models = data?.models ?? [];
@@ -125,13 +167,13 @@ export default function ConsumerProps() {
     <div className="consumer-page projection-page">
       <header className="pp-hero">
         <div className="pp-hero-copy">
-          <p className="pp-overline"><span /> Player lab / archive study</p>
+          <p className="pp-overline"><span /> Player lab / development preview</p>
           <h1>Player estimates,<br /><em>with the receipts.</em></h1>
-          <p>Explore what the model estimated for past NFL games, alongside the evidence it had and the result that followed. This is a historical simulation, not a forecast for an upcoming game.</p>
+          <p>Explore conditional upcoming estimates and a separate archive of historical simulations. Upcoming projections do not confirm participation or offer betting advice.</p>
         </div>
         <div className="pp-hero-stamp">
           <small>Study type</small>
-          <strong>Historical only</strong>
+          <strong>Development preview</strong>
           <span>No live player lines</span>
         </div>
       </header>
@@ -156,14 +198,70 @@ export default function ConsumerProps() {
             <CalendarDays aria-hidden="true" />
             <div>
               <span className="pp-upcoming-kicker">Separate development readiness</span>
-              <h2 id="upcoming-readiness-heading">Upcoming player forecasts</h2>
+              <h2 id="upcoming-readiness-heading">Upcoming conditional projections</h2>
             </div>
           </div>
-          <span className={`pp-upcoming-status${upcomingReadinessQuery.data?.status === 'development_forecasts' ? ' is-ready' : ''}`} data-testid="status-upcoming-readiness">
-            {upcomingReadinessQuery.data?.status === 'development_forecasts' ? 'Development only' : 'Unavailable'}
+          <span className={`pp-upcoming-status${upcomingForecastsQuery.data?.status === 'development_forecasts' ? ' is-ready' : ''}`} data-testid="status-upcoming-readiness">
+            {upcomingForecastsQuery.data?.status === 'development_forecasts' ? 'Development only' : 'Unavailable'}
           </span>
         </div>
-        <p className="pp-upcoming-note">This panel reports upcoming-game readiness only. Archived historical estimates below are never presented as upcoming forecasts.</p>
+        <p className="pp-upcoming-note">Conditional, development-only model outputs—not confirmed participation or betting advice. Archived historical estimates below remain separate.</p>
+        {upcomingForecastsQuery.isLoading ? (
+          <div className="pp-upcoming-state" role="status" data-testid="status-upcoming-forecasts-loading">
+            <div className="pp-skeleton" />
+            <p>Calculating conditional upcoming projections…</p>
+          </div>
+        ) : upcomingForecastsQuery.isError ? (
+          <div className="pp-upcoming-state is-error" role="alert" data-testid="status-upcoming-forecasts-error">
+            <p><AlertCircle size={15} aria-hidden="true" /> Upcoming projections could not be loaded. No historical estimates are substituted.</p>
+            <button type="button" onClick={() => void upcomingForecastsQuery.refetch()} data-testid="button-retry-upcoming-forecasts"><RotateCcw size={13} aria-hidden="true" /> Try again</button>
+          </div>
+        ) : upcomingForecastsQuery.data ? (
+          <>
+            <div className="pp-upcoming-message" data-testid="text-upcoming-forecasts-message">
+              <p>{upcomingForecastsQuery.data.message}</p>
+              {upcomingForecastsQuery.data.status === 'unavailable' && (
+                <small>Conditional projections are available only in the development preview. The production API remains unavailable for forecasts.</small>
+              )}
+            </div>
+            <div className="pp-upcoming-summary" aria-label="Upcoming conditional forecast coverage">
+              <div><span>Upcoming games</span><strong>{upcomingForecastsQuery.data.upcomingGames}</strong></div>
+              <div><span>Direct coverage</span><strong>{upcomingForecastsQuery.data.coverage.direct}</strong></div>
+              <div><span>Trusted crosswalk</span><strong>{upcomingForecastsQuery.data.coverage.crosswalk}</strong></div>
+              <div><span>Conditional</span><strong>{upcomingForecastsQuery.data.eligibility.conditional}</strong></div>
+              <div><span>Uncertain</span><strong>{upcomingForecastsQuery.data.eligibility.uncertain}</strong></div>
+              <div><span>Unavailable</span><strong>{upcomingForecastsQuery.data.eligibility.unavailable}</strong></div>
+              <div><span>Forecasts</span><strong>{upcomingForecastsQuery.data.forecasts.length}</strong></div>
+              <div><span>As of</span><strong className="pp-upcoming-asof">{dateTime(upcomingForecastsQuery.data.asOf)}</strong></div>
+            </div>
+            {Object.keys(upcomingForecastsQuery.data.eligibility.reasons).length > 0 && (
+              <div className="pp-upcoming-details" aria-label="Reasons conditional forecasts were withheld">
+                <section>
+                  <h3>Forecasts withheld</h3>
+                  <ul className="pp-upcoming-reasons">
+                    {Object.entries(upcomingForecastsQuery.data.eligibility.reasons).map(([reason, count]) => (
+                      <li key={reason}>{label(reason)} <strong>{count}</strong></li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+            )}
+            {upcomingForecastsQuery.data.forecasts.length > 0 ? (
+              <div className="pp-forecast-list" data-testid="upcoming-forecast-list">
+                {upcomingForecastsQuery.data.forecasts.map(row => (
+                  <UpcomingForecastRow key={`${row.playerId}-${row.gameId}-${row.statistic}`} row={row} />
+                ))}
+              </div>
+            ) : (
+              <p className="pp-upcoming-empty" data-testid="text-upcoming-no-conditional-forecasts">No conditional upcoming projections are available. Historical projections remain separate.</p>
+            )}
+          </>
+        ) : (
+          <div className="pp-upcoming-state" role="status" data-testid="status-upcoming-forecasts-empty">
+            <p>Conditional upcoming projections are not available. No historical estimates are substituted.</p>
+          </div>
+        )}
+        <p className="pp-upcoming-note">Separate strict source-readiness audit: it requires an independently verified ESPN roster assignment and starter evidence. Its eligible count does not describe the conditional Sleeper-based projections above.</p>
         {upcomingReadinessQuery.isLoading ? (
           <div className="pp-upcoming-state" role="status" data-testid="status-upcoming-loading">
             <div className="pp-skeleton" />
@@ -191,7 +289,7 @@ export default function ConsumerProps() {
               <div><span>As of</span><strong className="pp-upcoming-asof" data-testid="text-upcoming-as-of">{dateTime(upcomingReadinessQuery.data.asOf)}</strong></div>
             </div>
             {upcomingReadinessQuery.data.forecasts.length === 0 && (
-              <p className="pp-upcoming-empty" data-testid="text-upcoming-no-forecasts">No upcoming forecast records are available. Historical projections remain separate.</p>
+              <p className="pp-upcoming-empty" data-testid="text-upcoming-no-forecasts">This strict audit does not generate forecasts; conditional projections are shown above.</p>
             )}
             <div className="pp-upcoming-details">
               <section aria-label="Upcoming source freshness">

@@ -1,34 +1,45 @@
 {
   "status": "unavailable",
-  "message": "Read-only readiness audit for the nearest upcoming regular-season week 3. Source census: 475 ESPN QB/RB/WR/TE roster rows; 415 unique regular-season player-stat identities, 367 linked through latest GSIS → ESPN identity to players.player_id. The latest persisted ESPN skill-player row change was 2026-09-17T22:00:09.000Z; this is not the time of the latest complete provider check. Injury evidence: 475 of 475 skill-player roster entries have a matching player/team record, 0 updated within 48 hours. Absence of a record does not establish health. No forecasts are generated or published by this audit. Current player/team assignments lack recent per-player verification; change-only ESPN rows cannot establish upcoming eligibility or support forecasts. ESPN injury coverage is missing or stale; player availability remains uncertain. No depth-chart snapshots exist; starter status cannot be verified.",
-  "asOf": "2026-09-26T15:30:40.823Z",
+  "message": "Read-only readiness audit for the nearest upcoming regular-season week 3. Source census: 512 ESPN QB/RB/WR/TE roster rows; 415 unique regular-season player-stat identities, 387 linked through latest GSIS → ESPN identity to players.player_id. The latest persisted ESPN skill-player row change was 2026-09-26T18:58:03.000Z; this is not the time of the latest complete provider check. Injury evidence: 512 of 512 skill-player roster entries have a matching player/team record, 368 updated within 48 hours. Absence of a record does not establish health. No forecasts are generated or published by this audit. Current player/team assignments lack recent per-player verification; change-only ESPN rows cannot establish upcoming eligibility or support forecasts. No depth-chart snapshots exist; starter status cannot be verified.",
+  "asOf": "2026-09-26T18:58:23.353Z",
   "upcomingGames": 15,
   "eligibility": {
     "eligible": 0,
-    "uncertain": 358,
-    "excluded": 117,
+    "uncertain": 367,
+    "excluded": 145,
     "reasons": {
-      "fewer_than_three_strictly_prior_regular_season_appearances": 89,
-      "starter_status_unknown_no_depth_chart": 358,
-      "roster_assignment_not_recently_verified": 358,
-      "injury_status_not_fresh_and_confirmed_available": 358,
-      "team_not_in_nearest_upcoming_week": 28
+      "starter_status_unknown_no_depth_chart": 367,
+      "roster_assignment_not_recently_verified": 367,
+      "injury_status_not_fresh_and_confirmed_available": 125,
+      "team_not_in_nearest_upcoming_week": 29,
+      "fewer_than_three_strictly_prior_regular_season_appearances": 98,
+      "confirmed_unavailable_injury_status": 18
     }
   },
   "sourceFreshness": {
     "roster": {
       "latestSourceUpdatedAt": null,
       "ageHours": null,
-      "status": "No complete, independently timestamped current player/team roster observation is retained; players.source_updated_at records changes, not checks"
+      "status": "No complete, independently timestamped current player/team roster observation is retained; players.source_updated_at records changes, not checks; Sleeper retrieval does not verify ESPN roster assignments",
+      "lastAttemptAt": "2026-09-26T18:58:01.583Z",
+      "lastSuccessAt": "2026-09-26T18:58:03.196Z",
+      "validRetrievalAt": "2026-09-26T18:58:02.491Z",
+      "lastChangedRowAt": "2026-09-26T18:58:02.491Z",
+      "publicationAt": null
     },
     "injuries": {
-      "latestSourceUpdatedAt": "2026-09-17T22:00:09.000Z",
-      "ageHours": 209.50883972222223,
-      "status": "injuries.source_updated_at (ESPN payload observation when supplied) timestamp is stale (over 48 hours old)"
+      "latestSourceUpdatedAt": "2026-09-26T18:58:03.000Z",
+      "ageHours": 0.005653611111111111,
+      "status": "injuries.source_updated_at (ESPN payload observation when supplied) timestamp is within the 48-hour audit window; injury-only rows cannot confirm omitted players healthy; legacy runs lack response validity metadata",
+      "lastAttemptAt": "2026-09-26T18:58:03.218Z",
+      "lastSuccessAt": "2026-09-26T18:58:08.828Z",
+      "validRetrievalAt": "2026-09-26T18:58:08.828Z",
+      "lastChangedRowAt": "2026-09-26T18:58:08.824Z",
+      "publicationAt": "2026-09-26T18:58:03.000Z"
     },
     "playerStats": {
       "latestSourceUpdatedAt": "2026-09-26T15:01:51.775Z",
-      "ageHours": 0.4802911111111111,
+      "ageHours": 3.942105,
       "status": "nflverse_source_files.completed_at (import ingestion time, not provider publication time) timestamp is within the 48-hour audit window; NFLverse upstream publication time is not independently archived"
     }
   },

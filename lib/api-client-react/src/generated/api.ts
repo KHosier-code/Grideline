@@ -42,6 +42,7 @@ import type {
   ConsumerScheduleSelection,
   ConsumerTeamAnalytics,
   ConsumerTrends,
+  ConsumerUpcomingPlayerProjections,
   DashboardSummary,
   DataHealth,
   Game,
@@ -2984,6 +2985,84 @@ export function useGetConsumerPlayerProjections<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerPlayerProjectionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerUpcomingPlayerProjectionsUrl = () => {
+
+
+
+
+  return `/api/consumer/player-projections/upcoming`
+}
+
+/**
+ * Read-only forecasts from the existing frozen player models for players eligible for conditional projections. An estimate is conditional on participation, is not a guarantee of availability, and is not a betting recommendation or production forecast.
+ * @summary Read development-only upcoming conditional player projections
+ */
+export const getConsumerUpcomingPlayerProjections = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerUpcomingPlayerProjections> => {
+
+  return customFetch<ConsumerUpcomingPlayerProjections>(getGetConsumerUpcomingPlayerProjectionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerUpcomingPlayerProjectionsQueryKey = () => {
+    return [
+    `/api/consumer/player-projections/upcoming`
+    ] as const;
+    }
+
+
+export const getGetConsumerUpcomingPlayerProjectionsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerUpcomingPlayerProjectionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>> = ({ signal }) => getConsumerUpcomingPlayerProjections({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerUpcomingPlayerProjectionsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>>
+export type GetConsumerUpcomingPlayerProjectionsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read development-only upcoming conditional player projections
+ */
+
+export function useGetConsumerUpcomingPlayerProjections<TData = Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerUpcomingPlayerProjectionsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

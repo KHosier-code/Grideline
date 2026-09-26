@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { assessConsumerSource, playerObservationAt, type ConsumerSourceStatus } from "./consumer-source-health";
+import { SLEEPER_ACTIVE_TEAM_CODES } from "./sleeper";
 
 const now = new Date("2026-10-12T18:00:00.000Z");
 const assessment = (overrides: Partial<Parameters<typeof assessConsumerSource>[0]> = {}) =>
@@ -105,18 +106,24 @@ test("consumer source status vocabulary remains constrained", () => {
 test("a complete unchanged player fetch is a fresh source observation", () => {
   const old = new Date("2026-10-10T18:00:00Z");
   const observed = "2026-10-12T17:59:00Z";
-  assert.equal(playerObservationAt([
-    { status: "success", completedAt: now, metadata: { playerCount: 12000, sourceCapturedAt: observed } },
-  ], old)?.toISOString(), observed.replace("Z", ".000Z"));
+  const valid = { provider: "sleeper-players", status: "success", startedAt: new Date("2026-10-12T17:58:00Z"),
+    completedAt: now, recordsProcessed: 0,
+    metadata: { playerCount: 12000, unchanged: 12000, teamCount: 32, teams: [...SLEEPER_ACTIVE_TEAM_CODES], sourceCapturedAt: observed } };
+  assert.equal(playerObservationAt([valid], old)?.toISOString(), observed.replace("Z", ".000Z"));
 });
 
 test("failed, empty, or future player fetches cannot refresh old evidence", () => {
   const old = new Date("2026-10-10T18:00:00Z");
+  const base = { provider: "sleeper-players", status: "success", startedAt: new Date("2026-10-12T17:58:00Z"),
+    completedAt: now, recordsProcessed: 0,
+    metadata: { playerCount: 12000, unchanged: 12000, teamCount: 32, teams: [...SLEEPER_ACTIVE_TEAM_CODES],
+      sourceCapturedAt: "2026-10-12T17:59:00Z" } };
   for (const run of [
-    { status: "failed", completedAt: now, metadata: { playerCount: 12000, sourceCapturedAt: now.toISOString() } },
-    { status: "success", completedAt: now, metadata: { playerCount: 0, sourceCapturedAt: now.toISOString() } },
-    { status: "success", completedAt: now, metadata: { playerCount: 12000, sourceCapturedAt: "2026-10-13T00:00:00Z" } },
+    { ...base, status: "failed" },
+    { ...base, metadata: { ...base.metadata, playerCount: 0 } },
+    { ...base, metadata: { ...base.metadata, sourceCapturedAt: "2026-10-13T00:00:00Z" } },
+    { ...base, metadata: { ...base.metadata, unchanged: 1 } },
   ]) {
-    assert.equal(playerObservationAt([run], old), old);
+    assert.equal(playerObservationAt([run], old), null);
   }
 });
