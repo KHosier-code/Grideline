@@ -14,6 +14,8 @@
     "personnel-comparison": "export NODE_ENV=development && node --enable-source-maps ./dist/personnel-comparison-cli.mjs",
     "player-projections:baseline:dev": "export NODE_ENV=development && pnpm exec esbuild src/player-projections-cli.ts --bundle --platform=node --format=cjs --external:*.node --external:pg-native --outfile=dist/player-projections-cli.cjs && node --enable-source-maps ./dist/player-projections-cli.cjs",
     "player-projections:independent:dev": "export NODE_ENV=development && pnpm exec esbuild src/player-projections-independent-cli.ts --bundle --platform=node --format=cjs --external:*.node --external:pg-native --outfile=dist/player-projections-independent-cli.cjs && node --enable-source-maps ./dist/player-projections-independent-cli.cjs",
+    "player-projections:readiness:dev": "export NODE_ENV=development && pnpm run build && node --enable-source-maps ./dist/player-forecast-readiness-dev-cli.mjs",
+    "test:player-forecast-readiness": "pnpm run build && node --test ./dist/lib/player-forecast-readiness.test.mjs",
     "test:player-projections": "pnpm exec esbuild src/lib/player-projections.test.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/lib/player-projections.test.mjs && node --test ./dist/lib/player-projections.test.mjs",
     "test:personnel-comparison": "pnpm run build && node --test ./dist/lib/personnel-comparison.test.mjs",
     "test:personnel-comparison-performance": "pnpm run build && node --test ./dist/lib/personnel-comparison-performance.test.mjs",

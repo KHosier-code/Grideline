@@ -1,7 +1,13 @@
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Router, type IRouter } from "express";
-import { GetConsumerPlayerProjectionsResponse } from "@workspace/api-zod";
+import {
+  GetConsumerPlayerProjectionsResponse,
+  GetConsumerUpcomingPlayerProjectionReadinessResponse,
+} from "@workspace/api-zod";
+import {
+  readDevelopmentUpcomingPlayerReadiness,
+} from "../lib/player-forecast-readiness";
 import type { PlayerProjectionReport } from "../lib/player-projections";
 
 const router: IRouter = Router();
@@ -95,6 +101,34 @@ router.get("/consumer/player-projections", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Historical player projection report unavailable");
     res.status(503).json({ error: "Historical player projections are unavailable", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/consumer/player-projections/upcoming-readiness", async (req, res): Promise<void> => {
+  if (process.env.NODE_ENV !== "development" || process.env.REPLIT_DEPLOYMENT) {
+    res.json(GetConsumerUpcomingPlayerProjectionReadinessResponse.parse({
+      status: "unavailable",
+      message: "Upcoming player forecast readiness is available only in a local development preview. No forecasts are generated or published.",
+      asOf: null,
+      upcomingGames: 0,
+      eligibility: { eligible: 0, uncertain: 0, excluded: 0, reasons: {} },
+      sourceFreshness: {
+        roster: { latestSourceUpdatedAt: null, ageHours: null, status: "Unavailable outside local development" },
+        injuries: { latestSourceUpdatedAt: null, ageHours: null, status: "Unavailable outside local development" },
+        playerStats: { latestSourceUpdatedAt: null, ageHours: null, status: "Unavailable outside local development" },
+      },
+      blockers: ["This development-only readiness audit is not exposed in production."],
+      forecasts: [],
+    }));
+    return;
+  }
+
+  try {
+    const report = await readDevelopmentUpcomingPlayerReadiness();
+    res.json(GetConsumerUpcomingPlayerProjectionReadinessResponse.parse(report));
+  } catch (error) {
+    req.log.error({ error }, "Upcoming player forecast readiness audit unavailable");
+    res.status(503).json({ error: "Upcoming player forecast readiness is unavailable", code: "consumer_data_unavailable" });
   }
 });
 

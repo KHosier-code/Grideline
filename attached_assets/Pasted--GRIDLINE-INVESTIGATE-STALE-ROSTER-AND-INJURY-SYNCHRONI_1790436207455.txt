@@ -1,0 +1,122 @@
+# GRIDLINE — INVESTIGATE STALE ROSTER AND INJURY SYNCHRONIZATION
+
+WORKSTREAM: Player Projection Engine
+
+PRIORITY: HIGH
+
+OBJECTIVE
+
+Determine why Gridline's development database contains zero QB/RB/WR/TE roster records refreshed within 48 hours and why injury records appear to stop on September 17.
+
+Gridline already has scheduled integrations for player, roster and injury information. Diagnose the existing system rather than building another ingestion pipeline.
+
+This task should unblock Player Engine V1 upcoming forecasts.
+
+## 1. AUDIT EXISTING SYNCHRONIZATION
+
+Inspect the existing ESPN injury and Sleeper player synchronization jobs.
+
+For each source, establish:
+
+- Intended refresh frequency.
+- Whether the development worker is running.
+- Last scheduled execution.
+- Last attempted execution.
+- Last successful execution.
+- Last successful retrieval of valid source data.
+- Last database write.
+- Most recent recorded error.
+- Database and table destinations.
+
+Distinguish development from production using read-only production metadata where available.
+
+Do not access or modify production credentials, worker configuration or data.
+
+## 2. INVESTIGATE FRESHNESS MEASUREMENT
+
+Determine exactly how the upcoming-forecast readiness check measures player freshness.
+
+Does it use:
+
+- Provider publication timestamps?
+- Successful API retrieval timestamps?
+- Gridline ingestion timestamps?
+- Individual record modification timestamps?
+
+Investigate whether immutable snapshots, unchanged provider responses or deduplication are incorrectly making freshly verified player records appear stale.
+
+Do not simply update timestamps to make the readiness check pass.
+
+## 3. VERIFY COVERAGE
+
+Examine the 475 existing QB/RB/WR/TE roster records.
+
+Determine:
+
+- How many have verified current team assignments.
+- How many have recent source retrieval evidence.
+- How many lack a valid player identity.
+- How many have unavailable injury information.
+- Whether roster and injury data are successfully joined.
+
+Distinguish unavailable injury information from an explicit healthy or active status.
+
+## 4. IDENTIFY THE ROOT CAUSE
+
+Determine whether the problem is:
+
+A. Development worker not running.
+
+B. Scheduled jobs not executing.
+
+C. Provider requests failing.
+
+D. Provider data not being persisted.
+
+E. Incorrect database or table selection.
+
+F. Incorrect freshness logic.
+
+G. Actual stale or incomplete provider data.
+
+Identify every confirmed contributing cause with supporting evidence.
+
+## 5. CORRECT THE SMALLEST PROVEN DEFECT
+
+Correct a confirmed code or freshness-logic defect where safely possible in development.
+
+If restoring data requires a manual development-only refresh or restarting a worker, present the exact operation and request approval before executing it.
+
+Do not trigger paid APIs, production synchronization, deployments or worker restarts without explicit authorization.
+
+Keep all four existing player-projection models unchanged.
+
+## 6. VALIDATE
+
+After corrections, demonstrate:
+
+- Accurate source-health reporting.
+- Correct handling of unchanged records.
+- Verified player-team associations.
+- Correct injury-status interpretation.
+- Valid upcoming-forecast freshness decisions.
+- Explicit unavailable states for genuinely stale inputs.
+
+Do not artificially make every player eligible.
+
+## FINAL REPORT
+
+Return:
+
+1. The confirmed synchronization problem.
+2. Actual last-successful-refresh timestamps for each provider.
+3. Whether the development worker is operating correctly.
+4. Whether production and development have different freshness states.
+5. Whether the current 48-hour eligibility rule is appropriate.
+6. Corrections implemented and tested.
+7. Any owner-approved development refresh still required.
+8. Number of players eligible for upcoming forecasts after correction.
+
+Do not expand this into another project-wide audit or redesign.
+
+The objective is to make the existing automatic data pipeline work reliably for the player-projection engine.

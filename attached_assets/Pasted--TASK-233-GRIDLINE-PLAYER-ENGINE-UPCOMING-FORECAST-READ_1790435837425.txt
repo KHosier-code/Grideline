@@ -1,0 +1,167 @@
+# TASK #233 — GRIDLINE PLAYER ENGINE: UPCOMING FORECAST READINESS
+
+WORKSTREAM: Player Projection Engine
+
+PRIORITY: HIGH
+
+OBJECTIVE
+
+Advance Gridline's four validated player-projection baselines from retrospective historical simulations to development-only upcoming forecasts.
+
+The existing models have already been evaluated on 2024, 2025 and completed 2026 games.
+
+Do not rebuild, retrain or tune them.
+
+This task has one objective: establish reliable, timestamped upcoming-player eligibility and input freshness, then generate legitimate development-only forecasts where the available evidence permits.
+
+## 1. PRESERVE THE EXISTING MODELS
+
+Retain all four existing model configurations:
+
+- QB passing yards
+- RB rushing yards
+- WR/TE receiving yards
+- WR/TE receptions
+
+Preserve their historical evaluations and model identities.
+
+Do not modify Phase 6.1 game models.
+
+Do not change production.
+
+## 2. VERIFY CURRENT PLAYER ELIGIBILITY
+
+Reuse Gridline's existing data sources.
+
+For upcoming games, establish:
+
+- Verified game identifier.
+- Scheduled kickoff in UTC.
+- Player identity.
+- Current team assignment.
+- Opponent.
+- Eligible position.
+- Recent historical appearances.
+- Available injury information.
+- Existing role or participation evidence.
+
+Use historical player performance to establish baseline eligibility.
+
+Do not require perfect depth-chart coverage or a verified individual defender assignment.
+
+Never automatically assume that an unverified player will start or participate.
+
+Distinguish established player eligibility from confirmed starting status.
+
+## 3. ESTABLISH FRESHNESS REQUIREMENTS
+
+Record the actual calculation timestamp for every forecast.
+
+Verify the latest available source records and their timestamps.
+
+Separate:
+
+- Original source observation time, when available.
+- Provider publication or update time, when available.
+- Gridline ingestion time.
+- Forecast calculation time.
+
+Do not substitute ingestion time for an unknown source-publication timestamp.
+
+Establish documented freshness rules for upcoming games.
+
+Missing or stale information should produce an explicit warning or unavailable state according to its importance.
+
+## 4. GENERATE DEVELOPMENT FORECASTS
+
+Using the existing frozen models, generate projections for eligible players in verified upcoming games.
+
+Return:
+
+- Player and team.
+- Opponent and kickoff.
+- Projected statistic.
+- Model version.
+- Recent historical averages.
+- Sample quality.
+- Source freshness.
+- Eligibility status.
+- Injury and participation uncertainty.
+- Calculation timestamp.
+
+Do not generate forecasts for players with unresolved critical identity or team information.
+
+Do not invent projected participation or individual defensive matchups.
+
+If the available evidence does not support any upcoming projections, report the exact remaining data blocker rather than displaying simulated forecasts as live.
+
+## 5. VALIDATE AND TEST
+
+Test:
+
+- Correct player-team assignments.
+- Correct opponent assignments.
+- Pregame feature cutoffs.
+- Source freshness calculations.
+- Missing-player handling.
+- Player transfers and team changes.
+- Uncertain injury and starter situations.
+- No future-statistical leakage.
+- Deterministic inference from the frozen models.
+
+Report the number of eligible, uncertain and excluded players, with reasons.
+
+Do not require artificially high coverage.
+
+## 6. WEBSITE INTEGRATION
+
+Reuse the existing /props experience.
+
+Prepare a clear distinction between:
+
+- Historical simulations.
+- Development forecasts.
+- Unavailable player projections.
+
+Do not present development forecasts as production predictions.
+
+Do not activate betting recommendations.
+
+Do not publish.
+
+## 7. PROJECT CONTROL
+
+Create or update GRIDLINE_PROJECT_CONTROL.md using verified repository evidence.
+
+Record:
+
+- Player Engine V1: historical evaluation completed.
+- Upcoming forecast readiness: current task.
+- Historical validation limitations.
+- Actual implementation and testing status.
+- Merge and publication status.
+
+Do not expand this into another comprehensive project audit.
+
+## FINAL DELIVERABLE
+
+Save:
+
+reports/gridline-player-engine-upcoming-readiness.md
+
+Return:
+
+1. Number of upcoming games evaluated.
+2. Player eligibility and exclusion counts.
+3. Freshness and injury-data coverage.
+4. Number of development forecasts generated.
+5. Actual projection examples, if eligible.
+6. Any specific remaining blockers.
+7. Tests and verification results.
+8. Confirmation that frozen models and production remain unchanged.
+
+SUCCESS CRITERION
+
+Demonstrate genuine development-only forecasts for eligible upcoming players, or identify one specific blocking dependency that prevents them.
+
+Do not initiate another broad infrastructure or model-development investigation.

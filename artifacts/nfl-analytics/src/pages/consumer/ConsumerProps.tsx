@@ -2,12 +2,14 @@ import { useMemo, useState } from 'react';
 import {
   getGetConsumerPlayerProjectionsQueryKey,
   getGetConsumerPropsAvailabilityQueryKey,
+  getGetConsumerUpcomingPlayerProjectionReadinessQueryKey,
   useGetConsumerPlayerProjections,
   useGetConsumerPropsAvailability,
+  useGetConsumerUpcomingPlayerProjectionReadiness,
   type ConsumerPlayerProjection,
   type ConsumerPlayerProjectionModel,
 } from '@workspace/api-client-react';
-import { ChevronDown, FlaskConical, LockKeyhole, RotateCcw, ShieldAlert } from 'lucide-react';
+import { AlertCircle, CalendarDays, ChevronDown, FlaskConical, LockKeyhole, RotateCcw, ShieldAlert } from 'lucide-react';
 import { formatKickoff } from './consumer-ui';
 import './ConsumerProps.css';
 
@@ -103,6 +105,9 @@ export default function ConsumerProps() {
   const availabilityQuery = useGetConsumerPropsAvailability({
     query: { queryKey: getGetConsumerPropsAvailabilityQueryKey(), staleTime: 300_000 },
   });
+  const upcomingReadinessQuery = useGetConsumerUpcomingPlayerProjectionReadiness({
+    query: { queryKey: getGetConsumerUpcomingPlayerProjectionReadinessQueryKey(), staleTime: 300_000 },
+  });
 
   const data = projectionsQuery.data;
   const models = data?.models ?? [];
@@ -144,6 +149,91 @@ export default function ConsumerProps() {
         <div><span>Eligible players</span><strong data-testid="text-eligible-players">{data?.eligiblePlayers ?? '—'}</strong><small>In the available simulation</small></div>
         <div><span>Archive generated</span><strong data-testid="text-generated-at">{data?.generatedAt ? dateTime(data.generatedAt) : '—'}</strong><small>Not a live update timestamp</small></div>
       </div>
+
+      <section className="pp-upcoming" aria-labelledby="upcoming-readiness-heading" data-testid="panel-upcoming-readiness">
+        <div className="pp-upcoming-heading">
+          <div className="pp-upcoming-title">
+            <CalendarDays aria-hidden="true" />
+            <div>
+              <span className="pp-upcoming-kicker">Separate development readiness</span>
+              <h2 id="upcoming-readiness-heading">Upcoming player forecasts</h2>
+            </div>
+          </div>
+          <span className={`pp-upcoming-status${upcomingReadinessQuery.data?.status === 'development_forecasts' ? ' is-ready' : ''}`} data-testid="status-upcoming-readiness">
+            {upcomingReadinessQuery.data?.status === 'development_forecasts' ? 'Development only' : 'Unavailable'}
+          </span>
+        </div>
+        <p className="pp-upcoming-note">This panel reports upcoming-game readiness only. Archived historical estimates below are never presented as upcoming forecasts.</p>
+        {upcomingReadinessQuery.isLoading ? (
+          <div className="pp-upcoming-state" role="status" data-testid="status-upcoming-loading">
+            <div className="pp-skeleton" />
+            <p>Checking upcoming-game data readiness…</p>
+          </div>
+        ) : upcomingReadinessQuery.isError ? (
+          <div className="pp-upcoming-state is-error" role="alert" data-testid="status-upcoming-error">
+            <p><AlertCircle size={15} aria-hidden="true" /> Upcoming forecast readiness could not be loaded. No historical estimates are substituted.</p>
+            <button type="button" onClick={() => void upcomingReadinessQuery.refetch()} data-testid="button-retry-upcoming-readiness"><RotateCcw size={13} aria-hidden="true" /> Try again</button>
+          </div>
+        ) : upcomingReadinessQuery.data ? (
+          <>
+            <div className="pp-upcoming-message" data-testid="text-upcoming-readiness-message">
+              <p>{upcomingReadinessQuery.data.message}</p>
+              {upcomingReadinessQuery.data.status === 'unavailable' && (
+                <small>This readiness audit runs only in local development previews. The production API returns unavailable; no forecasts are generated or published there.</small>
+              )}
+            </div>
+            <div className="pp-upcoming-summary" aria-label="Upcoming readiness counts">
+              <div><span>Upcoming games</span><strong data-testid="text-upcoming-games">{upcomingReadinessQuery.data.upcomingGames}</strong></div>
+              <div><span>Eligible</span><strong data-testid="text-upcoming-eligible">{upcomingReadinessQuery.data.eligibility.eligible}</strong></div>
+              <div><span>Uncertain</span><strong data-testid="text-upcoming-uncertain">{upcomingReadinessQuery.data.eligibility.uncertain}</strong></div>
+              <div><span>Excluded</span><strong data-testid="text-upcoming-excluded">{upcomingReadinessQuery.data.eligibility.excluded}</strong></div>
+              <div><span>Forecast records</span><strong data-testid="text-upcoming-forecast-count">{upcomingReadinessQuery.data.forecasts.length}</strong></div>
+              <div><span>As of</span><strong className="pp-upcoming-asof" data-testid="text-upcoming-as-of">{dateTime(upcomingReadinessQuery.data.asOf)}</strong></div>
+            </div>
+            {upcomingReadinessQuery.data.forecasts.length === 0 && (
+              <p className="pp-upcoming-empty" data-testid="text-upcoming-no-forecasts">No upcoming forecast records are available. Historical projections remain separate.</p>
+            )}
+            <div className="pp-upcoming-details">
+              <section aria-label="Upcoming source freshness">
+                <h3>Source freshness</h3>
+                <dl className="pp-freshness">
+                  {([
+                    ['Roster', upcomingReadinessQuery.data.sourceFreshness.roster],
+                    ['Injuries', upcomingReadinessQuery.data.sourceFreshness.injuries],
+                    ['Player stats', upcomingReadinessQuery.data.sourceFreshness.playerStats],
+                  ] as const).map(([source, freshness]) => (
+                    <div key={source}>
+                      <dt>{source}</dt>
+                      <dd>{freshness.status}<small>{freshness.latestSourceUpdatedAt ? dateTime(freshness.latestSourceUpdatedAt) : 'No source timestamp'}{freshness.ageHours !== null ? ` · ${number(freshness.ageHours)}h old` : ''}</small></dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+              <section aria-label="Upcoming forecast blockers">
+                <h3>Readiness reasons & blockers</h3>
+                {Object.keys(upcomingReadinessQuery.data.eligibility.reasons).length > 0 && (
+                  <ul className="pp-upcoming-reasons">
+                    {Object.entries(upcomingReadinessQuery.data.eligibility.reasons).map(([reason, count]) => (
+                      <li key={reason}>{label(reason)} <strong>{count}</strong></li>
+                    ))}
+                  </ul>
+                )}
+                {upcomingReadinessQuery.data.blockers.length > 0 ? (
+                  <ul className="pp-upcoming-blockers">
+                    {upcomingReadinessQuery.data.blockers.map((blocker, index) => <li key={`${blocker}-${index}`}>{blocker}</li>)}
+                  </ul>
+                ) : Object.keys(upcomingReadinessQuery.data.eligibility.reasons).length === 0 ? (
+                  <p className="pp-upcoming-no-blockers">No readiness blockers reported.</p>
+                ) : null}
+              </section>
+            </div>
+          </>
+        ) : (
+          <div className="pp-upcoming-state" role="status" data-testid="status-upcoming-empty">
+            <p>Upcoming readiness is not available. No historical estimates are substituted.</p>
+          </div>
+        )}
+      </section>
 
       <div className="pp-workspace">
         <main className="pp-main">

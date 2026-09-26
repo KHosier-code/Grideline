@@ -1,0 +1,9 @@
+# Gridline project control
+
+## Player Engine V1
+
+- **Historical evaluation: completed in development.** Four fixed player-projection families (QB passing yards, RB rushing yards, WR/TE receiving yards, WR/TE receptions) retain their original 2021–2023 fitted configurations and 2024 evaluation. Separate 2025 and completed-2026 historical results are recorded in `reports/gridline-player-projection-independent-validation.md` and its JSON companion. These are not upcoming forecasts.
+- **Upcoming forecast readiness: audited in development; forecasts unavailable.** The read-only check covers the nearest 15 scheduled future regular-season games against player identity, team assignment, historical appearances, source freshness, and available injury evidence. At the September 26, 2026 review, no complete timestamped per-player roster verification was retained. The latest changed row dates to September 17, but that is not proof of the last provider check. Do not offer development forecasts until current assignments can be verified and an actual cutoff-safe inference path is validated.
+- **Historical limitations:** Retrospective game-time feature order does not establish when original player-stat files or schedule revisions were published. Historical stat lines do not establish future participation, starting status, or injury clearance.
+- **Implementation and testing:** The frozen model reports remain unchanged. The development readiness report records the current audit, coverage, and exclusions; the `/props` experience distinguishes its readiness state from historical simulations and betting props. Focused readiness tests and API/web TypeScript checks pass. No upcoming inference or forecast generation was implemented while current eligibility evidence is blocked.
+- **Merge and publication:** This work is in the development workspace. No merge, publication, production-data change, or Phase 6.1 model change was performed as part of this task.

@@ -1430,6 +1430,53 @@ export interface ConsumerPlayerProjections {
   projections: ConsumerPlayerProjection[];
 }
 
+export interface UpcomingReadinessSourceFreshness {
+  /** @nullable */
+  latestSourceUpdatedAt: string | null;
+  /** @nullable */
+  ageHours: number | null;
+  status: string;
+}
+
+export type UpcomingPlayerProjectionReadinessStatus = typeof UpcomingPlayerProjectionReadinessStatus[keyof typeof UpcomingPlayerProjectionReadinessStatus];
+
+
+export const UpcomingPlayerProjectionReadinessStatus = {
+  unavailable: 'unavailable',
+  development_forecasts: 'development_forecasts',
+} as const;
+
+export type UpcomingPlayerProjectionReadinessEligibilityReasons = {[key: string]: number};
+
+export type UpcomingPlayerProjectionReadinessEligibility = {
+  /** @minimum 0 */
+  eligible: number;
+  /** @minimum 0 */
+  uncertain: number;
+  /** @minimum 0 */
+  excluded: number;
+  reasons: UpcomingPlayerProjectionReadinessEligibilityReasons;
+};
+
+export type UpcomingPlayerProjectionReadinessSourceFreshness = {
+  roster: UpcomingReadinessSourceFreshness;
+  injuries: UpcomingReadinessSourceFreshness;
+  playerStats: UpcomingReadinessSourceFreshness;
+};
+
+export interface UpcomingPlayerProjectionReadiness {
+  status: UpcomingPlayerProjectionReadinessStatus;
+  message: string;
+  /** @nullable */
+  asOf: string | null;
+  /** @minimum 0 */
+  upcomingGames: number;
+  eligibility: UpcomingPlayerProjectionReadinessEligibility;
+  sourceFreshness: UpcomingPlayerProjectionReadinessSourceFreshness;
+  blockers: string[];
+  forecasts: unknown[];
+}
+
 export interface ConsumerUsageMetric {
   /** @nullable */
   value: number | null;

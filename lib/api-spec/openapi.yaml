@@ -700,6 +700,22 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerPlayerProjections" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/player-projections/upcoming-readiness:
+    get:
+      operationId: getConsumerUpcomingPlayerProjectionReadiness
+      tags: [nfl]
+      summary: Read the development-only upcoming player forecast readiness audit
+      description: >
+        Read-only audit of the nearest upcoming regular-season week. It never
+        generates forecasts. Provider observation timestamps are distinguished
+        from ingestion timestamps where the source schema permits.
+      responses:
+        "200":
+          description: Upcoming player forecast readiness, or explicit unavailability outside development
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UpcomingPlayerProjectionReadiness" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
   /consumer/player-usage:
     get:
       operationId: getConsumerPlayerUsage
@@ -1711,6 +1727,44 @@ components:
         eligiblePlayers: { type: integer }
         models: { type: array, items: { $ref: "#/components/schemas/ConsumerPlayerProjectionModel" } }
         projections: { type: array, items: { $ref: "#/components/schemas/ConsumerPlayerProjection" } }
+    UpcomingReadinessSourceFreshness:
+      type: object
+      required: [latestSourceUpdatedAt, ageHours, status]
+      properties:
+        latestSourceUpdatedAt: { type: ["string", "null"], format: date-time }
+        ageHours: { type: ["number", "null"] }
+        status: { type: string }
+    UpcomingPlayerProjectionReadiness:
+      type: object
+      required: [status, message, asOf, upcomingGames, eligibility, sourceFreshness, blockers, forecasts]
+      properties:
+        status: { type: string, enum: [unavailable, development_forecasts] }
+        message: { type: string }
+        asOf: { type: ["string", "null"], format: date-time }
+        upcomingGames: { type: integer, minimum: 0 }
+        eligibility:
+          type: object
+          required: [eligible, uncertain, excluded, reasons]
+          properties:
+            eligible: { type: integer, minimum: 0 }
+            uncertain: { type: integer, minimum: 0 }
+            excluded: { type: integer, minimum: 0 }
+            reasons:
+              type: object
+              additionalProperties: { type: integer, minimum: 0 }
+        sourceFreshness:
+          type: object
+          required: [roster, injuries, playerStats]
+          properties:
+            roster: { $ref: "#/components/schemas/UpcomingReadinessSourceFreshness" }
+            injuries: { $ref: "#/components/schemas/UpcomingReadinessSourceFreshness" }
+            playerStats: { $ref: "#/components/schemas/UpcomingReadinessSourceFreshness" }
+        blockers:
+          type: array
+          items: { type: string }
+        forecasts:
+          type: array
+          items: {}
     ConsumerUsageMetric:
       type: object
       required: [value, available, reason]

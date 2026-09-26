@@ -2170,6 +2170,55 @@ export const GetConsumerPlayerProjectionsResponse = zod.object({
 
 
 /**
+ * Read-only audit of the nearest upcoming regular-season week. It never generates forecasts. Provider observation timestamps are distinguished from ingestion timestamps where the source schema permits.
+ * @summary Read the development-only upcoming player forecast readiness audit
+ */
+export const getConsumerUpcomingPlayerProjectionReadinessResponseUpcomingGamesMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityEligibleMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityUncertainMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityExcludedMin = 0;
+
+export const getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityReasonsMinOne = 0;
+
+
+
+export const GetConsumerUpcomingPlayerProjectionReadinessResponse = zod.object({
+  "status": zod.enum(['unavailable', 'development_forecasts']),
+  "message": zod.string(),
+  "asOf": zod.coerce.date().nullable(),
+  "upcomingGames": zod.number().int().min(getConsumerUpcomingPlayerProjectionReadinessResponseUpcomingGamesMin),
+  "eligibility": zod.object({
+  "eligible": zod.number().int().min(getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityEligibleMin),
+  "uncertain": zod.number().int().min(getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityUncertainMin),
+  "excluded": zod.number().int().min(getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityExcludedMin),
+  "reasons": zod.record(zod.string(), zod.number().int().min(getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityReasonsMinOne))
+}),
+  "sourceFreshness": zod.object({
+  "roster": zod.object({
+  "latestSourceUpdatedAt": zod.coerce.date().nullable(),
+  "ageHours": zod.number().nullable(),
+  "status": zod.string()
+}),
+  "injuries": zod.object({
+  "latestSourceUpdatedAt": zod.coerce.date().nullable(),
+  "ageHours": zod.number().nullable(),
+  "status": zod.string()
+}),
+  "playerStats": zod.object({
+  "latestSourceUpdatedAt": zod.coerce.date().nullable(),
+  "ageHours": zod.number().nullable(),
+  "status": zod.string()
+})
+}),
+  "blockers": zod.array(zod.string()),
+  "forecasts": zod.array(zod.unknown())
+})
+
+
+/**
  * @summary Read cutoff-safe player usage history
  */
 export const getConsumerPlayerUsageQueryWindowDefault = `last5`;
