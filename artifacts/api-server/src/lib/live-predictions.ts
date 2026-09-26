@@ -205,11 +205,12 @@ export function comparisonData(
   };
 }
 
-async function productionModels() {
+async function productionModels(asOf?: Date) {
   const promotions = await db
     .select()
     .from(modelPromotionHistoryTable)
-    .where(eq(modelPromotionHistoryTable.role, "production"))
+    .where(and(eq(modelPromotionHistoryTable.role, "production"),
+      asOf ? lte(modelPromotionHistoryTable.promotedAt, asOf) : undefined))
     .orderBy(desc(modelPromotionHistoryTable.promotedAt), desc(modelPromotionHistoryTable.id));
   const current = new Map<Family, typeof promotions[number]>();
   for (const promotion of promotions) {
@@ -752,6 +753,70 @@ export function evaluateProductionInputEligibility(
     cutoffValid,
     vectorValid,
     causes: [...new Set(causes)],
+  };
+}
+
+/** Score only evidence that existed when Gridline observed the first lines.
+ * This does not create or freeze a canonical evaluation snapshot. */
+export async function inferInitialLineGame(gameId: string, requestedAt: Date, observedAt: Date) {
+  const [game] = await db.select().from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1);
+  if (!game?.kickoffTime || observedAt >= game.kickoffTime || requestedAt > observedAt)
+    return { status: "missing_input" as const, reason: "The scheduled kickoff or pregame cutoff could not be verified." };
+  const models = await productionModels(requestedAt);
+  const schema = sharedProductionSchema([...models.values()]);
+  if (!schema || models.size !== 3 || [...models.values()].some((model) =>
+    model.promotedAt > requestedAt || model.trainedAt > requestedAt
+    || !model.artifactId || !model.artifactChecksum))
+    return { status: "invalid_model" as const, reason: "Promoted fitted models with matching schema were unavailable at the first request." };
+  const rows = await db.select().from(pregameTeamFeaturesTable).where(and(
+    eq(pregameTeamFeaturesTable.gameId, gameId),
+    eq(pregameTeamFeaturesTable.featureVersion, schema.featureVersion),
+  ));
+  const vector = vectorForRows(rows, schema.names.slice(0, -3));
+  if (!evaluateProductionInputEligibility(game, rows, vector, true, requestedAt).eligible || !vector?.x)
+    return { status: "missing_input" as const, reason: "Complete, cutoff-safe pregame model inputs were unavailable at the first request." };
+  const margin = predictWithModel(models.get("spread")!, vector.x).value;
+  const total = predictWithModel(models.get("totals")!, vector.x).value;
+  const home = predictWithModel(models.get("moneyline")!, vector.x).value;
+  const output = {
+    projectedMargin: margin, projectedTotal: total, homeWinProbability: home,
+    awayWinProbability: home === null ? null : 1 - home,
+    projectedHomeScore: margin === null || total === null ? null : (total + margin) / 2,
+    projectedAwayScore: margin === null || total === null ? null : (total - margin) / 2,
+  };
+  if (validatePredictionOutputs(output).length || home === 0.5)
+    return { status: "invalid_model" as const, reason: "The fitted model did not produce a valid decisive winner." };
+  const evidence = { rows: rows.map((row) => ({
+    gameId: row.gameId, teamId: row.teamId, opponentTeamId: row.opponentTeamId,
+    isHome: row.isHome, sourceCutoff: row.sourceCutoff.toISOString(), generatedAt: row.generatedAt.toISOString(),
+    lowSample: row.lowSample,
+    selectedValues: Object.fromEntries(schema.names.slice(0, -3).map((name) => [name, row.features[name] ?? null])),
+    qbDataConfidence: row.features.qb_data_confidence ?? null,
+  })) };
+  const integrity = {
+    gameId, kickoffTime: game.kickoffTime, predictionTimestamp: requestedAt,
+    snapshotKey: `initial:input-integrity-v3:${schema.fingerprint}`,
+    spreadModelVersion: models.get("spread")!.modelVersion,
+    moneylineModelVersion: models.get("moneyline")!.modelVersion,
+    totalsModelVersion: models.get("totals")!.modelVersion,
+    inputFeatureCount: vector.inputFeatureCount, inputMissingFeatureCount: vector.inputMissingFeatureCount,
+    inputVector: vector.x, vectorFeatureNames: schema.names,
+    vectorSchemaFingerprint: schema.fingerprint, inputSourceEvidence: evidence,
+    ...output,
+  };
+  if (!isEligiblePredictionSnapshot(integrity))
+    return { status: "missing_input" as const, reason: "The original model vector and source evidence did not pass integrity checks." };
+  return {
+    status: "locked" as const, reason: null, game,
+    winnerTeamId: home! > 0.5 ? game.homeTeamId : game.awayTeamId,
+    winnerProbability: Math.max(home!, 1 - home!),
+    models: Object.fromEntries([...models.values()].map((model) => [model.family, {
+      version: model.modelVersion, artifactId: model.artifactId!, checksum: model.artifactChecksum!,
+      promotedAt: model.promotedAt.toISOString(), trainingCutoff: model.trainingCutoff,
+    }])),
+    featureVersion: schema.featureVersion, vectorFeatureNames: schema.names,
+    vectorSchemaFingerprint: schema.fingerprint, inputVector: vector.x,
+    inputSourceEvidence: evidence, prediction: output as Record<string, number>,
   };
 }
 

@@ -73,14 +73,15 @@ test('visitor Home renders only its pick or concise states, never signed-in Home
     renderToStaticMarkup(createElement(Router, { hook: staticLocation },
       createElement(VisitorHomeContent, props)));
   for (const [state, expected] of [['ready', 'Home'], ['loading', 'Loading this week'], ['error', 'Pick unavailable right now']] as const) {
-    const html = renderVisitor({ games: [official], now, state });
+    const html = renderVisitor({ initialWeeklyPick: { pick: { gameId: 'g', teamName: 'Home', season: 2026, week: 3, probability: .7, observedAt: new Date(now).toISOString() }, reason: null }, now, state });
     assert.match(html, new RegExp(expected));
     assert.match(html, /Pick of the week/);
     assert.doesNotMatch(html, /weekly-list|weekly-intro|weekly-status|ch-feature|Saved projection|Upcoming schedule|Persisted feed status|Home spread evidence|weekly-evidence|consumer-source-health/);
     if (state !== 'ready') assert.doesNotMatch(html, /weekly-pick-team/);
   }
-  const missing = renderVisitor({ games: [game], now, state: 'ready' });
-  assert.match(missing, /A pick is unavailable/);
+  const missing = renderVisitor({ initialWeeklyPick: { pick: null, reason: 'Cutoff-safe model inputs were unavailable at the first observed lines.' }, now, state: 'ready' });
+  assert.match(missing, /Cutoff-safe model inputs/);
+  assert.doesNotMatch(missing, /weekly-pick-team/);
 });
 
 test('snapshot provenance stays distinct from absence and official freeze', () => {

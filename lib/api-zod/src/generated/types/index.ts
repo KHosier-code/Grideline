@@ -44,6 +44,8 @@ export * from './consumerCurrentOffenseRolesRunningBackCommitteeStatus';
 export * from './consumerCurrentRolePlayer';
 export * from './consumerCurrentRolePlayerAvailability';
 export * from './consumerDashboard';
+export * from './consumerDashboardInitialWeeklyPick';
+export * from './consumerDashboardInitialWeeklyPickPick';
 export * from './consumerDashboardStatus';
 export * from './consumerDataUnavailableResponse';
 export * from './consumerDefenseVsPosition';

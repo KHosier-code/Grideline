@@ -9,6 +9,7 @@ import {
   teamsTable,
   type OddsAuditCandidate,
 } from "@workspace/db";
+import { captureInitialLineOutcome, selectInitialWeeklyPick, type InitialQuote } from "./initial-line-picks";
 
 export const SUPPORTED_SPORTSBOOKS = ["DraftKings", "FanDuel"] as const;
 export const SUPPORTED_MARKETS = ["spread", "moneyline", "total"] as const;
@@ -1241,6 +1242,7 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
   const failedSportsbooks = new Set<string>();
   const eventAudits: OddsEventAuditInsert[] = [];
   const now = new Date();
+  const initialEvents: Array<{ gameId: string; quotes: InitialQuote[] }> = [];
 
   for (const [eventIndex, event] of events.entries()) {
     const diagnostics = diagnoseOddsEventMatch(event, existingGames);
@@ -1299,6 +1301,7 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
     let observationsSaved = 0;
     let duplicateObservations = 0;
     let rejectedObservations = 0;
+    const initialQuotes: InitialQuote[] = [];
     const bookmakers = Array.isArray(event.bookmakers) ? event.bookmakers.map(asRecord) : [];
     for (const rawBookmaker of bookmakers) {
       const sportsbook = bookmakerName(rawBookmaker);
@@ -1333,6 +1336,7 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
             rejectedObservations += 1;
             continue;
           }
+          initialQuotes.push({ sportsbook, market, selection, point, price, sourceTimestamp });
           observationsReceived += 1;
           const result = await insertIfChanged(
             game,
@@ -1377,6 +1381,7 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
       duplicateObservations,
       rejectedObservations,
     });
+    initialEvents.push({ gameId: game.gameId, quotes: initialQuotes });
   }
   for (const sportsbook of SUPPORTED_SPORTSBOOKS) {
     if (!validSportsbooks.has(sportsbook)) {
@@ -1433,6 +1438,16 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
     },
   });
   await recordEventAudits(requestId, eventAudits);
+  for (const event of initialEvents) {
+    await captureInitialLineOutcome({
+      ...event, requestId, requestedAt, observedAt: now,
+    });
+  }
+  for (const game of matchedGames.values()) {
+    const [schedule] = await db.select({ season: gamesTable.season, week: gamesTable.week })
+      .from(gamesTable).where(eq(gamesTable.gameId, game.gameId)).limit(1);
+    if (schedule) await selectInitialWeeklyPick(schedule.season, schedule.week, now);
+  }
   lastCaptureFailure = null;
   return {
     status: "success",

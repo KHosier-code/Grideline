@@ -1582,9 +1582,26 @@ components:
           items: { $ref: "#/components/schemas/ConsumerPlayerUsageGame" }
     ConsumerDashboard:
       type: object
-      required: [status, games, note, sourceHealth]
+      required: [status, games, note, sourceHealth, initialWeeklyPick]
       properties:
         status: { type: string, enum: [available, unavailable] }
+        initialWeeklyPick:
+          type: object
+          required: [pick, reason]
+          properties:
+            pick:
+              oneOf:
+                - type: "null"
+                - type: object
+                  required: [gameId, teamName, season, week, probability, observedAt]
+                  properties:
+                    gameId: { type: string }
+                    teamName: { type: string }
+                    season: { type: integer }
+                    week: { type: integer }
+                    probability: { type: number }
+                    observedAt: { type: string, format: date-time }
+            reason: { type: ["string", "null"] }
         games:
           type: array
           items: { $ref: "#/components/schemas/ConsumerGame" }

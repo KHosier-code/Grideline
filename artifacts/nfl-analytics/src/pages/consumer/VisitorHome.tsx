@@ -11,7 +11,7 @@ export default function VisitorHome() {
   const now = useConsumerNow();
   return <VisitorHomeContent
     now={now}
-    games={query.data?.games}
+    initialWeeklyPick={query.data?.initialWeeklyPick}
     state={query.isLoading ? 'loading' : query.isError || !query.data ? 'error' : 'ready'}
   />;
 }

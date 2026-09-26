@@ -47,6 +47,7 @@ import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalSco
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
+import { readInitialWeeklyPick } from "../lib/initial-line-picks";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, readMatchupDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { attachQualifiedScoringTdProbability, buildPlayerPositionMatchup } from "../lib/player-position-matchup";
@@ -1584,9 +1585,9 @@ export async function consumerGames(
 
 router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   try {
-    const games = await consumerGames();
+    const [games, initialWeeklyPick] = await Promise.all([consumerGames(), readInitialWeeklyPick()]);
     res.set("Cache-Control", "no-store");
-    res.json({ status: games.length ? "available" : "unavailable", games, sourceHealth: games.sourceHealth, note: "Persisted snapshots only; this endpoint never starts model computation or data synchronization." });
+    res.json({ status: games.length ? "available" : "unavailable", games, initialWeeklyPick, sourceHealth: games.sourceHealth, note: "Persisted snapshots only; this endpoint never starts model computation or data synchronization." });
   } catch (error) {
     _req.log.error({ error }, "Consumer dashboard read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });

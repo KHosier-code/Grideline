@@ -1418,6 +1418,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.equal(GetConsumerDashboardResponse.safeParse({
     status: "available",
     games: [game],
+    initialWeeklyPick: { pick: null, reason: "Waiting for first verified lines for the upcoming slate." },
     sourceHealth,
     note: "Persisted snapshots only",
   }).success, true);

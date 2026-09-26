@@ -878,8 +878,17 @@ export const ConsumerDashboardStatus = {
   unavailable: 'unavailable',
 } as const;
 
+export type ConsumerDashboardInitialWeeklyPickPick = {
+  gameId: string;
+  teamName: string;
+  season: number;
+  week: number;
+  probability: number;
+  observedAt: string;
+} | null;
 export interface ConsumerDashboard {
   status: ConsumerDashboardStatus;
+  initialWeeklyPick: ConsumerDashboardInitialWeeklyPick;
   games: ConsumerGame[];
   note: string;
   sourceHealth: ConsumerSourceHealth;
@@ -3646,3 +3655,9 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
+
+export type ConsumerDashboardInitialWeeklyPick = {
+  pick: ConsumerDashboardInitialWeeklyPickPick;
+  /** @nullable */
+  reason: string | null;
+};
