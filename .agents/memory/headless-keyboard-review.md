@@ -1,10 +1,10 @@
 ---
 name: Headless keyboard review
-description: Reliable keyboard interaction checks in a separately launched headless Chromium page
+description: Native keyboard activation in CDP-only browser checks
 ---
 
-When sending keyboard events through Chrome DevTools Protocol to a page opened in a headless browser, bring that page to the foreground before dispatching the key event. After an input or DOM click, wait briefly for React to render before reading `aria-expanded` or finding a newly mounted link.
+In a CDP-only browser check, a focused button receiving keydown does not prove its native click fired. Deliver the key's text/char event as well as keydown/up, activate the page target first, and assert the resulting UI state after rendering.
 
-**Why:** A focused button in a non-frontmost DevTools target did not respond to dispatched keys, and an immediate read after a click saw the previous DOM state. Bringing the page forward and waiting for the render produced the expected accessible disclosure and link.
+**Why:** Headless input can reach a focused element without invoking native activation, and immediate reads can observe the prior render.
 
-**How to apply:** Use this only for development-only headless CDP interaction verification where the screenshot tool cannot click. Prefer a normal test harness when available.
+**How to apply:** Use this only for CDP input checks; prefer standard browser-test APIs when available.
