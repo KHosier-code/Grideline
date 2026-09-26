@@ -2,11 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildPlayerProjectionScheduleFromTeamGames,
+  hashSortedPlayerProjectionInputs,
+  PLAYER_PROJECTION_CONFIG,
+  PLAYER_PROJECTION_VERSION,
+  prepareIndependentProjectionSchedule,
   reconcilePlayerProjectionRows,
+  runIndependentPlayerProjectionValidation,
   runPlayerProjectionEvaluation,
+  type FrozenPlayerProjectionBaseline,
   type PlayerProjectionObservation,
   type PlayerProjectionTeamGame,
 } from "./player-projections";
+import { renderIndependentPlayerProjectionMarkdown } from "./player-projections-report";
 
 const positions = [
   { family: "qb", playerId: "qb-1", position: "QB" },
@@ -211,6 +218,26 @@ test("features and projections for a cutoff cannot change when a later game's ac
   assert.ok(firstGameBaseline.historicalSampleQuality.priorAppearances >= 3);
 });
 
+test("independent database input checksums ignore source query row ordering", () => {
+  const first = {
+    stats: [{ id: "b" }, { id: "a" }],
+    schedule: [{ gameId: "z" }, { gameId: "x" }],
+    teamGames: [{ team: "NYJ" }, { team: "BUF" }],
+    teams: [{ teamId: "2" }, { teamId: "1" }],
+  };
+  const reordered = {
+    stats: [...first.stats].reverse(),
+    schedule: [...first.schedule].reverse(),
+    teamGames: [...first.teamGames].reverse(),
+    teams: [...first.teams].reverse(),
+  };
+  assert.equal(hashSortedPlayerProjectionInputs(first), hashSortedPlayerProjectionInputs(reordered));
+  assert.notEqual(hashSortedPlayerProjectionInputs(first), hashSortedPlayerProjectionInputs({
+    ...reordered,
+    stats: [{ id: "changed" }, ...reordered.stats.slice(1)],
+  }));
+});
+
 test("all four independent families train on 2021-23 and evaluate only 2024", () => {
   const data = makeDataset();
   const report = run(data.observations, data.teamGames);
@@ -277,4 +304,323 @@ test("rejects post-2024 rows rather than silently using future training data", (
     kickoffTime: new Date("2025-09-07T17:00:00Z"),
   });
   assert.throws(() => run(data.observations, data.teamGames), /only 2021–2024 regular-season rows/);
+});
+
+const frozenFeatureNames = [
+  "intercept",
+  "priorLast3TargetMean:z", "priorLast3TargetMean:missing",
+  "priorLast5TargetMean:z", "priorLast5TargetMean:missing",
+  "priorLast8TargetMean:z", "priorLast8TargetMean:missing",
+  "seasonToDateTargetMean:z", "seasonToDateTargetMean:missing",
+  "priorLast3VolumeMean:z", "priorLast3VolumeMean:missing",
+  "priorLast8VolumeMean:z", "priorLast8VolumeMean:missing",
+  "priorLast3Efficiency:z", "priorLast3Efficiency:missing",
+  "priorLast8Efficiency:z", "priorLast8Efficiency:missing",
+  "teamSeasonPassRate:z", "teamSeasonPassRate:missing",
+  "opponentSeasonDefensiveEpaAllowed:z", "opponentSeasonDefensiveEpaAllowed:missing",
+  "teamRestDays:z", "teamRestDays:missing",
+];
+const frozenHash = "a".repeat(64);
+
+function makeFrozenBaseline(nonzeroFeatureCoefficients = false): FrozenPlayerProjectionBaseline {
+  const families = Object.fromEntries(
+    (["qbPassingYards", "rbRushingYards", "receiverReceivingYards", "receiverReceptions"] as const).map((family) => [
+      family,
+      {
+        modelVersion: `${PLAYER_PROJECTION_VERSION}-${family}-${frozenHash.slice(0, 16)}`,
+        eligiblePredictions: 0,
+        metrics: {
+          sampleSize: 0,
+          meanAbsoluteError: null,
+          meanAbsoluteError95CI: null,
+          rootMeanSquaredError: null,
+          rootMeanSquaredError95CI: null,
+          meanBias: null,
+          meanBias95CI: null,
+        },
+        fittedArtifact: {
+          featureNames: frozenFeatureNames,
+          standardizedMeans: Array(11).fill(0),
+          standardizedScales: Array(11).fill(1),
+          coefficients: [
+            50,
+            ...Array.from({ length: 22 }, (_, index) =>
+              nonzeroFeatureCoefficients && [0, 16, 18].includes(index) ? 0.1 : 0),
+          ],
+          ridgePenalty: PLAYER_PROJECTION_CONFIG.ridgePenalty,
+          trainingExamplesSha256: frozenHash,
+          trainingUsageVolumeTertiles: [5, 10] as [number, number],
+        },
+      },
+    ]),
+  ) as unknown as FrozenPlayerProjectionBaseline["families"];
+  return {
+    version: PLAYER_PROJECTION_VERSION,
+    config: PLAYER_PROJECTION_CONFIG,
+    modelMethod: {
+      name: "frozen original model",
+      description: "test fixture",
+      featureNames: frozenFeatureNames,
+      baselineDefinitions: {},
+      limitations: [],
+    },
+    families,
+  };
+}
+
+function independentProvenance(observations: PlayerProjectionObservation[], teamGames: PlayerProjectionTeamGame[]) {
+  return {
+    databaseScope: "development" as const,
+    sourceDatasets: ["test fixtures"],
+    sourceLedger: {
+      playerStats: ([2025, 2026] as const).map((season) => ({
+        season,
+        sourceUrl: `https://example.test/player_stats_${season}.csv.gz`,
+        status: "success",
+        rowCount: 20,
+        fileSizeBytes: 1024,
+        completedAt: "2026-09-01T00:00:00.000Z",
+        upstreamFileContentSha256: null,
+      })),
+      espnScheduleRecovery: [
+        {
+          jobKey: "development-historical-schedule-recovery" as const,
+          runId: 17,
+          status: "success",
+          recordsProcessed: 304,
+          completedAt: "2026-09-02T00:00:00.000Z",
+        },
+        {
+          jobKey: "development-historical-schedule-week3-atl-gb" as const,
+          runId: 18,
+          status: "success",
+          recordsProcessed: 1,
+          completedAt: "2026-09-03T00:00:00.000Z",
+        },
+      ],
+    },
+    rawPlayerStatRows: observations.length,
+    reconciledPlayerGameRows: observations.length,
+    teamGameRows: teamGames.length,
+    scheduleGames: observations.length,
+    matchedScheduleGames: observations.length,
+    unmatchedPlayerStatRows: 0,
+    excludedNonFinalScheduleRows: 0,
+    excludedUnmatchedOrAmbiguousPlayerRows: 0,
+    rawSeasonCoverage: Object.fromEntries([2021, 2022, 2023, 2024, 2025, 2026].map((season) => [
+      String(season), observations.filter((row) => row.season === season).length,
+    ])),
+    seasonCoverage: Object.fromEntries([2021, 2022, 2023, 2024, 2025, 2026].map((season) => [
+      String(season), observations.filter((row) => row.season === season).length,
+    ])),
+    scheduleTimeModeBySeason: {},
+    finalScheduleGamesBySeasonWeek: { "2025:1": 1, "2025:19": 2, "2026:1": 1 },
+    validKickoffGamesBySeasonWeek: { "2025:1": 1, "2025:19": 2, "2026:1": 1 },
+    matchedPlayerRowsBySeasonWeek: { "2025:1": 4, "2025:19": 0, "2026:1": 4 },
+    checksumSha256: frozenHash,
+    historicalTimestampCaveat: "Test fixture; source publication timestamps are not verified.",
+  };
+}
+
+function makeIndependentDataset() {
+  const observations: PlayerProjectionObservation[] = [];
+  const teamGames: PlayerProjectionTeamGame[] = [];
+  for (const player of positions) {
+    for (const season of [2021, 2022, 2023, 2024, 2025, 2026]) {
+      for (let week = 1; week <= 5; week += 1) {
+        const kickoffTime = new Date(Date.UTC(season, 8, week * 7, 17));
+        const base = 15 + week + season - 2021;
+        observations.push({
+          playerId: player.playerId,
+          playerName: player.family,
+          position: player.position,
+          season,
+          week,
+          seasonType: "REG",
+          gameId: `${season}-${week}-${player.playerId}`,
+          kickoffTime,
+          gameDate: kickoffTime,
+          scheduleTimeSource: "scheduledKickoff",
+          team: "BUF",
+          opponent: "NYJ",
+          homeAway: "home",
+          passingYards: player.position === "QB" ? 180 + base : null,
+          rushingYards: player.position === "RB" ? 35 + base : null,
+          receivingYards: ["WR", "TE"].includes(player.position) ? 40 + base : null,
+          receptions: ["WR", "TE"].includes(player.position) ? 2 + week : null,
+          passAttempts: player.position === "QB" ? 20 + week : null,
+          carries: player.position === "RB" ? 5 + week : null,
+          targets: ["WR", "TE"].includes(player.position) ? 3 + week : null,
+        });
+        teamGames.push({
+          season, week, gameId: `team-${season}-${week}`, kickoffTime,
+          team: "BUF", opponent: "NYJ", passRate: 0.57, defensiveEpaAllowedPerPlay: 0.02,
+        });
+        teamGames.push({
+          season, week, gameId: `opp-${season}-${week}`, kickoffTime,
+          team: "NYJ", opponent: "BUF", passRate: 0.53, defensiveEpaAllowedPerPlay: 0.03,
+        });
+      }
+    }
+  }
+  return { observations, teamGames };
+}
+
+function runIndependent(
+  observations: PlayerProjectionObservation[],
+  teamGames: PlayerProjectionTeamGame[] = [],
+  baseline = makeFrozenBaseline(),
+) {
+  return runIndependentPlayerProjectionValidation({
+    observations,
+    teamGames,
+    baseline,
+    baselineReportSha256: "b".repeat(64),
+    provenance: independentProvenance(observations, teamGames),
+    generatedAt: new Date("2027-01-01T00:00:00Z"),
+  });
+}
+
+test("independent validation applies frozen parameters to separate 2025 and 2026 holdouts", () => {
+  const { observations, teamGames } = makeIndependentDataset();
+  const report = runIndependent(observations, teamGames);
+  assert.equal(report.evaluationKind, "frozen_model_independent_validation");
+  assert.equal(report.baseline.reportSha256, "b".repeat(64));
+  assert.equal(report.families.qbPassingYards.evaluations["2025"].eligiblePredictions, 5);
+  assert.equal(report.families.qbPassingYards.evaluations["2026"].eligiblePredictions, 5);
+  assert.ok(report.predictions.every((row) => row.projectedStatistic === 50));
+  assert.ok(report.predictions.every((row) => row.season === 2025 || row.season === 2026));
+  assert.ok(Object.values(report.leakageChecks).every(Boolean));
+  const markdown = renderIndependentPlayerProjectionMarkdown(report);
+  assert.match(markdown, /structural game-time chronology/);
+  assert.match(markdown, /do not prove when the original stat or schedule sources were published/);
+  assert.match(markdown, /development-historical-schedule-recovery; run 17 \| success \| 304 records/);
+  assert.match(markdown, /development-historical-schedule-week3-atl-gb; run 18 \| success \| 1 record/);
+  assert.match(markdown, /2025:1 \| 1 \| 1 \| 4/);
+  assert.doesNotMatch(markdown, /2025:19/);
+  assert.match(markdown, /No upstream NFLverse file-content digest was available/);
+});
+
+test("later player and team context changes exact later features but cannot change earlier projections", () => {
+  const original = makeIndependentDataset();
+  const baseline = makeFrozenBaseline(true);
+  const before = runIndependent(original.observations, original.teamGames, baseline);
+  const changed = makeIndependentDataset();
+  const laterPlayerRow = changed.observations.find((row) =>
+    row.playerId === "qb-1" && row.season === 2026 && row.week === 4)!;
+  laterPlayerRow.passingYards = 1000;
+  const laterTeamContext = changed.teamGames.find((row) =>
+    row.season === 2026 && row.week === 4 && row.team === "BUF")!;
+  laterTeamContext.passRate = 0.99;
+  const laterOpponentContext = changed.teamGames.find((row) =>
+    row.season === 2026 && row.week === 4 && row.team === "NYJ")!;
+  laterOpponentContext.defensiveEpaAllowedPerPlay = 0.99;
+  const after = runIndependent(changed.observations, changed.teamGames, baseline);
+  const beforeEarly = before.predictions.find((row) =>
+    row.family === "qbPassingYards" && row.playerId === "qb-1" && row.season === 2026 && row.week === 2)!;
+  const afterEarly = after.predictions.find((row) =>
+    row.family === "qbPassingYards" && row.playerId === "qb-1" && row.season === 2026 && row.week === 2)!;
+  const beforeLate = before.predictions.find((row) =>
+    row.family === "qbPassingYards" && row.playerId === "qb-1" && row.season === 2026 && row.week === 5)!;
+  const afterLate = after.predictions.find((row) =>
+    row.family === "qbPassingYards" && row.playerId === "qb-1" && row.season === 2026 && row.week === 5)!;
+  assert.equal(afterEarly.projectedStatistic, beforeEarly.projectedStatistic);
+  assert.deepEqual(afterEarly.featureValues, beforeEarly.featureValues);
+  assert.equal(afterLate.featureValues.priorLast3TargetMean, (202 + 203 + 1000) / 3);
+  assert.equal(afterLate.featureValues.priorLast5TargetMean, beforeLate.featureValues.priorLast5TargetMean! + 796 / 5);
+  assert.equal(afterLate.featureValues.priorLast8TargetMean, beforeLate.featureValues.priorLast8TargetMean! + 796 / 8);
+  assert.equal(afterLate.featureValues.seasonToDateTargetMean, (201 + 202 + 203 + 1000) / 4);
+  assert.equal(afterLate.featureValues.priorLast3Efficiency, ((202 + 203 + 1000) / 3) / 23);
+  assert.ok(Math.abs(afterLate.featureValues.teamSeasonPassRate! - (0.57 * 15 + 0.99) / 16) < 1e-12);
+  assert.ok(Math.abs(afterLate.featureValues.opponentSeasonDefensiveEpaAllowed! - (0.03 * 15 + 0.99) / 16) < 1e-12);
+  assert.equal(afterLate.featureValues.teamRestDays, beforeLate.featureValues.teamRestDays);
+  assert.notEqual(afterLate.projectedStatistic, beforeLate.projectedStatistic);
+});
+
+test("independent validation rejects date-only holdout games and corrupted frozen hashes", () => {
+  const { observations, teamGames } = makeIndependentDataset();
+  observations.find((row) => row.season === 2025)!.scheduleTimeSource = "calendarDateBoundary";
+  assert.throws(() => runIndependent(observations, teamGames), /scheduled UTC kickoff/);
+  const clean = makeIndependentDataset();
+  const baseline = makeFrozenBaseline();
+  baseline.families.qbPassingYards.modelVersion += "-changed";
+  assert.throws(() => runIndependentPlayerProjectionValidation({
+    observations: clean.observations,
+    teamGames: clean.teamGames,
+    baseline,
+    baselineReportSha256: "b".repeat(64),
+    provenance: independentProvenance(clean.observations, clean.teamGames),
+  }), /training hash assertion/);
+  const badConfig = makeFrozenBaseline() as unknown as {
+    version: string;
+    config: Omit<typeof PLAYER_PROJECTION_CONFIG, "ridgePenalty"> & { ridgePenalty: number };
+    modelMethod: { featureNames: string[] };
+    families: FrozenPlayerProjectionBaseline["families"];
+  };
+  badConfig.config = { ...PLAYER_PROJECTION_CONFIG, ridgePenalty: 3 };
+  assert.throws(() => runIndependentPlayerProjectionValidation({
+    observations: clean.observations,
+    teamGames: clean.teamGames,
+    baseline: badConfig as FrozenPlayerProjectionBaseline,
+    baselineReportSha256: "b".repeat(64),
+    provenance: independentProvenance(clean.observations, clean.teamGames),
+  }), /configuration/);
+  assert.throws(() => runIndependentPlayerProjectionValidation({
+    observations: clean.observations,
+    teamGames: clean.teamGames,
+    baseline: makeFrozenBaseline(),
+    baselineReportSha256: "invalid",
+    provenance: independentProvenance(clean.observations, clean.teamGames),
+  }), /report SHA-256/);
+});
+
+test("independent schedule finality requires explicit status, not scores or 0-0 fields", () => {
+  const teams = [
+    { teamId: "buf", abbreviation: "BUF" },
+    { teamId: "nyj", abbreviation: "NYJ" },
+  ];
+  const sourceRows = [
+    {
+      gameId: "unfinished-zero-zero", season: 2025, week: 1,
+      kickoffTime: new Date("2025-09-07T17:00:00Z"), gameDate: null,
+      status: "In Progress", homeTeamId: "buf", awayTeamId: "nyj",
+      finalHomeScore: 0, finalAwayScore: 0,
+    },
+    {
+      gameId: "unfinished-with-scores", season: 2025, week: 2,
+      kickoffTime: new Date("2025-09-14T17:00:00Z"), gameDate: null,
+      status: "Scheduled", homeTeamId: "buf", awayTeamId: "nyj",
+      finalHomeScore: 24, finalAwayScore: 20,
+    },
+    {
+      gameId: "explicit-final", season: 2025, week: 3,
+      kickoffTime: new Date("2025-09-21T17:00:00Z"), gameDate: null,
+      status: "Final", homeTeamId: "buf", awayTeamId: "nyj",
+      finalHomeScore: 0, finalAwayScore: 0,
+    },
+  ];
+  const stats = sourceRows.map((game) => ({
+    playerId: game.gameId,
+    playerName: "Example QB",
+    position: "QB",
+    teamId: "BUF",
+    opponentTeamId: "NYJ",
+    season: game.season,
+    week: game.week,
+    seasonType: "REG",
+    passingYards: 200,
+    rushingYards: null,
+    receivingYards: null,
+    receptions: null,
+    passAttempts: 30,
+    carries: null,
+    targets: null,
+  }));
+  const result = reconcilePlayerProjectionRows({
+    stats,
+    schedule: prepareIndependentProjectionSchedule(sourceRows),
+    teams,
+  });
+  assert.deepEqual(result.rows.map((row) => row.gameId), ["explicit-final"]);
+  assert.equal(result.excludedNonFinalScheduleRows, 2);
 });

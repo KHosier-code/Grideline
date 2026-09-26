@@ -1,0 +1,141 @@
+# GRIDLINE — PLAYER ENGINE V1: DATA RECOVERY & INDEPENDENT VALIDATION
+
+WORKSTREAM: Player Projection Engine
+
+PRIORITY: HIGH
+
+OBJECTIVE
+
+Advance the existing four working player-projection models toward legitimate upcoming NFL forecasts.
+
+The models have completed their initial 2024 historical evaluation. The next milestone is independent validation using newer player statistics and verified historical schedules.
+
+Do not rebuild or redesign the projection engine.
+
+Do not change model algorithms or tune hyperparameters based on the new evaluation results.
+
+## PHASE 1 — IDENTIFY THE MISSING DATA
+
+Inspect the existing player-data pipeline and development database.
+
+Determine why development contains player-game statistics for 2021–2024 but not 2025–2026.
+
+Check existing:
+- NFLverse ingestion and source files.
+- Historical player statistics.
+- GSIS player identities.
+- ESPN schedules and kickoff timestamps.
+- Relevant database tables and migrations.
+- Existing synchronization and backfill commands.
+
+Identify the smallest correction necessary to restore the missing data.
+
+Do not start new paid integrations.
+
+## PHASE 2 — RESTORE DATA COVERAGE
+
+Using approved existing sources, populate development with available 2025 and completed 2026 player-game statistics.
+
+Obtain and verify historical scheduled kickoff timestamps in UTC.
+
+Validate:
+- Game identifiers.
+- Player identities.
+- Teams and opponents.
+- Week and season.
+- Scheduled kickoff.
+- Actual player statistics.
+- Missing and duplicate records.
+- Source provenance.
+
+Do not overwrite valid existing data unnecessarily.
+
+Do not touch production.
+
+Do not treat newly retrieved historical source data as proof that it was published before historical kickoff. Identify publication-time limitations explicitly.
+
+## PHASE 3 — FREEZE THE EXISTING MODELS
+
+Preserve the four current baseline configurations and their 2024 evaluation results.
+
+Record model versions, feature definitions, training cutoffs and evaluation settings before testing newer seasons.
+
+Do not change the existing models after inspecting 2025 results.
+
+## PHASE 4 — INDEPENDENT HISTORICAL EVALUATION
+
+Evaluate the frozen models on eligible 2025 player-games.
+
+Evaluate available completed 2026 games separately, where data supports legitimate pregame reconstruction.
+
+Use chronological feature calculations.
+
+Prevent:
+- Future-game leakage.
+- Post-kickoff feature contamination.
+- Historical identity mismatches.
+- Current player information being substituted for historical information.
+- Unverified historical injuries or starter assignments.
+
+If some historical features cannot be reconstructed with adequate evidence, report the limitation and exclude affected examples when necessary.
+
+For each of the four models, report:
+- Eligible observations and coverage.
+- MAE.
+- RMSE.
+- Prediction bias.
+- Results against comparable simple baselines.
+- Performance by player usage level.
+- Comparison with the retained 2024 results.
+
+Clearly distinguish newly verified results from simulations with unverified historical source-availability timing.
+
+Do not fabricate historical sportsbook lines.
+
+## PHASE 5 — UPCOMING PROJECTION READINESS
+
+Determine whether the recovered data supports projections for upcoming games.
+
+Verify that every proposed live input is available as of its actual calculation timestamp.
+
+Do not publish or label projections live until data freshness and eligibility checks pass.
+
+If ready, generate development-only projections using the existing four models.
+
+If not ready, report the specific missing inputs.
+
+## PHASE 6 — PROJECT TRACKING
+
+Update GRIDLINE_PROJECT_CONTROL.md if it exists.
+
+Record:
+- Player Engine V1 baseline: completed in development.
+- 2024 historical evaluation: completed.
+- Newer-season data recovery: current milestone.
+- Independent evaluation: pending or completed based on actual results.
+- Live projection readiness: evidence-based status.
+
+Preserve the existing numerical reports.
+
+## FINAL DELIVERABLE
+
+Save:
+
+reports/gridline-player-projection-independent-validation.md
+
+reports/gridline-player-projection-independent-validation.json
+
+Return:
+
+1. Recovered 2025 and 2026 data coverage.
+2. Verified historical kickoff coverage.
+3. Independent evaluation results for all four models.
+4. Comparison against simple baselines.
+5. Historical data and leakage limitations.
+6. Actual upcoming projection readiness.
+7. Tests performed.
+8. Exactly one recommended next development task.
+
+Do not change Phase 6.1, publish, or modify production.
+
+Success means recovered player data and an evidence-based assessment of whether the existing projection engine is ready to advance.

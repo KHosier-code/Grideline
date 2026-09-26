@@ -250,6 +250,115 @@ export type PlayerProjectionReport = {
   predictions: PlayerProjectionPrediction[];
 };
 
+export type FrozenPlayerProjectionBaseline = Pick<
+  PlayerProjectionReport,
+  "version" | "config" | "modelMethod" | "families"
+>;
+
+export type IndependentPlayerProjectionReport = {
+  version: "gridline-player-projection-independent-validation-v1";
+  evaluationKind: "frozen_model_independent_validation";
+  generatedAt: string;
+  baseline: {
+    version: string;
+    reportSha256: string;
+    config: PlayerProjectionReport["config"];
+    featureNames: string[];
+    retained2024: Record<PlayerProjectionFamily, {
+      eligiblePredictions: number;
+      metrics: PlayerProjectionMetric;
+    }>;
+    modelArtifacts: Record<PlayerProjectionFamily, {
+      modelVersion: string;
+      artifactSha256: string;
+      trainingExamplesSha256: string;
+      trainingUsageVolumeTertiles: [number | null, number | null];
+    }>;
+  };
+  evaluationSeasons: [2025, 2026];
+  provenance: {
+    databaseScope: "development";
+    sourceDatasets: string[];
+    sourceLedger: {
+      playerStats: Array<{
+        season: 2025 | 2026;
+        sourceUrl: string;
+        status: string | null;
+        rowCount: number;
+        fileSizeBytes: number | null;
+        completedAt: string | null;
+        upstreamFileContentSha256: null;
+      }>;
+      espnScheduleRecovery: Array<{
+        jobKey: "development-historical-schedule-recovery" | "development-historical-schedule-week3-atl-gb";
+        runId: number | null;
+        status: string | null;
+        recordsProcessed: number | null;
+        completedAt: string | null;
+      }>;
+    };
+    rawPlayerStatRows: number;
+    reconciledPlayerGameRows: number;
+    teamGameRows: number;
+    scheduleGames: number;
+    matchedScheduleGames: number;
+    unmatchedPlayerStatRows: number;
+    excludedNonFinalScheduleRows: number;
+    excludedUnmatchedOrAmbiguousPlayerRows: number;
+    rawSeasonCoverage: Record<string, number>;
+    seasonCoverage: Record<string, number>;
+    scheduleTimeModeBySeason: Record<string, string>;
+    finalScheduleGamesBySeasonWeek: Record<string, number>;
+    validKickoffGamesBySeasonWeek: Record<string, number>;
+    matchedPlayerRowsBySeasonWeek: Record<string, number>;
+    checksumSha256: string;
+    historicalTimestampCaveat: string;
+  };
+  leakageChecks: {
+    allPredictionsHaveStrictPreKickoffCutoffs: boolean;
+    allPredictionsUseScheduledKickoffs: boolean;
+    playerAndTeamFeaturesUseOnlyEarlierRows: boolean;
+  };
+  upcomingReadiness: {
+    status: "not_ready";
+    reasons: string[];
+  };
+  families: Record<PlayerProjectionFamily, {
+    label: string;
+    frozenModelVersion: string;
+    evaluations: Record<"2025" | "2026", {
+      evaluationCandidates: number;
+      evaluationCandidatePlayers: number;
+      eligiblePredictions: number;
+      eligiblePlayers: number;
+      predictionAvailability: number | null;
+      metrics: PlayerProjectionMetric;
+      baselines: PlayerProjectionFamilyReport["baselines"];
+      usageStrata: PlayerProjectionFamilyReport["usageStrata"];
+    }>;
+  }>;
+  predictions: Array<{
+    family: PlayerProjectionFamily;
+    playerId: string;
+    player: string;
+    position: string;
+    team: string;
+    opponent: string;
+    season: 2025 | 2026;
+    week: number;
+    gameId: string;
+    kickoffTime: string;
+    calculationTimestamp: string;
+    projectedStatistic: number;
+    actualStatistic: number;
+    last3Baseline: number;
+    last5Baseline: number | null;
+    seasonToDateBaseline: number | null;
+    featureValues: FeatureValues;
+    priorAppearanceCount: number;
+  }>;
+};
+
 export function canonicalProjectionTeam(value: string | null | undefined): string | null {
   const normalized = value?.trim().toUpperCase();
   if (!normalized) return null;
@@ -348,6 +457,12 @@ export function reconcilePlayerProjectionRows(input: {
     excludedNonFinalScheduleRows,
     excludedUnmatchedOrAmbiguousPlayerRows: unmatchedOrAmbiguousRows,
   };
+}
+
+export function prepareIndependentProjectionSchedule(schedule: PlayerProjectionScheduleGame[]) {
+  return schedule.map((game) => game.season >= 2025 && !/final|complete/i.test(game.status)
+    ? { ...game, finalHomeScore: null, finalAwayScore: null }
+    : game);
 }
 
 export function reconcilePlayerProjectionTeamGames(input: {
@@ -688,6 +803,22 @@ export function hash(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export function hashSortedPlayerProjectionInputs(input: {
+  stats: object[];
+  schedule: object[];
+  teamGames: object[];
+  teams: object[];
+}): string {
+  const sorted = (rows: object[]) => [...rows].sort((left, right) =>
+    JSON.stringify(left).localeCompare(JSON.stringify(right)));
+  return hash(JSON.stringify({
+    stats: sorted(input.stats),
+    schedule: sorted(input.schedule),
+    teamGames: sorted(input.teamGames),
+    teams: sorted(input.teams),
+  }));
+}
+
 export function runPlayerProjectionEvaluation(input: {
   observations: PlayerProjectionObservation[];
   teamGames: PlayerProjectionTeamGame[];
@@ -875,6 +1006,239 @@ export function runPlayerProjectionEvaluation(input: {
       ],
     },
     families: modelReports,
+    predictions,
+  };
+}
+
+function assertFrozenBaseline(baseline: FrozenPlayerProjectionBaseline, reportSha256: string) {
+  if (baseline.version !== PLAYER_PROJECTION_VERSION) {
+    throw new Error(`Independent validation requires baseline version ${PLAYER_PROJECTION_VERSION}`);
+  }
+  if (JSON.stringify(baseline.config) !== JSON.stringify(PLAYER_PROJECTION_CONFIG)) {
+    throw new Error("Frozen baseline configuration does not match the original player-projection configuration");
+  }
+  if (!/^[a-f0-9]{64}$/.test(reportSha256)) throw new Error("Frozen baseline report SHA-256 is missing or invalid");
+  const expectedFeatures = ["intercept", ...CONTINUOUS_FEATURES.flatMap((name) => [`${name}:z`, `${name}:missing`])];
+  if (JSON.stringify(baseline.modelMethod.featureNames) !== JSON.stringify(expectedFeatures)) {
+    throw new Error("Frozen baseline feature definitions do not match the original chronological feature extraction");
+  }
+  for (const family of Object.keys(PLAYER_PROJECTION_FAMILIES) as PlayerProjectionFamily[]) {
+    const result = baseline.families[family];
+    const artifact = result?.fittedArtifact;
+    if (!artifact) throw new Error(`Frozen baseline is missing fitted parameters for ${family}`);
+    if (JSON.stringify(artifact.featureNames) !== JSON.stringify(expectedFeatures)
+      || artifact.standardizedMeans.length !== CONTINUOUS_FEATURES.length
+      || artifact.standardizedScales.length !== CONTINUOUS_FEATURES.length
+      || artifact.coefficients.length !== expectedFeatures.length
+      || artifact.standardizedScales.some((scale) => !Number.isFinite(scale) || scale <= 0)
+      || [...artifact.standardizedMeans, ...artifact.coefficients].some((value) => !Number.isFinite(value))
+      || artifact.ridgePenalty !== PLAYER_PROJECTION_CONFIG.ridgePenalty
+      || artifact.trainingUsageVolumeTertiles.length !== 2
+      || artifact.trainingUsageVolumeTertiles.some((value) => value !== null && !Number.isFinite(value))) {
+      throw new Error(`Frozen baseline fitted parameters or feature configuration are invalid for ${family}`);
+    }
+    if (!/^[a-f0-9]{64}$/.test(artifact.trainingExamplesSha256)
+      || !result.modelVersion.endsWith(`-${artifact.trainingExamplesSha256.slice(0, 16)}`)) {
+      throw new Error(`Frozen baseline training hash assertion failed for ${family}`);
+    }
+  }
+}
+
+function predictFrozen(example: ProjectionExample, artifact: PlayerProjectionFamilyReport["fittedArtifact"]) {
+  const raw = finiteValues(example);
+  let value = artifact.coefficients[0]!;
+  for (let column = 0; column < raw.length; column += 1) {
+    const feature = raw[column];
+    value += artifact.coefficients[1 + column * 2]!
+      * (feature === null ? 0 : (feature - artifact.standardizedMeans[column]!) / artifact.standardizedScales[column]!);
+    value += artifact.coefficients[2 + column * 2]! * (feature === null ? 1 : 0);
+  }
+  return Math.max(0, value);
+}
+
+export function runIndependentPlayerProjectionValidation(input: {
+  observations: PlayerProjectionObservation[];
+  teamGames: PlayerProjectionTeamGame[];
+  baseline: FrozenPlayerProjectionBaseline;
+  baselineReportSha256: string;
+  provenance: IndependentPlayerProjectionReport["provenance"];
+  generatedAt?: Date;
+}): IndependentPlayerProjectionReport {
+  assertFrozenBaseline(input.baseline, input.baselineReportSha256);
+  const observations = [...input.observations].sort(compareObservations);
+  if (observations.some((row) => row.season < 2021 || row.season > 2026 || row.seasonType.toUpperCase() !== "REG")) {
+    throw new Error("Independent validation input must contain only 2021–2026 regular-season rows");
+  }
+  for (const row of observations.filter((observation) => observation.season >= 2025)) {
+    if (row.scheduleTimeSource !== "scheduledKickoff" || !Number.isFinite(row.kickoffTime.getTime())) {
+      throw new Error(`Independent validation requires a scheduled UTC kickoff for ${row.season} game ${row.gameId}`);
+    }
+  }
+
+  const artifactSummary = {} as IndependentPlayerProjectionReport["baseline"]["modelArtifacts"];
+  const reports = {} as IndependentPlayerProjectionReport["families"];
+  const predictions: IndependentPlayerProjectionReport["predictions"] = [];
+  const allCutoffsBeforeKickoff = observations
+    .filter((row) => row.season >= 2025)
+    .every((row) => row.scheduleTimeSource === "scheduledKickoff");
+  let featuresStrictlyChronological = true;
+
+  for (const family of Object.keys(PLAYER_PROJECTION_FAMILIES) as PlayerProjectionFamily[]) {
+    const definition = PLAYER_PROJECTION_FAMILIES[family];
+    const frozen = input.baseline.families[family];
+    const artifact = frozen.fittedArtifact;
+    artifactSummary[family] = {
+      modelVersion: frozen.modelVersion,
+      artifactSha256: hash(JSON.stringify(artifact)),
+      trainingExamplesSha256: artifact.trainingExamplesSha256,
+      trainingUsageVolumeTertiles: artifact.trainingUsageVolumeTertiles,
+    };
+    const historyByPlayer = new Map<string, PlayerProjectionObservation[]>();
+    const seasonPredictions: Record<"2025" | "2026", Array<{ example: ProjectionExample; prediction: number }>> = {
+      "2025": [],
+      "2026": [],
+    };
+    for (const observation of observations) {
+      if (!definition.position.includes(observation.position) || targetOf(observation, family) === null) continue;
+      const history = historyByPlayer.get(observation.playerId) ?? [];
+      const example = featuresFor({ current: observation, history, family, teamGames: input.teamGames });
+      historyByPlayer.set(observation.playerId, [...history, observation]);
+      if (!example || observation.season < 2025) continue;
+      if (new Date(example.priorAppearanceCutoff).getTime() >= observation.kickoffTime.getTime()) {
+        featuresStrictlyChronological = false;
+      }
+      seasonPredictions[String(observation.season) as "2025" | "2026"].push({
+        example,
+        prediction: predictFrozen(example, artifact),
+      });
+    }
+
+    const evaluations = {} as IndependentPlayerProjectionReport["families"][PlayerProjectionFamily]["evaluations"];
+    for (const season of [2025, 2026] as const) {
+      const seasonKey = String(season) as "2025" | "2026";
+      const modelPredictions = seasonPredictions[seasonKey];
+      const candidates = observations.filter((row) =>
+        row.season === season && definition.position.includes(row.position) && targetOf(row, family) !== null);
+      const compareBaseline = (
+        value: (example: ProjectionExample) => number | null,
+      ): PlayerProjectionFamilyReport["baselines"][keyof PlayerProjectionFamilyReport["baselines"]] => {
+        const paired = modelPredictions.flatMap(({ example, prediction }) => {
+          const baselinePrediction = value(example);
+          return baselinePrediction === null ? [] : [{
+            actual: example.actual,
+            modelPrediction: prediction,
+            baselinePrediction: Math.max(0, baselinePrediction),
+          }];
+        });
+        return {
+          baseline: metrics(paired.map(({ actual, baselinePrediction }) => ({ actual, predicted: baselinePrediction }))),
+          modelOnSameCohort: metrics(paired.map(({ actual, modelPrediction }) => ({ actual, predicted: modelPrediction }))),
+        };
+      };
+      const comparisons = {
+        last3AppearanceMean: compareBaseline((example) => example.featureValues.priorLast3TargetMean),
+        last5AppearanceMean: compareBaseline((example) => example.featureValues.priorLast5TargetMean),
+        seasonToDateMean: compareBaseline((example) => example.featureValues.seasonToDateTargetMean),
+      };
+      const usageStrata = (["low", "medium", "high"] as const).map((band) => {
+        const group = modelPredictions.filter(({ example }) =>
+          usageBand(example.volume, artifact.trainingUsageVolumeTertiles) === band);
+        const baselineGroup = group.map(({ example }) => ({
+          actual: example.actual,
+          predicted: Math.max(0, example.featureValues.priorLast3TargetMean ?? 0),
+        }));
+        const thresholds = artifact.trainingUsageVolumeTertiles;
+        return {
+          band,
+          trainingVolumeRange: band === "low"
+            ? [null, thresholds[0]] as [number | null, number | null]
+            : band === "medium"
+              ? [thresholds[0], thresholds[1]] as [number | null, number | null]
+              : [thresholds[1], null] as [number | null, number | null],
+          sampleSize: group.length,
+          modelMae: metrics(group.map(({ example, prediction }) => ({ actual: example.actual, predicted: prediction }))).meanAbsoluteError,
+          last3BaselineMae: metrics(baselineGroup).meanAbsoluteError,
+        };
+      });
+      evaluations[seasonKey] = {
+        evaluationCandidates: candidates.length,
+        evaluationCandidatePlayers: new Set(candidates.map((row) => row.playerId)).size,
+        eligiblePredictions: modelPredictions.length,
+        eligiblePlayers: new Set(modelPredictions.map(({ example }) => example.observation.playerId)).size,
+        predictionAvailability: candidates.length ? modelPredictions.length / candidates.length : null,
+        metrics: metrics(modelPredictions.map(({ example, prediction }) => ({ actual: example.actual, predicted: prediction }))),
+        baselines: comparisons,
+        usageStrata,
+      };
+      for (const { example, prediction } of modelPredictions) {
+        const observation = example.observation;
+        predictions.push({
+          family,
+          playerId: observation.playerId,
+          player: observation.playerName,
+          position: observation.position,
+          team: observation.team,
+          opponent: observation.opponent,
+          season,
+          week: observation.week,
+          gameId: observation.gameId,
+          kickoffTime: observation.kickoffTime.toISOString(),
+          calculationTimestamp: example.priorAppearanceCutoff,
+          projectedStatistic: prediction,
+          actualStatistic: example.actual,
+          last3Baseline: Math.max(0, example.featureValues.priorLast3TargetMean ?? 0),
+          last5Baseline: example.featureValues.priorLast5TargetMean === null ? null : Math.max(0, example.featureValues.priorLast5TargetMean),
+          seasonToDateBaseline: example.featureValues.seasonToDateTargetMean === null ? null : Math.max(0, example.featureValues.seasonToDateTargetMean),
+          featureValues: example.featureValues,
+          priorAppearanceCount: example.priorAppearanceCount,
+        });
+      }
+    }
+    reports[family] = { label: definition.label, frozenModelVersion: frozen.modelVersion, evaluations };
+  }
+
+  if (!allCutoffsBeforeKickoff || !featuresStrictlyChronological) {
+    throw new Error("Independent validation chronology/leakage assertion failed");
+  }
+  predictions.sort((a, b) => a.kickoffTime.localeCompare(b.kickoffTime)
+    || a.family.localeCompare(b.family) || a.playerId.localeCompare(b.playerId));
+  return {
+    version: "gridline-player-projection-independent-validation-v1",
+    evaluationKind: "frozen_model_independent_validation",
+    generatedAt: (input.generatedAt ?? new Date()).toISOString(),
+    baseline: {
+      version: input.baseline.version,
+      reportSha256: input.baselineReportSha256,
+      config: input.baseline.config,
+      featureNames: input.baseline.modelMethod.featureNames,
+      retained2024: Object.fromEntries(
+        (Object.keys(PLAYER_PROJECTION_FAMILIES) as PlayerProjectionFamily[]).map((family) => [
+          family,
+          {
+            eligiblePredictions: input.baseline.families[family].eligiblePredictions,
+            metrics: input.baseline.families[family].metrics,
+          },
+        ]),
+      ) as IndependentPlayerProjectionReport["baseline"]["retained2024"],
+      modelArtifacts: artifactSummary,
+    },
+    evaluationSeasons: [2025, 2026],
+    provenance: input.provenance,
+    leakageChecks: {
+      allPredictionsHaveStrictPreKickoffCutoffs: predictions.every((row) =>
+        new Date(row.calculationTimestamp).getTime() < new Date(row.kickoffTime).getTime()),
+      allPredictionsUseScheduledKickoffs: predictions.every((row) => Boolean(row.kickoffTime)),
+      playerAndTeamFeaturesUseOnlyEarlierRows: featuresStrictlyChronological,
+    },
+    upcomingReadiness: {
+      status: "not_ready",
+      reasons: [
+        "No verified as-of publication/freshness evidence for each player and team input at an upcoming calculation timestamp.",
+        "The recorded player-game stat lines do not establish upcoming player participation, team assignment, injury status, or starter eligibility.",
+        "This evaluator requires a completed target-game outcome for scoring; it does not generate or validate future-game inference inputs.",
+      ],
+    },
+    families: reports,
     predictions,
   };
 }
