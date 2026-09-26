@@ -11,6 +11,7 @@ import { ConsumerMarketEvidence } from '../../components/ConsumerMarketEvidence'
 import { ConsumerProjectionEvidence } from '../../components/ConsumerProjectionEvidence';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
+import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -78,6 +79,8 @@ export default function ConsumerGameDetail() {
 
     <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
     <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
+
+    {(game.gameState === 'pregame' || game.gameState === 'scheduled') && <GameDefenseVsPosition gameId={game.gameId} season={game.season} away={game.matchup.away} home={game.matchup.home} />}
 
     <ConsumerDepthChart context={game.context} />
 

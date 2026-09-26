@@ -28,6 +28,7 @@ import type {
   ConfidenceAudit,
   ConsumerDashboard,
   ConsumerDataUnavailableResponse,
+  ConsumerDefenseVsPosition,
   ConsumerGameDetail,
   ConsumerGameNotFoundResponse,
   ConsumerGames,
@@ -46,6 +47,7 @@ import type {
   DashboardSummary,
   DataHealth,
   Game,
+  GetConsumerDefenseVsPositionParams,
   GetConsumerGradedChartsParams,
   GetConsumerPlayerUsageParams,
   GetConsumerRedZoneOpportunitiesParams,
@@ -3141,6 +3143,91 @@ export function useGetConsumerUpcomingPlayerProjectionReadiness<TData = Awaited<
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerUpcomingPlayerProjectionReadinessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerDefenseVsPositionUrl = (params?: GetConsumerDefenseVsPositionParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/defense-vs-position?${stringifiedParams}` : `/api/consumer/defense-vs-position`
+}
+
+/**
+ * Read-only retrospective history. Final games strictly before a game's kickoff are eligible; metric-specific denominators require complete weekly stats and PBP evidence for both teams. Last-three and last-five select covered games, while missing completed weeks within the selected span remain visible. Not a forecast or a historical point-in-time source snapshot.
+ * @summary Read observed regular-season defensive allowances by opposing position
+ */
+export const getConsumerDefenseVsPosition = async (params?: GetConsumerDefenseVsPositionParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerDefenseVsPosition> => {
+
+  return customFetch<ConsumerDefenseVsPosition>(getGetConsumerDefenseVsPositionUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerDefenseVsPositionQueryKey = (params?: GetConsumerDefenseVsPositionParams,) => {
+    return [
+    `/api/consumer/defense-vs-position`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerDefenseVsPositionQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(params?: GetConsumerDefenseVsPositionParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerDefenseVsPositionQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>> = ({ signal }) => getConsumerDefenseVsPosition(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerDefenseVsPositionQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>>
+export type GetConsumerDefenseVsPositionQueryError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read observed regular-season defensive allowances by opposing position
+ */
+
+export function useGetConsumerDefenseVsPosition<TData = Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerDefenseVsPositionParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerDefenseVsPositionQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

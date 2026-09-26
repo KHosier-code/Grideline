@@ -44,6 +44,7 @@ import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
+import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { GetConsumerScheduleSelectionResponse } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 import {
@@ -1871,6 +1872,35 @@ router.get("/consumer/trends", async (req, res): Promise<void> => {
 
 router.get("/consumer/props", (_req, res): void => {
   res.json({ status: "unavailable", message: "Player information temporarily unavailable", available: false });
+});
+
+router.get("/consumer/defense-vs-position", async (req, res): Promise<void> => {
+  const season = req.query.season === undefined ? undefined : Number(req.query.season);
+  const window = typeof req.query.window === "string" ? req.query.window : "season";
+  const gameId = typeof req.query.game === "string" ? req.query.game : undefined;
+  if ((season !== undefined && (!Number.isInteger(season) || season < 2000 || season > 2100))
+    || !WINDOWS.includes(window as typeof WINDOWS[number])
+    || (req.query.game !== undefined && (!gameId || gameId.length > 128))) {
+    res.status(400).json({ error: "Choose a valid season, game and window.", code: "invalid_request" });
+    return;
+  }
+  try {
+    const cutoffGame = gameId
+      ? await db.select().from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1) : [];
+    if (gameId && (!cutoffGame[0]?.kickoffTime || (season !== undefined && season !== cutoffGame[0].season))) {
+      res.status(400).json({ error: "Unknown game cutoff or mismatched season.", code: "invalid_request" });
+      return;
+    }
+    const effectiveSeason = season ?? cutoffGame[0]?.season ?? defaultDefenseSeason();
+    const cutoff = cutoffGame[0]?.kickoffTime ?? new Date();
+    res.json(buildDefenseVsPosition(
+      await readDefenseInputs(effectiveSeason, cutoff), effectiveSeason, cutoff, gameId,
+      window as typeof WINDOWS[number],
+    ));
+  } catch (error) {
+    req.log.error({ error }, "Consumer defense vs position read failed");
+    res.status(503).json({ error: "Defensive history is being refreshed", code: "consumer_data_unavailable" });
+  }
 });
 
 router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, res): Promise<void> => {

@@ -733,6 +733,35 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/UpcomingPlayerProjectionReadiness" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/defense-vs-position:
+    get:
+      operationId: getConsumerDefenseVsPosition
+      tags: [nfl]
+      summary: Read observed regular-season defensive allowances by opposing position
+      description: >
+        Read-only retrospective history. Final games strictly before a game's kickoff
+        are eligible; metric-specific denominators require complete weekly stats and
+        PBP evidence for both teams. Last-three and last-five select covered games,
+        while missing completed weeks within the selected span remain visible.
+        Not a forecast or a historical point-in-time source snapshot.
+      parameters:
+        - name: season
+          in: query
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - name: game
+          in: query
+          schema: { type: string }
+        - name: window
+          in: query
+          schema: { type: string, enum: [season, last3, last5], default: season }
+      responses:
+        "200":
+          description: Metric-specific game coverage and observed allowance for each defense
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerDefenseVsPosition" }
+        "400": { $ref: "#/components/responses/ConsumerInvalidRequest" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
   /consumer/player-usage:
     get:
       operationId: getConsumerPlayerUsage
@@ -1894,6 +1923,46 @@ components:
             requestedGames: { type: integer }
             includedGames: { type: integer }
             partialReasons: { type: array, items: { type: string } }
+    DefensePositionMetric:
+      type: object
+      required: [label, unit, perGame, total, coveredGames, coveredWeeks, missingWeeks, missingGames, completedGames, reason]
+      properties:
+        label: { type: string }
+        unit: { type: string, enum: [yards, count] }
+        perGame: { type: ["number", "null"] }
+        total: { type: ["number", "null"] }
+        coveredGames: { type: integer }
+        completedGames: { type: integer }
+        coveredWeeks: { type: array, items: { type: integer } }
+        missingWeeks: { type: array, items: { type: integer } }
+        missingGames: { type: array, items: { type: string } }
+        reason: { type: ["string", "null"] }
+    ConsumerDefenseVsPosition:
+      type: object
+      required: [season, seasonType, window, cutoff, source, sourceUpdatedAt, ingestedAt, note, unsupported, defenses]
+      properties:
+        season: { type: integer }
+        seasonType: { type: string, enum: [REG] }
+        window: { type: string, enum: [season, last3, last5] }
+        cutoff: { type: string, format: date-time }
+        source: { type: string }
+        sourceUpdatedAt: { type: ["string", "null"], format: date-time }
+        ingestedAt: { type: ["string", "null"], format: date-time }
+        note: { type: string }
+        unsupported: { type: object, additionalProperties: { type: string } }
+        defenses:
+          type: array
+          items:
+            type: object
+            required: [teamId, abbreviation, positions]
+            properties:
+              teamId: { type: string }
+              abbreviation: { type: string }
+              positions:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties: { $ref: "#/components/schemas/DefensePositionMetric" }
     ConsumerPlayerUsage:
       type: object
       required: [status, season, players, availableTeams, filters, metricAvailability, sourceCoverage]

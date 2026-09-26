@@ -79,6 +79,7 @@ import ConsumerTrends from '@/pages/consumer/ConsumerTrends';
 import ConsumerProps from '@/pages/consumer/ConsumerProps';
 import ConsumerUsage from '@/pages/consumer/ConsumerUsage';
 import ConsumerRedZone from '@/pages/consumer/ConsumerRedZone';
+import DefenseVsPositionLeague from '@/components/DefenseVsPosition';
 import ConsumerTeams from '@/pages/consumer/ConsumerTeams';
 import UsageAnalytics from '@/pages/admin/UsageAnalytics';
 import { useAdminStatus } from '@/hooks/use-admin-status';
@@ -468,6 +469,7 @@ function Shell({ children }: { children: ReactNode }) {
 const consumerNav = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/games', label: 'Games', icon: CalendarDays },
+  { href: '/defense-vs-position', label: 'Defense vs Position', icon: ShieldCheck },
   { href: '/teams', label: 'Teams', icon: Gauge },
   { href: '/usage', label: 'Player Usage', icon: ChartNoAxesColumnIncreasing },
   ...(redZoneEnabled ? [{ href: '/red-zone', label: 'Red Zone', icon: CircleDot }] : []),
@@ -2088,6 +2090,7 @@ function Router() {
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
     <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
+    <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
     <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
     {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}
@@ -2099,6 +2102,7 @@ function Router() {
       <Route path="/admin/*" component={AdminRoutes} />
       <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
       <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
+      <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
       <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
       {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}

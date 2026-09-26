@@ -58,6 +58,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/scheduler.test.ts"),
       path.resolve(artifactDir, "src/lib/nflverse-player-stats.test.ts"),
       path.resolve(artifactDir, "src/lib/red-zone-opportunities.test.ts"),
+      path.resolve(artifactDir, "src/lib/defense-vs-position.test.ts"),
       path.resolve(artifactDir, "src/lib/nflverse-week2-refresh.test.ts"),
       path.resolve(artifactDir, "src/lib/usage-analytics-retention.test.ts"),
       path.resolve(artifactDir, "src/routes/authorization.test.ts"),

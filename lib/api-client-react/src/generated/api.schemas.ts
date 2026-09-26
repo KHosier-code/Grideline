@@ -1637,6 +1637,7 @@ export interface ConsumerUsagePlayer {
   sourceCoverage: ConsumerUsagePlayerSourceCoverage;
 }
 
+export type DefensePositionMetricUnit = typeof DefensePositionMetricUnit[keyof typeof DefensePositionMetricUnit];
 export type ConsumerPlayerUsageStatus = typeof ConsumerPlayerUsageStatus[keyof typeof ConsumerPlayerUsageStatus];
 
 
@@ -2968,6 +2969,15 @@ export type GetConsumerGradedChartsParams = {
 season?: number;
 };
 
+export type GetConsumerDefenseVsPositionParams = {
+/**
+ * @minimum 2000
+ * @maximum 2100
+ */
+season?: number;
+game?: string;
+window?: GetConsumerDefenseVsPositionWindow;
+};
 export type GetConsumerPlayerUsageParams = {
 team?: string;
 position?: GetConsumerPlayerUsagePosition;
@@ -3041,3 +3051,71 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   last3: 'last3',
 } as const;
 
+
+export type ConsumerDefenseVsPositionDefensesItemPositions = {[key: string]: {[key: string]: DefensePositionMetric}};
+
+export type ConsumerDefenseVsPositionDefensesItem = {
+  teamId: string;
+  abbreviation: string;
+  positions: ConsumerDefenseVsPositionDefensesItemPositions;
+};
+
+export type ConsumerDefenseVsPositionUnsupported = {[key: string]: string};
+
+export const ConsumerDefenseVsPositionWindow = {
+  season: 'season',
+  last3: 'last3',
+  last5: 'last5',
+} as const;
+
+export type ConsumerDefenseVsPositionWindow = typeof ConsumerDefenseVsPositionWindow[keyof typeof ConsumerDefenseVsPositionWindow];
+
+export const DefensePositionMetricUnit = {
+  yards: 'yards',
+  count: 'count',
+} as const;
+
+export interface ConsumerDefenseVsPosition {
+  season: number;
+  seasonType: ConsumerDefenseVsPositionSeasonType;
+  window: ConsumerDefenseVsPositionWindow;
+  cutoff: string;
+  source: string;
+  /** @nullable */
+  sourceUpdatedAt: string | null;
+  /** @nullable */
+  ingestedAt: string | null;
+  note: string;
+  unsupported: ConsumerDefenseVsPositionUnsupported;
+  defenses: ConsumerDefenseVsPositionDefensesItem[];
+}
+
+export const ConsumerDefenseVsPositionSeasonType = {
+  REG: 'REG',
+} as const;
+
+export type GetConsumerDefenseVsPositionWindow = typeof GetConsumerDefenseVsPositionWindow[keyof typeof GetConsumerDefenseVsPositionWindow];
+
+export const GetConsumerDefenseVsPositionWindow = {
+  season: 'season',
+  last3: 'last3',
+  last5: 'last5',
+} as const;
+
+export type ConsumerDefenseVsPositionSeasonType = typeof ConsumerDefenseVsPositionSeasonType[keyof typeof ConsumerDefenseVsPositionSeasonType];
+
+export interface DefensePositionMetric {
+  label: string;
+  unit: DefensePositionMetricUnit;
+  /** @nullable */
+  perGame: number | null;
+  /** @nullable */
+  total: number | null;
+  coveredGames: number;
+  completedGames: number;
+  coveredWeeks: number[];
+  missingWeeks: number[];
+  missingGames: string[];
+  /** @nullable */
+  reason: string | null;
+}
