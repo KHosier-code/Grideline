@@ -1,10 +1,18 @@
 import { assertDisposableDatabaseIdentity, assertWorkerStartupConfiguration, assertNoRehearsalExecutionAttempts, installRehearsalGuards, rehearsalRequested } from "./lib/worker-rehearsal";
-import { assertPlayerRecoveryConfiguration, attestPlayerRecoveryDatabase, blockRecoveryTestNetwork, recoveryRequested, RecoveryFeedLockedError, runAttestedPlayerRecovery } from "./lib/player-feed-recovery";
+import { assertPlayerRecoveryConfiguration, attestPlayerRecoveryDatabase, blockRecoveryTestNetwork, playerRecoveryRefusal, recoveryRequested, RecoveryFeedLockedError, runAttestedPlayerRecovery } from "./lib/player-feed-recovery";
 
 // Never import @workspace/db, scheduler, provider modules, or retention before
 // the rehearsal URL and all independent execution switches have been checked.
 const rehearsal = rehearsalRequested(process.env);
-const recovery = recoveryRequested(process.env) ? assertPlayerRecoveryConfiguration(process.env) : null;
+let recovery = null;
+if (recoveryRequested(process.env)) {
+  try {
+    recovery = assertPlayerRecoveryConfiguration(process.env);
+  } catch (error) {
+    process.stdout.write(`${JSON.stringify(playerRecoveryRefusal(process.env, "invalid_configuration"))}\n`);
+    throw error;
+  }
+}
 if (!recovery) assertWorkerStartupConfiguration(process.env);
 if (rehearsal) installRehearsalGuards(process.env);
 if (recovery?.disposable) blockRecoveryTestNetwork(process.env);
@@ -22,6 +30,7 @@ if (recovery) {
   try {
     await attestPlayerRecoveryDatabase(recovery, (statement) => pool.query(statement));
   } catch (error) {
+    process.stdout.write(`${JSON.stringify(playerRecoveryRefusal(process.env, "attestation_failed"))}\n`);
     await pool.end();
     throw error;
   }
@@ -30,12 +39,21 @@ if (recovery) {
 const { logger } = await import("./lib/logger");
 const { acquireGlobalWorkerOwnership } = await import("./lib/worker-ownership");
 
-const release = await acquireGlobalWorkerOwnership(pool, {
-  onConnectionLost: (error) => {
-    logger.error({ error }, "Global worker ownership connection lost; exiting fail-closed");
-    process.exit(1);
-  },
-});
+let release;
+try {
+  release = await acquireGlobalWorkerOwnership(pool, {
+    onConnectionLost: (error) => {
+      logger.error({ error }, "Global worker ownership connection lost; exiting fail-closed");
+      process.exit(1);
+    },
+  });
+} catch (error) {
+  if (recovery) {
+    process.stdout.write(`${JSON.stringify(playerRecoveryRefusal(process.env, "ownership_unavailable"))}\n`);
+    await pool.end();
+  }
+  throw error;
+}
 
 if (rehearsal) {
   try {

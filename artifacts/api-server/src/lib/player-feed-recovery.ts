@@ -26,6 +26,7 @@ export type RecoveryAttempt = {
 
 export class RecoveryFeedLockedError extends Error {}
 
+export type RecoveryRefusalReason = "invalid_configuration" | "attestation_failed" | "ownership_unavailable";
 /**
  * Allowlisted stdout receipt: the unique job key links to data_sync_runs without
  * copying provider errors, database identifiers, connection URLs or credentials.
@@ -191,4 +192,24 @@ export function blockRecoveryTestNetwork(env: NodeJS.ProcessEnv) {
     }
     throw new Error("Disposable recovery blocked provider fetch");
   }) as typeof fetch;
+}
+
+/**
+ * A refusal is not a provider receipt. Only an exact, consented selection is
+ * reported; no caller-supplied or connected database identity is copied here.
+ * In particular, do not add a target, sync-run key, or completion status.
+ */
+export function playerRecoveryRefusal(env: NodeJS.ProcessEnv, reason: RecoveryRefusalReason) {
+  const selection = env.GRIDLINE_PLAYER_RECOVERY;
+  const approvedFeeds: RecoveryFeed[] =
+    env.GRIDLINE_PLAYER_RECOVERY_APPROVED === "1"
+    && (selection === "injuries" || selection === "sleeper" || selection === "injuries,sleeper")
+      ? selection.split(",") as RecoveryFeed[] : [];
+  return {
+    event: "player_recovery_refusal" as const,
+    approvedFeeds,
+    reason,
+    providerAttempted: false as const,
+    refusedAt: new Date().toISOString(),
+  };
 }

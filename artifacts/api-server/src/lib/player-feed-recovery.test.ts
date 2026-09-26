@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   assertPlayerRecoveryConfiguration, attestPlayerRecoveryDatabase,
-  RecoveryFeedLockedError, runAttestedPlayerRecovery,
+  playerRecoveryRefusal, RecoveryFeedLockedError, runAttestedPlayerRecovery,
 } from "./player-feed-recovery";
 
 const env = {
@@ -55,13 +55,51 @@ test("the connected server, role, database, oid and primary must match", async (
   await assert.rejects(attestPlayerRecoveryDatabase(config, async () => ({ rows: [] })));
 });
 
+test("early refusals report only the exact approved subset and never impersonate a provider receipt", () => {
+  const supplied = {
+    ...env,
+    DATABASE_URL: "postgresql://sensitive:password@private-host/private-db",
+    GRIDLINE_PLAYER_RECOVERY_ROLE: "private-role",
+    GRIDLINE_PLAYER_RECOVERY_SYSTEM_ID: "9999999999999999999",
+    GRIDLINE_PLAYER_RECOVERY_SERVER_ADDRESS: "private-address",
+  };
+  for (const reason of ["invalid_configuration", "attestation_failed", "ownership_unavailable"] as const) {
+    const refusal = playerRecoveryRefusal(supplied, reason);
+    assert.deepEqual(refusal.approvedFeeds, ["injuries", "sleeper"]);
+    assert.equal(refusal.event, "player_recovery_refusal");
+    assert.equal(refusal.reason, reason);
+    assert.equal(refusal.providerAttempted, false);
+    assert(!Number.isNaN(Date.parse(refusal.refusedAt)));
+    const serialized = JSON.stringify(refusal);
+    for (const forbidden of ["player_recovery_receipt", "syncRunJobKey", "receiptId",
+      "attempts", "completedAt", "status", "target", "attested", "private-host",
+      "private-db", "private-role", "private-address", "9999999999999999999", "password",
+      "heliumdb", "16384"]) {
+      assert(!serialized.includes(forbidden), `refusal leaked or implied ${forbidden}`);
+    }
+  }
+  for (const selection of ["injuries", "sleeper"] as const)
+    assert.deepEqual(playerRecoveryRefusal({ ...supplied, GRIDLINE_PLAYER_RECOVERY: selection },
+      "invalid_configuration").approvedFeeds, [selection]);
+  for (const invalid of [
+    { GRIDLINE_PLAYER_RECOVERY: "injuries,unknown" },
+    { GRIDLINE_PLAYER_RECOVERY: "sleeper,injuries" },
+    { GRIDLINE_PLAYER_RECOVERY: undefined },
+    { GRIDLINE_PLAYER_RECOVERY_APPROVED: undefined },
+    { GRIDLINE_PLAYER_RECOVERY_APPROVED: "true" },
+  ]) {
+    assert.deepEqual(playerRecoveryRefusal({ ...supplied, ...invalid }, "invalid_configuration").approvedFeeds, []);
+  }
+});
+
 test("receipt shows partial success, links only selected sync runs and excludes target identifiers", async () => {
   const config = assertPlayerRecoveryConfiguration(env);
   const called: string[] = [];
-  const receipt = await runAttestedPlayerRecovery(
-    assertPlayerRecoveryConfiguration({ ...env, GRIDLINE_PLAYER_RECOVERY: "injuries" }),
-    async () => { throw new RecoveryFeedLockedError("locked"); },
-  );
+  const receipt = await runAttestedPlayerRecovery(config, async (feed, jobKey) => {
+    called.push(`${feed}:${jobKey}`);
+    if (feed === "sleeper") throw new Error("secret connection detail");
+    return { inserted: 3 };
+  });
   assert.equal(receipt.status, "partial_success");
   assert.deepEqual(receipt.approvedFeeds, ["injuries", "sleeper"]);
   assert.deepEqual(receipt.attempts, [
