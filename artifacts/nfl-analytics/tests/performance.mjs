@@ -1,6 +1,7 @@
 // Run after `node tests/build-performance.mjs`. The app entry is the ordinary
 // production bundle; the separately optimized fixture uses the real Home
-// component and API, but intentionally does not measure Clerk.
+// component and API. The account-shell variant measures shared navigation and
+// fixture-only account controls, but intentionally does not measure Clerk.
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { readdir, stat, writeFile } from 'node:fs/promises';
@@ -11,7 +12,9 @@ const base = process.env.BASE_PATH ?? '/';
 const prefix = base === '/' ? '' : `/${base.split('/').filter(Boolean).join('/')}`;
 const port = Number(process.env.PERF_PORT ?? 5198);
 const origin = `http://127.0.0.1:${port}`;
-const routes = ['/', '/tests/performance-home.html', '/games', '/games/perf-not-a-real-game', '/performance'];
+const routes = process.env.PERF_ACCOUNT_ONLY === '1'
+  ? ['/tests/performance-home.html?shell=account']
+  : ['/', '/tests/performance-home.html', '/tests/performance-home.html?shell=account', '/games', '/games/perf-not-a-real-game', '/performance'];
 let sparseGameId = null;
 const profiles = {
   mobile: { viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 2, cpu: 4, latency: 150, throughput: 200 * 1024 },
@@ -45,7 +48,7 @@ try {
       for (const [index] of routes.entries()) {
         // Measure Home and Games before the first explicit dashboard lookup.
         // Pre-fetching the dashboard here would hide cold API work from Home.
-        if (index === 3 && routes[3] === '/games/perf-not-a-real-game') {
+        if (routes[index] === '/games/perf-not-a-real-game') {
           const dashboardResponse = await fetch('http://localhost:80/api/consumer/dashboard');
           if (!dashboardResponse.ok) throw new Error(`Consumer API unavailable (${dashboardResponse.status}); start the API workflow before measuring.`);
           const dashboard = await dashboardResponse.json();
@@ -65,10 +68,11 @@ try {
             }
           }
           if (!sparseGameId) throw new Error('Consumer dashboard has no genuinely sparse Game Detail with an unavailable saved projection.');
-          routes[3] = `/games/${encodeURIComponent(sparseGameId)}`;
+          routes[index] = `/games/${encodeURIComponent(sparseGameId)}`;
         }
         const route = routes[index];
         const isHomeFixture = route === '/tests/performance-home.html';
+        const isAccountFixture = route === '/tests/performance-home.html?shell=account';
         const context = await browser.newContext({ viewport: settings.viewport, isMobile: settings.isMobile, deviceScaleFactor: settings.deviceScaleFactor });
         const page = await context.newPage();
         await page.route('**/api/**', async route => {
@@ -95,9 +99,9 @@ try {
         const url = `${origin}${prefix}${route}`;
         const start = Date.now();
         const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-        if (isHomeFixture) {
+        if (isHomeFixture || isAccountFixture) {
           await page.locator('main .weekly-home h1').waitFor({ timeout: 12_000 });
-          if (await page.locator('main .consumer-state').count()) throw new Error(`${profile}: signed-in Home fixture remained in a loading or error state`);
+          if (await page.locator('main .consumer-state').count()) throw new Error(`${profile}: Home fixture remained in a loading or error state`);
         } else {
           await page.locator('main h1, main .consumer-state h2, main .consumer-state p').first().waitFor({ timeout: 12_000 }).catch(() => {});
         }
@@ -123,18 +127,39 @@ try {
             movementUnavailable: Boolean(document.querySelector('[data-section="line-movement"] .movement-empty')),
           };
         });
+        let accountActionMs = null;
+        if (isAccountFixture) {
+          const actionStart = Date.now();
+          if (settings.isMobile) {
+            await page.getByRole('button', { name: 'Open navigation' }).click();
+            await page.locator('#consumer-mobile-navigation').getByRole('button', { name: 'Manage account' }).click();
+          } else {
+            await page.getByRole('button', { name: 'Fixture account control' }).click();
+          }
+          await page.getByTestId('fixture-account-panel').waitFor();
+          accountActionMs = Date.now() - actionStart;
+          // No mock login is installed: this link must reach the real anonymous
+          // saved-games route, where private data remains inaccessible.
+        }
         if (settings.isMobile && route !== '/games') await page.getByRole('button', { name: 'Open navigation' }).click();
         const link = route === '/games'
           ? page.getByRole('link', { name: /^Open .* details$/ }).first()
-          : page.locator(`${settings.isMobile ? '#consumer-mobile-navigation' : 'nav[aria-label="Primary navigation"]'} a[href$="/games"]`).first();
+          : page.locator(`${settings.isMobile ? '#consumer-mobile-navigation' : 'nav[aria-label="Primary navigation"]'} a[href$="${isAccountFixture ? '/saved-games' : '/games'}"]`).first();
         let interactionMs = null;
         if (await link.isVisible().catch(() => false)) {
           const clickStart = Date.now();
           await link.click();
           await page.waitForURL(url => route === '/games'
             ? url.pathname.startsWith(`${prefix}/games/`)
-            : url.pathname === `${prefix}/games`, { timeout: 10_000 });
+            : url.pathname === `${prefix}${isAccountFixture ? '/saved-games' : '/games'}`, { timeout: 10_000 });
           interactionMs = Date.now() - clickStart;
+        }
+        if (isAccountFixture) {
+          // Wouter changes the fixture URL in place. Reload at the destination
+          // to check the ordinary production app's anonymous access boundary.
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.getByTestId('status-saved-games-signed-out').waitFor({ timeout: 12_000 });
+          if (await page.getByTestId('list-saved-games').count()) throw new Error('Account fixture exposed private saved games.');
         }
         if (route === `/games/${encodeURIComponent(sparseGameId)}` && (
           data.chartLoaded || !data.comparisonUnavailable || !data.movementUnavailable
@@ -142,7 +167,7 @@ try {
         )) {
           throw new Error('Sparse Game Detail must show both unavailable states without downloading chart code or rendering a chart.');
         }
-        results.push({ profile, route, scenario: isHomeFixture ? 'signed-in-weekly-home-component-fixture' : 'anonymous-production-route', httpStatus: response?.status(), routeReadyMs, interactionMs, ...data });
+        results.push({ profile, route, scenario: isAccountFixture ? 'unauthenticated-account-shell-visual-fixture' : isHomeFixture ? 'signed-in-weekly-home-component-fixture' : 'anonymous-production-route', httpStatus: response?.status(), routeReadyMs, interactionMs, accountActionMs, ...data });
         await context.close();
       }
       const boundary = await browser.newPage();

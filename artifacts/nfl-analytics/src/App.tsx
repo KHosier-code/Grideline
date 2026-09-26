@@ -6,18 +6,15 @@ import {
   AlertTriangle,
   BarChart3,
   Bell,
-  Bookmark,
   CalendarDays,
   Check,
   ChevronRight,
-  CircleDot,
   Clock3,
   Database,
   Gauge,
   FileSearch,
   ChartNoAxesColumnIncreasing,
   History,
-  Home,
   LayoutDashboard,
   LineChart,
   ListFilter,
@@ -75,7 +72,7 @@ import NotFound from '@/pages/not-found';
 import { useRouteMetadata } from '@/lib/public-metadata';
 import { useAdminStatus } from '@/hooks/use-admin-status';
 import { consumerAccountState } from '@/lib/consumer-account-state';
-import { ConsumerAccountAction, ConsumerWorkspaceLink } from '@/components/ConsumerAccountNavigation';
+import { ConsumerShellView } from '@/components/ConsumerShellView';
 import './index.css';
 
 import { useTheme } from '@/lib/theme';
@@ -478,39 +475,12 @@ function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-const consumerNav = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/games', label: 'Games', icon: CalendarDays },
-  { href: '/saved-games', label: 'Saved games', icon: Bookmark },
-  { href: '/methodology', label: 'Methodology', icon: FileSearch },
-  { href: '/defense-vs-position', label: 'Defense vs Position', icon: ShieldCheck },
-  { href: '/teams', label: 'Teams', icon: Gauge },
-  { href: '/usage', label: 'Player Usage', icon: ChartNoAxesColumnIncreasing },
-  ...(redZoneEnabled ? [{ href: '/red-zone', label: 'Red Zone', icon: CircleDot }] : []),
-];
-
 function ConsumerShell({ children }: { children: ReactNode }) {
-  const [location] = useLocation();
-  const [open, setOpen] = useState(false);
-  const menuButton = useRef<HTMLButtonElement>(null);
   const admin = useAdminStatus();
   const { isLoaded, isSignedIn } = useAuth();
   const { openUserProfile } = useClerk();
   const account = consumerAccountState(isLoaded, isSignedIn, admin);
-  useEffect(() => setOpen(false), [location]);
-  return <div className="consumer-shell">
-    <header className="consumer-topbar">
-      <Link href="/" className="consumer-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-6 w-6" /><strong>Gridline</strong></Link>
-      <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined}><Icon />{item.label}</Link>; })}<ConsumerWorkspaceLink verified={account.adminVerified} /></nav>
-      <div className="consumer-account">
-        <ThemeToggle />
-        <ConsumerAccountAction state={account} mobile={false} accountControl={<UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} />} />
-        <button ref={menuButton} className="consumer-menu-toggle" type="button" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-controls="consumer-mobile-navigation" aria-expanded={open} onClick={() => setOpen(!open)}><Menu aria-hidden="true" /></button>
-      </div>
-    </header>
-      {open && <nav id="consumer-mobile-navigation" className="consumer-mobile-nav" aria-label="Mobile navigation" onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); } }}>{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}<ConsumerWorkspaceLink verified={account.adminVerified} onNavigate={() => setOpen(false)} /><ConsumerAccountAction state={account} mobile onNavigate={() => setOpen(false)} onManageAccount={() => { setOpen(false); openUserProfile(); }} /><ThemeToggle /></nav>}
-    <main className="consumer-main">{children}</main>
-  </div>;
+  return <ConsumerShellView account={account} accountControl={<UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} />} onManageAccount={openUserProfile} themeToggle={<ThemeToggle />}>{children}</ConsumerShellView>;
 }
 
 function AdminOnly({ children }: { children: ReactNode }) {
