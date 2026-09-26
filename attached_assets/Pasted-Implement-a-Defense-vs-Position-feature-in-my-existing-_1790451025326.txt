@@ -1,0 +1,104 @@
+Implement a **Defense vs Position** feature in my existing Gridline NFL analytics website. I want to review **QB vs opposing defense, RB vs opposing defense, WR vs opposing defense, and TE vs opposing defense** for upcoming games.
+
+This is an observed historical matchup analysis. Do not describe it as a verified one-on-one player/defender matchup or automatically turn it into a betting pick or player projection.
+
+## 1. Audit Gridline before changing it
+
+Inspect the existing repository, database schema, ingestion jobs, APIs, Game Detail page, player usage cards, and red zone feature. Identify the actual tables and fields available for:
+
+- Completed games and game status
+- Weekly player statistics, including player ID, position, team, opponent, and game ID
+- Play by play, including offensive and defensive team, player IDs, and play ID
+- Snap counts, injuries, and depth charts
+- Existing red zone opportunities and their game coverage
+- Source timestamps and Gridline’s existing pregame cutoff rules
+
+Use Gridline’s existing nflverse imports when they contain the needed fields. Do not introduce R or Python merely because nflreadr or nflreadpy exists; use the repository’s current stack and stored data. If a needed field is absent, identify its documented source and add only the smallest ingestion change required. The relevant upstream references are:
+
+- https://nflreadr.nflverse.com/reference/load_player_stats.html
+- https://nflreadr.nflverse.com/articles/nflverse_data_schedule.html
+
+Before any development database write or migration, independently verify that the connection targets the intended **development** database. Do not change production bindings, run a production migration, trigger unrelated providers, or publish this feature.
+
+Give me a short audit summary identifying the verified source and join keys for each proposed metric. Then implement what the verified data supports. If a metric lacks reliable data, leave that metric unavailable and explain the gap.
+
+## 2. Define “defense vs position” precisely
+
+For each defense, calculate what opposing **QB, RB, WR, and TE players actually produced against it** in completed regular-season games.
+
+Use the offensive player’s position and the actual opponent for that game. Normalize team abbreviations through Gridline’s existing canonical mapping before joining. Join on stable game and player IDs where available; do not match players by name alone.
+
+Support these windows:
+
+- Current season to date
+- Defense’s last three completed games
+- Defense’s last five completed games, when available
+
+Averages must use the count of **completed defensive games with verified source coverage for that metric**, not the number of player rows. If two WRs play in one game, that is still one defensive game. A missing player row or incomplete import must not become a zero. A genuine zero is allowed only when the game and relevant source coverage are verified complete.
+
+Keep regular-season and postseason results separate. Do not silently blend prior seasons into a small current-season sample. Show the season, weeks, number of covered games, and source update time alongside results. Make small samples obvious, especially early in the 2026 season.
+
+## 3. Build the four matchup views
+
+**QB vs defense**
+- Defense allowed per covered game: QB passing attempts, passing yards, passing TDs, interceptions, and QB rushing yards/TDs where supported.
+- Add dropback EPA, sack rate, or other efficiency measures only if Gridline has trustworthy play-by-play coverage and the calculation is clearly defined.
+- Alongside the defense figures, show the prospective QB’s observed season and last-three-game usage and production. Do not assume an uncertain player is the confirmed starter.
+
+**RB vs defense**
+- Defense allowed to RBs per covered game: carries, rushing yards, rushing TDs, targets, receptions, receiving yards, and receiving TDs where supported.
+- Show available red zone or inside-10 RB opportunities separately, with their own coverage count.
+- Alongside those figures, show each relevant RB’s recent carries, targets, and snaps or usage when verified.
+
+**WR vs defense**
+- Defense allowed to WRs per covered game: targets, receptions, receiving yards, and receiving TDs.
+- Add air yards, explosive plays, or red zone targets only when the underlying play-level data supports them.
+- Alongside those figures, show relevant WRs’ recent targets, target share, receiving yards, and verified red zone usage.
+
+**TE vs defense**
+- Defense allowed to TEs per covered game: targets, receptions, receiving yards, and receiving TDs.
+- Show TE red zone targets separately when covered.
+- Alongside those figures, show relevant TEs’ recent targets and available snap or usage data.
+
+Keep rushing and receiving TDs separate. Do not count a QB’s passing TD as a receiving TD or a defensive/special-teams score as an offensive position TD. Use the actual field definitions in Gridline and nflverse; do not assume a field exists because its name appears in this request.
+
+## 4. Put it in the website
+
+Add a **Defense vs Position** section to each upcoming Game Detail page with QB, RB, WR, and TE tabs. Each tab should make the comparison easy to scan:
+
+1. What the opposing defense has allowed to that position.
+2. The relevant offensive players’ verified recent usage and results.
+3. The covered games, time window, source, and update time.
+
+Also add a league-wide Defense vs Position table if it fits Gridline’s existing navigation. Let me select position and sort defenses by relevant allowed measures. Make the display work on desktop and mobile and follow Gridline’s existing visual system, including dark mode.
+
+Label any league ranking clearly: for example, **“1st most receiving yards allowed to TEs”**, with the window and covered games shown. Do not create a favorable/unfavorable grade from an unexplained formula.
+
+If injuries, player identity, or depth-chart status is uncertain, show the uncertainty. Do not mark a player healthy or confirmed merely because an injury feed has no entry. The matchup section should still show trustworthy team-level history if a player forecast is unavailable.
+
+## 5. Preserve data integrity
+
+- Use only games completed and source data available before the displayed pregame cutoff. Never include the upcoming game or later games in its matchup analysis.
+- Keep this descriptive feature separate from Gridline’s existing model eligibility, official snapshots, grades, and published picks. Displaying matchup history must not make an ineligible forecast eligible.
+- Reuse the existing red zone facts only for games they cover. Show partial coverage explicitly; do not convert missing red zone games to zero.
+- Do not use nflverse participation data for a current-season individual coverage matchup. Its 2023-onward seasons are released after the postseason. Do not claim that a specific cornerback or linebacker will cover a particular WR or TE.
+- Avoid per-player upstream requests during page loads. Calculate or query matchup data in batches, cache it using Gridline’s existing pattern, and invalidate it when the underlying completed-game data changes.
+- Follow the applicable upstream attribution and licensing requirements for any newly imported feed.
+
+## 6. Verify it before calling it complete
+
+Test these specific cases against actual development data:
+
+- One completed game with multiple WRs contributes **one game** to the defense’s per-game denominator.
+- A verified game with zero qualifying production is distinguished from a game with missing source data.
+- The last-three window chooses the defense’s last three **completed, covered games**, with its exact week labels shown.
+- An upcoming game cannot enter its own analysis; a historical pregame view cannot use later results.
+- Team abbreviation and player-ID joins do not duplicate or silently drop records.
+- A missing injury entry is not displayed as “healthy.”
+- A partially covered red zone window displays its actual coverage.
+- Existing Game Detail, picks, eligibility, snapshots, and grading still behave as before.
+- Desktop, mobile, and dark-mode views render correctly.
+
+Manually trace at least two displayed matchup figures back to their underlying game/player records and show the arithmetic. Report any discrepancies you find and fix them.
+
+Finish with a concise report listing: files changed, any development migration or ingestion performed, exact sources and fields used, coverage by metric, tests and visual checks run, two manual calculation examples, and remaining limitations. **Do not publish or alter production.** If development database identity cannot be verified, stop before data writes and report what is needed to proceed safely.
