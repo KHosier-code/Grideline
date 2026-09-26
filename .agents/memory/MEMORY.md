@@ -45,6 +45,7 @@
 - [Cross-source chart coverage](cross-source-chart-coverage.md) — raw team-stat counts do not prove chart readiness; reconcile season, schedule game, canonical teams and finals first.
 - [Disposable PostgreSQL rehearsals](disposable-postgres-rehearsal.md) — keep local server and test in one shell invocation; loopback identity may include /32.
 - [Development data repair boundaries](dev-data-repair-boundary.md) — a development-mode flag is not database identity; remove one-off writers or attest the actual target before writes.
+- [Generated contracts in publish](generated-contracts-publish.md) — commit regenerated API packages after contract changes; local builds can pass on uncommitted code while Publish sees older exports.
 - [Recovery rehearsal evidence](recovery-rehearsal-evidence.md) — bundled logs can hide blocked-fetch errors; verify persisted selected failures and unchanged sentinel rows.
 - [Matchup alert evidence](matchup-alert-evidence.md) — compare overlapping persisted evidence against the last material baseline; missing coverage must not become a change.
 - [Saved-game meaning](saved-game-meaning.md) — following a matchup stores identity, not a projection; keep evidence eligibility current and unavailable states explicit.
