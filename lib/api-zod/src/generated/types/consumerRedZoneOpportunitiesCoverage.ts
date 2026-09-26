@@ -14,5 +14,26 @@ export type ConsumerRedZoneOpportunitiesCoverage = {
   /** @minimum 0 */
   gamesWithPbp: number;
   missingGames: string[];
+  /**
+     * Weeks with completed games for which every expected team has all red-zone zone denominators.
+     * @items.minimum 1
+     */
+  coveredWeeks: number[];
+  /**
+     * Weeks with at least one completed game missing complete team play-by-play coverage.
+     * @items.minimum 1
+     */
+  missingWeeks: number[];
+  /**
+     * Earliest kickoff among the covered completed games.
+     * @nullable
+     */
+  firstCoveredKickoff: Date | null;
+  /**
+     * Latest kickoff among the covered completed games.
+     * @nullable
+     */
+  lastCoveredKickoff: Date | null;
+  partialReasons: string[];
   note: string;
 };

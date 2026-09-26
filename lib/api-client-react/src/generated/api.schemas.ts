@@ -1441,12 +1441,44 @@ export interface ConsumerRedZoneGame {
   zones: ConsumerRedZoneMetric[];
 }
 
+export type ConsumerRedZonePlayerStatus = typeof ConsumerRedZonePlayerStatus[keyof typeof ConsumerRedZonePlayerStatus];
+
+
+export const ConsumerRedZonePlayerStatus = {
+  available: 'available',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
 export type ConsumerRedZonePlayerSourceCoverage = {
   /** @minimum 0 */
   requestedGames: number;
-  /** @minimum 0 */
+  /**
+     * Requested appearances with complete PBP and verifiable player opportunity evidence.
+     * @minimum 0
+     */
   includedGames: number;
   missingGames: string[];
+  /**
+     * Selected-window weeks with at least one included appearance with complete PBP and verified player opportunity evidence.
+     * @items.minimum 1
+     */
+  coveredWeeks: number[];
+  /**
+     * Selected-window weeks with requested appearances lacking complete PBP or verifiable player opportunity evidence.
+     * @items.minimum 1
+     */
+  missingWeeks: number[];
+  /**
+     * Earliest kickoff in the included player sample.
+     * @nullable
+     */
+  firstCoveredKickoff: string | null;
+  /**
+     * Latest kickoff in the included player sample.
+     * @nullable
+     */
+  lastCoveredKickoff: string | null;
 };
 
 export interface ConsumerRedZonePlayer {
@@ -1456,8 +1488,17 @@ export interface ConsumerRedZonePlayer {
   position: string | null;
   /** @nullable */
   teamId: string | null;
-  /** @minimum 0 */
+  /**
+     * Included appearances used in the displayed metrics; uncovered appearances are never counted.
+     * @minimum 0
+     */
   gamesPlayed: number;
+  status: ConsumerRedZonePlayerStatus;
+  /**
+     * Exact week coverage for this player's selected window when partial or unavailable.
+     * @nullable
+     */
+  reason: string | null;
   /**
      * @minimum 0
      * @nullable
@@ -1528,6 +1569,27 @@ export type ConsumerRedZoneOpportunitiesCoverage = {
   /** @minimum 0 */
   gamesWithPbp: number;
   missingGames: string[];
+  /**
+     * Weeks with completed games for which every expected team has all red-zone zone denominators.
+     * @items.minimum 1
+     */
+  coveredWeeks: number[];
+  /**
+     * Weeks with at least one completed game missing complete team play-by-play coverage.
+     * @items.minimum 1
+     */
+  missingWeeks: number[];
+  /**
+     * Earliest kickoff among the covered completed games.
+     * @nullable
+     */
+  firstCoveredKickoff: string | null;
+  /**
+     * Latest kickoff among the covered completed games.
+     * @nullable
+     */
+  lastCoveredKickoff: string | null;
+  partialReasons: string[];
   note: string;
 };
 

@@ -8,6 +8,7 @@
 import type { ConsumerRedZoneGame } from './consumerRedZoneGame';
 import type { ConsumerRedZoneMetric } from './consumerRedZoneMetric';
 import type { ConsumerRedZonePlayerSourceCoverage } from './consumerRedZonePlayerSourceCoverage';
+import type { ConsumerRedZonePlayerStatus } from './consumerRedZonePlayerStatus';
 
 export interface ConsumerRedZonePlayer {
   playerId: string;
@@ -16,8 +17,17 @@ export interface ConsumerRedZonePlayer {
   position: string | null;
   /** @nullable */
   teamId: string | null;
-  /** @minimum 0 */
+  /**
+     * Included appearances used in the displayed metrics; uncovered appearances are never counted.
+     * @minimum 0
+     */
   gamesPlayed: number;
+  status: ConsumerRedZonePlayerStatus;
+  /**
+     * Exact week coverage for this player's selected window when partial or unavailable.
+     * @nullable
+     */
+  reason: string | null;
   /**
      * @minimum 0
      * @nullable

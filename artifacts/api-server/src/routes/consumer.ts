@@ -50,9 +50,11 @@ import {
 } from "../lib/consumer-market-freshness";
 import {
   cutoffSafeRedZoneGames,
+  coveredRedZoneWindow,
   groupRedZoneAppearancesByPlayerTeam,
   hasPlayerStatAppearance,
   RED_ZONE_VALUES,
+  redZoneCoveragePeriodLabel,
   redZonePlayerFactForAppearance,
   redZoneShare,
 } from "../lib/red-zone-opportunities";
@@ -1914,7 +1916,6 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
         || teamMaps.scheduleToAbbreviation.get(entry.awayTeamId) === canonicalTeam)
       : completed;
     const applicableGameIds = new Set(applicableTeams.map((entry) => entry.gameId));
-    const coveredKeys = new Set(teamFacts.map((fact) => `${fact.gameId}:${fact.teamId}`));
     const expectedTeamGames = applicableTeams.flatMap((entry) => {
       const home = teamMaps.scheduleToAbbreviation.get(entry.homeTeamId);
       const away = teamMaps.scheduleToAbbreviation.get(entry.awayTeamId);
@@ -1922,16 +1923,36 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
         .filter((team): team is string => Boolean(team) && (!canonicalTeam || team === canonicalTeam))
         .map((team) => ({ gameId: entry.gameId, team }));
     });
-    const missingGames = [...new Set(expectedTeamGames
-      .filter((entry) => !coveredKeys.has(`${entry.gameId}:${entry.team}`))
-      .map((entry) => entry.gameId))];
-    const coveredGameIds = new Set(expectedTeamGames.map((entry) => entry.gameId)
-      .filter((id) => expectedTeamGames.filter((entry) => entry.gameId === id)
-        .every((entry) => coveredKeys.has(`${entry.gameId}:${entry.team}`))));
     const teamDenominators = new Map(teamFacts.map((fact) => [
       `${fact.gameId}:${fact.teamId}:${fact.zone}`,
       { targets: fact.targets, carries: fact.carries },
     ]));
+    const coveredTeamGameKeys = new Set(expectedTeamGames.flatMap(({ gameId, team }) =>
+      RED_ZONE_VALUES.every((zone) => teamDenominators.has(`${gameId}:${team}:${zone}`))
+        ? [`${gameId}:${team}`]
+        : []));
+    const missingGames = [...new Set(expectedTeamGames
+      .filter((entry) => !coveredTeamGameKeys.has(`${entry.gameId}:${entry.team}`))
+      .map((entry) => entry.gameId))];
+    const coveredGameIds = new Set(expectedTeamGames.map((entry) => entry.gameId)
+      .filter((id) => {
+        const gameTeams = expectedTeamGames.filter((entry) => entry.gameId === id);
+        return gameTeams.length === (canonicalTeam ? 1 : 2)
+          && gameTeams.every((entry) => coveredTeamGameKeys.has(`${entry.gameId}:${entry.team}`));
+      }));
+    const coveredSchedules = applicableTeams
+      .filter((entry) => coveredGameIds.has(entry.gameId))
+      .sort((a, b) => a.kickoffTime!.getTime() - b.kickoffTime!.getTime()
+        || a.gameId.localeCompare(b.gameId));
+    const weeksForGames = (gameIds: Set<string>) => [...new Set(applicableTeams
+      .filter((entry) => gameIds.has(entry.gameId))
+      .map((entry) => entry.week))].sort((a, b) => a - b);
+    const coveredWeeks = weeksForGames(coveredGameIds);
+    const missingWeeks = weeksForGames(new Set(missingGames));
+    const coveragePeriod = redZoneCoveragePeriodLabel(coveredWeeks, missingWeeks);
+    const coveragePartialReasons = missingWeeks.length ? [coveragePeriod] : [];
+    const firstCoveredKickoff = coveredSchedules[0]?.kickoffTime?.toISOString() ?? null;
+    const lastCoveredKickoff = coveredSchedules.at(-1)?.kickoffTime?.toISOString() ?? null;
     const scheduleById = new Map(completed.map((entry) => [entry.gameId, entry]));
     const scheduleGameByMatchup = new Map<string, string>();
     for (const entry of completed) {
@@ -2079,7 +2100,17 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
         Boolean(denominator),
       );
     };
+    const metricZones = rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5];
     const players = playerTeamGroups.map(({ key, playerId, teamId, appearances: selectedAppearances }) => {
+      const playerEvidenceFacts = playerFacts.filter((fact) =>
+        fact.playerId === playerId && fact.teamId === teamId && applicableGameIds.has(fact.gameId));
+      const playerCoveredTeamGameKeys = new Set(selectedAppearances.filter((appearance) =>
+        coveredTeamGameKeys.has(`${appearance.gameId}:${appearance.teamId}`)
+        && metricZones.every((zone) =>
+          Boolean(playerFactFor(playerId, appearance, zone, playerEvidenceFacts))))
+        .map((appearance) => `${appearance.gameId}:${appearance.teamId}`));
+      const sourceWindow = coveredRedZoneWindow(selectedAppearances, playerCoveredTeamGameKeys);
+      const coveredAppearances = sourceWindow.included;
       const facts = grouped.get(key) ?? [];
       const chronologicalFacts = [...facts].sort((a, b) =>
         (scheduleById.get(a.gameId)?.kickoffTime?.getTime() ?? 0)
@@ -2088,10 +2119,10 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
         || a.zone - b.zone
         || a.teamId.localeCompare(b.teamId));
       const zones = (rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5]).map((zone) => {
-        const rows = selectedAppearances.map((appearance) =>
+        const rows = coveredAppearances.map((appearance) =>
           playerFactFor(playerId, appearance, zone, chronologicalFacts));
-        const completePlayerEvidence = rows.every(Boolean);
-        const denominators = selectedAppearances.map((appearance) =>
+        const completePlayerEvidence = rows.length > 0 && rows.every(Boolean);
+        const denominators = coveredAppearances.map((appearance) =>
           teamDenominators.get(`${appearance.gameId}:${appearance.teamId}:${zone}`));
         const targets = completePlayerEvidence
           ? rows.reduce((total, row) => total + row!.targets, 0) : null;
@@ -2101,9 +2132,9 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
           ? rows.reduce((total, row) => total + row!.receivingTouchdowns, 0) : null;
         const rushingTouchdowns = completePlayerEvidence
           ? rows.reduce((total, row) => total + row!.rushingTouchdowns, 0) : null;
-        const teamTargets = denominators.every(Boolean)
+        const teamTargets = coveredAppearances.length > 0 && denominators.every(Boolean)
           ? denominators.reduce((total, denominator) => total + denominator!.targets, 0) : null;
-        const teamCarries = denominators.every(Boolean)
+        const teamCarries = coveredAppearances.length > 0 && denominators.every(Boolean)
           ? denominators.reduce((total, denominator) => total + denominator!.carries, 0) : null;
         return {
           zone,
@@ -2117,15 +2148,12 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
           carryShare: redZoneShare(carries, teamCarries),
         };
       });
-      const selectedGames = selectedAppearances.map((appearance) => appearance.gameId);
-      const metricZones = rawZone === undefined ? RED_ZONE_VALUES : [rawZone as 20 | 10 | 5];
-      const gamesWithPlayerEvidence = selectedAppearances.filter((appearance) =>
-        metricZones.every((zone) => Boolean(playerFactFor(playerId, appearance, zone, chronologicalFacts))));
-      const missingPlayerGames = selectedAppearances
-        .filter((appearance) => !gamesWithPlayerEvidence.some((covered) => covered.gameId === appearance.gameId))
-        .map((appearance) => appearance.gameId);
+      const selectedGames = coveredAppearances.map((appearance) => appearance.gameId);
       const snapHistory = selectedGames.map((selectedGameId) =>
         snapByPlayerGame.get(`${playerId}:${selectedGameId}`)).filter((snap): snap is NonNullable<typeof snap> => Boolean(snap));
+      const playerStatus = coveredAppearances.length === 0
+        ? "unavailable"
+        : sourceWindow.missingGames.length > 0 ? "partial" : "available";
       const name = sourceNameByPlayer.get(playerId) ?? chronologicalFacts.find((fact) => fact.playerName)?.playerName
         ?? metadataById.get(playerId)?.name ?? playerId;
       return {
@@ -2135,6 +2163,14 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
           ?? sourcePositionByPlayer.get(playerId) ?? metadataById.get(playerId)?.position ?? null,
         teamId,
         gamesPlayed: selectedGames.length,
+        status: playerStatus,
+        reason: sourceWindow.missingGames.length > 0 || coveredAppearances.length === 0
+          ? redZoneCoveragePeriodLabel(
+              sourceWindow.coveredWeeks,
+              sourceWindow.missingWeeks,
+              "Verified player opportunity evidence",
+            )
+          : null,
         offenseSnaps: snapHistory.some((snap) => snap.offenseSnaps !== null)
           ? snapHistory.reduce((total, snap) => total + (snap.offenseSnaps ?? 0), 0) : null,
         offensePct: snapHistory.some((snap) => snap.offensePct !== null)
@@ -2143,13 +2179,17 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
           : null,
         snapGames: snapHistory.length,
         sourceCoverage: {
-          requestedGames: selectedAppearances.length,
-          includedGames: gamesWithPlayerEvidence.length,
-          missingGames: missingPlayerGames,
+          requestedGames: sourceWindow.requestedGames,
+          includedGames: sourceWindow.includedGames,
+          missingGames: sourceWindow.missingGames,
+          coveredWeeks: sourceWindow.coveredWeeks,
+          missingWeeks: sourceWindow.missingWeeks,
+          firstCoveredKickoff: sourceWindow.firstCoveredKickoff,
+          lastCoveredKickoff: sourceWindow.lastCoveredKickoff,
         },
-        games: selectedGames.map((selectedGameId) => {
+        games: coveredAppearances.map((appearance) => {
+          const selectedGameId = appearance.gameId;
           const game = scheduleById.get(selectedGameId);
-          const appearance = selectedAppearances.find((entry) => entry.gameId === selectedGameId)!;
           const gameRows = facts.filter((fact) => fact.gameId === selectedGameId
             && fact.teamId === appearance.teamId);
           return {
@@ -2196,6 +2236,11 @@ router.get("/consumer/red-zone-opportunities", async (req, res): Promise<void> =
         completedGames: expectedGames,
         gamesWithPbp: coveredGames,
         missingGames,
+        coveredWeeks,
+        missingWeeks,
+        firstCoveredKickoff,
+        lastCoveredKickoff,
+        partialReasons: coveragePartialReasons,
         note: "Zero opportunities are observed only for players identified by credited PBP participation, weekly player statistics, or a verified positive-offense-snap GSIS/PFR identity in a completed PBP game. Missing PBP evidence leaves that appearance unavailable. Attempts without a credited receiver or rusher ID are excluded from player counts and team denominators.",
       },
       players,

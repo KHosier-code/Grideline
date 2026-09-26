@@ -1,10 +1,10 @@
 import { getGetConsumerRedZoneOpportunitiesQueryKey, useGetConsumerRedZoneOpportunities, type ConsumerKeyPlayer, type ConsumerTeam, type GetConsumerRedZoneOpportunitiesParams } from '@workspace/api-client-react';
 import { AlertTriangle, UserRound } from 'lucide-react';
 import { USAGE_METRIC_LABELS, formatUsageMetric, usagePeriodLabel } from '../lib/consumer-presentation';
-import { RED_ZONE_FALLBACK_LABEL, formatRedZoneValue, normalizeRedZoneResponse, readableTime, selectRedZoneFallback, type RedZonePlayer, type RedZonePeriod } from '../lib/consumer-red-zone';
+import { RED_ZONE_FALLBACK_LABEL, formatRedZoneCoverage, formatRedZoneValue, normalizeRedZoneResponse, readableTime, selectRedZoneFallback, type RedZonePlayer, type RedZonePeriod } from '../lib/consumer-red-zone';
 
-function RedZoneFigures({ playerId, season, last3, loading, unavailable, sourceUpdatedAt, ingestedAt }: {
-  playerId: string; season?: RedZonePlayer; last3?: RedZonePlayer; loading: Record<RedZonePeriod, boolean>; unavailable: Record<RedZonePeriod, boolean>; sourceUpdatedAt: string | null; ingestedAt: string | null;
+function RedZoneFigures({ playerId, season, last3, loading, unavailable, sourceGaps, sourceUpdatedAt, ingestedAt }: {
+  playerId: string; season?: RedZonePlayer; last3?: RedZonePlayer; loading: Record<RedZonePeriod, boolean>; unavailable: Record<RedZonePeriod, boolean>; sourceGaps: Record<RedZonePeriod, number[]>; sourceUpdatedAt: string | null; ingestedAt: string | null;
 }) {
   const windows: { key: RedZonePeriod; label: string; entry?: RedZonePlayer }[] = [
     { key: 'season', label: 'Season', entry: season },
@@ -16,7 +16,15 @@ function RedZoneFigures({ playerId, season, last3, loading, unavailable, sourceU
       {windows.map(({ key, label, entry }) => {
         const window = entry?.[key];
         return <div className="rz-card-period" key={key} data-testid={`red-zone-${key}-${playerId}`}>
-          <strong>{label} <span className="rz-value-muted">· {window?.gamesPlayed === null || window?.gamesPlayed === undefined ? 'sample unavailable' : `${window.gamesPlayed} played`}{window?.sampleGames !== null && window?.sampleGames !== undefined && window.includedGames !== null ? ` · ${window.includedGames}/${window.sampleGames} sourced` : ''}</span></strong>
+          <strong>{label} <span className="rz-value-muted">· {window?.gamesPlayed === null || window?.gamesPlayed === undefined ? 'sample unavailable' : `${window.gamesPlayed} covered`}{window?.sampleGames !== null && window?.sampleGames !== undefined && window.includedGames !== null ? ` · ${window.includedGames}/${window.sampleGames} sourced` : ''}</span></strong>
+          {window && (window.coveredWeeks.length > 0 || window.missingWeeks.length > 0 || window.sampleGames !== null) && <small className="rz-card-coverage" data-testid={`red-zone-coverage-${key}-${playerId}`}>
+            {window.coveredWeeks.length > 0 || window.missingWeeks.length > 0 ? `${formatRedZoneCoverage(window)} · ` : ''}
+            {window.includedGames ?? 0}/{window.sampleGames ?? window.gamesPlayed ?? 0} completed appearances covered
+            {window.status === 'partial' ? ' · PARTIAL SOURCE COVERAGE' : ''}
+          </small>}
+          {sourceGaps[key].length > 0 && window && <small className="rz-card-coverage">
+            League play-by-play is missing {sourceGaps[key].map(week => `Week ${week}`).join(', ')}. The appearance ratio counts only identified player games; participation in missing weeks cannot be confirmed from this source.
+          </small>}
           <div className="rz-card-stats">
             <span><small>Targets</small>{formatRedZoneValue(window?.stats.targets ?? null)}</span>
             <span><small>Carries</small>{formatRedZoneValue(window?.stats.carries ?? null)}</span>
@@ -93,6 +101,7 @@ export function ConsumerKeyPlayers({ players, away, home, season, week, gameId }
       last3: last3Data.players.find(match),
       loading: { season: seasonQuery.isLoading, last3: last3Query.isLoading },
       unavailable: { season: seasonQuery.isError, last3: last3Query.isError },
+      sourceGaps: { season: seasonData.missingWeeks, last3: last3Data.missingWeeks },
       sourceUpdatedAt: seasonData.sourceUpdatedAt ?? last3Data.sourceUpdatedAt,
       ingestedAt: seasonData.ingestedAt ?? last3Data.ingestedAt,
     };

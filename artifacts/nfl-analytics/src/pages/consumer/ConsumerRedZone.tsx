@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { getGetConsumerRedZoneOpportunitiesQueryKey, getListConsumerPlayerUsageGamesQueryKey, useGetConsumerRedZoneOpportunities, useListConsumerPlayerUsageGames, type GetConsumerRedZoneOpportunitiesParams } from '@workspace/api-client-react';
 import { ArrowDown, ArrowUp, ArrowUpDown, RotateCcw, Target } from 'lucide-react';
 import { ConsumerMessage } from './consumer-ui';
-import { formatRedZoneValue, normalizeRedZoneResponse, readableTime, scheduleTeamAbbreviation, sortRedZonePlayers, type RedZonePeriod, type RedZoneStat, type RedZoneZone } from '../../lib/consumer-red-zone';
+import { formatRedZoneCoverage, formatRedZoneValue, normalizeRedZoneResponse, readableTime, scheduleTeamAbbreviation, sortRedZonePlayers, type RedZonePeriod, type RedZoneStat, type RedZoneZone } from '../../lib/consumer-red-zone';
 
 type SortColumn = RedZoneStat | 'playerName' | 'gamesPlayed';
 const columns: { key: SortColumn; label: string; percent?: boolean }[] = [
   { key: 'playerName', label: 'Player' },
-  { key: 'gamesPlayed', label: 'Games' },
+  { key: 'gamesPlayed', label: 'Covered games' },
   { key: 'targets', label: 'Targets' },
   { key: 'carries', label: 'Carries' },
   { key: 'targetShare', label: 'Target share', percent: true },
@@ -69,6 +69,9 @@ export default function ConsumerRedZone() {
       : query.isError ? <div><ConsumerMessage error title="Opportunity data unavailable" detail="The source-backed red zone ledger could not be loaded." /><button className="rz-reset mt-3" type="button" onClick={() => query.refetch()} data-testid="button-red-zone-retry">Try again</button></div>
       : <>
         {(data.status === 'partial' || data.status === 'unavailable' || data.partialReasons.length > 0 || data.players.some(player => player[period].status !== 'available')) && <div className="rz-warning" role="status" data-testid="status-red-zone-coverage"><strong>{data.status === 'unavailable' ? 'Unavailable coverage' : 'Limited coverage'}</strong> · {data.partialReasons.length ? data.partialReasons.join(' · ') : 'Some player appearances lack verified play-by-play. See each row’s source sample; missing values are not zeros.'}</div>}
+        {data.missingWeeks.length > 0 && <div className="rz-coverage-period" role="status" data-testid="red-zone-coverage-period">
+          <strong>{period === 'season' ? 'Season sample' : 'Last-three sample'} covers:</strong> {formatRedZoneCoverage(data)}. Displayed figures use covered games only; missing-week opportunities are unavailable, not zero.
+        </div>}
         {players.length === 0 ? <div className="consumer-state" data-testid="empty-red-zone"><Target className="h-6 w-6 text-accent" /><h2>No verified opportunities in this view</h2><p>Try another team, position, season or zone. No missing play is counted as zero.</p></div>
           : <section className="rz-ledger" aria-labelledby="rz-ledger-title">
             <div className="rz-ledger-head"><h2 id="rz-ledger-title">Opportunity ledger</h2><span data-testid="text-red-zone-count">{players.length} players · {period === 'last3' ? 'up to 3 completed appearances' : 'completed games'}</span></div>
@@ -76,12 +79,14 @@ export default function ConsumerRedZone() {
               <table className="rz-table"><caption className="sr-only">{zoneLabels[zone]} inclusive opportunity totals for {period === 'season' ? 'the season' : 'the last three completed appearances'}</caption>
                 <thead><tr>{columns.map(column => <th key={column.key} scope="col" aria-sort={sortColumn === column.key ? sortDirection === 'asc' ? 'ascending' : 'descending' : 'none'}><button className="rz-sort" type="button" onClick={() => sort(column.key)} data-testid={`button-red-zone-sort-${column.key}`}>{column.label}{sortColumn === column.key ? sortDirection === 'asc' ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" /> : <ArrowUpDown aria-hidden="true" />}</button></th>)}</tr></thead>
                 <tbody>{players.map((player, index) => { const window = player[period]; return <tr key={`${player.playerId}:${player.team}:${index}`} data-testid={`row-red-zone-${index}`}>
-                  <td><span className="rz-player-name">{player.playerName}</span><span className="rz-player-meta">{player.team} · {player.position}{window.status !== 'available' ? ` · ${window.status}` : ''}</span></td>
+                  <td><span className="rz-player-name">{player.playerName}</span><span className="rz-player-meta">{player.team} · {player.position}{window.status !== 'available' ? ` · ${window.status}` : ''}</span>
+                    {window.missingWeeks.length > 0 && <span className="rz-player-coverage" data-testid={`red-zone-player-coverage-${index}`}>{formatRedZoneCoverage(window)} · {window.includedGames ?? 0}/{window.sampleGames ?? window.gamesPlayed ?? 0} sourced appearances; partial sample</span>}
+                  </td>
                   {columns.slice(1).map(column => { const value = column.key === 'gamesPlayed' ? window.gamesPlayed : window.stats[column.key as RedZoneStat]; return <td key={column.key} className={value === null ? 'rz-value-muted' : column.key === 'targets' ? 'rz-primary-value' : ''} title={value === null ? window.reason ?? 'Unavailable from source' : undefined} data-testid={`text-red-zone-${column.key}-${index}`}>{formatRedZoneValue(value, column.percent)}{column.key === 'gamesPlayed' && window.sampleGames !== null && window.includedGames !== null ? <span className="rz-value-muted" title="Sourced appearances / requested appearances"> · {window.includedGames}/{window.sampleGames} source</span> : null}{column.key === 'snaps' && window.snapGames !== null && window.gamesPlayed !== null ? <span className="rz-value-muted" title="Verified snap games / player appearances"> ({window.snapGames}/{window.gamesPlayed})</span> : null}</td>; })}
                 </tr>; })}</tbody>
               </table>
             </div>
-            <div className="rz-legend"><strong>Games</strong> = player completed appearances; source sample = included / requested appearances. <strong>Shares</strong> are percentages of team opportunities in the selected zone. Snaps and snap % appear only when independently verified; snap coverage can be smaller than appearance coverage. A dash means unavailable, not zero. TD columns distinguish receiving from rushing. Players changing teams have separate rows.</div>
+            <div className="rz-legend"><strong>Covered games</strong> = completed player appearances with verified source evidence; source sample = included / requested completed appearances. <strong>Shares</strong> are percentages of team opportunities in the selected zone. Snaps and snap % appear only when independently verified; snap coverage can be smaller than appearance coverage. A dash means unavailable, not zero. TD columns distinguish receiving from rushing. Players changing teams have separate rows.</div>
           </section>}
       </>}
   </div>;

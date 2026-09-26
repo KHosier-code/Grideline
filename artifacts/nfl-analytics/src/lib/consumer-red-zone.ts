@@ -4,9 +4,10 @@
 export type RedZonePeriod = 'season' | 'last3';
 export type RedZoneZone = 20 | 10 | 5;
 export type RedZoneStat = 'targets' | 'carries' | 'targetShare' | 'carryShare' | 'receivingTds' | 'rushingTds' | 'snaps' | 'snapPct';
-export type RedZoneWindow = { gamesPlayed: number | null; sampleGames: number | null; includedGames: number | null; snapGames: number | null; status: string; reason: string | null; stats: Record<RedZoneStat, number | null> };
+export type RedZoneCoverage = { coveredWeeks: number[]; missingWeeks: number[]; firstCoveredKickoff: string | null; lastCoveredKickoff: string | null };
+export type RedZoneWindow = RedZoneCoverage & { gamesPlayed: number | null; sampleGames: number | null; includedGames: number | null; snapGames: number | null; status: string; reason: string | null; stats: Record<RedZoneStat, number | null> };
 export type RedZonePlayer = { playerId: string; playerName: string; team: string; position: string; season: RedZoneWindow; last3: RedZoneWindow };
-export type RedZoneResponse = { season: number | null; status: string; players: RedZonePlayer[]; sourceUpdatedAt: string | null; ingestedAt: string | null; partialReasons: string[]; availableTeams: string[]; availableSeasons: number[] };
+export type RedZoneResponse = RedZoneCoverage & { season: number | null; status: string; players: RedZonePlayer[]; sourceUpdatedAt: string | null; ingestedAt: string | null; partialReasons: string[]; availableTeams: string[]; availableSeasons: number[] };
 
 type Raw = Record<string, unknown>;
 const object = (value: unknown): Raw => value && typeof value === 'object' && !Array.isArray(value) ? value as Raw : {};
@@ -35,6 +36,10 @@ export function normalizeRedZoneWindow(value: unknown, selectedZone: RedZoneZone
     return null;
   };
   return {
+    coveredWeeks: normalizeWeeks(sourceCoverage.coveredWeeks ?? raw.coveredWeeks),
+    missingWeeks: normalizeWeeks(sourceCoverage.missingWeeks ?? raw.missingWeeks),
+    firstCoveredKickoff: text(sourceCoverage.firstCoveredKickoff ?? raw.firstCoveredKickoff),
+    lastCoveredKickoff: text(sourceCoverage.lastCoveredKickoff ?? raw.lastCoveredKickoff),
     gamesPlayed: number(raw.gamesPlayed),
     sampleGames: requestedGames ?? number(raw.sampleGames),
     includedGames,
@@ -57,6 +62,41 @@ export function normalizeRedZoneWindow(value: unknown, selectedZone: RedZoneZone
   };
 }
 
+function normalizeWeeks(value: unknown): number[] {
+  return Array.isArray(value)
+    ? [...new Set(value.map(number).filter((week): week is number => week !== null && Number.isInteger(week) && week > 0))]
+      .sort((left, right) => left - right)
+    : [];
+}
+
+/** A stable, human-readable source span; UTC avoids dates shifting with browser locale. */
+export function formatRedZoneDateRange(first: string | null, last: string | null): string | null {
+  if (!first) return null;
+  const start = new Date(first);
+  const end = last ? new Date(last) : start;
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  const year = start.getUTCFullYear();
+  const endYear = end.getUTCFullYear();
+  const monthDay = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const fullDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  if (start.getTime() === end.getTime()) return fullDate.format(start);
+  if (year === endYear) return `${monthDay.format(start)}–${monthDay.format(end)}, ${year}`;
+  return `${fullDate.format(start)}–${fullDate.format(end)}`;
+}
+
+export function formatRedZoneCoverage(coverage: RedZoneCoverage): string {
+  const weeks = (values: number[]) => {
+    const normalized = normalizeWeeks(values);
+    return normalized.length ? normalized.map(week => `Week ${week}`).join(', ') : 'none';
+  };
+  const range = formatRedZoneDateRange(coverage.firstCoveredKickoff, coverage.lastCoveredKickoff);
+  return [
+    `Covered ${weeks(coverage.coveredWeeks)}`,
+    range ? range : null,
+    coverage.missingWeeks.length ? `missing ${weeks(coverage.missingWeeks)}` : null,
+  ].filter(Boolean).join(' · ');
+}
+
 export function normalizeRedZoneResponse(value: unknown, selectedPeriod: RedZonePeriod = 'season', selectedZone: RedZoneZone = 20): RedZoneResponse {
   const raw = object(value);
   const coverage = object(raw.sourceCoverage ?? raw.coverage);
@@ -66,6 +106,10 @@ export function normalizeRedZoneResponse(value: unknown, selectedPeriod: RedZone
   return {
     season: number(raw.season),
     status: text(raw.status) ?? 'unavailable',
+    coveredWeeks: normalizeWeeks(coverage.coveredWeeks ?? raw.coveredWeeks),
+    missingWeeks: normalizeWeeks(coverage.missingWeeks ?? raw.missingWeeks),
+    firstCoveredKickoff: text(coverage.firstCoveredKickoff ?? raw.firstCoveredKickoff),
+    lastCoveredKickoff: text(coverage.lastCoveredKickoff ?? raw.lastCoveredKickoff),
     players: players.map((item) => {
       const p = object(item);
       const windows = object(p.windows ?? p.periods);
@@ -100,7 +144,7 @@ export function scheduleTeamAbbreviation(value: unknown): string | null {
   return text(value) ?? text(object(value).abbreviation);
 }
 
-export const RED_ZONE_FALLBACK_LABEL = 'Red-zone-only evidence';
+export const RED_ZONE_FALLBACK_LABEL = 'Incomplete Player Usage · Red-zone-only evidence';
 
 /** Rank verified opportunities for one matchup team. Missing metrics are not zero;
  * a player with no count evidence sorts after every player with a known count.

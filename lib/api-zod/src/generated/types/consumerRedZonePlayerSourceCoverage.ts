@@ -9,7 +9,30 @@
 export type ConsumerRedZonePlayerSourceCoverage = {
   /** @minimum 0 */
   requestedGames: number;
-  /** @minimum 0 */
+  /**
+     * Requested appearances with complete PBP and verifiable player opportunity evidence.
+     * @minimum 0
+     */
   includedGames: number;
   missingGames: string[];
+  /**
+     * Selected-window weeks with at least one included appearance with complete PBP and verified player opportunity evidence.
+     * @items.minimum 1
+     */
+  coveredWeeks: number[];
+  /**
+     * Selected-window weeks with requested appearances lacking complete PBP or verifiable player opportunity evidence.
+     * @items.minimum 1
+     */
+  missingWeeks: number[];
+  /**
+     * Earliest kickoff in the included player sample.
+     * @nullable
+     */
+  firstCoveredKickoff: Date | null;
+  /**
+     * Latest kickoff in the included player sample.
+     * @nullable
+     */
+  lastCoveredKickoff: Date | null;
 };

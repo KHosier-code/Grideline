@@ -1128,6 +1128,9 @@
   .rz-table td:first-child { padding-left: 20px; font-family: var(--app-font-sans); }
   .rz-player-name { display: block; font-weight: 800; color: hsl(var(--foreground)); font-size: 13px; }
   .rz-player-meta { display: block; margin-top: 4px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; }
+  .rz-player-coverage { display: block; max-width: 300px; margin-top: 5px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 9px; line-height: 1.5; white-space: normal; }
+  .rz-coverage-period { margin: -3px 0 14px; border-left: 3px solid hsl(var(--accent)); background: hsl(var(--accent) / .06); padding: 11px 14px; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.55; }
+  .rz-coverage-period strong { color: hsl(var(--foreground)); }
   .rz-value-muted { color: hsl(var(--muted-foreground)); }
   .rz-primary-value { color: hsl(var(--accent)); font-weight: 700; }
   .rz-legend { padding: 15px 20px; border-top: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.6; }
@@ -1140,6 +1143,7 @@
   .rz-card-period { border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--card)); padding: 10px; min-width: 0; }
   .rz-card-period > strong { display: block; margin-bottom: 9px; color: hsl(var(--foreground)); font-size: 11px; }
   .rz-card-period > small { display: block; margin-top: 8px; color: hsl(var(--muted-foreground)); font-size: 9px; line-height: 1.45; }
+  .rz-card-coverage { border-left: 2px solid hsl(var(--accent) / .7); padding-left: 7px; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); }
   .rz-card-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
   .rz-card-stats span { display: grid; gap: 3px; font-family: var(--app-font-mono); font-size: 12px; font-weight: 700; }
   .rz-card-stats small { color: hsl(var(--muted-foreground)); font-size: 9px; font-weight: 400; }

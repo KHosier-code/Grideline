@@ -671,6 +671,8 @@ export const GetLiveModelInputIntegrityResponse = zod.object({
   "phase7UsedForValidationOnly": zod.boolean()
 }))
 })
+
+
 /**
  * Requires authenticated administrator access. The optional featureVersion pregame-v4-personnel-context creates additive rows from pregame-v3 and never overwrites v3. Never trains or scores a betting model.
  * @summary Build an immutable version of historical pregame features
@@ -2098,7 +2100,7 @@ export const ListConsumerPlayerUsageGamesResponse = zod.object({
 
 
 /**
- * Returns regular-season nflverse play-by-play counts at pre-play yardline thresholds 20, 10, and 5 (overlapping zones). Targets include credited intended receivers on incomplete passes. Carries follow rush_attempt, including credited QB scrambles. Two-point tries, kneels, spikes, no-play/nullified plays, and attempts without a credited player ID are excluded; missing-ID attempts are also excluded from team denominators. last3 uses each player's last three completed appearances identified by regular-season player statistics or positive offensive snaps with a verified GSIS/PFR crosswalk, across teams before results are partitioned into separate playerId/teamId rows. Missing PBP for an appearance is returned as unavailable rather than as a zero count. sourceUpdatedAt is null when nflverse does not publish a source update timestamp. A game parameter sets a pre-kickoff cutoff and excludes that game; it does not require prediction or market data.
+ * Returns regular-season nflverse play-by-play counts at pre-play yardline thresholds 20, 10, and 5 (overlapping zones). Targets include credited intended receivers on incomplete passes. Carries follow rush_attempt, including credited QB scrambles. Two-point tries, kneels, spikes, no-play/nullified plays, and attempts without a credited player ID are excluded; missing-ID attempts are also excluded from team denominators. last3 uses each player's last three completed appearances identified by regular-season player statistics or positive offensive snaps with a verified GSIS/PFR crosswalk, across teams before results are partitioned into separate playerId/teamId rows. Season and last3 select the original completed-appearance window first, then aggregate only games with complete team play-by-play and verified player opportunity evidence. Missing appearances are excluded from the count and surfaced in sourceCoverage rather than treated as zero. Week lists and kickoff bounds specify the exact coverage period for each figure. sourceUpdatedAt is null when nflverse does not publish a source update timestamp. A game parameter sets a pre-kickoff cutoff and excludes that game; it does not require prediction or market data.
  * @summary Read cutoff-safe, source-backed red-zone opportunities
  */
 export const getConsumerRedZoneOpportunitiesQuerySeasonMin = 2000;
@@ -2119,6 +2121,8 @@ export const getConsumerRedZoneOpportunitiesResponseCoverageCompletedGamesMin = 
 
 export const getConsumerRedZoneOpportunitiesResponseCoverageGamesWithPbpMin = 0;
 
+
+
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesPlayedMin = 0;
 
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemOffenseSnapsMin = 0;
@@ -2131,6 +2135,8 @@ export const getConsumerRedZoneOpportunitiesResponsePlayersItemSnapGamesMin = 0;
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageRequestedGamesMin = 0;
 
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageIncludedGamesMin = 0;
+
+
 
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemOffenseSnapsMin = 0;
 
@@ -2189,6 +2195,11 @@ export const GetConsumerRedZoneOpportunitiesResponse = zod.object({
   "completedGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponseCoverageCompletedGamesMin),
   "gamesWithPbp": zod.number().int().min(getConsumerRedZoneOpportunitiesResponseCoverageGamesWithPbpMin),
   "missingGames": zod.array(zod.string()),
+  "coveredWeeks": zod.array(zod.number().int().min(1)).describe('Weeks with completed games for which every expected team has all red-zone zone denominators.'),
+  "missingWeeks": zod.array(zod.number().int().min(1)).describe('Weeks with at least one completed game missing complete team play-by-play coverage.'),
+  "firstCoveredKickoff": zod.coerce.date().nullable().describe('Earliest kickoff among the covered completed games.'),
+  "lastCoveredKickoff": zod.coerce.date().nullable().describe('Latest kickoff among the covered completed games.'),
+  "partialReasons": zod.array(zod.string()),
   "note": zod.string()
 }),
   "players": zod.array(zod.object({
@@ -2196,14 +2207,20 @@ export const GetConsumerRedZoneOpportunitiesResponse = zod.object({
   "playerName": zod.string(),
   "position": zod.string().nullable(),
   "teamId": zod.string().nullable(),
-  "gamesPlayed": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesPlayedMin),
+  "gamesPlayed": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemGamesPlayedMin).describe('Included appearances used in the displayed metrics; uncovered appearances are never counted.'),
+  "status": zod.enum(['available', 'partial', 'unavailable']),
+  "reason": zod.string().nullable().describe('Exact week coverage for this player\'s selected window when partial or unavailable.'),
   "offenseSnaps": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemOffenseSnapsMin).nullable(),
   "offensePct": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemOffensePctMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemOffensePctMax).nullable(),
   "snapGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemSnapGamesMin),
   "sourceCoverage": zod.object({
   "requestedGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageRequestedGamesMin),
-  "includedGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageIncludedGamesMin),
-  "missingGames": zod.array(zod.string())
+  "includedGames": zod.number().int().min(getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageIncludedGamesMin).describe('Requested appearances with complete PBP and verifiable player opportunity evidence.'),
+  "missingGames": zod.array(zod.string()),
+  "coveredWeeks": zod.array(zod.number().int().min(1)).describe('Selected-window weeks with at least one included appearance with complete PBP and verified player opportunity evidence.'),
+  "missingWeeks": zod.array(zod.number().int().min(1)).describe('Selected-window weeks with requested appearances lacking complete PBP or verifiable player opportunity evidence.'),
+  "firstCoveredKickoff": zod.coerce.date().nullable().describe('Earliest kickoff in the included player sample.'),
+  "lastCoveredKickoff": zod.coerce.date().nullable().describe('Latest kickoff in the included player sample.')
 }),
   "games": zod.array(zod.object({
   "gameId": zod.string(),

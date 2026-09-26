@@ -245,3 +245,46 @@ export function groupRedZoneAppearancesByPlayerTeam<
       || a.gameId.localeCompare(b.gameId)),
   }));
 }
+
+export type RedZoneWindowAppearance = RedZoneAppearance & { teamId: string };
+
+/** A period window is selected before this coverage filter is applied. */
+export function coveredRedZoneWindow<T extends RedZoneWindowAppearance>(
+  requested: T[],
+  coveredGameTeamKeys: ReadonlySet<string>,
+) {
+  const included = requested.filter((appearance) =>
+    coveredGameTeamKeys.has(`${appearance.gameId}:${appearance.teamId}`));
+  const missing = requested.filter((appearance) =>
+    !coveredGameTeamKeys.has(`${appearance.gameId}:${appearance.teamId}`));
+  const weeks = (rows: T[]) => [...new Set(rows.map((row) => row.week))].sort((a, b) => a - b);
+  const chronological = [...included].sort((a, b) =>
+    a.kickoffTime.getTime() - b.kickoffTime.getTime()
+    || a.gameId.localeCompare(b.gameId));
+  return {
+    included,
+    missing,
+    requestedGames: requested.length,
+    includedGames: included.length,
+    missingGames: missing.map((appearance) => appearance.gameId),
+    coveredWeeks: weeks(included),
+    missingWeeks: weeks(missing),
+    firstCoveredKickoff: chronological[0]?.kickoffTime.toISOString() ?? null,
+    lastCoveredKickoff: chronological.at(-1)?.kickoffTime.toISOString() ?? null,
+  };
+}
+
+export function redZoneCoveragePeriodLabel(
+  coveredWeeks: number[],
+  missingWeeks: number[],
+  subject = "Play-by-play coverage",
+) {
+  const weeks = (label: string, values: number[]) => values.length
+    ? `${label} week${values.length === 1 ? "" : "s"} ${values.join(", ")}`
+    : null;
+  const parts = [
+    weeks("covered", coveredWeeks),
+    weeks("unavailable", missingWeeks),
+  ].filter((part): part is string => part !== null);
+  return parts.length ? `${subject}: ${parts.join("; ")}.` : `${subject} is unavailable.`;
+}

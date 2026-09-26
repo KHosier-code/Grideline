@@ -9,6 +9,12 @@ Treat a downloaded dataset as successful only when it contains usable rows for t
 
 **How to apply:** Preserve the source limitation as a failed or unavailable season entry with a clear message. Do not generate missing rows or carry older values forward.
 
+A successful source ledger entry or a newer upstream Last-Modified header does not establish coverage for a specific completed week. Confirm the file's season/week and distinct-game rows before claiming that week is available; distinguish a stale local cache from an unpublished upstream week.
+
+**Why:** A development cache remained at Week 1 after the worker missed its normal occurrence, while the public release had since gained every Week 2 game. Neither the old successful ledger nor a newer HEAD timestamp alone proved the present week's contents.
+
+**How to apply:** For release reviews, inspect a separate public source copy without replacing the application cache or triggering a scheduled import. Report source availability, local import coverage, and derived-fact coverage separately.
+
 When the current-season file is valid but contains no usable rows for that season, avoid repeated large downloads within the same scheduled slot. Retry on the next normal slot, when the publisher may have updated the release; ordinary transient failures retain bounded backoff.
 
 **Why:** Repeated downloads of the same current-season archive cannot manufacture missing season rows and unnecessarily consume bandwidth and worker time.

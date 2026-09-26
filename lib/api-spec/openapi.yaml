@@ -690,8 +690,12 @@ paths:
         last3 uses each player's last three completed appearances identified by
         regular-season player statistics or positive offensive snaps with a
         verified GSIS/PFR crosswalk, across teams before results are partitioned
-        into separate playerId/teamId rows. Missing PBP for an appearance is
-        returned as unavailable rather than as a zero count.
+        into separate playerId/teamId rows. Season and last3 select the
+        original completed-appearance window first, then aggregate only games
+        with complete team play-by-play and verified player opportunity
+        evidence. Missing appearances are excluded from the count and surfaced
+        in sourceCoverage rather than treated as zero. Week lists and kickoff
+        bounds specify the exact coverage period for each figure.
         sourceUpdatedAt is null when nflverse does not publish a source update
         timestamp. A game parameter sets a pre-kickoff cutoff and excludes that
         game; it does not require prediction or market data.
@@ -1602,23 +1606,41 @@ components:
         zones: { type: array, items: { $ref: "#/components/schemas/ConsumerRedZoneMetric" } }
     ConsumerRedZonePlayer:
       type: object
-      required: [playerId, playerName, position, teamId, gamesPlayed, offenseSnaps, offensePct, snapGames, sourceCoverage, games, zones]
+      required: [playerId, playerName, position, teamId, gamesPlayed, status, reason, offenseSnaps, offensePct, snapGames, sourceCoverage, games, zones]
       properties:
         playerId: { type: string }
         playerName: { type: string }
         position: { type: ["string", "null"] }
         teamId: { type: ["string", "null"] }
-        gamesPlayed: { type: integer, minimum: 0 }
+        gamesPlayed:
+          type: integer
+          minimum: 0
+          description: Included appearances used in the displayed metrics; uncovered appearances are never counted.
+        status: { type: string, enum: [available, partial, unavailable] }
+        reason: { type: ["string", "null"], description: Exact week coverage for this player's selected window when partial or unavailable. }
         offenseSnaps: { type: ["integer", "null"], minimum: 0 }
         offensePct: { type: ["number", "null"], minimum: 0, maximum: 1 }
         snapGames: { type: integer, minimum: 0 }
         sourceCoverage:
           type: object
-          required: [requestedGames, includedGames, missingGames]
+          required: [requestedGames, includedGames, missingGames, coveredWeeks, missingWeeks, firstCoveredKickoff, lastCoveredKickoff]
           properties:
             requestedGames: { type: integer, minimum: 0 }
-            includedGames: { type: integer, minimum: 0 }
+            includedGames:
+              type: integer
+              minimum: 0
+              description: Requested appearances with complete PBP and verifiable player opportunity evidence.
             missingGames: { type: array, items: { type: string } }
+            coveredWeeks:
+              type: array
+              items: { type: integer, minimum: 1 }
+              description: Selected-window weeks with at least one included appearance with complete PBP and verified player opportunity evidence.
+            missingWeeks:
+              type: array
+              items: { type: integer, minimum: 1 }
+              description: Selected-window weeks with requested appearances lacking complete PBP or verifiable player opportunity evidence.
+            firstCoveredKickoff: { type: ["string", "null"], format: date-time, description: Earliest kickoff in the included player sample. }
+            lastCoveredKickoff: { type: ["string", "null"], format: date-time, description: Latest kickoff in the included player sample. }
         games: { type: array, items: { $ref: "#/components/schemas/ConsumerRedZoneGame" } }
         zones: { type: array, items: { $ref: "#/components/schemas/ConsumerRedZoneMetric" } }
     ConsumerRedZoneOpportunities:
@@ -1635,12 +1657,23 @@ components:
         ingestedAt: { type: ["string", "null"], format: date-time }
         coverage:
           type: object
-          required: [status, completedGames, gamesWithPbp, missingGames, note]
+          required: [status, completedGames, gamesWithPbp, missingGames, coveredWeeks, missingWeeks, firstCoveredKickoff, lastCoveredKickoff, partialReasons, note]
           properties:
             status: { type: string, enum: [available, partial, unavailable] }
             completedGames: { type: integer, minimum: 0 }
             gamesWithPbp: { type: integer, minimum: 0 }
             missingGames: { type: array, items: { type: string } }
+            coveredWeeks:
+              type: array
+              items: { type: integer, minimum: 1 }
+              description: Weeks with completed games for which every expected team has all red-zone zone denominators.
+            missingWeeks:
+              type: array
+              items: { type: integer, minimum: 1 }
+              description: Weeks with at least one completed game missing complete team play-by-play coverage.
+            firstCoveredKickoff: { type: ["string", "null"], format: date-time, description: Earliest kickoff among the covered completed games. }
+            lastCoveredKickoff: { type: ["string", "null"], format: date-time, description: Latest kickoff among the covered completed games. }
+            partialReasons: { type: array, items: { type: string } }
             note: { type: string }
         players: { type: array, items: { $ref: "#/components/schemas/ConsumerRedZonePlayer" } }
     HealthStatus:

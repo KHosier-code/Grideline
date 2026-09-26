@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { RED_ZONE_FALLBACK_LABEL, formatRedZoneValue, normalizeRedZoneResponse, scheduleTeamAbbreviation, selectRedZoneFallback, sortRedZonePlayers } from './consumer-red-zone.ts';
+import { RED_ZONE_FALLBACK_LABEL, formatRedZoneCoverage, formatRedZoneValue, normalizeRedZoneResponse, scheduleTeamAbbreviation, selectRedZoneFallback, sortRedZonePlayers } from './consumer-red-zone.ts';
 
 test('missing and unavailable fields remain unavailable while verified zero is displayed', () => {
   const data = normalizeRedZoneResponse({
@@ -59,6 +59,56 @@ test('live endpoint shape selects only the requested overlapping zone and identi
   assert.match(data.partialReasons[0]!, /1 completed game/);
 });
 
+test('coverage presentation preserves discontiguous weeks and the actual covered date span', () => {
+  const coverage = {
+    coveredWeeks: [3, 1, 3],
+    missingWeeks: [2, 4],
+    firstCoveredKickoff: '2026-09-11T00:20:00.000Z',
+    lastCoveredKickoff: '2026-09-25T00:15:00.000Z',
+  };
+  assert.equal(formatRedZoneCoverage(coverage), 'Covered Week 1, Week 3 · Sep 11–Sep 25, 2026 · missing Week 2, Week 4');
+});
+
+test('Week 1-only evidence names Week 2 as missing without implying zero opportunities', () => {
+  const data = normalizeRedZoneResponse({
+    season: 2026,
+    status: 'partial',
+    coverage: {
+      coveredWeeks: [1],
+      missingWeeks: [2],
+      firstCoveredKickoff: '2026-09-11T00:20:00.000Z',
+      lastCoveredKickoff: '2026-09-11T00:20:00.000Z',
+      completedGames: 32,
+      gamesWithPbp: 16,
+    },
+    players: [{
+      playerId: 'p1',
+      playerName: 'A. Receiver',
+      teamId: 'BUF',
+      gamesPlayed: 1,
+      sourceCoverage: {
+        requestedGames: 2,
+        includedGames: 1,
+        missingGames: ['week-2-game'],
+        coveredWeeks: [1],
+        missingWeeks: [2],
+        firstCoveredKickoff: '2026-09-11T00:20:00.000Z',
+        lastCoveredKickoff: '2026-09-11T00:20:00.000Z',
+      },
+      zones: [{ zone: 20, targets: 3, carries: 0, receivingTouchdowns: 1, rushingTouchdowns: 0 }],
+    }],
+  });
+  assert.deepEqual(data.coveredWeeks, [1]);
+  assert.deepEqual(data.missingWeeks, [2]);
+  assert.equal(formatRedZoneCoverage(data), 'Covered Week 1 · Sep 11, 2026 · missing Week 2');
+  assert.deepEqual(data.players[0]?.season.coveredWeeks, [1]);
+  assert.deepEqual(data.players[0]?.season.missingWeeks, [2]);
+  assert.equal(data.players[0]?.season.includedGames, 1);
+  assert.equal(data.players[0]?.season.sampleGames, 2);
+  assert.equal(data.players[0]?.season.stats.targets, 3);
+  assert.equal(data.players[0]?.season.status, 'partial');
+});
+
 test('actual response retains separate player/team rows after a trade and uses player-specific availability', () => {
   const response = {
     status: 'partial', season: 2026, seasonType: 'REG', period: 'last3', zone: 20,
@@ -99,7 +149,7 @@ test('Game Detail red-zone-only fallback selects at most three per team by sourc
     { playerId: 'e', playerName: 'E', teamId: 'BUF', gamesPlayed: 1, sourceCoverage: { requestedGames: 1, includedGames: 1, missingGames: [] }, zones: [{ zone: 20, targets: 1, carries: 1 }] },
     { playerId: 'opponent', playerName: 'Opponent', teamId: 'MIA', gamesPlayed: 1, zones: [{ zone: 20, targets: 12, carries: 2 }] },
   ] }, 'season', 20);
-  assert.equal(RED_ZONE_FALLBACK_LABEL, 'Red-zone-only evidence');
+  assert.equal(RED_ZONE_FALLBACK_LABEL, 'Incomplete Player Usage · Red-zone-only evidence');
   assert.deepEqual(selectRedZoneFallback(data.players, 'BUF').map(player => player.playerId), ['d', 'a', 'e']);
   assert.deepEqual(selectRedZoneFallback(data.players, 'MIA').map(player => player.playerId), ['opponent']);
   assert.equal(data.players[2]!.season.status, 'unavailable');
@@ -120,4 +170,16 @@ test('red zone is publicly routed and game cards request game-scoped windows', (
   assert.match(card, /if \(fallback\)/);
   assert.match(page, /useGetConsumerRedZoneOpportunities, useListConsumerPlayerUsageGames.*from '@workspace\/api-client-react'/);
   assert.match(page, /scheduleTeamAbbreviation\(game\.matchup\.home\)/);
+});
+
+test('coverage periods and incomplete Player Usage labels are visible beside dashboard and Game Detail figures', () => {
+  const card = readFileSync(fileURLToPath(new URL('../components/ConsumerKeyPlayers.tsx', import.meta.url)), 'utf8');
+  const page = readFileSync(fileURLToPath(new URL('../pages/consumer/ConsumerRedZone.tsx', import.meta.url)), 'utf8');
+  assert.match(page, /formatRedZoneCoverage\(data\)/);
+  assert.match(page, /red-zone-coverage-period/);
+  assert.match(page, /formatRedZoneCoverage\(window\)/);
+  assert.match(page, /partial sample/);
+  assert.match(card, /formatRedZoneCoverage\(window\)/);
+  assert.match(card, /completed appearances covered/);
+  assert.match(RED_ZONE_FALLBACK_LABEL, /incomplete player usage/i);
 });

@@ -143,6 +143,7 @@ export * from './consumerRedZoneOpportunitiesStatus';
 export * from './consumerRedZoneOpportunitiesZone';
 export * from './consumerRedZonePlayer';
 export * from './consumerRedZonePlayerSourceCoverage';
+export * from './consumerRedZonePlayerStatus';
 export * from './consumerScheduleSelection';
 export * from './consumerScheduleSelectionReason';
 export * from './consumerScheduleSelectionSelection';
