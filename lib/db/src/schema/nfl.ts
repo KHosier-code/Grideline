@@ -73,7 +73,9 @@ export const gamesTable = pgTable("games", {
   broadcast: text("broadcast"),
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("games_usage_season_kickoff_idx").on(table.season, table.kickoffTime),
+]);
 
 export const injuriesTable = pgTable("injuries", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -957,6 +959,7 @@ export const playerGameStatsTable = pgTable("player_game_stats", {
     table.seasonType,
     table.opponentTeamId,
   ),
+  index("player_game_stats_usage_matchup_idx").on(table.season, table.teamId, table.week, table.opponentTeamId),
 ]);
 
 /** Derived, source-play-backed player red-zone facts. Counts are zero only
@@ -1032,6 +1035,7 @@ export const snapCountsTable = pgTable("snap_counts", {
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique("snap_counts_game_player_unique").on(table.gameId, table.playerId),
+  index("snap_counts_usage_matchup_idx").on(table.season, table.teamId, table.week, table.opponentTeamId),
 ]);
 
 export const historicalDepthChartTable = pgTable("historical_depth_charts", {

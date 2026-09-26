@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, lte, or, sql } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { Router, type IRouter, type NextFunction, type Request, type Response } from "express";
 import {
@@ -195,6 +195,50 @@ export function buildUsageTeamMappings(teams: Array<{ teamId: string; abbreviati
   return { abbreviationToTeamId, scheduleToAbbreviation, sourceToAbbreviation, canonical };
 }
 
+type UsageScheduleGame = { season: number; week: number; homeTeamId: string; awayTeamId: string };
+type UsageTeamMaps = ReturnType<typeof buildUsageTeamMappings>;
+
+/** Source game IDs differ from schedule IDs (and snap IDs). Match exact eligible
+ * team/opponent/week identities in SQL so a same-week future game cannot leak. */
+export function usageSourceGameKeys(games: UsageScheduleGame[], maps: UsageTeamMaps, teamFilter?: string) {
+  const keys = new Map<string, { week: number; team: string; opponent: string }>();
+  for (const game of games) {
+    const home = maps.scheduleToAbbreviation.get(game.homeTeamId);
+    const away = maps.scheduleToAbbreviation.get(game.awayTeamId);
+    if (!home || !away) continue;
+    for (const [team, opponent] of [[home, away], [away, home]]) {
+      if (teamFilter && team !== teamFilter) continue;
+      for (const sourceTeam of nflverseTeamCandidates(team)) {
+        for (const sourceOpponent of nflverseTeamCandidates(opponent)) {
+          keys.set(`${game.week}:${sourceTeam}:${sourceOpponent}`, {
+            week: game.week, team: sourceTeam, opponent: sourceOpponent,
+          });
+        }
+      }
+    }
+  }
+  return [...keys.values()];
+}
+
+function usageSourceGameCondition(
+  table: typeof playerGameStatsTable | typeof snapCountsTable,
+  keys: ReturnType<typeof usageSourceGameKeys>,
+  includeMissingOpponent = false,
+) {
+  if (!keys.length) return sql`false`;
+  // Row-value IN is parameterized; the composite season/team/week/opponent index
+  // can serve each game key without reading unrelated weeks or matchups.
+  const exact = sql`(${table.week}, ${table.teamId}, ${table.opponentTeamId}) in
+    (${sql.join(keys.map((key) => sql`(${key.week}, ${key.team}, ${key.opponent})`), sql`, `)})`;
+  if (!includeMissingOpponent) return exact;
+  // Game Detail historically accepts player-game rows without an opponent ID
+  // when the team's schedule week still identifies the game.
+  const teamWeeks = new Map(keys.map((key) => [`${key.week}:${key.team}`, key]));
+  return sql`(${exact} or (${table.opponentTeamId} is null and
+    (${table.week}, ${table.teamId}) in
+    (${sql.join([...teamWeeks.values()].map((key) => sql`(${key.week}, ${key.team})`), sql`, `)})))`;
+}
+
 export function usageCompositeIdentity(row: { season: number; seasonType: string; week: number; teamId: string | null; opponentTeamId: string | null; playerId: string }) {
   return `${row.season}:${row.seasonType.toUpperCase()}:${row.week}:${row.teamId ?? ""}:${row.opponentTeamId ?? ""}:${row.playerId}`;
 }
@@ -232,6 +276,11 @@ export function aggregatePlayerUsage(
     const key = `${row.playerId}:${row.teamId ?? "unknown"}`;
     byPlayer.set(key, [...(byPlayer.get(key) ?? []), row]);
   }
+  const teamGameTargets = new Map<string, number>();
+  for (const row of rows) {
+    const key = `${row.teamId}:${row.gameId}`;
+    teamGameTargets.set(key, (teamGameTargets.get(key) ?? 0) + (row.targets ?? 0));
+  }
   const snapMap = new Map(snaps.map((row) => [`${row.playerId}:${row.gameId}`, row.offensePct]));
   const unsupported = Object.fromEntries(UNSUPPORTED_USAGE_METRICS.map((name) => [name, false]));
   return [...byPlayer.entries()].map(([, history]) => {
@@ -247,9 +296,9 @@ export function aggregatePlayerUsage(
     };
     const snapValues = selected.map((r) => snapMap.get(`${r.playerId}:${r.gameId}`)).filter((v): v is number => typeof v === "number" && Number.isFinite(v));
     const targets = sum("targets");
-    const teamTargetRows = rows.filter((r) => r.teamId === ordered[0].teamId && selected.some((s) => s.gameId === r.gameId));
-    const teamTargets = teamTargetRows.length
-      ? teamTargetRows.reduce((total, row) => total + (row.targets ?? 0), 0)
+    const selectedTeamGames = new Set(selected.map((row) => `${row.teamId}:${row.gameId}`));
+    const teamTargets = selectedTeamGames.size
+      ? [...selectedTeamGames].reduce((total, key) => total + (teamGameTargets.get(key) ?? 0), 0)
       : null;
     const receivingYards = sum("receivingYards");
     const carries = sum("carries");
@@ -268,8 +317,7 @@ export function aggregatePlayerUsage(
       ...Object.fromEntries(UNSUPPORTED_USAGE_METRICS.map((name) => [name, metric(null, "Persisted source does not support this metric")])),
     };
     const gameSeries = selected.map((r) => {
-      const gameTeamRows = rows.filter((candidate) => candidate.teamId === r.teamId && candidate.gameId === r.gameId);
-      const gameTargets = gameTeamRows.reduce((total, candidate) => total + (candidate.targets ?? 0), 0);
+      const gameTargets = teamGameTargets.get(`${r.teamId}:${r.gameId}`) ?? 0;
       const td = r.passingTds == null && r.rushingTds === null && r.receivingTds === null
         ? null : (r.passingTds ?? 0) + (r.rushingTds ?? 0) + (r.receivingTds ?? 0);
       const targetShare = r.targets !== null && gameTargets > 0 ? r.targets / gameTargets : null;
@@ -1525,26 +1573,26 @@ router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
 });
 
 export function consumerScheduleSummaryQuery(now: Date) {
-    // Match interpretNflGameState: terminal states win over in-progress states,
-    // and a non-terminal game past kickoff is live regardless of its status.
-    const status = sql`lower(btrim(regexp_replace(${gamesTable.gameStatus}, '[_-]+', ' ', 'g')))`;
-    const terminal = sql`(${status} like '%postpon%' or ${status} like '%cancel%'
-      or ${status} like '%final%' or ${status} like '%completed%' or ${status} = 'closed')`;
-    const explicitlyLive = sql`(${status} like '%progress%' or ${status} like '%halftime%'
-      or ${status} like '%in progress%' or ${status} like '%end of%' or ${status} like '%quarter%')`;
-    return db.select({
-      season: gamesTable.season,
-      week: gamesTable.week,
-      first: sql<string>`min(${gamesTable.kickoffTime})`.as("first"),
-      last: sql<string>`max(${gamesTable.kickoffTime})`.as("last"),
-      live: sql<boolean>`bool_or(${gamesTable.kickoffTime} <= ${now}
-        and ${gamesTable.kickoffTime} >= ${new Date(now.getTime() - 8 * 60 * 60_000)}
-        and not ${terminal})`.as("live"),
-      upcoming: sql<boolean>`bool_or(${gamesTable.kickoffTime} > ${now}
-        and not ${terminal} and not ${explicitlyLive})`.as("upcoming"),
-    }).from(gamesTable)
-      .where(isNotNull(gamesTable.kickoffTime))
-      .groupBy(gamesTable.season, gamesTable.week);
+  // Match interpretNflGameState: terminal states win over in-progress states,
+  // and a non-terminal game past kickoff is live regardless of its status.
+  const status = sql`lower(btrim(regexp_replace(${gamesTable.gameStatus}, '[_-]+', ' ', 'g')))`;
+  const terminal = sql`(${status} like '%postpon%' or ${status} like '%cancel%'
+    or ${status} like '%final%' or ${status} like '%completed%' or ${status} = 'closed')`;
+  const explicitlyLive = sql`(${status} like '%progress%' or ${status} like '%halftime%'
+    or ${status} like '%in progress%' or ${status} like '%end of%' or ${status} like '%quarter%')`;
+  return db.select({
+    season: gamesTable.season,
+    week: gamesTable.week,
+    first: sql<string>`min(${gamesTable.kickoffTime})`.as("first"),
+    last: sql<string>`max(${gamesTable.kickoffTime})`.as("last"),
+    live: sql<boolean>`bool_or(${gamesTable.kickoffTime} <= ${now}
+      and ${gamesTable.kickoffTime} >= ${new Date(now.getTime() - 8 * 60 * 60_000)}
+      and not ${terminal})`.as("live"),
+    upcoming: sql<boolean>`bool_or(${gamesTable.kickoffTime} > ${now}
+      and not ${terminal} and not ${explicitlyLive})`.as("upcoming"),
+  }).from(gamesTable)
+    .where(isNotNull(gamesTable.kickoffTime))
+    .groupBy(gamesTable.season, gamesTable.week);
 }
 
 router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
@@ -1689,7 +1737,22 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
     const detailSourceTeams = [gameRow.homeTeamId, gameRow.awayTeamId]
       .map((id) => detailTeamMaps.scheduleToAbbreviation.get(id))
       .flatMap((abbr) => abbr ? nflverseTeamCandidates(abbr) : []);
-    const [weather, contextRows, movementRows, recentStats, recentSnaps, recentGames, currentPersonnel, predictionEvidenceRows] = await Promise.all([
+    const recentGames = await db.select({
+      gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week,
+      kickoffTime: gamesTable.kickoffTime, gameStatus: gamesTable.gameStatus,
+      homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId,
+    }).from(gamesTable).where(and(
+      eq(gamesTable.season, game.season),
+      lt(gamesTable.kickoffTime, sourceCutoff),
+      eq(gamesTable.gameStatus, "STATUS_FINAL"),
+      or(
+        inArray(gamesTable.homeTeamId, [gameRow.homeTeamId, gameRow.awayTeamId]),
+        inArray(gamesTable.awayTeamId, [gameRow.homeTeamId, gameRow.awayTeamId]),
+      ),
+    ));
+    const eligibleRecentGames = eligibleUsageGames(recentGames, game.season, sourceCutoff, game.gameId);
+    const detailKeys = usageSourceGameKeys(eligibleRecentGames, detailTeamMaps);
+    const [weather, contextRows, movementRows, recentStats, recentSnaps, currentPersonnel, predictionEvidenceRows] = await Promise.all([
       db.select().from(weatherForecastSnapshotsTable)
         .where(and(
           eq(weatherForecastSnapshotsTable.gameId, game.gameId),
@@ -1727,21 +1790,21 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
           inArray(sportsbookOddsTable.market, ["spread", "total", "moneyline"]),
         ))
         .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id)),
-      db.select().from(playerGameStatsTable)
+      detailKeys.length ? db.select().from(playerGameStatsTable)
         .where(and(
           inArray(playerGameStatsTable.teamId, detailSourceTeams),
           eq(playerGameStatsTable.season, game.season),
-        )),
-      db.select({
+          usageSourceGameCondition(playerGameStatsTable, detailKeys, true),
+        )) : Promise.resolve([]),
+      detailKeys.length ? db.select({
         playerId: snapCountsTable.playerId, season: snapCountsTable.season, week: snapCountsTable.week,
         teamId: snapCountsTable.teamId, opponentTeamId: snapCountsTable.opponentTeamId, offensePct: snapCountsTable.offensePct,
       }).from(snapCountsTable)
         .where(and(
           eq(snapCountsTable.season, game.season),
           inArray(snapCountsTable.teamId, detailSourceTeams),
-        )),
-      db.select({ gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week, kickoffTime: gamesTable.kickoffTime, gameStatus: gamesTable.gameStatus, homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId })
-        .from(gamesTable).where(eq(gamesTable.season, game.season)),
+          usageSourceGameCondition(snapCountsTable, detailKeys, true),
+        )) : Promise.resolve([]),
       getCurrentGamePersonnel(game.gameId, sourceCutoff),
       db.select({
         predictionTimestamp: predictionSnapshotsTable.predictionTimestamp,
@@ -1800,9 +1863,6 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
     const recommendation = applyModelPersonnelLimitationToRecommendation(
       game.recommendation, modelPersonnelLimitation,
     );
-    const eligibleRecentGames = eligibleUsageGames(recentGames, game.season, sourceCutoff, game.gameId)
-      .filter((candidate) => candidate.homeTeamId === gameRow.homeTeamId || candidate.homeTeamId === gameRow.awayTeamId
-        || candidate.awayTeamId === gameRow.homeTeamId || candidate.awayTeamId === gameRow.awayTeamId);
     const recentIds = new Set(eligibleRecentGames.map((candidate) => candidate.gameId));
     const recentMatchups = new Map<string, string>();
     const recentRows: UsageRow[] = recentStats.flatMap((row) => {
@@ -2463,7 +2523,11 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
     }
     const cutoff = matchup[0]?.kickoffTime ?? new Date();
     const applicableSeason = matchup[0]?.season ?? usageSeasonAtCutoff(cutoff);
-    const selectedGames = await db.select().from(gamesTable)
+    const selectedGames = await db.select({
+      gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week,
+      kickoffTime: gamesTable.kickoffTime, gameStatus: gamesTable.gameStatus,
+      homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId,
+    }).from(gamesTable)
       .where(and(eq(gamesTable.season, applicableSeason), lte(gamesTable.kickoffTime, cutoff)))
       .orderBy(asc(gamesTable.season), asc(gamesTable.week), asc(gamesTable.gameId));
     const eligibleGames = eligibleUsageGames(selectedGames, applicableSeason, cutoff, game);
@@ -2474,7 +2538,6 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
       gameKeys.set(`${g.season}:${g.week}:${home}:${away}`, g.gameId);
       gameKeys.set(`${g.season}:${g.week}:${away}:${home}`, g.gameId);
     }
-    const seasons = [applicableSeason];
     const sourceCandidates = canonicalFilter
       ? nflverseTeamCandidates(canonicalFilter)
       : matchup[0]
@@ -2483,14 +2546,23 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
           return abbreviation ? nflverseTeamCandidates(abbreviation) : [];
         })
         : [];
-    const statRows = seasons.length ? await db.select().from(playerGameStatsTable)
-      .where(and(inArray(playerGameStatsTable.season, seasons), sourceCandidates.length ? inArray(playerGameStatsTable.teamId, sourceCandidates) : undefined)) : [];
+    const usesSourceChronology = !matchup[0] && selectedGames.length === 0;
+    const sourceKeys = usageSourceGameKeys(eligibleGames, teamMaps)
+      .filter((key) => !sourceCandidates.length || sourceCandidates.includes(key.team));
+    const readSource = usesSourceChronology || sourceKeys.length > 0;
+    const statRows = readSource ? await db.select().from(playerGameStatsTable)
+      .where(and(
+        eq(playerGameStatsTable.season, applicableSeason),
+        sourceCandidates.length ? inArray(playerGameStatsTable.teamId, sourceCandidates) : undefined,
+        usesSourceChronology ? undefined : usageSourceGameCondition(playerGameStatsTable, sourceKeys),
+      )) : [];
     const rawSnaps = statRows.length ? await db.select({
       playerId: snapCountsTable.playerId, season: snapCountsTable.season, week: snapCountsTable.week,
       teamId: snapCountsTable.teamId, opponentTeamId: snapCountsTable.opponentTeamId, offensePct: snapCountsTable.offensePct,
     }).from(snapCountsTable).where(and(
       eq(snapCountsTable.season, applicableSeason),
       sourceCandidates.length ? inArray(snapCountsTable.teamId, sourceCandidates) : undefined,
+      usesSourceChronology ? undefined : usageSourceGameCondition(snapCountsTable, sourceKeys),
     )) : [];
     const sourceGameIds = new Map<string, string>();
     const usageRows: UsageRow[] = statRows.flatMap((row) => {
@@ -2532,7 +2604,6 @@ router.get("/consumer/player-usage", async (req, res): Promise<void> => {
       orderedGameIdsByTeam.set(home, [...(orderedGameIdsByTeam.get(home) ?? []), eligible.gameId]);
       orderedGameIdsByTeam.set(away, [...(orderedGameIdsByTeam.get(away) ?? []), eligible.gameId]);
     }
-    const usesSourceChronology = !matchup[0] && selectedGames.length === 0;
     if (usesSourceChronology) {
       const sourceGames = new Map<string, { teamId: string; gameId: string; seasonType: string; week: number }>();
       for (const row of usageRows) sourceGames.set(`${row.teamId}:${row.gameId}`, {

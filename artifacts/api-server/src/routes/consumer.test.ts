@@ -51,6 +51,7 @@ import consumerRouter, {
   usageCompositeIdentity,
   usageMatchupIdentity,
   usageSeasonAtCutoff,
+  usageSourceGameKeys,
   verifyTeamRecords,
 } from "./consumer";
 import { deriveCurrentTeamDepth } from "../lib/current-personnel-derivation";
@@ -500,6 +501,28 @@ test("usage team mapping joins ESPN schedule IDs to nflverse abbreviations and a
   const scheduleKey = `2026:1:${mappings.canonical("12")}:${mappings.canonical("13")}`;
   const nflverseRowKey = `2026:1:${mappings.canonical("KC")}:${mappings.canonical("LA")}`;
   assert.equal(nflverseRowKey, scheduleKey);
+});
+
+test("usage source keys include only eligible game identities and both team alias directions", () => {
+  const maps = buildUsageTeamMappings([
+    { teamId: "12", abbreviation: "KC" }, { teamId: "13", abbreviation: "LAR" },
+  ]);
+  const schedule = [
+    { gameId: "final", season: 2026, week: 2, homeTeamId: "12", awayTeamId: "13",
+      kickoffTime: new Date("2026-09-12T18:00:00Z"), gameStatus: "STATUS_FINAL" },
+    { gameId: "future-same-week", season: 2026, week: 2, homeTeamId: "13", awayTeamId: "12",
+      kickoffTime: new Date("2026-09-13T18:00:00Z"), gameStatus: "STATUS_SCHEDULED" },
+    { gameId: "old-season", season: 2025, week: 1, homeTeamId: "12", awayTeamId: "13",
+      kickoffTime: new Date("2025-09-12T18:00:00Z"), gameStatus: "STATUS_FINAL" },
+  ];
+  const keys = usageSourceGameKeys(
+    eligibleUsageGames(schedule, 2026, new Date("2026-09-13T12:00:00Z")), maps, "LAR",
+  );
+  assert.ok(keys.length >= 2);
+  assert.ok(keys.every((key) => key.week === 2 && key.opponent === "KC"));
+  assert.ok(keys.some((key) => key.team === "LAR"));
+  assert.ok(keys.some((key) => key.team === "LA"));
+  assert.deepEqual(usageSourceGameKeys([], maps), []);
 });
 
 test("source game and snap identities resolve independently of persisted raw game IDs", () => {
