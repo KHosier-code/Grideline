@@ -14,3 +14,9 @@ For a featured upcoming matchup, label team trends as *season to date* only thro
 **Why:** A partial current week may contain some final games, but showing those as if the whole week or season-to-date window were complete misstates coverage.
 
 **How to apply:** Compare each prior week's final-game and reconciled-stat coverage before selecting the displayed window; retain per-team valid-sample counts and state when later weeks are excluded.
+
+For Team Evidence's default cutoff, distinguish "every final game has paired statistics" from "every scheduled game is final and has paired statistics." Discover readiness through the season, then render a separate response ending at the contiguous verified cutoff; do not treat discovery data as displayed chart data.
+
+**Why:** An in-progress week can have perfectly matched statistics for its one final game while many more scheduled games have not finished. Reusing its discovery response updates charts early and reports an expected partial-week warning.
+
+**How to apply:** Keep the week selector, plotted observations and coverage list on the same verified response. A missing schedule week or delayed paired statistics blocks advancing; do not suppress genuine evidence warnings just because the current week is unfinished.

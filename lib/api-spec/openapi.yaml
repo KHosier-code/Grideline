@@ -2026,11 +2026,13 @@ components:
               type: array
               items:
                 type: object
-                required: [week, finalGames, statGames]
+                required: [week, scheduledGames, finalGames, statGames, allFinal]
                 properties:
                   week: { type: integer }
+                  scheduledGames: { type: integer, description: Persisted regular-season schedule games for this week. }
                   finalGames: { type: integer }
                   statGames: { type: integer }
+                  allFinal: { type: boolean, description: At least one scheduled game exists and every scheduled game has an authoritative final result before now. }
             partialReasons: { type: array, items: { type: string } }
         teams: { type: array, items: { $ref: "#/components/schemas/ConsumerTeamAnalyticsTeam" } }
     ConsumerGradedAggregate:

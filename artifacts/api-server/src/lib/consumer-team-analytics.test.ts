@@ -72,9 +72,9 @@ test("team analytics selects only complete weeks and averages persisted game EPA
   assert.equal(teamA.observations[0]!.opponent, "BBB");
   assert.equal(teamA.observations[1]!.defenseEpa, null);
   assert.deepEqual(response.coverage.weeks, [
-    { week: 1, finalGames: 1, statGames: 1 },
-    { week: 2, finalGames: 1, statGames: 1 },
-    { week: 3, finalGames: 0, statGames: 0 },
+    { week: 1, scheduledGames: 1, finalGames: 1, statGames: 1, allFinal: true },
+    { week: 2, scheduledGames: 1, finalGames: 1, statGames: 1, allFinal: true },
+    { week: 3, scheduledGames: 1, finalGames: 0, statGames: 0, allFinal: false },
   ]);
   assert.ok(response.coverage.partialReasons.some((reason) => reason.includes("Week 3 is not final-complete")));
   assert.match(response.source, /averaged equally \(not play-weighted\)/);
@@ -104,9 +104,42 @@ test("season window excludes incomplete weeks and missing stats never become num
   assert.equal(response.teams[0]!.offenseEpa, null);
   assert.equal(response.teams[0]!.offenseSamples, 0);
   assert.deepEqual(response.coverage.weeks, [
-    { week: 1, finalGames: 1, statGames: 0 },
-    { week: 2, finalGames: 0, statGames: 0 },
+    { week: 1, scheduledGames: 1, finalGames: 1, statGames: 0, allFinal: true },
+    { week: 2, scheduledGames: 1, finalGames: 0, statGames: 0, allFinal: false },
   ]);
+});
+
+test("a week waits for every scheduled result and both reconciled team stat rows", () => {
+  const now = new Date("2025-09-30T00:00:00Z");
+  const teams = [
+    { teamId: "a", abbreviation: "AAA", name: "A", logoUrl: null },
+    { teamId: "b", abbreviation: "BBB", name: "B", logoUrl: null },
+    { teamId: "c", abbreviation: "CCC", name: "C", logoUrl: null },
+  ];
+  const game = (id: string, week: number, status: string, awayTeamId = "b") => ({
+    gameId: id, week, kickoffTime: new Date("2025-09-01T00:00:00Z"),
+    gameStatus: status, finalHomeScore: status === "STATUS_FINAL" ? 10 : null,
+    finalAwayScore: status === "STATUS_FINAL" ? 7 : null,
+    homeTeamId: "a", awayTeamId,
+  });
+  const first = game("first", 1, "STATUS_FINAL");
+  const second = game("second", 2, "STATUS_FINAL");
+  const third = game("third", 2, "STATUS_SCHEDULED", "c");
+  const pair = (g: typeof first, value: number) => [
+    statFor(g, "AAA", g.awayTeamId === "b" ? "BBB" : "CCC", true, { epaPerPlay: value }),
+    statFor(g, g.awayTeamId === "b" ? "BBB" : "CCC", "AAA", false, { epaPerPlay: -value }),
+  ];
+  const read = (games: typeof first[], stats: ReturnType<typeof statFor>[]) =>
+    buildConsumerTeamAnalytics(games, stats, teams, { season: 2025, throughWeek: 2, window: "season", now });
+  const partial = read([first, second, third], [...pair(first, 1), ...pair(second, 2)]);
+  assert.deepEqual(partial.coverage.weeks[1], { week: 2, scheduledGames: 2, finalGames: 1, statGames: 1, allFinal: false });
+  assert.equal(partial.teams[0]!.offenseEpa, 1);
+  const final = { ...third, gameStatus: "STATUS_FINAL", finalHomeScore: 10, finalAwayScore: 7 };
+  const delayed = read([first, second, final], [...pair(first, 1), ...pair(second, 2)]);
+  assert.deepEqual(delayed.coverage.weeks[1], { week: 2, scheduledGames: 2, finalGames: 2, statGames: 1, allFinal: true });
+  const covered = read([first, second, final], [...pair(first, 1), ...pair(second, 2), ...pair(final, 3)]);
+  assert.deepEqual(covered.coverage.weeks[1], { week: 2, scheduledGames: 2, finalGames: 2, statGames: 2, allFinal: true });
+  assert.equal(covered.teams[0]!.offenseEpa, 2);
 });
 
 test("nflverse aliases canonicalize to persisted schedule team ids and lastN counts team games across bye weeks", () => {

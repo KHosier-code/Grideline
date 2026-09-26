@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AlertTriangle, Crosshair, X } from 'lucide-react';
 import {
   getGetConsumerTeamAnalyticsQueryKey,
@@ -21,6 +21,7 @@ import { ChartContainer } from '@/components/ui/chart';
 import { ConsumerTeamTrendChart, teamTrendMetrics, trendValueLabel, validTrendValue, type TeamTrendMetric } from '../../components/ConsumerTeamTrendChart';
 import './ConsumerTeams.css';
 import { TeamMark } from '../../components/VerifiedImage';
+import { teamEvidenceWeek } from '../../lib/home-chart-evidence';
 
 type Metric = TeamTrendMetric;
 type DotData = ConsumerTeamAnalyticsTeam & { offenseEpa: number; defenseEpa: number };
@@ -75,42 +76,43 @@ function ScatterTip({ active, payload }: { active?: boolean; payload?: Array<{ p
 export default function ConsumerTeams() {
   const now = new Date();
   const [season, setSeason] = useState(now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear());
-  const [throughWeek, setThroughWeek] = useState(18);
-  const [autoWeekPending, setAutoWeekPending] = useState(true);
+  const [weekSelection, setWeekSelection] = useState<{ season: number; week: number } | null>(null);
   const [windowValue, setWindowValue] = useState<GetConsumerTeamAnalyticsWindow>('season');
   const [selection, setSelection] = useState<string[] | null>(null);
   const [metric, setMetric] = useState<Metric>('offenseEpa');
-  const params = { season, throughWeek, window: windowValue };
-  const all = useGetConsumerTeamAnalytics(params, { query: { queryKey: getGetConsumerTeamAnalyticsQueryKey(params), staleTime: 60_000 } });
-  useEffect(() => {
-    if (!autoWeekPending || !all.data || all.data.season !== season || throughWeek !== 18) return;
-    // The initial week-18 response is only a discovery query. Never infer a
-    // completed week from the calendar or select a week without verified stats.
-    const lastCompleteWeek = Math.max(0, ...all.data.coverage.weeks
-      .filter(item => item.week <= 18 && item.finalGames > 0 && item.statGames === item.finalGames)
-      .map(item => item.week));
-    const lastVerifiedWeek = Math.max(0, ...all.data.coverage.weeks
-      .filter(item => item.week <= 18 && item.statGames > 0)
-      .map(item => item.week));
-    setAutoWeekPending(false);
-    const defaultWeek = lastCompleteWeek || lastVerifiedWeek;
-    if (defaultWeek > 0 && defaultWeek < 18) setThroughWeek(defaultWeek);
-  }, [all.data, autoWeekPending, season, throughWeek]);
-  const teams = all.data?.teams ?? [];
+  const discoveryParams = { season, throughWeek: 18, window: 'season' as const };
+  const discovery = useGetConsumerTeamAnalytics(discoveryParams, { query: {
+    queryKey: getGetConsumerTeamAnalyticsQueryKey(discoveryParams), staleTime: 60_000,
+  } });
+  const discoveryCoverage = discovery.data?.season === season ? discovery.data.coverage : null;
+  const throughWeek = teamEvidenceWeek(discoveryCoverage?.weeks ?? [], weekSelection?.season === season ? weekSelection.week : null);
+  const params = { season, throughWeek: Math.max(1, throughWeek), window: windowValue };
+  const all = useGetConsumerTeamAnalytics(params, { query: {
+    queryKey: getGetConsumerTeamAnalyticsQueryKey(params), enabled: throughWeek > 0 && !!discoveryCoverage, staleTime: 60_000,
+  } });
+  const displayReady = throughWeek > 0 && all.data?.season === season && all.data.throughWeek === throughWeek && all.data.window === windowValue;
+  const display = displayReady ? all.data : undefined;
+  const teams = display?.teams ?? [];
   const plotted = teams.filter((team): team is DotData => valid(team.offenseEpa) && valid(team.defenseEpa));
   const selected = (selection ?? plotted.slice(0, 2).map(team => team.abbreviation)).filter(code => teams.some(team => team.abbreviation === code)).slice(0, 4);
   const trendParams = { ...params, teams: selected.join(',') };
   const trend = useGetConsumerTeamAnalytics(trendParams, {
-    query: { queryKey: getGetConsumerTeamAnalyticsQueryKey(trendParams), enabled: !!all.data && selected.length > 0, staleTime: 60_000 },
+    query: { queryKey: getGetConsumerTeamAnalyticsQueryKey(trendParams), enabled: !!display && selected.length > 0, staleTime: 60_000 },
   });
-  const trendTeams = (trend.data?.teams ?? []).filter(team => selected.includes(team.abbreviation));
+  const trendTeams = (trend.data?.season === season && trend.data.throughWeek === throughWeek && trend.data.window === windowValue
+    ? trend.data.teams : []).filter(team => selected.includes(team.abbreviation));
   const observedPoints = trendTeams.reduce((sum, team) => sum + team.observations.filter(item => valid(item[metric])).length, 0);
-  const coverage = all.data?.coverage;
+  const coverage = display?.coverage;
   const incomplete = (coverage?.weeks ?? []).filter(item => item.statGames < item.finalGames);
   const lastReportedWeek = Math.max(0, ...(coverage?.weeks ?? []).map(item => item.week));
   const unreportedWeeks = coverage
     ? Array.from({ length: Math.min(throughWeek, lastReportedWeek) }, (_, index) => index + 1).filter(week => !coverage.weeks.some(item => item.week === week))
     : [];
+  const nextWeek = throughWeek + 1;
+  const nextCoverage = discoveryCoverage?.weeks.find(item => item.week === nextWeek);
+  const missingNextSchedule = !!discoveryCoverage?.weeks.some(item => item.week > nextWeek) && !nextCoverage;
+  const delayedStats = !!nextCoverage && nextCoverage.finalGames > nextCoverage.statGames;
+  const orphanNextStats = discoveryCoverage?.partialReasons.filter(reason => reason.startsWith('Excluded ') && reason.includes(`from week ${nextWeek} `)) ?? [];
   const toggle = (code: string) => {
     setSelection(current => {
       const active = (current ?? plotted.slice(0, 2).map(team => team.abbreviation)).filter(item => teams.some(team => team.abbreviation === item));
@@ -120,7 +122,7 @@ export default function ConsumerTeams() {
   const domainValues = plotted.flatMap(team => [team.offenseEpa, team.defenseEpa]);
   const extent = Math.max(.05, ...domainValues.map(value => Math.abs(value)));
   const domain = Math.ceil(extent * 1.15 * 20) / 20;
-  const dataAvailable = !!all.data && teams.some(team => team.selectedGames > 0);
+  const dataAvailable = !!display && teams.some(team => team.selectedGames > 0);
 
   return <div className="ct-page">
     <header className="ct-hero">
@@ -135,13 +137,14 @@ export default function ConsumerTeams() {
     <section className="ct-toolbar" aria-label="Analytics filters">
       <div className="ct-fields">
         <label className="ct-field">Season
-          <select value={season} onChange={event => { setAutoWeekPending(false); setSeason(Number(event.target.value)); setSelection(null); }} data-testid="select-teams-season">
+          <select value={season} onChange={event => { setSeason(Number(event.target.value)); setWeekSelection(null); setSelection(null); }} data-testid="select-teams-season">
             {Array.from({ length: Math.max(1, now.getFullYear() - 2020) }, (_, index) => now.getFullYear() - index).map(year => <option value={year} key={year}>{year}</option>)}
           </select>
         </label>
         <label className="ct-field">Through week
-          <select value={throughWeek} onChange={event => { setAutoWeekPending(false); setThroughWeek(Number(event.target.value)); }} data-testid="select-teams-week">
-            {Array.from({ length: 18 }, (_, index) => index + 1).map(week => <option value={week} key={week}>Week {week}</option>)}
+          <select value={throughWeek} disabled={!throughWeek} onChange={event => setWeekSelection({ season, week: Number(event.target.value) })} data-testid="select-teams-week">
+            {!throughWeek && <option value={0}>No verified week</option>}
+            {Array.from({ length: teamEvidenceWeek(discoveryCoverage?.weeks ?? [], null) }, (_, index) => index + 1).map(week => <option value={week} key={week}>Week {week}</option>)}
           </select>
         </label>
         <label className="ct-field">Sample window
@@ -153,10 +156,13 @@ export default function ConsumerTeams() {
       <p className="ct-toolbar-note">Last-N windows use games from the selected season only. Future weeks are never estimated.</p>
     </section>
 
-    {(coverage?.partialReasons.length || incomplete.length > 0 || (dataAvailable && unreportedWeeks.length > 0)) ? <div className="ct-alert" role="status" data-testid="status-teams-coverage">
+    {(coverage?.partialReasons.length || incomplete.length > 0 || (dataAvailable && unreportedWeeks.length > 0) || delayedStats || missingNextSchedule || orphanNextStats.length > 0) ? <div className="ct-alert" role="status" data-testid="status-teams-coverage">
       <AlertTriangle aria-hidden="true" /><div><strong>Coverage is incomplete</strong>
-        <p>Only final games with available statistics contribute to the charts. Requested weeks without evidence remain unplotted.</p>
+        <p>Charts stop at the last fully verified week. Missing final-game statistics and schedule evidence are not inferred.</p>
         {unreportedWeeks.length > 0 && <p>No week-level coverage reported for {unreportedWeeks.map(week => `W${week}`).join(', ')}.</p>}
+        {delayedStats && <p>Week {nextWeek} has paired team statistics for {nextCoverage!.statGames} of {nextCoverage!.finalGames} final games. Charts remain through week {throughWeek || 'none'}.</p>}
+        {missingNextSchedule && <p>Week {nextWeek} has no schedule coverage although later weeks are reported. Charts cannot skip it.</p>}
+        {orphanNextStats.map(reason => <p key={reason}>{reason}</p>)}
         {!!coverage?.partialReasons.length && <ul>{coverage.partialReasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>}
       </div>
     </div> : null}
@@ -166,7 +172,7 @@ export default function ConsumerTeams() {
         <div><p className="ct-overline">01 / LEAGUE MAP</p><h2 id="ct-scatter-title">Offense × defense</h2><p className="ct-subtitle">Right is stronger offense. Higher is better defense: fewer EPA allowed per play. Select a logo to compare.</p></div>
         <span className="ct-tag" data-testid="text-plotted-teams">{plotted.length} / {teams.length} teams plotted</span>
       </div>
-      {all.isLoading ? <div className="ct-skeleton" aria-label="Loading team evidence" /> : all.isError ? <div className="ct-state" role="alert"><strong>Team evidence is unavailable</strong><p>We couldn't load verified team observations for this selection.</p><button type="button" onClick={() => all.refetch()} data-testid="button-retry-teams">Try again</button></div> : !dataAvailable ? <div className="ct-state" data-testid="status-teams-unavailable"><strong>No verified games for this selection</strong><p>The {season} season has no final-game team evidence through week {throughWeek}. Choose another season or week; no values will be inferred.</p></div> : !plotted.length ? <div className="ct-state" data-testid="status-teams-no-axes"><strong>No complete EPA pairs yet</strong><p>Teams require both offense and defense EPA to appear on the map. Available partial records are listed below.</p></div> :
+      {discovery.isLoading || (throughWeek > 0 && all.isLoading) ? <div className="ct-skeleton" aria-label="Loading team evidence" /> : discovery.isError || all.isError ? <div className="ct-state" role="alert"><strong>Team evidence is unavailable</strong><p>We couldn't load verified team observations for this selection.</p><button type="button" onClick={() => { if (discovery.isError) discovery.refetch(); else all.refetch(); }} data-testid="button-retry-teams">Try again</button></div> : !dataAvailable ? <div className="ct-state" data-testid="status-teams-unavailable"><strong>No verified games for this selection</strong><p>{throughWeek ? `The ${season} season has no final-game team evidence through week ${throughWeek}.` : `The ${season} season has no fully final, statistically covered week yet.`} {discoveryCoverage?.weeks.length === 0 ? 'Schedule evidence is unavailable.' : 'Wait for final results and paired statistics, or choose another season.'} No values will be inferred.</p></div> : !plotted.length ? <div className="ct-state" data-testid="status-teams-no-axes"><strong>No complete EPA pairs yet</strong><p>Teams require both offense and defense EPA to appear on the map. Available partial records are listed below.</p></div> :
         <>
           <ChartContainer config={{ offense: { color: 'hsl(var(--chart-1))' }, defense: { color: 'hsl(var(--chart-2))' } }} className="ct-chart" aria-label="Scatter plot of team offense EPA per play against defense EPA allowed per play, with the defense axis inverted">
             <ScatterChart margin={{ top: 28, right: 33, bottom: 34, left: 15 }}>
@@ -228,7 +234,7 @@ export default function ConsumerTeams() {
         const item = coverage.weeks.find(entry => entry.week === week);
         return <div className={`ct-week ${item ? (item.statGames < item.finalGames ? 'is-partial' : '') : (week <= lastReportedWeek ? 'is-partial' : '')}`} key={week} data-testid={`status-coverage-week-${week}`}><b>WK {week}</b><small>{item ? `${item.statGames} / ${item.finalGames} games` : week <= lastReportedWeek ? 'Missing report' : 'Not reported'}</small></div>;
       }) : <p className="ct-muted">No week-level coverage reported for this selection.</p>}</div>
-      <p className="ct-source" data-testid="text-teams-source"><strong>Source:</strong> {all.data?.source || 'Not available'} · Scatter EPA is the unweighted mean of available game-level EPA per-play values, not a play-weighted season estimate. Defense values represent EPA allowed, so lower is better. Success rates use the source's game observations. Windows never cross season boundaries.</p>
+       <p className="ct-source" data-testid="text-teams-source"><strong>Source:</strong> {display?.source || 'Not available'} · Scatter EPA is the unweighted mean of available game-level EPA per-play values, not a play-weighted season estimate. Defense values represent EPA allowed, so lower is better. Success rates use the source's game observations. Windows never cross season boundaries.</p>
     </section>
   </div>;
 }

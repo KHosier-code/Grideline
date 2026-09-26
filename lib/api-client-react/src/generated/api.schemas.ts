@@ -1558,8 +1558,12 @@ export const ConsumerTeamAnalyticsWindow = {
 
 export type ConsumerTeamAnalyticsCoverageWeeksItem = {
   week: number;
+  /** Persisted regular-season schedule games for this week. */
+  scheduledGames: number;
   finalGames: number;
   statGames: number;
+  /** At least one scheduled game exists and every scheduled game has an authoritative final result before now. */
+  allFinal: boolean;
 };
 
 export type ConsumerTeamAnalyticsCoverage = {

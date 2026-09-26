@@ -263,7 +263,9 @@ export function buildConsumerTeamAnalytics(
     window,
     source: "persisted team_game_stats; per-game EPA is averaged equally (not play-weighted); offense uses epa_per_play, defense uses defensive_epa_allowed_per_play",
     coverage: {
-      weeks: weeks.map(({ week, finalGames, statGames }) => ({ week, finalGames: finalGames.length, statGames })),
+      weeks: weeks.map(({ week, scheduledGames, finalGames, statGames, complete }) => ({
+        week, scheduledGames, finalGames: finalGames.length, statGames, allFinal: complete,
+      })),
       partialReasons,
     },
     teams: outputTeams,
