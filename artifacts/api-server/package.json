@@ -16,6 +16,7 @@
     "player-projections:independent:dev": "export NODE_ENV=development && pnpm exec esbuild src/player-projections-independent-cli.ts --bundle --platform=node --format=cjs --external:*.node --external:pg-native --outfile=dist/player-projections-independent-cli.cjs && node --enable-source-maps ./dist/player-projections-independent-cli.cjs",
     "player-position:evaluate:dev": "export NODE_ENV=development && pnpm run build && node --enable-source-maps ./dist/player-position-evaluation-cli.mjs",
     "test:player-position": "pnpm run build && node --test ./dist/lib/player-position-matchup.test.mjs",
+    "test:player-position-performance": "pnpm run build && node --test ./dist/lib/player-position-matchup-performance.test.mjs",
     "player-projections:readiness:dev": "export NODE_ENV=development && pnpm run build && node --enable-source-maps ./dist/player-forecast-readiness-dev-cli.mjs",
     "capture:espn-rosters:dev": "export NODE_ENV=development && pnpm run build && node --enable-source-maps ./dist/espn-roster-dev-cli.mjs",
     "player-td:evaluate:dev": "export NODE_ENV=development && pnpm exec esbuild src/player-td-evaluation-cli.ts --bundle --platform=node --format=cjs --external:*.node --external:pg-native --outfile=dist/player-td-evaluation-cli.cjs && node --enable-source-maps ./dist/player-td-evaluation-cli.cjs",

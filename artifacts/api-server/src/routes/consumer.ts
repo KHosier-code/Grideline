@@ -47,7 +47,7 @@ import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
-import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
+import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, readMatchupDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { attachQualifiedScoringTdProbability, buildPlayerPositionMatchup } from "../lib/player-position-matchup";
 import { readDevelopmentPlayerTdForecastReadiness } from "../lib/player-td-forecast-readiness";
 import { GetConsumerPlayerPositionMatchupResponse } from "@workspace/api-zod";
@@ -2144,7 +2144,8 @@ router.get("/consumer/player-position-matchup", async (req, res): Promise<void> 
       res.status(400).json({ error: "A verified upcoming regular-season game is required.", code: "invalid_request" });
       return;
     }
-    const result = buildPlayerPositionMatchup(await readDefenseInputs(game.season, game.kickoffTime),
+    const result = buildPlayerPositionMatchup(await readMatchupDefenseInputs(
+      game.season, game.kickoffTime, game.homeTeamId, game.awayTeamId),
       game, now, position as "QB" | "RB" | "WR" | "TE", window as typeof WINDOWS[number], playerId);
     if (!result) {
       res.status(400).json({ error: "Matchup identities could not be verified.", code: "invalid_request" });

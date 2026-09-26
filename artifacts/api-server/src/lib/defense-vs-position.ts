@@ -1,4 +1,4 @@
-import { and, eq, lte, sql } from "drizzle-orm";
+import { and, eq, inArray, lte, or, sql, type SQLWrapper } from "drizzle-orm";
 import {
   db, gamesTable, nflverseSourceFilesTable, playerGameStatsTable,
   redZonePlayerGameFactsTable, redZoneTeamGameFactsTable, teamsTable,
@@ -180,6 +180,50 @@ export async function readDefenseInputs(season: number, cutoff: Date): Promise<D
   const data = { games, teams, sources, stats, rzPlayers, rzTeams };
   cache = { key, data };
   return data;
+}
+
+/** Only teams in the selected matchup can appear in the player's history or
+ * the two opposing defensive histories. Include every source alias for those
+ * teams, then let the builders verify the exact schedule opponent and week.
+ * In particular, do not filter out null-position rows: they invalidate
+ * position coverage for an otherwise complete defensive team-game. */
+export async function readMatchupDefenseInputs(
+  season: number, cutoff: Date, homeTeamId: string, awayTeamId: string,
+): Promise<DefenseInputs> {
+  const [games, teams, sources] = await Promise.all([
+    db.select().from(gamesTable).where(and(eq(gamesTable.season, season), lte(gamesTable.kickoffTime, cutoff))),
+    db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable),
+    db.select().from(nflverseSourceFilesTable).where(eq(nflverseSourceFilesTable.season, season)),
+  ]);
+  const maps = buildUsageTeamMappings(teams);
+  const selected = new Set([maps.canonical(homeTeamId), maps.canonical(awayTeamId)]);
+  if (selected.size !== 2 || selected.has(null)) {
+    return { games, teams, sources, stats: [], rzPlayers: [], rzTeams: [] };
+  }
+  const aliases = [...new Set([
+    ...[homeTeamId, awayTeamId],
+    ...teams.filter((team) => selected.has(maps.canonical(team.teamId))).map((team) => team.teamId),
+    ...[...maps.sourceToAbbreviation].filter(([, canonical]) => selected.has(canonical)).map(([alias]) => alias),
+  ].map((alias) => alias.trim().toUpperCase()))];
+  // Source spellings are not guaranteed to be uppercase. Normalizing in SQL
+  // matches buildUsageTeamMappings without assuming an import's casing.
+  const teamMatch = (column: SQLWrapper) =>
+    inArray(sql<string>`upper(trim(${column}))`, aliases);
+  const [stats, rzPlayers, rzTeams] = await Promise.all([
+    db.select().from(playerGameStatsTable).where(and(
+      eq(playerGameStatsTable.season, season),
+      or(teamMatch(playerGameStatsTable.teamId), teamMatch(playerGameStatsTable.opponentTeamId)),
+    )),
+    db.select().from(redZonePlayerGameFactsTable).where(and(
+      eq(redZonePlayerGameFactsTable.season, season),
+      or(teamMatch(redZonePlayerGameFactsTable.teamId), teamMatch(redZonePlayerGameFactsTable.opponentTeamId)),
+    )),
+    db.select().from(redZoneTeamGameFactsTable).where(and(
+      eq(redZoneTeamGameFactsTable.season, season),
+      or(teamMatch(redZoneTeamGameFactsTable.teamId), teamMatch(redZoneTeamGameFactsTable.opponentTeamId)),
+    )),
+  ]);
+  return { games, teams, sources, stats, rzPlayers, rzTeams };
 }
 
 export function defaultDefenseSeason() { return usageSeasonAtCutoff(new Date()); }

@@ -111,7 +111,7 @@ test("colliding crosswalk IDs and conflicting weekly headshots fail closed", () 
   const crosswalk = (gsisId: string) => ({
     gsisId, espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null,
   });
-  const rows = [source("LA", "Los Angeles Rams", url("rams"))];
+  const rows = [crosswalk("00-1"), crosswalk("00-2")];
   const collision = reconcilePlayerImages([player("", "100", url("someone"))], rows);
   assert.equal(playerHeadshot("100", collision), null);
   assert.equal(collision.photos.size, 0);
