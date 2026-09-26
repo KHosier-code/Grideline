@@ -1365,6 +1365,71 @@ export interface ConsumerPropsAvailability {
   available: false;
 }
 
+export interface ConsumerPlayerProjectionModel {
+  family: string;
+  statistic: string;
+  modelVersion: string;
+  trainSamples: number;
+  evaluationSamples: number;
+  mae: number;
+  rmse: number;
+  bias: number;
+}
+
+export interface ConsumerPlayerProjection {
+  playerId: string;
+  playerName: string;
+  position: string;
+  teamId: string;
+  opponentTeamId: string;
+  gameId: string;
+  gameDate: string;
+  /** @nullable */
+  kickoffTime: string | null;
+  cutoffAt: string;
+  cutoffBasis: string;
+  season: number;
+  week: number;
+  statistic: string;
+  projectedValue: number;
+  /** @nullable */
+  actualValue: number | null;
+  /** @nullable */
+  recentAverage: number | null;
+  /** @nullable */
+  seasonAverage: number | null;
+  /** @nullable */
+  recentVolume3: number | null;
+  /** @nullable */
+  recentVolume8: number | null;
+  volumeUnit: string;
+  priorAppearances: number;
+  sampleQuality: string;
+  warnings: string[];
+  modelVersion: string;
+  calculatedAt: string;
+}
+
+export type ConsumerPlayerProjectionsStatus = typeof ConsumerPlayerProjectionsStatus[keyof typeof ConsumerPlayerProjectionsStatus];
+
+
+export const ConsumerPlayerProjectionsStatus = {
+  historical_simulation: 'historical_simulation',
+  unavailable: 'unavailable',
+} as const;
+
+export interface ConsumerPlayerProjections {
+  status: ConsumerPlayerProjectionsStatus;
+  message: string;
+  /** @nullable */
+  season: number | null;
+  /** @nullable */
+  generatedAt: string | null;
+  eligiblePlayers: number;
+  models: ConsumerPlayerProjectionModel[];
+  projections: ConsumerPlayerProjection[];
+}
+
 export interface ConsumerUsageMetric {
   /** @nullable */
   value: number | null;
@@ -1643,6 +1708,7 @@ export const ConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
+
 /**
  * @nullable
  */
@@ -2819,3 +2885,4 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
+

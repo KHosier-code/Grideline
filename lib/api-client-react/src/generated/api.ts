@@ -34,6 +34,7 @@ import type {
   ConsumerGradedCharts,
   ConsumerInvalidRequestResponse,
   ConsumerPerformance,
+  ConsumerPlayerProjections,
   ConsumerPlayerUsage,
   ConsumerPlayerUsageGames,
   ConsumerPropsAvailability,
@@ -2904,6 +2905,84 @@ export function useGetConsumerPropsAvailability<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerPropsAvailabilityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerPlayerProjectionsUrl = () => {
+
+
+
+
+  return `/api/consumer/player-projections`
+}
+
+/**
+ * Historical pregame simulations are not live predictions or betting props.
+ * @summary Read development-only historical player projection simulations
+ */
+export const getConsumerPlayerProjections = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPlayerProjections> => {
+
+  return customFetch<ConsumerPlayerProjections>(getGetConsumerPlayerProjectionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerPlayerProjectionsQueryKey = () => {
+    return [
+    `/api/consumer/player-projections`
+    ] as const;
+    }
+
+
+export const getGetConsumerPlayerProjectionsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPlayerProjections>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerProjections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPlayerProjectionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPlayerProjections>>> = ({ signal }) => getConsumerPlayerProjections({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerProjections>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerPlayerProjectionsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerPlayerProjections>>>
+export type GetConsumerPlayerProjectionsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read development-only historical player projection simulations
+ */
+
+export function useGetConsumerPlayerProjections<TData = Awaited<ReturnType<typeof getConsumerPlayerProjections>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerProjections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerPlayerProjectionsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

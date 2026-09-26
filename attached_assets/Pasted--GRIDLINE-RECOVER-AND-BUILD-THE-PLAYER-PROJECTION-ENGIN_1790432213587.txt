@@ -1,0 +1,161 @@
+# GRIDLINE — RECOVER AND BUILD THE PLAYER PROJECTION ENGINE
+
+PRIORITY: HIGH
+
+OBJECTIVE
+
+Resume Gridline's existing player-projection development and deliver functioning, statistically validated baseline projections.
+
+Do not start over. Reuse existing code, datasets, models, APIs, player identity mappings and frontend components wherever possible.
+
+Do not make complete depth charts, red-zone production deployment or WR–CB matchup assignments prerequisites.
+
+This task concerns player projections only. Do not change Phase 6.1 game models or production systems.
+
+## PHASE 1 — RECOVER EXISTING COMPONENTS
+
+Inspect the current repository and development database.
+
+Identify what already exists for:
+
+- Historical player statistics and NFLverse data.
+- Historical player identities.
+- Play-by-play and player usage.
+- Current player information.
+- Existing projection models.
+- Player Usage Lab.
+- Player Matchup components.
+- Player-projection and props APIs.
+- Chronological backtesting infrastructure.
+
+For every component, classify it as reusable, incomplete, broken or unavailable.
+
+Verify actual data coverage.
+
+Do not rewrite working components.
+
+Do not make the missing 2025 game-model evaluation baseline a blocker for independent player projections.
+
+## PHASE 2 — BUILD FOUR INDEPENDENT PROJECTION MODELS
+
+Produce the following baseline outputs:
+
+1. Quarterback passing yards.
+2. Running back rushing yards.
+3. Wide receiver/tight end receiving yards.
+4. Wide receiver/tight end receptions.
+
+Use verified historical information, including:
+
+- Recent individual production.
+- Season-to-date usage.
+- Last 3, 5 and 8 appearances where available.
+- Offensive team tendencies.
+- Opponent defensive performance.
+- Rest and game context where supported.
+
+Apply chronological cutoffs to every feature.
+
+Do not use postgame data or fabricated historical inputs.
+
+Do not require full depth charts, individual CB assignments, red-zone production tables or paid commercial datasets.
+
+Exclude or explicitly flag players without sufficient historical evidence.
+
+Develop these as four separately testable model families.
+
+## PHASE 3 — VALIDATE THE MODELS
+
+Use chronological training and evaluation.
+
+For each family, report:
+
+- Training sample size.
+- Evaluation sample size.
+- Prediction availability.
+- MAE.
+- RMSE.
+- Mean prediction bias.
+- Performance against simple historical baselines.
+- Performance across different usage levels.
+- Uncertainty and limitations.
+
+Prevent player identity leakage and future-game information leakage.
+
+Do not claim betting profitability from statistical prediction accuracy alone.
+
+## PHASE 4 — GENERATE ACTUAL PROJECTIONS
+
+Using existing verified development data, generate projections for eligible upcoming games.
+
+Each projection must include:
+
+- Player.
+- Team and opponent.
+- Game and kickoff.
+- Projected statistic.
+- Model version.
+- Historical sample quality.
+- Calculation timestamp.
+- Missing-data warnings.
+
+If the development schedule has no upcoming games, use a clearly labeled historical simulation with authentic pregame cutoffs.
+
+Never display historical simulations as live projections.
+
+## PHASE 5 — EXISTING WEBSITE INTEGRATION
+
+Reuse existing player-related UI components wherever practical.
+
+Prepare a consumer-friendly presentation showing:
+
+- Player projection.
+- Recent statistical averages.
+- Historical usage trends.
+- Opponent context.
+- Sample confidence.
+
+Keep these projections separate from the existing Phase 6.1 game projections.
+
+Do not publish.
+
+## PHASE 6 — PRESERVE THE RESULTS
+
+Save:
+
+reports/gridline-player-projection-baseline.md
+
+reports/gridline-player-projection-baseline.json
+
+Include actual numerical performance, dataset coverage, model configurations and reproducibility details.
+
+Clearly separate implemented functionality from components that remain experimental.
+
+## SAFETY REQUIREMENTS
+
+- No production database changes.
+- No production deployments.
+- No game-model modifications.
+- No automatic model promotion.
+- No fabricated player statistics.
+- No unverified WR–CB assignments.
+- No mandatory new paid providers.
+- No unnecessary reconstruction of existing functionality.
+
+FINAL DELIVERABLE
+
+Return:
+
+1. What existing Gridline components were successfully reused.
+2. Which components required repair or new implementation.
+3. Actual performance for each of the four model families.
+4. Number of players eligible for projections.
+5. Examples of genuine, timestamped projections or clearly labeled historical simulations.
+6. Website integration status.
+7. Outstanding data limitations.
+8. Tests and leakage-validation results.
+9. Exact next development task.
+
+If an existing data dependency prevents implementation, identify the specific blocker and its smallest viable correction. Do not substitute another large architectural investigation.
+
+Success means producing functioning, reproducible player projections—not simply another development plan.

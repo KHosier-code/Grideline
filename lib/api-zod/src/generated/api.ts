@@ -20,6 +20,8 @@ export const GetConfidenceAuditResponse = zod.object({
   "historicalEvidence": zod.record(zod.string(), zod.unknown()),
   "results": zod.array(zod.record(zod.string(), zod.unknown()))
 })
+
+
 /**
  * @summary Calculate and append confidence evidence for a season and week
  */
@@ -669,6 +671,8 @@ export const GetLiveModelInputIntegrityResponse = zod.object({
   "phase7UsedForValidationOnly": zod.boolean()
 }))
 })
+
+
 /**
  * Requires authenticated administrator access. The optional featureVersion pregame-v4-personnel-context creates additive rows from pregame-v3 and never overwrites v3. Never trains or scores a betting model.
  * @summary Build an immutable version of historical pregame features
@@ -854,6 +858,7 @@ export const GetChallengerReadinessReportResponse = zod.object({
   "requiredAction": zod.string()
 }))
 })
+
 
 /**
  * @summary List NFL teams
@@ -2052,6 +2057,8 @@ export const GetConsumerTeamAnalyticsResponse = zod.object({
 }))
 }))
 })
+
+
 /**
  * @summary Read complete official pregame final-game grading aggregates
  */
@@ -2109,6 +2116,56 @@ export const GetConsumerPropsAvailabilityResponse = zod.object({
   "status": zod.literal("unavailable"),
   "message": zod.string(),
   "available": zod.literal(false)
+})
+
+
+/**
+ * Historical pregame simulations are not live predictions or betting props.
+ * @summary Read development-only historical player projection simulations
+ */
+export const GetConsumerPlayerProjectionsResponse = zod.object({
+  "status": zod.enum(['historical_simulation', 'unavailable']),
+  "message": zod.string(),
+  "season": zod.number().int().nullable(),
+  "generatedAt": zod.string().nullable(),
+  "eligiblePlayers": zod.number().int(),
+  "models": zod.array(zod.object({
+  "family": zod.string(),
+  "statistic": zod.string(),
+  "modelVersion": zod.string(),
+  "trainSamples": zod.number().int(),
+  "evaluationSamples": zod.number().int(),
+  "mae": zod.number(),
+  "rmse": zod.number(),
+  "bias": zod.number()
+})),
+  "projections": zod.array(zod.object({
+  "playerId": zod.string(),
+  "playerName": zod.string(),
+  "position": zod.string(),
+  "teamId": zod.string(),
+  "opponentTeamId": zod.string(),
+  "gameId": zod.string(),
+  "gameDate": zod.string(),
+  "kickoffTime": zod.string().nullable(),
+  "cutoffAt": zod.string(),
+  "cutoffBasis": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "statistic": zod.string(),
+  "projectedValue": zod.number(),
+  "actualValue": zod.number().nullable(),
+  "recentAverage": zod.number().nullable(),
+  "seasonAverage": zod.number().nullable(),
+  "recentVolume3": zod.number().nullable(),
+  "recentVolume8": zod.number().nullable(),
+  "volumeUnit": zod.string(),
+  "priorAppearances": zod.number().int(),
+  "sampleQuality": zod.string(),
+  "warnings": zod.array(zod.string()),
+  "modelVersion": zod.string(),
+  "calculatedAt": zod.string()
+}))
 })
 
 

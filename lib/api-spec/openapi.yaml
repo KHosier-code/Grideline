@@ -687,6 +687,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConsumerPropsAvailability"
+  /consumer/player-projections:
+    get:
+      operationId: getConsumerPlayerProjections
+      tags: [nfl]
+      summary: Read development-only historical player projection simulations
+      description: Historical pregame simulations are not live predictions or betting props.
+      responses:
+        "200":
+          description: Historical simulation or explicit unavailability
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerPlayerProjections" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
   /consumer/player-usage:
     get:
       operationId: getConsumerPlayerUsage
@@ -1646,6 +1659,58 @@ components:
         status: { type: string, const: unavailable }
         message: { type: string }
         available: { type: boolean, const: false }
+    ConsumerPlayerProjectionModel:
+      type: object
+      required: [family, statistic, modelVersion, trainSamples, evaluationSamples, mae, rmse, bias]
+      properties:
+        family: { type: string }
+        statistic: { type: string }
+        modelVersion: { type: string }
+        trainSamples: { type: integer }
+        evaluationSamples: { type: integer }
+        mae: { type: number }
+        rmse: { type: number }
+        bias: { type: number }
+    ConsumerPlayerProjection:
+      type: object
+      required: [playerId, playerName, position, teamId, opponentTeamId, gameId, gameDate, kickoffTime, cutoffAt, cutoffBasis, season, week, statistic, projectedValue, actualValue, recentAverage, seasonAverage, recentVolume3, recentVolume8, volumeUnit, priorAppearances, sampleQuality, warnings, modelVersion, calculatedAt]
+      properties:
+        playerId: { type: string }
+        playerName: { type: string }
+        position: { type: string }
+        teamId: { type: string }
+        opponentTeamId: { type: string }
+        gameId: { type: string }
+        gameDate: { type: string }
+        kickoffTime: { type: ["string", "null"] }
+        cutoffAt: { type: string }
+        cutoffBasis: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        statistic: { type: string }
+        projectedValue: { type: number }
+        actualValue: { type: ["number", "null"] }
+        recentAverage: { type: ["number", "null"] }
+        seasonAverage: { type: ["number", "null"] }
+        recentVolume3: { type: ["number", "null"] }
+        recentVolume8: { type: ["number", "null"] }
+        volumeUnit: { type: string }
+        priorAppearances: { type: integer }
+        sampleQuality: { type: string }
+        warnings: { type: array, items: { type: string } }
+        modelVersion: { type: string }
+        calculatedAt: { type: string }
+    ConsumerPlayerProjections:
+      type: object
+      required: [status, message, season, generatedAt, eligiblePlayers, models, projections]
+      properties:
+        status: { type: string, enum: [historical_simulation, unavailable] }
+        message: { type: string }
+        season: { type: ["integer", "null"] }
+        generatedAt: { type: ["string", "null"] }
+        eligiblePlayers: { type: integer }
+        models: { type: array, items: { $ref: "#/components/schemas/ConsumerPlayerProjectionModel" } }
+        projections: { type: array, items: { $ref: "#/components/schemas/ConsumerPlayerProjection" } }
     ConsumerUsageMetric:
       type: object
       required: [value, available, reason]

@@ -12,6 +12,7 @@ import consumerTeamAnalyticsRouter from "./consumer-team-analytics";
 import consumerGradedChartsRouter from "./consumer-graded-charts";
 import confidenceRouter from "./confidence";
 import usageAnalyticsRouter from "./usage-analytics";
+import playerProjectionsRouter from "./player-projections";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(consumerTeamAnalyticsRouter);
 router.use(consumerGradedChartsRouter);
 router.use(confidenceRouter);
 router.use(usageAnalyticsRouter);
+router.use(playerProjectionsRouter);
 
 export default router;
