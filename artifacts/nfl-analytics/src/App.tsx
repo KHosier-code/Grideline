@@ -832,7 +832,16 @@ function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string;
     <>
       <PageHeader eyebrow={eyebrow} title={title} detail={detail} actions={<button type="button" className="button button-subtle" onClick={() => health.refetch()} data-testid={`button-refresh-${kind}`}><RefreshCw className={cx('h-4 w-4', health.isFetching && 'animate-spin')} /> Refresh</button>} />
       {kind === 'data-health' && <><DatabaseCapacityNotice item={databaseCapacity} /><AdminPlayerStatsImport /></>}
-      <div className="readiness-header"><div className="readiness-header-icon"><Database className="h-5 w-5" /></div><div><p className="eyebrow text-accent">OPERATING PRINCIPLE</p><h2 className="text-lg font-semibold text-ink">Show the capture state. Never imply a signal.</h2><p className="mt-1 text-sm text-muted-foreground">This surface is ready for live data and stays honest while the provider is not configured.</p><p className="mt-2 text-xs font-medium text-accent">Scheduler timezone: America/New_York (DST-aware). Odds are seven scheduled weekly slots, not continuous polling.</p></div></div>
+      <div className="readiness-header">
+        <div className="readiness-header-icon"><Database className="h-5 w-5" /></div>
+        <div>
+          <p className="eyebrow text-accent">OPERATING PRINCIPLE</p>
+          <h2 className="text-lg font-semibold text-ink">Show the capture state. Never imply a signal.</h2>
+          <p className="mt-1 text-sm text-muted-foreground">This surface is ready for live data and stays honest while the provider is not configured.</p>
+          <p className="mt-2 text-xs font-medium text-accent">Scheduler timezone: America/New_York (DST-aware). Odds use one persisted adaptive job: low-frequency weekly slots more than six hours before the next kickoff, then every 12 minutes from six to one hour out and every 5 minutes in the final hour.</p>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">Multiple planned near-kickoff captures require known remaining credits sufficient through kickoff; a single request can establish the balance when it is unknown. Quota checks may skip paid calls. With no unfinished upcoming game, no paid odds capture is scheduled. Check the provider record below for the next attempt and any skip reason. Saved quota headers reflect past responses, not a live balance or authorization for another paid request.</p>
+        </div>
+      </div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <Panel eyebrow="Provider monitor" title="Data health" action={health.data && <span className="section-meta">{health.data.length} providers</span>}>{health.isLoading ? <div className="space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : health.isError ? <ErrorPanel /> : focused?.length ? <div className="space-y-3">{focused.map((item) => <FreshnessCard item={item} key={item.provider} />)}</div> : <EmptyPanel title="No provider record matches this surface" detail="Once the backend exposes a provider health record, it will be listed here with its last and next update." icon={Database} />}</Panel>
         <Panel eyebrow="Readiness" title={`${title} readiness`}>
