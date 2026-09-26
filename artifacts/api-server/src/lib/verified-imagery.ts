@@ -6,6 +6,15 @@ import { NFLVERSE_TEAM_ALIASES } from "./personnel-context-derivation";
 export const TEAM_IMAGE_SOURCE = "https://github.com/nflverse/nflverse-data/releases/download/teams/teams_colors_logos.csv";
 export const ROSTER_IMAGE_SOURCE = "https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2026.csv";
 export const IMAGE_PARSER_VERSION = "verified-imagery-v1";
+
+export const PLAYER_HEADSHOT_RIGHTS = {
+  status: "not_approved",
+  approvedHosts: [] as string[],
+  reviewedHost: "static.www.nfl.com",
+  reviewedUse: "Public display of player portraits in Game Detail",
+  review: "No grant for NFL-hosted photographs established; use the portrait placeholder.",
+  termsUrl: "https://www.nfl.com/legal/terms/",
+} as const;
 type Team = { teamId: string; abbreviation: string; name: string };
 type TeamRow = { team_abbr: string; team_name: string; team_logo_espn: string };
 type RosterRow = { gsis_id: string; espn_id: string; pfr_id: string; pff_id: string; esb_id: string; smart_id: string; headshot_url: string };
@@ -56,6 +65,13 @@ export function safeImageUrl(value: string | null | undefined) {
   } catch { return null; }
 }
 
+/** Only a separately licensed, explicitly approved host may reach a consumer. */
+export function approvedPlayerHeadshotUrl(value: string | null | undefined) {
+  const safe = safeImageUrl(value);
+  if (!safe) return null;
+  const url = new URL(safe);
+  return PLAYER_HEADSHOT_RIGHTS.approvedHosts.includes(url.hostname) && !url.port ? safe : null;
+}
 const club = (value: string) => NFLVERSE_TEAM_ALIASES[value.trim().toUpperCase()] ?? value.trim().toUpperCase();
 const nameKey = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -88,6 +104,7 @@ export function reconcilePlayerImages(rows: RosterRow[], crosswalk: CrosswalkRow
   const byGsis = new Map<string, RosterRow[]>();
   const byTyped = new Map<string, Set<string>>();
   const ambiguous: Issue[] = [], unmatched: Issue[] = [], missingUrl: Issue[] = [], duplicateRosterIds: Issue[] = [];
+  const unapprovedHosts = new Map<string, number>();
   for (const row of crosswalk) {
     for (const [key, value] of Object.entries(row)) {
       if (!value) continue;
@@ -98,6 +115,11 @@ export function reconcilePlayerImages(rows: RosterRow[], crosswalk: CrosswalkRow
   }
   for (const [key, targets] of byTyped) if (targets.size > 1) ambiguous.push({ id: key, reason: `conflicting crosswalk: ${[...targets].sort().join(", ")}` });
   for (const row of rows) {
+    const safeUrl = safeImageUrl(row.headshot_url);
+    if (safeUrl && !approvedPlayerHeadshotUrl(safeUrl)) {
+      const host = new URL(safeUrl).hostname;
+      unapprovedHosts.set(host, (unapprovedHosts.get(host) ?? 0) + 1);
+    }
     // A direct GSIS ID is preferred; other identifiers may only establish identity when GSIS is absent.
     const candidates = new Set<string>();
     if (row.gsis_id) candidates.add(row.gsis_id);
@@ -136,17 +158,18 @@ export function reconcilePlayerImages(rows: RosterRow[], crosswalk: CrosswalkRow
     else if (!urls.size) { /* Already counted from raw roster rows above. */ }
     else photos.set(gsis, [...urls][0]!);
   }
-  return { photos, byTyped, unmatched, ambiguous, missingUrl: [...new Map(missingUrl.map(issue => [issue.id, issue])).values()], duplicateRosterIds };
+  return { photos, byTyped, unmatched, ambiguous, missingUrl: [...new Map(missingUrl.map(issue => [issue.id, issue])).values()], duplicateRosterIds,
+    unapprovedHosts: [...unapprovedHosts].sort(([a], [b]) => a.localeCompare(b)).map(([host, rows]) => ({ host, rows })) };
 }
 
 export function playerHeadshot(id: string, result: ReturnType<typeof reconcilePlayerImages>) {
-  if (result.photos.has(id)) return result.photos.get(id)!;
+  if (result.photos.has(id)) return approvedPlayerHeadshotUrl(result.photos.get(id));
   // Bare identifiers must resolve to one GSIS across all typed namespaces.
   const targets = new Set<string>();
   for (const namespace of ["espnId", "pfrId", "pffId", "esbId", "smartId"]) {
     for (const gsis of result.byTyped.get(`${namespace}:${id}`) ?? []) targets.add(gsis);
   }
-  return targets.size === 1 ? result.photos.get([...targets][0]!) ?? null : null;
+  return targets.size === 1 ? approvedPlayerHeadshotUrl(result.photos.get([...targets][0]!)) : null;
 }
 
 type ImageState = {

@@ -52,3 +52,4 @@
 - [Public metadata boundary](public-metadata-boundary.md) — verify game identity at request time for share previews; client head updates alone cannot make social cards accurate.
 - [Optional image refresh](optional-image-refresh.md) — remote enrichment must not block consumer data; cold-path performance runs must not warm the API first.
 - [Player TD temporal evidence](player-td-temporal-evidence.md) — reconstructed game chronology is not a pregame source-release archive; strong backtests alone cannot activate live TD probabilities.
+- [Bundled API test resolution](bundled-api-test-resolution.md) — use the server build for standalone Node tests that import workspace TS packages; ad-hoc external bundles can fail at runtime.

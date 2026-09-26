@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createImageRefreshGate, parseImageCsv, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages } from "./verified-imagery";
+import { approvedPlayerHeadshotUrl, createImageRefreshGate, parseImageCsv, PLAYER_HEADSHOT_RIGHTS, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages } from "./verified-imagery";
 
 test("a cold or timed-out image source never blocks consumer responses and retries are bounded", async () => {
   let finish!: () => void;
@@ -81,13 +81,29 @@ test("GSIS, ESPN and PFR resolve exactly; non-fantasy positions remain eligible"
     { gsisId: "00-1", espnId: "100", pfrId: "Line01", pffId: null, esbId: null, smartId: null },
     { gsisId: "00-2", espnId: "200", pfrId: null, pffId: null, esbId: null, smartId: null },
   ]);
-  assert.equal(playerHeadshot("00-1", reconciled), url("lineman"));
-  assert.equal(playerHeadshot("100", reconciled), url("lineman"));
-  assert.equal(playerHeadshot("Line01", reconciled), url("lineman"));
-  assert.equal(playerHeadshot("200", reconciled), url("kicker"));
-  assert.equal(playerHeadshot("00-2", reconciled), url("kicker"));
+
+  assert.equal(reconciled.photos.get("00-1"), url("lineman"));
+  assert.equal(reconciled.photos.get("00-2"), url("kicker"));
+  for (const id of ["00-1", "100", "Line01", "200", "00-2"])
+    assert.equal(playerHeadshot(id, reconciled), null, `unlicensed image must not be served for ${id}`);
   assert.equal(playerHeadshot("00-3", reconciled), null);
   assert.ok(reconciled.missingUrl.some(issue => issue.id === "00-3"));
+});
+
+test("NFL-hosted and unknown headshots fail closed despite verified identity", () => {
+  const nflUrl = "https://static.www.nfl.com/image/upload/league/some-image";
+  const mapped = reconcilePlayerImages([player("00-1", "100", nflUrl)], [
+    { gsisId: "00-1", espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null },
+  ]);
+  assert.deepEqual(PLAYER_HEADSHOT_RIGHTS.approvedHosts, []);
+  assert.equal(mapped.photos.get("00-1"), nflUrl);
+  assert.deepEqual(mapped.unapprovedHosts, [{ host: "static.www.nfl.com", rows: 1 }]);
+  assert.equal(playerHeadshot("00-1", mapped), null);
+  assert.equal(playerHeadshot("100", mapped), null);
+  assert.equal(approvedPlayerHeadshotUrl(url("other")), null);
+  assert.equal(approvedPlayerHeadshotUrl("https://static.www.nfl.com.evil.test/photo"), null);
+  assert.equal(approvedPlayerHeadshotUrl("http://static.www.nfl.com/photo"), null);
+  assert.equal(approvedPlayerHeadshotUrl("https://user@static.www.nfl.com/photo"), null);
 });
 
 test("colliding crosswalk IDs and conflicting weekly headshots fail closed", () => {
@@ -97,13 +113,16 @@ test("colliding crosswalk IDs and conflicting weekly headshots fail closed", () 
   ];
   const collision = reconcilePlayerImages([player("", "100", url("someone"))], rows);
   assert.equal(playerHeadshot("100", collision), null);
+  assert.equal(collision.photos.size, 0);
   assert.ok(collision.ambiguous.some(issue => issue.id === "espnId:100"));
   const conflicting = reconcilePlayerImages([player("00-1", "100", url("first")), player("00-1", "100", url("second"))], [rows[0]!]);
   assert.equal(playerHeadshot("00-1", conflicting), null);
+  assert.equal(conflicting.photos.size, 0);
   assert.ok(conflicting.duplicateRosterIds.some(issue => issue.id === "00-1"));
   const contradictory = reconcilePlayerImages([player("00-3", "100", url("wrong"))], [rows[0]!]);
   assert.equal(playerHeadshot("00-3", contradictory), null);
-  assert.equal(playerHeadshot("00-1", reconcilePlayerImages([player("00-1", "100", url("wrong"))], rows)), null);
+  assert.equal(contradictory.photos.size, 0);
+  assert.equal(reconcilePlayerImages([player("00-1", "100", url("wrong"))], rows).photos.size, 0);
 });
 
 test("missing source stays unavailable; failed refresh only reuses prior verified rows", () => {
