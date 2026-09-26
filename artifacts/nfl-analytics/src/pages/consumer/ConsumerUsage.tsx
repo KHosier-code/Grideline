@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   getGetConsumerPlayerUsageQueryKey,
   getListConsumerPlayerUsageGamesQueryKey,
@@ -8,12 +8,12 @@ import {
   type ConsumerUsagePlayer,
   type GetConsumerPlayerUsageParams,
 } from '@workspace/api-client-react';
-import { Link } from 'wouter';
+import { Link, useSearchParams } from 'wouter';
 import { ResponsiveContainer, LineChart, Line, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, FilterX, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ConsumerLoading, ConsumerMessage, metric } from './consumer-ui';
-import { primaryUsage, sortUsagePlayers, trendLabel, usageChartData, type UsageSortColumn } from '../../lib/consumer-usage';
+import { defaultUsageFilters, parseUsageSearch, primaryUsage, serializeUsageSearch, sortUsagePlayers, trendLabel, usageChartData, type UsageFilters, type UsageSortColumn } from '../../lib/consumer-usage';
 import { trackEvent } from '../../lib/analytics';
 
 type SortDir = 'asc' | 'desc';
@@ -114,21 +114,33 @@ function SortHeader({ column, label, current, direction, onSort }: { column: Usa
 }
 
 export default function ConsumerUsage() {
-  const [team, setTeam] = useState('');
-  const [position, setPosition] = useState('');
-  const [windowFilter, setWindowFilter] = useState('last5');
-  const [game, setGame] = useState('');
-  const [sortCol, setSortCol] = useState<UsageSortColumn>('primaryVolume');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.toString();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const gamesQuery = useListConsumerPlayerUsageGames({ query: { queryKey: getListConsumerPlayerUsageGamesQueryKey(), staleTime: 300_000 } });
+  const requestedGame = searchParams.get('game');
+  const gamePending = Boolean(requestedGame) && !gamesQuery.isSuccess && !gamesQuery.isError;
+  const validGames = useMemo(() => gamesQuery.data ? new Set(gamesQuery.data.games.map(context => context.gameId)) : null, [gamesQuery.data]);
+  const filters = parseUsageSearch(search, validGames);
+  const { team, position, window: windowFilter, game, sort: sortCol, direction: sortDir } = filters;
+
+  useEffect(() => {
+    if (gamePending) return;
+    const canonical = serializeUsageSearch(filters);
+    if (search !== canonical) setSearchParams(canonical, { replace: true });
+  }, [search, gamePending, filters.team, filters.position, filters.window, filters.game, filters.sort, filters.direction, setSearchParams]);
+
+  function updateFilters(next: UsageFilters) {
+    setSearchParams(serializeUsageSearch(next), { replace: true });
+    setExpandedId(null);
+  }
   const params: GetConsumerPlayerUsageParams = {
     ...(team ? { team } : {}),
     ...(position ? { position: position as GetConsumerPlayerUsageParams['position'] } : {}),
     ...(game ? { game } : {}),
     window: windowFilter as GetConsumerPlayerUsageParams['window'],
   };
-  const query = useGetConsumerPlayerUsage(params, { query: { queryKey: getGetConsumerPlayerUsageQueryKey(params), staleTime: 60_000 } });
-  const gamesQuery = useListConsumerPlayerUsageGames({ query: { queryKey: getListConsumerPlayerUsageGamesQueryKey(), staleTime: 300_000 } });
+  const query = useGetConsumerPlayerUsage(params, { query: { queryKey: getGetConsumerPlayerUsageQueryKey(params), enabled: !gamePending, staleTime: 60_000 } });
   const sortedPlayers = useMemo(() => sortUsagePlayers(query.data?.players ?? [], sortCol, sortDir), [query.data?.players, sortCol, sortDir]);
   const playerKey = (player: ConsumerUsagePlayer) => `${player.playerId}:${player.teamId}`;
   const selectedPlayer = sortedPlayers.find(player => playerKey(player) === expandedId);
@@ -136,23 +148,19 @@ export default function ConsumerUsage() {
   function handleSort(col: UsageSortColumn) {
     const direction: SortDir = col === sortCol && sortDir === 'desc' ? 'asc' : 'desc';
     trackEvent('usage_sort_changed', { column: col, direction });
-    setSortCol(col);
-    setSortDir(direction);
+    updateFilters({ ...filters, sort: col, direction });
   }
   function handleFilterChange(filter: 'team' | 'position' | 'window', value: string) {
-    if (filter === 'team') setTeam(value);
-    if (filter === 'position') {
-      setPosition(value);
-      setSortCol('primaryVolume');
-      setSortDir('desc');
-    }
-    if (filter === 'window') setWindowFilter(value);
-    setExpandedId(null);
+    updateFilters({
+      ...filters,
+      ...(filter === 'team' ? { team: value } : {}),
+      ...(filter === 'position' ? { position: value as UsageFilters['position'], sort: 'primaryVolume' as const, direction: 'desc' as const } : {}),
+      ...(filter === 'window' ? { window: value as UsageFilters['window'] } : {}),
+    });
     trackEvent('usage_filter_changed', { filter, value: value || 'all' });
   }
   function handleGameFilterChange(value: string) {
-    setGame(value);
-    setExpandedId(null);
+    updateFilters({ ...filters, game: value });
     trackEvent('usage_filter_changed', { filter: 'game', value: value ? 'specific_game' : 'all' });
   }
   function togglePlayer(player: ConsumerUsagePlayer, open: boolean) {
@@ -167,13 +175,7 @@ export default function ConsumerUsage() {
   }
   function handleReset() {
     trackEvent('usage_filters_reset', { had_team: Boolean(team), had_position: Boolean(position), had_game: Boolean(game.trim()), window: windowFilter });
-    setTeam('');
-    setPosition('');
-    setWindowFilter('last5');
-    setGame('');
-    setSortCol('primaryVolume');
-    setSortDir('desc');
-    setExpandedId(null);
+    updateFilters(defaultUsageFilters);
   }
 
   return <div className="consumer-page min-w-0 max-w-full space-y-6" data-testid="page-player-usage">
@@ -185,7 +187,7 @@ export default function ConsumerUsage() {
       <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap">
         <label className="flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground sm:w-32">Team
           <select className="h-10 min-w-0 rounded-md border border-input bg-background px-2 text-sm text-foreground" value={team} onChange={e => handleFilterChange('team', e.target.value)} data-testid="select-usage-team">
-            <option value="">All teams</option>{query.data?.availableTeams.map(({ teamId, abbreviation }) => <option key={teamId} value={abbreviation}>{abbreviation}</option>)}
+            <option value="">All teams</option>{team && !query.data?.availableTeams.some(({ abbreviation }) => abbreviation === team) && <option value={team}>{team}</option>}{query.data?.availableTeams.map(({ teamId, abbreviation }) => <option key={teamId} value={abbreviation}>{abbreviation}</option>)}
           </select>
         </label>
         <label className="flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground sm:w-32">Position
@@ -211,7 +213,7 @@ export default function ConsumerUsage() {
         <p id="usage-game-context-status" className="mt-2 text-xs text-muted-foreground">{gamesQuery.isLoading ? 'Loading valid game contexts.' : gamesQuery.isError ? 'Game context is unavailable; current-season usage still works.' : gamesQuery.data?.games.length ? 'Optional cutoff for games played before the selected matchup.' : `No game contexts are available for ${gamesQuery.data?.season ?? 'the current season'}.`}</p>
       </details>
     </div>
-    {query.isLoading ? <ConsumerLoading label="Analyzing usage data..." /> : query.isError
+    {gamePending || query.isLoading ? <ConsumerLoading label={gamePending ? "Validating game context..." : "Analyzing usage data..."} /> : query.isError
       ? <ConsumerMessage error title="Usage data unavailable" detail="Could not load player usage for the requested filters." />
       : !query.data?.players.length
         ? <ConsumerMessage title="No players found" detail={query.data?.sourceCoverage.partialReasons.join(' · ') || 'No persisted player-game records match the current filters.'} />

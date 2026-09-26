@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { primaryUsage, sortUsagePlayers, trendLabel, usageChartData } from "./consumer-usage.ts";
+import { defaultUsageFilters, parseUsageSearch, primaryUsage, serializeUsageSearch, sortUsagePlayers, trendLabel, usageChartData } from "./consumer-usage.ts";
 import { trackEvent } from "./analytics.ts";
 
 test("usage chart transformation preserves unavailable values", () => {
@@ -28,6 +28,25 @@ test("usage sorting keeps unavailable values last in either direction", () => {
   ];
   assert.deepEqual(sortUsagePlayers(players, "targets", "desc").map((player) => player.playerName), ["High", "Low", "Unavailable"]);
   assert.deepEqual(sortUsagePlayers(players, "targets", "asc").map((player) => player.playerName), ["Low", "High", "Unavailable"]);
+});
+
+test("usage URLs round-trip supported filters and sort without storing defaults", () => {
+  const selected = { team: "BUF", position: "QB" as const, window: "last8" as const, game: "matchup-123", sort: "totalTd" as const, direction: "asc" as const };
+  const search = serializeUsageSearch(selected);
+  assert.deepEqual(parseUsageSearch(search, new Set(["matchup-123"])), selected);
+  assert.equal(serializeUsageSearch(defaultUsageFilters), "");
+  assert.equal(serializeUsageSearch(parseUsageSearch(search, new Set(["matchup-123"]))), search);
+  const washington = parseUsageSearch("?team=WSH&position=WR", new Set());
+  assert.equal(washington.team, "WSH");
+  assert.equal(serializeUsageSearch(washington), "team=WSH&position=WR");
+});
+
+test("usage URLs reject unknown fields and invalid values and never trust an unverified cutoff", () => {
+  const search = "?team=XYZ&position=K&window=all&game=made-up&sort=playerId&direction=sideways&player=private";
+  assert.deepEqual(parseUsageSearch(search, new Set(["real-game"])), defaultUsageFilters);
+  assert.deepEqual(parseUsageSearch("?team=BUF&game=real-game", null), { ...defaultUsageFilters, team: "BUF" });
+  assert.deepEqual(parseUsageSearch("?game=real-game", new Set(["real-game"])), { ...defaultUsageFilters, game: "real-game" });
+  assert.equal(serializeUsageSearch(parseUsageSearch(search, new Set())), "");
 });
 
 test("public navigation and signed-out routing expose player usage", () => {
@@ -59,7 +78,7 @@ test("usage page has a compact filter toolbar, separately readable mobile list a
   for (const filter of ["team", "position", "window", "game"]) assert.match(source, new RegExp(`select-usage-${filter}`));
   assert.match(source, /<details className="mt-3/);
   assert.match(source, /button-usage-reset/);
-  assert.match(source, /setGame\(''\)/);
+  assert.match(source, /updateFilters\(defaultUsageFilters\)/);
   assert.match(source, /table-usage-players/);
   assert.match(source, /list-usage-players/);
   assert.match(source, /hidden lg:block/);
