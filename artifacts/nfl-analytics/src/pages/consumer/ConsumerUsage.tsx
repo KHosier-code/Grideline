@@ -12,8 +12,8 @@ import { Link, useSearchParams } from 'wouter';
 import { ResponsiveContainer, LineChart, Line, XAxis, Tooltip, YAxis, CartesianGrid } from 'recharts';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, FilterX, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { ConsumerLoading, ConsumerMessage, metric } from './consumer-ui';
-import { defaultUsageFilters, parseUsageSearch, primaryUsage, serializeUsageSearch, sortUsagePlayers, trendLabel, usageChartData, type UsageFilters, type UsageSortColumn } from '../../lib/consumer-usage';
+import { ConsumerLoading, ConsumerMessage } from './consumer-ui';
+import { boundedUsageSearch, defaultUsageFilters, discoverUsagePlayers, formatUsageMetric, MAX_USAGE_SEARCH_LENGTH, parseUsageSearch, primaryUsage, serializeUsageSearch, sortUsagePlayers, trendLabel, usageChartData, type UsageFilters, type UsageSortColumn } from '../../lib/consumer-usage';
 import { trackEvent } from '../../lib/analytics';
 
 type SortDir = 'asc' | 'desc';
@@ -25,9 +25,9 @@ const metricGroups = [
   { title: 'Situational', items: [['Snap share', 'snapShare'], ['Explosive play rate', 'explosiveRate'], ['Total TDs', 'totalTd']] },
 ] as const;
 
-function MetricText({ value, percent = false }: { value?: ConsumerUsageMetric; percent?: boolean }) {
+function MetricText({ value, unit = 'count' }: { value?: ConsumerUsageMetric; unit?: 'count' | 'percent' | 'average' }) {
   if (!value?.available || value.value === null) return <span className="text-muted-foreground" title={value?.reason || 'Unavailable'}>—</span>;
-  return <span>{metric(value.value, percent)}</span>;
+  return <span>{formatUsageMetric(value.value, unit)}</span>;
 }
 
 function UsageChart({ player }: { player: ConsumerUsagePlayer }) {
@@ -81,7 +81,7 @@ function PlayerDetail({ player }: { player: ConsumerUsagePlayer }) {
         <dl className="divide-y divide-border/60">
           {group.items.map(([label, key]) => <div key={key} className="flex items-center justify-between gap-3 py-2 text-sm">
             <dt className="text-muted-foreground">{label}</dt>
-            <dd className="font-mono font-semibold"><MetricText value={player.aggregate[key]} percent={['snapShare', 'targetShare', 'explosiveRate'].includes(key)} /></dd>
+            <dd className="font-mono font-semibold"><MetricText value={player.aggregate[key]} unit={['snapShare', 'targetShare', 'explosiveRate'].includes(key) ? 'percent' : ['yardsPerTarget', 'yardsPerCarry'].includes(key) ? 'average' : 'count'} /></dd>
           </div>)}
         </dl>
       </section>)}
@@ -122,13 +122,13 @@ export default function ConsumerUsage() {
   const gamePending = Boolean(requestedGame) && !gamesQuery.isSuccess && !gamesQuery.isError;
   const validGames = useMemo(() => gamesQuery.data ? new Set(gamesQuery.data.games.map(context => context.gameId)) : null, [gamesQuery.data]);
   const filters = parseUsageSearch(search, validGames);
-  const { team, position, window: windowFilter, game, sort: sortCol, direction: sortDir } = filters;
+  const { team, position, window: windowFilter, game, search: playerSearch, includeZero, sort: sortCol, direction: sortDir } = filters;
 
   useEffect(() => {
     if (gamePending) return;
     const canonical = serializeUsageSearch(filters);
     if (search !== canonical) setSearchParams(canonical, { replace: true });
-  }, [search, gamePending, filters.team, filters.position, filters.window, filters.game, filters.sort, filters.direction, setSearchParams]);
+  }, [search, gamePending, filters.team, filters.position, filters.window, filters.game, filters.search, filters.includeZero, filters.sort, filters.direction, setSearchParams]);
 
   function updateFilters(next: UsageFilters) {
     setSearchParams(serializeUsageSearch(next), { replace: true });
@@ -141,20 +141,20 @@ export default function ConsumerUsage() {
     window: windowFilter as GetConsumerPlayerUsageParams['window'],
   };
   const query = useGetConsumerPlayerUsage(params, { query: { queryKey: getGetConsumerPlayerUsageQueryKey(params), enabled: !gamePending, staleTime: 60_000 } });
-  const sortedPlayers = useMemo(() => sortUsagePlayers(query.data?.players ?? [], sortCol, sortDir), [query.data?.players, sortCol, sortDir]);
+  const sortedPlayers = useMemo(() => sortUsagePlayers(discoverUsagePlayers(query.data?.players ?? [], playerSearch, includeZero), sortCol, sortDir), [query.data?.players, playerSearch, includeZero, sortCol, sortDir]);
   const playerKey = (player: ConsumerUsagePlayer) => `${player.playerId}:${player.teamId}`;
   const selectedPlayer = sortedPlayers.find(player => playerKey(player) === expandedId);
 
   function handleSort(col: UsageSortColumn) {
-    const direction: SortDir = col === sortCol && sortDir === 'desc' ? 'asc' : 'desc';
-    trackEvent('usage_sort_changed', { column: col, direction });
+    const direction: SortDir = col === 'relevance' ? 'desc' : col === sortCol && sortDir === 'desc' ? 'asc' : 'desc';
+    if (col !== 'relevance') trackEvent('usage_sort_changed', { column: col, direction });
     updateFilters({ ...filters, sort: col, direction });
   }
   function handleFilterChange(filter: 'team' | 'position' | 'window', value: string) {
     updateFilters({
       ...filters,
       ...(filter === 'team' ? { team: value } : {}),
-      ...(filter === 'position' ? { position: value as UsageFilters['position'], sort: 'primaryVolume' as const, direction: 'desc' as const } : {}),
+      ...(filter === 'position' ? { position: value as UsageFilters['position'], sort: 'relevance' as const, direction: 'desc' as const } : {}),
       ...(filter === 'window' ? { window: value as UsageFilters['window'] } : {}),
     });
     trackEvent('usage_filter_changed', { filter, value: value || 'all' });
@@ -200,6 +200,13 @@ export default function ConsumerUsage() {
             <option value="last3">Last 3 games</option><option value="last5">Last 5 games</option><option value="last8">Last 8 games</option><option value="season">Season to date</option>
           </select>
         </label>
+        <label className="col-span-2 flex min-w-0 flex-col gap-1 text-xs font-semibold text-muted-foreground sm:w-48">Player name
+          <input type="search" autoComplete="off" maxLength={MAX_USAGE_SEARCH_LENGTH} className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground" placeholder="Search players" value={playerSearch} onChange={e => updateFilters({ ...filters, search: boundedUsageSearch(e.target.value) })} data-testid="input-usage-search" />
+        </label>
+        <label className="col-span-2 inline-flex min-h-10 items-center gap-2 text-sm text-foreground sm:whitespace-nowrap">
+          <input type="checkbox" checked={includeZero} onChange={e => updateFilters({ ...filters, includeZero: e.target.checked })} data-testid="checkbox-usage-include-zero" />
+          Include verified zero-usage players
+        </label>
         <button type="button" className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border bg-secondary px-4 text-sm font-medium text-secondary-foreground sm:ml-auto" onClick={handleReset} data-testid="button-usage-reset"><FilterX className="h-4 w-4" /> Reset</button>
       </div>
       <details className="mt-3 border-t border-border pt-2 text-sm" data-testid="disclosure-usage-context">
@@ -215,21 +222,23 @@ export default function ConsumerUsage() {
     </div>
     {gamePending || query.isLoading ? <ConsumerLoading label={gamePending ? "Validating game context..." : "Analyzing usage data..."} /> : query.isError
       ? <ConsumerMessage error title="Usage data unavailable" detail="Could not load player usage for the requested filters." />
-      : !query.data?.players.length
-        ? <ConsumerMessage title="No players found" detail={query.data?.sourceCoverage.partialReasons.join(' · ') || 'No persisted player-game records match the current filters.'} />
+       : !query.data?.players.length
+         ? <ConsumerMessage title="No players found" detail={query.data?.sourceCoverage.partialReasons.join(' · ') || 'No persisted player-game records match the team, position, window, or game context. The player-name search and zero-usage setting cannot add records without verified evidence. Try changing filters or Reset.'} />
+         : !sortedPlayers.length
+         ? <div data-testid="status-usage-filtered-empty"><p className="text-sm text-muted-foreground" data-testid="text-usage-count">0 of {query.data.players.length} players visible</p><ConsumerMessage title="No players match these filters" detail="Try another player name, team, position, window, or game context. You can also include verified zero-usage players or Reset the filters." /></div>
         : <section className="overflow-hidden rounded-xl border border-border bg-card shadow-sm" aria-label="Participation evidence">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/20 px-4 py-3">
-            <div><h2 className="font-serif text-lg">Participation Evidence</h2><p className="text-xs text-muted-foreground" data-testid="text-usage-count">{query.data.players.length} players · {query.data.season} season</p></div>
+             <div><h2 className="font-serif text-lg">Participation Evidence</h2><p className="text-xs text-muted-foreground" data-testid="text-usage-count">{sortedPlayers.length} of {query.data.players.length} players · {query.data.season} season</p></div>
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Info className="h-4 w-4" /> {query.data.sourceCoverage.includedGames}/{query.data.sourceCoverage.requestedGames} games covered</span>
           </div>
           {query.data.status === 'partial' && <p role="status" className="border-b border-border bg-amber-500/10 px-4 py-2 text-xs text-amber-800 dark:text-amber-300" data-testid="status-usage-partial"><strong>Partial coverage.</strong> {query.data.sourceCoverage.partialReasons.join(' · ') || 'Some metrics are unavailable for this window.'} A dash means unavailable, not zero.</p>}
-          <div className="border-b border-border px-4 py-3 text-xs text-muted-foreground">Volume is pass attempts for QBs, carries for RBs, and targets for WRs/TEs. Yards follow the same roles. TDs are observed totals.</div>
+           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 text-xs text-muted-foreground"><span>Volume is pass attempts for QBs, carries for RBs, and targets for WRs/TEs. Yards follow the same roles. TDs are observed totals.</span>{sortCol === 'relevance' ? <span data-testid="text-usage-relevance">Sorted by relevance · observed role and coverage</span> : <button type="button" className="font-semibold text-accent underline" onClick={() => handleSort('relevance')} data-testid="button-usage-relevance">Sort by relevance</button>}</div>
           <div className="flex items-center gap-2 border-b border-border px-4 py-3 lg:hidden">
             <label htmlFor="usage-mobile-sort" className="text-xs font-medium">Sort by</label>
             <select id="usage-mobile-sort" className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm" value={sortCol} onChange={e => handleSort(e.target.value as UsageSortColumn)} data-testid="select-usage-sort">
-              <option value="primaryVolume">Volume</option><option value="primaryYards">Yards</option><option value="totalTd">TDs</option><option value="snapShare">Snap %</option><option value="trend">Trend</option><option value="name">Player</option>
+               <option value="relevance">Relevance</option><option value="primaryVolume">Volume</option><option value="primaryYards">Yards</option><option value="totalTd">TDs</option><option value="snapShare">Snap %</option><option value="trend">Trend</option><option value="name">Player</option>
             </select>
-            <button type="button" aria-label={`Sort ${sortDir === 'asc' ? 'descending' : 'ascending'}`} onClick={() => handleSort(sortCol)} className="rounded border border-border p-2" data-testid="button-usage-sort-direction">{sortDir === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}</button>
+             <button type="button" disabled={sortCol === 'relevance'} aria-label={`Sort ${sortDir === 'asc' ? 'descending' : 'ascending'}`} onClick={() => handleSort(sortCol)} className="rounded border border-border p-2 disabled:opacity-40" data-testid="button-usage-sort-direction">{sortDir === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}</button>
           </div>
           <div className="hidden lg:block">
             <table className="w-full text-left text-sm" data-testid="table-usage-players">
@@ -250,7 +259,7 @@ export default function ConsumerUsage() {
                   <td className="px-4 py-3 font-mono"><MetricText value={player.aggregate[primary.yards]} /></td>
                   <td className="px-4 py-3 font-mono"><MetricText value={player.aggregate.totalTd} /></td>
                   <td className="px-4 py-3">{trendLabel(player.trend)}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{player.sourceCoverage.includedGames}/{player.sourceCoverage.requestedGames}{player.sourceCoverage.partialReasons.length ? ' · partial' : ''}</td>
+                   <td className="px-4 py-3 text-xs" data-testid={`text-usage-coverage-${playerKey(player)}`}><strong className="font-mono text-foreground">{player.sourceCoverage.includedGames}/{player.sourceCoverage.requestedGames} games</strong>{player.sourceCoverage.partialReasons.length ? <span className="block text-amber-700 dark:text-amber-300">Partial coverage</span> : ''}</td>
                   <td className="px-4 py-3"><button type="button" className="rounded-md text-accent underline underline-offset-2 focus-visible:outline focus-visible:outline-2" onClick={() => togglePlayer(player, true)} data-testid={`button-usage-detail-${playerKey(player)}`} aria-haspopup="dialog">View details</button></td>
                 </tr>;
               })}</tbody>
@@ -259,7 +268,7 @@ export default function ConsumerUsage() {
           <ul className="divide-y divide-border lg:hidden" data-testid="list-usage-players">{sortedPlayers.map(player => {
             const primary = primaryUsage(player);
             return <li key={playerKey(player)} className="p-4" data-testid={`card-usage-player-${playerKey(player)}`}>
-              <div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block break-words">{player.playerName}</strong><span className="text-xs text-muted-foreground">{player.teamId} · {player.position} · {player.sourceCoverage.includedGames}/{player.sourceCoverage.requestedGames} games{player.sourceCoverage.partialReasons.length ? ' · partial' : ''}</span></div><span className="shrink-0 text-xs text-muted-foreground">{trendLabel(player.trend)}</span></div>
+               <div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block break-words">{player.playerName}</strong><span className="text-xs text-muted-foreground">{player.teamId} · {player.position}</span><span className="mt-1 block text-xs" data-testid={`text-usage-mobile-coverage-${playerKey(player)}`}><strong className="font-mono">{player.sourceCoverage.includedGames}/{player.sourceCoverage.requestedGames} games</strong>{player.sourceCoverage.partialReasons.length ? ' · Partial coverage' : ''}</span></div><span className="shrink-0 text-xs text-muted-foreground">{trendLabel(player.trend)}</span></div>
               <dl className="mt-3 grid grid-cols-3 gap-2 text-sm"><div><dt className="text-xs text-muted-foreground">{primary.volumeLabel}</dt><dd className="font-mono font-semibold"><MetricText value={player.aggregate[primary.volume]} /></dd></div><div><dt className="text-xs text-muted-foreground">Yards</dt><dd className="font-mono font-semibold"><MetricText value={player.aggregate[primary.yards]} /></dd></div><div><dt className="text-xs text-muted-foreground">TDs</dt><dd className="font-mono font-semibold"><MetricText value={player.aggregate.totalTd} /></dd></div></dl>
               <button type="button" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-accent underline underline-offset-2" onClick={() => togglePlayer(player, true)} data-testid={`button-usage-mobile-detail-${playerKey(player)}`} aria-haspopup="dialog">View details <ChevronRight className="h-4 w-4" /></button>
             </li>;

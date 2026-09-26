@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { defaultUsageFilters, parseUsageSearch, primaryUsage, serializeUsageSearch, sortUsagePlayers, trendLabel, usageChartData } from "./consumer-usage.ts";
+import { boundedUsageSearch, defaultUsageFilters, discoverUsagePlayers, formatUsageMetric, MAX_USAGE_SEARCH_LENGTH, parseUsageSearch, primaryUsage, serializeUsageSearch, sortUsagePlayers, trendLabel, usageChartData } from "./consumer-usage.ts";
 import { trackEvent } from "./analytics.ts";
 
 test("usage chart transformation preserves unavailable values", () => {
@@ -31,11 +31,12 @@ test("usage sorting keeps unavailable values last in either direction", () => {
 });
 
 test("usage URLs round-trip supported filters and sort without storing defaults", () => {
-  const selected = { team: "BUF", position: "QB" as const, window: "last8" as const, game: "matchup-123", sort: "totalTd" as const, direction: "asc" as const };
+  const selected = { team: "BUF", position: "QB" as const, window: "last8" as const, game: "matchup-123", search: "Josh Allen", includeZero: true, sort: "totalTd" as const, direction: "asc" as const };
   const search = serializeUsageSearch(selected);
   assert.deepEqual(parseUsageSearch(search, new Set(["matchup-123"])), selected);
   assert.equal(serializeUsageSearch(defaultUsageFilters), "");
   assert.equal(serializeUsageSearch(parseUsageSearch(search, new Set(["matchup-123"]))), search);
+  assert.ok(!search.includes("playerId"));
   const washington = parseUsageSearch("?team=WSH&position=WR", new Set());
   assert.equal(washington.team, "WSH");
   assert.equal(serializeUsageSearch(washington), "team=WSH&position=WR");
@@ -47,6 +48,54 @@ test("usage URLs reject unknown fields and invalid values and never trust an unv
   assert.deepEqual(parseUsageSearch("?team=BUF&game=real-game", null), { ...defaultUsageFilters, team: "BUF" });
   assert.deepEqual(parseUsageSearch("?game=real-game", new Set(["real-game"])), { ...defaultUsageFilters, game: "real-game" });
   assert.equal(serializeUsageSearch(parseUsageSearch(search, new Set())), "");
+  assert.deepEqual(parseUsageSearch("?includeZero=true&sort=relevance&direction=asc", new Set()), defaultUsageFilters);
+  assert.equal(parseUsageSearch(`?search=${encodeURIComponent("x".repeat(100))}`, new Set()).search.length, MAX_USAGE_SEARCH_LENGTH);
+  assert.equal(boundedUsageSearch("a\nb"), "ab");
+});
+
+test("discovery matches names without inventing evidence or treating missing volume as zero", () => {
+  const player = (name: string, position: string, metric: string, value: number | null, available = value !== null, games = [1]) => ({
+    playerId: name, playerName: name, teamId: "BUF", position, trend: "flat" as const,
+    aggregate: { [metric]: { value, available } }, games,
+    sourceCoverage: { includedGames: games.length, requestedGames: 2 },
+  });
+  const players = [
+    player("Josh Allen", "QB", "attempts", 30), player("Zero QB", "QB", "attempts", 0),
+    player("Null RB", "RB", "carries", null), player("Zero RB", "RB", "carries", 0),
+    player("Zero WR", "WR", "targets", 0), player("Zero TE", "TE", "targets", 0),
+    player("Unavailable WR", "WR", "targets", 0, false),
+    player("No games", "WR", "targets", 4, true, []),
+  ];
+  assert.deepEqual(discoverUsagePlayers(players, "", false).map(p => p.playerName), ["Josh Allen", "Null RB", "Unavailable WR"]);
+  assert.deepEqual(discoverUsagePlayers(players, " zErO ", true).map(p => p.playerName), ["Zero QB", "Zero RB", "Zero WR", "Zero TE"]);
+  assert.deepEqual(discoverUsagePlayers(players, "not here", true), []);
+  assert.equal(discoverUsagePlayers(players, "", true).length, 7);
+});
+
+test("default relevance compares role-adjusted usage and observed coverage with deterministic ties", () => {
+  const player = (playerName: string, playerId: string, position: string, volume: number | null, includedGames = 5) => ({
+    playerName, playerId, teamId: "BUF", position, trend: "flat" as const,
+    aggregate: { [primaryUsage({ position }).volume]: { value: volume, available: volume !== null } },
+    sourceCoverage: { includedGames, requestedGames: 5 },
+  });
+  const players = [
+    player("QB raw volume", "q", "QB", 50), player("WR regular", "w", "WR", 35),
+    player("WR partial", "p", "WR", 35, 2), player("RB full", "r", "RB", 75),
+    player("Missing", "m", "TE", null), player("RB full", "r2", "RB", 75),
+  ];
+  assert.deepEqual(sortUsagePlayers(players, "relevance", "desc").map(p => p.playerId), ["r", "r2", "w", "q", "p", "m"]);
+  assert.equal(sortUsagePlayers([player("Alphabetical QB", "qa", "QB", 100), player("Zed WR", "wz", "WR", 60)], "relevance", "desc")[0]?.playerId, "wz");
+  assert.deepEqual(sortUsagePlayers(players, "primaryVolume", "desc").map(p => p.playerId), ["r", "r2", "q", "p", "w", "m"]);
+  assert.deepEqual(sortUsagePlayers(players, "name", "asc").map(p => p.playerId), ["m", "q", "r", "r2", "p", "w"]);
+});
+
+test("usage-specific metric units preserve zero and unavailable", () => {
+  assert.equal(formatUsageMetric(0), "0");
+  assert.equal(formatUsageMetric(312.0), "312");
+  assert.equal(formatUsageMetric(0, "percent"), "0.0%");
+  assert.equal(formatUsageMetric(0.235, "percent"), "23.5%");
+  assert.equal(formatUsageMetric(7.26, "average"), "7.3");
+  assert.equal(formatUsageMetric(null), "—");
 });
 
 test("public navigation and signed-out routing expose player usage", () => {
@@ -78,6 +127,14 @@ test("usage page has a compact filter toolbar, separately readable mobile list a
   for (const filter of ["team", "position", "window", "game"]) assert.match(source, new RegExp(`select-usage-${filter}`));
   assert.match(source, /<details className="mt-3/);
   assert.match(source, /button-usage-reset/);
+  assert.match(source, /input-usage-search/);
+  assert.match(source, /checkbox-usage-include-zero/);
+  assert.match(source, /status-usage-filtered-empty/);
+  assert.match(source, /sortedPlayers\.length} of \{query\.data\.players\.length/);
+  assert.match(source, /text-usage-mobile-coverage/);
+  assert.match(source, /text-usage-coverage/);
+  assert.match(source, /sort: 'relevance'/);
+  assert.match(source, /unit=\{\['snapShare'/);
   assert.match(source, /updateFilters\(defaultUsageFilters\)/);
   assert.match(source, /table-usage-players/);
   assert.match(source, /list-usage-players/);
@@ -113,6 +170,8 @@ test("usage interactions emit bounded analytics without player or game identifie
   assert.match(source, /usage_row_toggled/);
   assert.match(source, /value: value \? 'specific_game' : 'all'/);
   assert.doesNotMatch(source, /trackEvent\([^)]*playerId/s);
+  assert.doesNotMatch(source, /trackEvent\([^)]*playerSearch/s);
+  assert.doesNotMatch(source, /trackEvent\([^)]*search:/s);
 });
 
 test("usage analytics copies bounded payloads without blocking interactions", async () => {
