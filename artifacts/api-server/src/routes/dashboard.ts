@@ -72,6 +72,14 @@ const defaultDataHealthDependencies: DataHealthDependencies = {
 };
 
 export const DATA_HEALTH_ROUTE_TIMEOUT_MS = 5_000;
+const ADMIN_SCHEDULE_FRESHNESS_MS = 60 * 60 * 1000;
+const ADMIN_WEATHER_FRESHNESS_MS = 6 * 60 * 60 * 1000;
+
+function recentSuccessfulObservation(timestamp: string | null | undefined, now: Date, maxAgeMs: number) {
+  if (!timestamp) return false;
+  const age = now.getTime() - new Date(timestamp).getTime();
+  return Number.isFinite(age) && age >= 0 && age <= maxAgeMs;
+}
 
 type DataHealthHandlerOptions = {
   timeoutMs?: number;
@@ -748,7 +756,10 @@ export function createDataHealthHandler(
           status: scheduleResult.unavailable
             ? "unavailable"
             : schedule.latestRun?.status === "success"
-              ? "current"
+              ? schedule.records > 0 &&
+                  recentSuccessfulObservation(schedule.latestRun.completedAt, now, ADMIN_SCHEDULE_FRESHNESS_MS)
+                ? "current"
+                : "stale"
               : schedule.latestRun?.status === "partial"
                 ? "stale"
                 : schedule.latestRun?.status === "failed"
@@ -758,6 +769,10 @@ export function createDataHealthHandler(
                     : "unavailable",
           detail: scheduleResult.unavailable
             ? healthCheckUnavailable("ESPN schedule")
+            : schedule.latestRun?.status === "success" &&
+                (!schedule.records ||
+                  !recentSuccessfulObservation(schedule.latestRun.completedAt, now, ADMIN_SCHEDULE_FRESHNESS_MS))
+              ? `${schedule.records} persisted games; the last successful schedule refresh is older than 60 minutes or has no saved games.`
             : schedule.latestRun
               ? `${schedule.records} persisted games; ${schedule.unfinished} unfinished windows remain refreshable.`
               : espn.lastSuccessfulRequest
@@ -870,13 +885,18 @@ export function createDataHealthHandler(
             weatherResult.unavailable || scheduledWeatherRunsResult.unavailable
               ? "unavailable"
               : weather.lastRun?.status === "success"
-                ? "current"
+                ? recentSuccessfulObservation(weather.lastRun.completedAt, now, ADMIN_WEATHER_FRESHNESS_MS)
+                  ? "current"
+                  : "stale"
                 : weather.lastRun
                   ? "stale"
                   : "unavailable",
           detail:
             weatherResult.unavailable || scheduledWeatherRunsResult.unavailable
               ? healthCheckUnavailable("NWS weather")
+              : weather.lastRun?.status === "success" &&
+                  !recentSuccessfulObservation(weather.lastRun.completedAt, now, ADMIN_WEATHER_FRESHNESS_MS)
+                ? "The last successful weather attempt is older than the six-hour active-season cadence."
               : (weather.lastRun?.error ??
                 "U.S. stadium forecasts use keyless api.weather.gov data; indoor games record no outdoor conditions."),
           schedule: "Every 6 hours during active season.",

@@ -256,6 +256,46 @@ function providerByName(body: unknown[], name: string) {
   return provider;
 }
 
+test("old successful schedule and weather attempts are stale, not current", async () => {
+  const old = new Date(Date.now() - 9 * 60 * 60 * 1000).toISOString();
+  const handler = createDataHealthHandler({
+    ...dataHealthDependencies,
+    getScheduleHealth: async () => ({
+      records: 12, unfinished: 12, lastUpdated: old,
+      latestRun: { id: 1, status: "success", startedAt: old, completedAt: old, recordsProcessed: 12, errorMessage: null },
+      runs: [],
+    }),
+    weatherHealth: async () => ({
+      source: "National Weather Service", cost: "Free", userAgentConfigured: true,
+      lastRun: { status: "success", startedAt: old, completedAt: old, error: null },
+    }),
+  }) as unknown as DataHealthHandler;
+  const body = await readDataHealth(handler);
+  assert.equal(providerByName(body, "espn").status, "stale");
+  assert.match(providerByName(body, "espn").detail, /older than 60 minutes/);
+  assert.equal(providerByName(body, "nws-weather").status, "stale");
+  assert.match(providerByName(body, "nws-weather").detail, /six-hour/);
+});
+
+test("recent successful schedule and weather attempts stay current", async () => {
+  const recent = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+  const handler = createDataHealthHandler({
+    ...dataHealthDependencies,
+    getScheduleHealth: async () => ({
+      records: 12, unfinished: 12, lastUpdated: recent,
+      latestRun: { id: 1, status: "success", startedAt: recent, completedAt: recent, recordsProcessed: 12, errorMessage: null },
+      runs: [],
+    }),
+    weatherHealth: async () => ({
+      source: "National Weather Service", cost: "Free", userAgentConfigured: true,
+      lastRun: { status: "success", startedAt: recent, completedAt: recent, error: null },
+    }),
+  }) as unknown as DataHealthHandler;
+  const body = await readDataHealth(handler);
+  assert.equal(providerByName(body, "espn").status, "current");
+  assert.equal(providerByName(body, "nws-weather").status, "current");
+});
+
 test("player receipt cleanup alert appears only on protected data-health and contains no raw errors", async () => {
   const route = (dashboardRouter as unknown as { stack: RouteLayer[] }).stack
     .find((layer) => layer.route?.path === "/data-health")?.route;
