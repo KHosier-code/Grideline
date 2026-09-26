@@ -1,0 +1,237 @@
+# TASK #81 — GRIDLINE PRODUCTION RECOVERY & HEALTH AUDIT
+
+## OBJECTIVE
+
+The previous production database-binding issue appears to have been resolved. Before continuing development, perform a comprehensive, **read-only production health audit** to confirm that Gridline is connected to the correct database and that all critical systems are functioning.
+
+This is an investigation and verification task, NOT a repair or deployment task.
+
+**IMPORTANT:**
+- Do not modify production data or database bindings.
+- Do not run migrations, deployments, rollbacks, or backfills.
+- Do not regenerate, overwrite, or delete prediction snapshots.
+- Do not retrain, refit, or promote any models.
+- Do not expose secrets or credentials.
+- If a problem is discovered, document it and recommend a solution. Do not automatically implement it.
+
+## 1. DATABASE INTEGRITY
+
+Confirm the production application and dedicated data worker connect to the intended production database.
+
+Verify:
+- Database connectivity and identity using non-sensitive metadata.
+- Production application and worker use the same intended database.
+- Expected tables and migration history are intact.
+- Historical NFL data is accessible.
+- Previously verified prediction snapshots still exist.
+- New records have continued appearing following recovery.
+- No unexpected gaps or duplicate records are evident.
+
+Compare historical records from before the rollback with recent records.
+
+Do not assume that a successful database connection means the correct database is connected.
+
+If the authoritative pre-rollback database identity cannot be established, report that limitation rather than claiming complete recovery.
+
+## 2. PRODUCTION MODEL VERIFICATION
+
+Verify that the following three Phase 6.1 model families remain active:
+
+- Spread: regularized linear regression
+- Moneyline: logistic regression
+- Totals: gradient boosting
+
+Verify:
+- Active model IDs against the previously approved Phase 6.1 records.
+- Immutable artifact existence.
+- Artifact SHA-256 checksums.
+- Exact 27-feature schema and ordering.
+- Historical training cutoff.
+- Model promotion history.
+- Production inference configuration.
+
+Confirm that the system has not silently reverted to an earlier model or changed the approved configurations.
+
+Do not change active models.
+
+## 3. PREDICTION HEALTH
+
+Inspect the latest available upcoming NFL games and saved production predictions.
+
+Verify:
+- Correct game IDs and scheduled kickoff times.
+- Distinct game-specific input signatures.
+- Complete required feature vectors.
+- Valid QB confidence inputs.
+- Correct model artifact association.
+- Correct prediction timestamps and historical cutoffs.
+- Valid projected scores, margins, totals, and probabilities.
+
+Specifically check that the previous identical-prediction issue has not returned.
+
+Do not treat identical rounded predictions alone as proof of a defect. Verify the underlying inputs and inference paths.
+
+Report:
+- Games evaluated.
+- Games with complete projections.
+- Games awaiting projections.
+- Invalid snapshots.
+- Missing features.
+- Suspicious identical input signatures.
+- Unexpected errors.
+
+Do not create new snapshots during this audit.
+
+## 4. DATA WORKER AND INTEGRATIONS
+
+Inspect the current health of:
+
+- ESPN schedules and results.
+- ESPN injuries.
+- nflverse historical data.
+- Sleeper player and depth snapshots.
+- The Odds API.
+- Weather integration.
+- Dedicated Gridline data worker.
+
+For each source, report:
+
+- Most recent successful synchronization.
+- Current freshness.
+- Last error, if applicable.
+- Available record counts.
+- Whether its scheduled job is operational.
+
+Distinguish an operational worker from a worker that is merely running but failing its scheduled jobs.
+
+Use existing logs, health records, and saved data. Do not force additional paid API requests or trigger production writes.
+
+## 5. SPORTSBOOK DATA
+
+Verify existing DraftKings and FanDuel market observations.
+
+Check:
+- Spread availability.
+- Moneyline availability.
+- Totals availability.
+- Observation timestamps.
+- Market freshness.
+- Price-only changes.
+- Historical line movement.
+- First-observed and final-pre-kickoff terminology.
+
+Confirm sportsbook history remains intact and the Market Board correctly handles unavailable, partial, and stale data.
+
+Do not backfill or rewrite sportsbook records.
+
+## 6. CONSUMER WEBSITE HEALTH
+
+Perform safe, non-destructive checks of the published Gridline website.
+
+Validate:
+
+- Home.
+- Games.
+- Game Detail.
+- Market Board.
+- Line Movement.
+- Matchup Board.
+- Depth Chart.
+- Player Usage.
+- Performance.
+- Trends.
+
+Confirm the website retrieves production information rather than development or outdated database records.
+
+Check that missing information produces honest unavailable states rather than fabricated values.
+
+Do not bypass authentication or expose administrative information through consumer APIs.
+
+## 7. CROSS-SYSTEM CONSISTENCY
+
+Select at least three existing production game records, ideally including one with a saved projection.
+
+Trace each record across:
+
+1. Production database.
+2. Approved model artifact.
+3. Saved prediction snapshot.
+4. Consumer API response.
+5. Published website.
+
+Confirm that the same game, model version, projection values, and applicable timestamps are represented throughout.
+
+If three suitable records are unavailable, inspect all suitable records and document the limitation.
+
+## 8. RECOVERY VERIFICATION
+
+Investigate whether the original database-binding problem is resolved.
+
+Specifically determine:
+
+- Whether the application and worker are using the intended production database.
+- Whether pre-rollback records remain accessible.
+- Whether legitimate post-rollback writes were preserved.
+- Whether the current website reflects those records.
+- Whether there are signs of missing or conflicting database branches.
+
+Do not claim that all historical data was recovered unless sufficient evidence supports that conclusion.
+
+If any part of the recovery cannot be verified, identify exactly what evidence is missing.
+
+## 9. REGRESSION TESTING
+
+Run relevant tests that do not mutate production.
+
+Include:
+
+- Production configuration checks.
+- Model artifact verification.
+- Prediction input validation.
+- Consumer API contract tests.
+- Market Board tests.
+- Line Movement tests.
+- Database connectivity checks.
+- Application and worker health checks.
+
+Where appropriate, run workspace typechecks and the production build locally without publishing.
+
+## 10. FINAL AUDIT REPORT
+
+Generate and retain:
+
+`reports/gridline-production-recovery-audit.md`
+
+Include:
+
+1. Production database verification.
+2. Application and worker database consistency.
+3. Historical data preservation.
+4. Phase 6.1 model integrity.
+5. Prediction health.
+6. Data integration freshness.
+7. Sportsbook integrity.
+8. Consumer website health.
+9. Cross-system consistency.
+10. Original binding-issue recovery status.
+11. Regression test results.
+12. Any unresolved risks.
+
+For each subsystem, assign one of these statuses:
+
+- PASS — verified with supporting evidence.
+- WARNING — functioning but incomplete, stale, or only partially verified.
+- FAIL — confirmed malfunction.
+- UNVERIFIED — insufficient access or evidence.
+
+Report a concise overall readiness status:
+
+- VERIFIED — all critical production systems passed.
+- PARTIALLY VERIFIED — operational but outstanding verification remains.
+- NOT READY — critical failures remain.
+
+Identify the evidence supporting your conclusion.
+
+**Do not automatically repair or deploy anything.**
+
+At the end, tell me whether it is safe to resume normal Gridline development and list any actions that should be completed first.
