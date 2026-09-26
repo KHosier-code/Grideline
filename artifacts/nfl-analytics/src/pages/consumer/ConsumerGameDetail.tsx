@@ -17,6 +17,8 @@ import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useCon
 import { useEffect } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
 import { TeamMark } from '../../components/VerifiedImage';
+import { supportedMatchupSummary } from '../../lib/consumer-matchups';
+import { eligibleMarketComparisons } from '../../lib/consumer-presentation';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -48,22 +50,18 @@ export default function ConsumerGameDetail() {
     typeof weather.sustainedWind === 'number' ? `${weather.sustainedWind.toFixed(0)} mph wind` : null,
     typeof weather.precipitationProbability === 'number' ? `${weather.precipitationProbability.toFixed(0)}% precipitation` : null,
   ].filter(Boolean) : [];
+  const insights = supportedMatchupSummary(game.matchupBoard);
+  const eligibleCount = eligibleMarketComparisons(game, beforeKickoff).length;
 
   return <div className="consumer-page consumer-detail">
     <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
-    <div className="consumer-detail-save"><SaveGameButton gameId={game.gameId} /></div>
-    <p className="consumer-note mb-5">Saved evidence is not automatically an official prediction. <Link href="/methodology" className="font-semibold text-accent underline">Read how projections and results are verified</Link>.</p>
-
+    <div className="consumer-detail-save"><SaveGameButton gameId={game.gameId} /><span className="consumer-note">Following a game does not save its projection or make a market eligible.</span></div>
     <section className="premium-hero" data-section="game-header" data-testid="premium-hero" aria-label="Game summary">
       <div className="premium-hero-context">
         <div className="premium-hero-kickoff">
           {formatKickoff(game.kickoffTime)}
             <span className={`market-state market-state-${game.gameState}`}> · {game.gameState}</span>
           {game.venue ? <span className="premium-venue"> · {game.venue}</span> : null}
-        </div>
-        <div className="premium-weather" data-testid="game-weather">
-          <CloudRain className="h-4 w-4" aria-hidden="true" />
-          <span>{weatherParts.length > 0 ? weatherParts.join(' · ') : game.analysis.availability.weather ?? 'Weather unavailable'}</span>
         </div>
       </div>
 
@@ -81,8 +79,6 @@ export default function ConsumerGameDetail() {
 
     </section>
 
-    <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
-
     {personnelLimitation.active && (
       <aside className="premium-personnel-warning" role="status" data-testid="qb-model-limitation">
         <ShieldAlert className="h-5 w-5" aria-hidden="true" />
@@ -93,23 +89,42 @@ export default function ConsumerGameDetail() {
       </aside>
     )}
     <ConsumerProjectionEvidence game={game} />
-    <ConsumerMarketEvidence game={game} beforeKickoff={beforeKickoff} />
-    <ConsumerSourceHealth health={game.sourceHealth} />
-
-    <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
-    <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
-
-    {beforeKickoff && <><GameDefenseVsPosition gameId={game.gameId} season={game.season} away={game.matchup.away} home={game.matchup.home} /><PlayerPositionMatchup gameId={game.gameId} /></>}
-
-    <ConsumerDepthChart context={game.context} />
-
-    <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
-
-    <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
-
-    <LineMovementExperience movement={game.movement} beforeKickoff={beforeKickoff} />
-
-    <section className="premium-analysis-section" data-section="projection-explanation" data-testid="premium-analysis" aria-labelledby="projection-explanation-heading">
+    <section className="detail-primary" aria-label="Market eligibility">
+      <h2>Market comparisons</h2>
+      <p className="consumer-note">{beforeKickoff
+        ? eligibleCount ? `${eligibleCount} current ${eligibleCount === 1 ? 'market comparison is' : 'market comparisons are'} eligible. Only fresh, complete markets are compared.`
+          : `No current market comparison is eligible. ${game.recommendation.reason ?? 'Fresh, complete market evidence is unavailable.'}`
+        : 'No current market comparison is eligible after kickoff. Recorded lines are historical, not verified closing lines.'}</p>
+    </section>
+    <section className="matchup-biggest detail-insights" data-section="matchup-insights" aria-labelledby="game-insights-title">
+      <h2 id="game-insights-title">Supported matchup insights</h2>
+      <p>Descriptive pregame evidence through {new Date(game.matchupBoard.sourceCutoff).toLocaleString()}; not a new prediction.</p>
+      {insights.length ? <div>{insights.map(item => <article key={item.category}><strong>{item.label}</strong><span>{item.title}</span><small>{item.evidence}</small><small>{item.caveat}</small></article>)}</div>
+        : <p>No sufficiently supported matchup advantage is available.</p>}
+    </section>
+    <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
+    <details className="detail-disclosure" data-testid="disclosure-market">
+      <summary>Market evidence and recorded line history <small>{beforeKickoff ? `${eligibleCount} eligible now` : 'Historical only'}</small></summary>
+      <ConsumerMarketEvidence game={game} beforeKickoff={beforeKickoff} />
+      <LineMovementExperience movement={game.movement} beforeKickoff={beforeKickoff} />
+    </details>
+    <details className="detail-disclosure" data-testid="disclosure-matchups">
+      <summary>Detailed matchup evidence <small>{game.matchupBoard.completeness.supportedCategories}/{game.matchupBoard.completeness.totalCategories} categories supported</small></summary>
+      <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
+      <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
+    </details>
+    <details className="detail-disclosure" data-testid="disclosure-personnel">
+      <summary>Personnel and player context <small>{game.context.message ?? 'Depth, usage and matchups'}</small></summary>
+      {beforeKickoff && <><GameDefenseVsPosition gameId={game.gameId} season={game.season} away={game.matchup.away} home={game.matchup.home} /><PlayerPositionMatchup gameId={game.gameId} /></>}
+      <ConsumerDepthChart context={game.context} />
+      <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
+      <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
+    </details>
+    <details className="detail-disclosure" data-testid="disclosure-sources">
+      <summary>Source status, weather and analysis <small>Feeds {game.sourceHealth.status}</small></summary>
+      <div className="premium-weather" data-testid="game-weather"><CloudRain className="h-4 w-4" aria-hidden="true" /><span>{weatherParts.length > 0 ? weatherParts.join(' · ') : game.analysis.availability.weather ?? 'Weather unavailable'}</span></div>
+      <ConsumerSourceHealth health={game.sourceHealth} />
+      <section className="premium-analysis-section" data-section="projection-explanation" data-testid="premium-analysis" aria-labelledby="projection-explanation-heading">
       <div className="consumer-section-heading">
         <div>
           <p className="consumer-eyebrow">Summary</p>
@@ -125,6 +140,7 @@ export default function ConsumerGameDetail() {
           <p className="premium-analysis-empty">No verified analysis drivers are available for this matchup.</p>
         )}
       </div>
-    </section>
+      </section>
+    </details>
   </div>;
 }

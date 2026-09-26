@@ -97,8 +97,8 @@ export function ConsumerPregameComparisonChart({ board, away, home }: {
       No supported two-team values are available for these pregame metrics yet.
     </p>}
 
-    <ul className="m-0 grid list-none gap-2 p-0 sm:grid-cols-2" aria-label="Accessible list of pregame comparison values">
-      {rows.map(({ category, label, assessment, metric }) => {
+    <ul className="m-0 grid list-none gap-2 p-0 sm:grid-cols-2" aria-label="Accessible list of supported pregame comparison values">
+      {plotted.map(({ category, label, assessment, metric }) => {
         const isSupported = supported(metric, assessment);
         return <li key={category} className="min-w-0 rounded-lg border border-border/70 px-3 py-2">
           <div className="flex items-baseline justify-between gap-2">
@@ -113,6 +113,9 @@ export function ConsumerPregameComparisonChart({ board, away, home }: {
         </li>;
       })}
     </ul>
+    {rows.length > plotted.length && <details className="detail-zero-coverage"><summary>{rows.length - plotted.length} pregame comparison metrics unavailable · view coverage</summary>
+      <ul>{rows.filter(row => !supported(row.metric, row.assessment)).map(row => <li key={row.category}>{row.label}: {row.assessment?.coverage ?? 'Verified evidence unavailable'}</li>)}</ul>
+    </details>}
 
     <footer className="text-[11px] leading-relaxed text-muted-foreground">
       Sources: {board.sources.length ? board.sources.join(' · ') : 'No supported sources'} · Pregame evidence through {cutoffLabel}

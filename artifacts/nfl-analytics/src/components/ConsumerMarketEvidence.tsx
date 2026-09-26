@@ -2,6 +2,7 @@ import type { ConsumerGameDetail } from '@workspace/api-client-react';
 import { ConsumerMarketComparisonCell } from './ConsumerMarketComparison';
 import { formatQuote } from '../pages/consumer/consumer-ui';
 import { eligibleMarketComparisons } from '../lib/consumer-presentation';
+import { MarketConfidenceSummary } from './MarketConfidence';
 
 export function ConsumerMarketEvidence({ game, beforeKickoff }: { game: ConsumerGameDetail; beforeKickoff: boolean }) {
   const usable = eligibleMarketComparisons(game, beforeKickoff);
@@ -22,5 +23,6 @@ export function ConsumerMarketEvidence({ game, beforeKickoff }: { game: Consumer
       <div className="premium-comparison-grid">{game.marketBoard.comparisons.filter((comparison) => !usable.includes(comparison)).map((comparison) =>
         <ConsumerMarketComparisonCell key={comparison.market} comparison={comparison} />)}</div>
     </details>}
+    <MarketConfidenceSummary value={game} />
   </section>;
 }

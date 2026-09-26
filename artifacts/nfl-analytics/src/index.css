@@ -1524,3 +1524,27 @@
   .board-game .tb-evidence { display: block; }
   .board-game .tb-evidence > * + * { margin-top: 16px; }
 }
+.detail-primary { padding: 18px 22px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+.detail-primary h2, .detail-insights h2 { margin: 0 0 8px; font: 600 20px var(--app-font-serif); }
+.detail-primary p { margin: 0; }
+.detail-insights { margin: 0; }
+.detail-insights > p { margin: 0 0 14px; font-size: 12px; color: hsl(var(--sidebar-foreground) / .76); }
+.detail-disclosure { min-width: 0; padding: 0 18px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+.detail-disclosure > summary { cursor: pointer; padding: 18px 0; font-weight: 700; }
+.detail-disclosure > summary small { display: block; margin: 4px 0 0 18px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+.detail-disclosure[open] { padding-bottom: 20px; }
+.detail-disclosure > section, .detail-disclosure > details, .detail-disclosure > div { margin-top: 16px; }
+.detail-zero-coverage { margin: 12px 0; padding: 10px 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.detail-zero-coverage summary { cursor: pointer; font-weight: 600; }
+.detail-zero-coverage[open] > div, .detail-zero-coverage[open] > p { margin: 10px 0; }
+.detail-disclosure summary:focus-visible, .detail-zero-coverage summary:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 3px; border-radius: 4px; }
+@media (max-width: 640px) { .detail-disclosure { padding-inline: 14px; } .detail-primary { padding: 16px; } }
+@media (max-width: 767px) {
+  .consumer-detail .premium-hero { padding: 18px 16px; gap: 14px; }
+  .consumer-detail .premium-teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; }
+  .consumer-detail .premium-team { min-width: 0; align-items: center; }
+  .consumer-detail .premium-team-abbr { font-size: 32px; }
+  .consumer-detail .premium-team-abbr img { max-width: 44px; max-height: 44px; }
+  .consumer-detail .premium-team-name { font-size: 11px; }
+  .consumer-detail .premium-vs { margin: 0; font-size: 12px; }
+}

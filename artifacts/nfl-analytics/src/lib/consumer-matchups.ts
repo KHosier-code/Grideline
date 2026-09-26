@@ -13,5 +13,12 @@ export function matchupEdgeSide(assessment: ConsumerMatchupAssessment) {
 }
 
 export function supportedMatchupSummary(board: ConsumerMatchupBoard) {
-  return board.summary.filter((item) => item.edge === 'home' || item.edge === 'away').slice(0, 3);
+  return board.summary.filter((item) => {
+    const assessment = board.assessments.find((candidate) => candidate.category === item.category);
+    return (item.edge === 'home' || item.edge === 'away')
+      && assessment?.edge === item.edge
+      && assessment.confidence !== 'unavailable'
+      && assessment.metrics.some((metric) => metric.homeValue !== null && metric.awayValue !== null
+        && Number.isFinite(metric.homeValue) && Number.isFinite(metric.awayValue));
+  }).slice(0, 3);
 }

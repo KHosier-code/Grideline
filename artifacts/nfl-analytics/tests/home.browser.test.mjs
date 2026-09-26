@@ -28,7 +28,7 @@ const game = (gameId, away, home) => ({
   confidence: { markets: [] }, availability: { prediction: 'No eligible saved prediction', market: null },
 });
 const games = [game('home-test-one', 'AWY', 'HOM'), game('home-test-two', 'VIS', 'LOC')];
-const detail = {
+let detail = {
   ...games[0], weather: null, movement: { available: false, streams: [], message: 'No observations',
     completeness: { status: 'complete', returnedObservations: 0, totalObservations: 0 } },
   context: { teams: [], message: 'No confirmed depth', projectedMatchups: [],
@@ -189,6 +189,49 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
         await until(() => cdp.evaluate(`location.pathname === '/games/home-test-one' && !!document.querySelector('[data-testid="premium-hero"]')`), 'Game Detail loads after navigation');
         assert.equal(await cdp.evaluate('location.search'), `?season=${season}&week=1`);
         assert.equal(await cdp.evaluate('document.querySelector(".premium-teams").textContent.includes("AWY")'), true);
+        assert.deepEqual(await cdp.evaluate(`(() => {
+          const root = document.querySelector('.consumer-detail');
+          return [...root.querySelectorAll('[data-section]')].filter(node => !node.closest('details'))
+            .map(node => node.dataset.section);
+        })()`), ['game-header', 'gridline-projection', 'matchup-insights'], 'primary hierarchy');
+        assert.equal(await cdp.evaluate('document.querySelector(".detail-insights").textContent.includes("No sufficiently supported")'), true);
+        assert.equal(await cdp.evaluate('document.querySelector(".detail-primary").textContent.includes("No current market comparison is eligible")'), true);
+        assert.equal(await cdp.evaluate('document.querySelectorAll(".detail-disclosure:not([open])").length'), 4);
+        assert.equal(await cdp.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), true, 'no horizontal overflow');
+        await cdp.key('Tab');
+        await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] > summary").focus()');
+        await cdp.key('Enter');
+        await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-sources]").open'), 'source disclosure opens by Enter');
+        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .consumer-source-health") !== null'), true);
+        await cdp.key(' ');
+        await until(() => cdp.evaluate('!document.querySelector("[data-testid=disclosure-sources]").open'), 'source disclosure closes by Space');
+        detail = {
+          ...detail,
+          matchupBoard: {
+            ...detail.matchupBoard, status: 'partial', completeness: { supportedCategories: 1, totalCategories: 2 },
+            sources: ['Recorded games'], summary: [{ category: 'passing', edge: 'home', label: 'HOM', title: 'Passing edge',
+              evidence: 'Two-team sample', caveat: 'Partial coverage' }],
+            assessments: [
+              { category: 'passing', edge: 'home', edgeLabel: 'Home', title: 'Passing', confidence: 'medium',
+                coverage: '1/2 games covered', explanation: 'Partial observed sample.', limitations: ['One game missing'],
+                metrics: [{ label: 'Pass rate', homeValue: 0.5, awayValue: 0.3, unit: 'rate' },
+                  { label: 'Unavailable metric', homeValue: null, awayValue: null, unit: 'rate' }] },
+              { category: 'rushing', edge: 'insufficient', edgeLabel: 'Unavailable', title: 'Rushing', confidence: 'unavailable',
+                coverage: '0/2 games covered', explanation: 'No observed values.', limitations: [],
+                metrics: [{ label: 'Rush rate', homeValue: null, awayValue: null, unit: 'rate' }] },
+            ],
+          },
+        };
+        await cdp.send('Page.navigate', { url: `${origin}/games/home-test-one?season=${season}&week=1` });
+        await until(() => cdp.evaluate('document.querySelector(".detail-insights article")?.textContent.includes("Passing edge")'), 'supported insight');
+        assert.equal(await cdp.evaluate('document.querySelectorAll(".detail-insights article").length'), 1);
+        await cdp.evaluate('document.querySelector("[data-testid=disclosure-matchups] > summary").focus()');
+        await cdp.key('Enter');
+        await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-matchups]").open'), 'matchup disclosure opens');
+        assert.equal(await cdp.evaluate('document.querySelector(".matchup-assessment summary").textContent.includes("1/2 games covered")'), true);
+        assert.equal(await cdp.evaluate('document.querySelector(".detail-zero-coverage") !== null'), true);
+        detail = { ...detail, matchupBoard: { ...detail.matchupBoard, status: 'unavailable', summary: [], assessments: [],
+          completeness: { supportedCategories: 0, totalCategories: 0 } } };
         assert.deepEqual(failures, [], 'no intercepted request failures');
       }
     }

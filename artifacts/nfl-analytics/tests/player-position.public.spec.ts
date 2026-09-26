@@ -84,6 +84,7 @@ for (const width of [390, 1280]) {
         body: JSON.stringify(comparison(position, url.searchParams.get('player'))) });
     });
     await page.goto('/games/position-ui-fixture');
+    await page.getByTestId('disclosure-personnel').locator('summary').first().click();
     const section = page.getByTestId('player-position-matchup');
     await expect(section).toBeVisible();
     await expect(section.getByRole('status')).toContainText('Loading player and defensive history');

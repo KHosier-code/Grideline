@@ -1,4 +1,4 @@
-import type { ConsumerProjectedMatchup, ConsumerGameDetail, ConsumerMatchupAssessment } from '@workspace/api-client-react';
+import type { ConsumerProjectedMatchup, ConsumerGameDetail, ConsumerMatchupAssessment, DefensePositionMetric } from '@workspace/api-client-react';
 
 export function eligibleMarketComparisons(game: Pick<ConsumerGameDetail, 'marketBoard' | 'recommendation'>, beforeKickoff: boolean) {
   return game.marketBoard.comparisons.filter((comparison) =>
@@ -10,6 +10,13 @@ export function supportedAssessments(assessments: ConsumerMatchupAssessment[]) {
   return assessments.filter((assessment) => assessment.edge !== 'insufficient');
 }
 
+export function partitionMetricCoverage(keys: string[], metrics: Record<string, DefensePositionMetric>) {
+  return {
+    covered: keys.filter(key => (metrics[key]?.coveredGames ?? 0) > 0),
+    missing: keys.filter(key => (metrics[key]?.coveredGames ?? 0) === 0),
+  };
+}
+
 export function preKickoffMovementLabel(beforeKickoff: boolean): string | null {
   return beforeKickoff ? null : 'Last recorded pre-kickoff';
 }
@@ -18,6 +25,7 @@ export const PREMIUM_GAME_DETAIL_SECTION_ORDER = [
   'game-header',
   'gridline-projection',
   'market-comparison',
+  'matchup-insights',
   'matchup-board',
   'personnel',
   'player-usage',

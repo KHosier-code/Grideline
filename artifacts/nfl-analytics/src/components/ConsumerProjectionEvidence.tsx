@@ -1,7 +1,6 @@
 import type { ConsumerGameDetail } from '@workspace/api-client-react';
 import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { ConsumerMessage, metric } from '../pages/consumer/consumer-ui';
-import { MarketConfidenceSummary } from './MarketConfidence';
 
 export function ConsumerProjectionEvidence({ game }: { game: ConsumerGameDetail }) {
   const prediction = game.prediction;
@@ -33,6 +32,5 @@ export function ConsumerProjectionEvidence({ game }: { game: ConsumerGameDetail 
       </div>
       <p className="consumer-note">The projected scores are calculated from the spread model’s home margin and the totals model’s total. Win probabilities come separately from the moneyline model; they need not imply the same favorite as the projected score.</p>
     </> : <ConsumerMessage title="No eligible saved projection" detail={game.availability.prediction ?? 'No eligible saved prediction is available.'} />}
-    <MarketConfidenceSummary value={game} />
   </section>;
 }

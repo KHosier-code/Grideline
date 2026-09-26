@@ -9,6 +9,7 @@ import {
   eligibleMarketComparisons,
   supportedAssessments,
   preKickoffMovementLabel,
+  partitionMetricCoverage,
 } from './consumer-presentation.ts';
 
 describe('consumer-presentation', () => {
@@ -34,6 +35,15 @@ describe('consumer-presentation', () => {
     assert.deepStrictEqual(supportedAssessments([{ edge: 'insufficient' }, { edge: 'home' }] as any).map((a) => a.edge), ['home']);
     assert.equal(preKickoffMovementLabel(true), null);
     assert.equal(preKickoffMovementLabel(false), 'Last recorded pre-kickoff');
+  });
+  test('zero coverage is grouped while partial and full sample metrics remain visible', () => {
+    const metrics = {
+      yards: { coveredGames: 0, completedGames: 2, perGame: null },
+      targets: { coveredGames: 1, completedGames: 2, perGame: 4 },
+      catches: { coveredGames: 2, completedGames: 2, perGame: 3 },
+    } as any;
+    assert.deepStrictEqual(partitionMetricCoverage(['yards', 'targets', 'catches', 'missing'], metrics),
+      { covered: ['targets', 'catches'], missing: ['yards', 'missing'] });
   });
   test('isMatchupSupported requires basis and confidence', () => {
     assert.strictEqual(isMatchupSupported({ receiverName: 'A', defenderName: 'B', summary: 'C' }), false);
@@ -64,6 +74,7 @@ describe('consumer-presentation', () => {
       'game-header',
       'gridline-projection',
       'market-comparison',
+      'matchup-insights',
       'matchup-board',
       'personnel',
       'player-usage',

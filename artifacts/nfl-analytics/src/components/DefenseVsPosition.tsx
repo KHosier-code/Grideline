@@ -2,6 +2,7 @@ import { type ReactNode, useMemo, useState } from 'react';
 import { getGetConsumerDefenseVsPositionQueryKey, getGetConsumerPlayerUsageQueryKey, useGetConsumerDefenseVsPosition, useGetConsumerPlayerUsage, type ConsumerDefenseVsPosition, type ConsumerDefenseVsPositionDefensesItem, type DefensePositionMetric, type GetConsumerDefenseVsPositionParams, type GetConsumerPlayerUsageParams } from '@workspace/api-client-react';
 import { ArrowDown, ArrowRight, Database, Info, RefreshCw, Shield, Users } from 'lucide-react';
 import { Link } from 'wouter';
+import { partitionMetricCoverage } from '../lib/consumer-presentation';
 
 type Position = 'QB' | 'RB' | 'WR' | 'TE';
 type Window = 'season' | 'last3' | 'last5';
@@ -37,6 +38,9 @@ const metricKeys = (data: ConsumerDefenseVsPosition | undefined, position: Posit
     return rank(a) - rank(b) || a.localeCompare(b);
   });
 };
+const sidesCoverage = (data: ConsumerDefenseVsPosition | undefined, position: Position, key: string, away: string, home: string) =>
+  data?.defenses.some(row => (row.abbreviation === away || row.abbreviation === home)
+    && (metricsFor(row, position)[key]?.coveredGames ?? 0) > 0) ?? false;
 
 function TabGroup<T extends string>({ label, items, selected, onChange, id }: { label: string; items: { value: T; label: string }[]; selected: T; onChange: (value: T) => void; id: string }) {
   return <div className="dvp-control"><span className="dvp-control-label">{label}</span><div className="dvp-tabs" role="group" aria-label={label}>{items.map(item => <button key={item.value} type="button" className={selected === item.value ? 'is-active' : ''} aria-pressed={selected === item.value} onClick={() => onChange(item.value)} data-testid={`button-${id}-${item.value}`}>{item.label}</button>)}</div></div>;
@@ -62,15 +66,19 @@ function RedZonePanel({ position, metrics }: { position: Position; metrics: Reco
   const keys = position === 'RB'
     ? ['rz20Carries', 'rz10Carries', 'rz20Targets', 'rz10Targets']
     : ['rz20Targets', 'rz10Targets'];
+  const { covered, missing } = partitionMetricCoverage(keys, metrics);
   return <div className="dvp-zones" aria-label={`${position} scoring-area allowances`}>
     <p className="dvp-kicker">Separate PBP scoring-area opportunity coverage</p>
-    <div className="dvp-zone-grid">{keys.map(key => {
+    <div className="dvp-zone-grid">{covered.map(key => {
       const metric = metrics[key];
       return <div className="dvp-zone" key={key}><strong>{metric?.label ?? readable(key)} allowed</strong>
         <p>{number(metric?.perGame)} / covered defensive game</p>
         <Evidence metric={metric} compact />
       </div>;
     })}</div>
+    {missing.length > 0 && <details className="detail-zero-coverage"><summary>{missing.length} scoring-area metrics have no covered games · view coverage</summary>
+      {missing.map(key => <div key={key}><strong>{metrics[key]?.label ?? readable(key)}</strong><Evidence metric={metrics[key]} compact /></div>)}
+    </details>}
     <p className="dvp-quiet">Inside-10 opportunities are also inside 20. These are team-position allowances, not an individual player's scoring prediction.</p>
   </div>;
 }
@@ -109,7 +117,7 @@ export function GameDefenseVsPosition({ gameId, season, away, home }: { gameId: 
   const query = useGetConsumerDefenseVsPosition(params, { query: { queryKey: getGetConsumerDefenseVsPositionQueryKey(params), enabled: Boolean(gameId), staleTime: 60_000 } });
   const keys = metricKeys(query.data, position);
   const [chosenMetric, setChosenMetric] = useState('');
-  const selectedMetric = keys.includes(chosenMetric) ? chosenMetric : keys[0];
+   const selectedMetric = keys.includes(chosenMetric) ? chosenMetric : keys.find(key => sidesCoverage(query.data, position, key, away.abbreviation, home.abbreviation)) ?? keys[0];
   const sides = [{ offense: away, defense: home }, { offense: home, defense: away }];
   return <section className="dvp-section" data-section="defense-vs-position" data-testid="section-defense-vs-position" aria-labelledby="dvp-game-title">
     <div className="dvp-head"><div><p className="consumer-eyebrow">Historical matchup context / 01</p><h2 id="dvp-game-title">Defense vs position</h2><p>What each defense has allowed to the opposing position in completed games. This is observed history, not a player forecast.</p></div><Link href={`/defense-vs-position?season=${season}&position=${position}&window=${windowFilter}`} className="dvp-league-link" data-testid="link-defense-league">Compare the league <ArrowRight size={16} /></Link></div>
@@ -118,15 +126,18 @@ export function GameDefenseVsPosition({ gameId, season, away, home }: { gameId: 
       <div className="dvp-matchup-grid">{sides.map(({ offense, defense }, index) => {
         const row = query.data?.defenses.find(item => item.abbreviation === defense.abbreviation || item.teamId === defense.abbreviation);
         const metric = metricsFor(row, position)[selectedMetric];
+        const { covered, missing } = partitionMetricCoverage(keys, metricsFor(row, position));
         return <article className="dvp-side" key={index} data-testid={`card-defense-${defense.abbreviation}-${position}`}>
           <div className="dvp-side-top"><span className="dvp-index">0{index + 1} / MATCHUP LENS</span><span className="dvp-def-mark">{defense.abbreviation} DEF</span></div>
           <div className="dvp-versus"><div><small>OFFENSE</small><strong>{offense.name}</strong></div><ArrowRight size={18} /><div><small>FACES DEFENSE</small><strong>{defense.name}</strong></div></div>
-          <div className="dvp-primary"><small>{metric?.label ?? readable(selectedMetric || 'Metric')} allowed to {position}</small><MetricDisplay metric={metric} /></div>
-          <Evidence metric={metric} />
-          <div className="dvp-all-metrics"><p className="dvp-kicker">All observed {position} allowance metrics · choose focus</p>{keys.map(key => {
+           {metric && metric.coveredGames > 0 ? <><div className="dvp-primary"><small>{metric.label} allowed to {position}</small><MetricDisplay metric={metric} /></div><Evidence metric={metric} /></> : <p className="dvp-quiet">No covered games for {metric?.label ?? readable(selectedMetric || 'this metric')} against {defense.abbreviation}.</p>}
+           <div className="dvp-all-metrics"><p className="dvp-kicker">Observed {position} allowance metrics · choose focus</p>{covered.map(key => {
             const item = metricsFor(row, position)[key];
             return <button type="button" key={key} className={`dvp-metric-row ${selectedMetric === key ? 'is-selected' : ''}`} onClick={() => setChosenMetric(key)} aria-pressed={selectedMetric === key} data-testid={`button-game-metric-${defense.abbreviation}-${key}`}><span><strong>{item?.label ?? readable(key)}</strong><small>{item?.coveredGames ?? 0}/{item?.completedGames ?? 0} games · covered weeks {item?.coveredWeeks.join(', ') || 'none'}{item?.missingWeeks.length ? ` · missing ${item.missingWeeks.join(', ')}` : ''}</small></span><span><b>{number(item?.perGame)}</b><small>{item?.unit ?? '—'} / covered game</small></span></button>;
-          })}</div>
+           })}
+           {missing.length > 0 && <details className="detail-zero-coverage"><summary>{missing.length} metrics have no covered games · view coverage</summary>
+             {missing.map(key => <div key={key}><strong>{metricsFor(row, position)[key]?.label ?? readable(key)}</strong><Evidence metric={metricsFor(row, position)[key]} compact /></div>)}
+           </details>}</div>
            <RedZonePanel position={position} metrics={metricsFor(row, position)} />
            <UsagePanel team={offense.abbreviation} position={position} game={gameId} />
         </article>;
