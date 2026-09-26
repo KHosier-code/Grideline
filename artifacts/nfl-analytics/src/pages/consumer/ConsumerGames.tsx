@@ -64,7 +64,7 @@ function GameRow({ game, season, week }: { game: ConsumerGame; season: number; w
             ? prediction.projectedAwayScore == null || prediction.projectedHomeScore == null
               ? `${score(prediction.projectedMargin)} margin · ${score(prediction.projectedTotal)} total (scores unavailable)`
               : `${game.matchup.away.abbreviation} ${score(prediction.projectedAwayScore)} – ${game.matchup.home.abbreviation} ${score(prediction.projectedHomeScore)}`
-            : game.availability.prediction ?? 'Unavailable'}</p>
+             : game.availability.prediction ?? 'No eligible saved prediction returned.'}</p>
           {prediction && <small className="board-result">{prediction.officialFinalPrediction
             ? 'Verified official pregame prediction · frozen before kickoff'
             : 'Saved model projection · not a verified official pregame prediction'}</small>}

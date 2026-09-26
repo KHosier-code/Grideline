@@ -32,7 +32,7 @@ export function ConsumerProjectionEvidence({ game }: { game: ConsumerGameDetail 
         </div>
       </div>
       <p className="consumer-note">The projected scores are calculated from the spread model’s home margin and the totals model’s total. Win probabilities come separately from the moneyline model; they need not imply the same favorite as the projected score.</p>
-    </> : <ConsumerMessage title={game.finalScore ? 'Pregame projection unavailable' : 'Projection is updating'} detail={game.availability.prediction ?? 'A saved Gridline projection is not available for this matchup.'} />}
+    </> : <ConsumerMessage title="No eligible saved projection" detail={game.availability.prediction ?? 'No eligible saved prediction is available.'} />}
     <MarketConfidenceSummary value={game} />
   </section>;
 }

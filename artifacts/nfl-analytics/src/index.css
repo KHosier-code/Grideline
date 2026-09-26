@@ -441,6 +441,49 @@
 /* Gridline's dark-first consumer language. All readable status/chart colors are
    paired with the surface they appear on rather than using translucent text. */
 .dark { color-scheme: dark; }
+/* Weekly Home stays scoped so Games and Game Detail keep their existing presentation. */
+.weekly-home { gap: 22px; }
+.weekly-intro { display: flex; align-items: center; justify-content: space-between; gap: 26px; border: 1px solid hsl(var(--border)); border-radius: 16px; background: linear-gradient(115deg, hsl(var(--card)), hsl(var(--secondary) / .65)); padding: 26px 30px; }
+.weekly-intro h1 { margin: 0; font-family: var(--app-font-serif); font-size: clamp(26px, 3vw, 38px); letter-spacing: -.04em; }
+.weekly-intro p:not(.consumer-eyebrow) { max-width: 620px; margin: 8px 0 0; color: hsl(var(--muted-foreground)); line-height: 1.5; font-size: 13px; }
+.weekly-status { display: grid; gap: 6px; min-width: 215px; padding: 14px 18px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); }
+.weekly-status small, .weekly-metric small, .weekly-evidence small { display: block; color: hsl(var(--muted-foreground)); font: 10px var(--app-font-mono); text-transform: uppercase; letter-spacing: .06em; }
+.weekly-status strong { width: fit-content; font-size: 12px; text-transform: capitalize; }
+.weekly-status span { font-size: 11px; color: hsl(var(--muted-foreground)); }
+.weekly-list { display: grid; gap: 10px; }
+.weekly-card { min-width: 0; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); overflow: hidden; }
+.weekly-card.is-selected { border-color: hsl(var(--accent)); }
+.weekly-card-toggle { display: grid; width: 100%; grid-template-columns: minmax(140px, 1fr) minmax(180px, 1.4fr) minmax(130px, 1fr) minmax(135px, 1fr) 20px; align-items: center; gap: 16px; padding: 19px; border: 0; background: transparent; color: hsl(var(--foreground)); text-align: left; cursor: pointer; transition: background .16s ease; }
+.weekly-card-toggle:hover { background: hsl(var(--secondary) / .55); }
+.weekly-kickoff { display: flex; align-items: center; gap: 7px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.weekly-teams { display: grid; gap: 5px; min-width: 0; }
+.weekly-teams strong { font-size: 20px; letter-spacing: -.03em; }
+.weekly-teams small { color: hsl(var(--muted-foreground)); font-weight: 400; font-size: 12px; }
+.weekly-teams span { color: hsl(var(--muted-foreground)); font-size: 11px; }
+.weekly-metric { display: grid; gap: 6px; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.weekly-metric em { color: hsl(var(--muted-foreground)); font-size: 10px; font-weight: 400; font-style: normal; }
+.weekly-expand { font-size: 22px; color: hsl(var(--accent)); }
+.weekly-evidence { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; padding: 19px; border-top: 1px solid hsl(var(--border)); background: hsl(var(--secondary) / .3); }
+.weekly-evidence strong { display: block; margin-top: 7px; font-size: 13px; }
+.weekly-evidence p { margin: 6px 0 0; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.55; }
+.weekly-disclaimer { align-self: center; }
+.weekly-detail-link { display: inline-flex; align-items: center; gap: 8px; justify-self: end; align-self: center; color: hsl(var(--accent)); font-size: 13px; font-weight: 700; }
+@media (max-width: 850px) {
+  .weekly-card-toggle { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 24px; }
+  .weekly-kickoff { grid-column: 1 / 3; grid-row: 1; }
+  .weekly-teams { grid-column: 1 / 4; grid-row: 2; }
+  .weekly-metric:nth-of-type(3) { grid-column: 1 / 2; grid-row: 3; }
+  .weekly-metric:nth-of-type(4) { grid-column: 2 / 4; grid-row: 3; }
+  .weekly-expand { grid-column: 3; grid-row: 1; }
+}
+@media (max-width: 600px) {
+  .weekly-intro { flex-direction: column; align-items: stretch; padding: 20px; }
+  .weekly-status { min-width: 0; }
+  .weekly-card-toggle { gap: 12px; padding: 15px; }
+  .weekly-teams span { white-space: normal; }
+  .weekly-evidence { grid-template-columns: 1fr; }
+  .weekly-detail-link { justify-self: start; }
+}
 :root { --color-chart-axis: hsl(var(--chart-axis)); --color-chart-grid: hsl(var(--chart-grid)); }
 .theme-toggle { display: inline-flex !important; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 7px 11px; border: 1px solid hsl(var(--border)) !important; border-radius: 9px; background: hsl(var(--card)) !important; color: hsl(var(--foreground)); font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background .16s, border-color .16s; }
 .theme-toggle svg { width: 16px !important; height: 16px !important; color: hsl(var(--accent)); }

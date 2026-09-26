@@ -21,6 +21,7 @@ import {
 import {
   gameSpecificSnapshot,
   getLatestValidPredictionSnapshots,
+  getSnapshotIneligibilityReasons,
   getPredictionPerformance,
 } from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
@@ -77,6 +78,19 @@ export const MAX_CONSUMER_GAMES = 100;
 export const MAX_CONSUMER_MOVEMENT_ROWS = 200;
 export const MAX_CONSUMER_SNAPSHOT_ROWS = MAX_CONSUMER_GAMES;
 export const MAX_CONSUMER_PERFORMANCE_ROWS = 5_000;
+export function consumerProjection(snapshot: typeof predictionSnapshotsTable.$inferSelect | undefined) {
+  return snapshot ? {
+    modelLabel: "Gridline Production Model",
+    officialFinalPrediction: snapshot.officialFinalPrediction,
+    predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
+    projectedHomeScore: safeNumber(snapshot.projectedHomeScore),
+    projectedAwayScore: safeNumber(snapshot.projectedAwayScore),
+    projectedMargin: safeNumber(snapshot.projectedMargin),
+    projectedTotal: safeNumber(snapshot.projectedTotal),
+    homeWinProbability: safeNumber(snapshot.homeWinProbability),
+    awayWinProbability: safeNumber(snapshot.awayWinProbability),
+  } : null;
+}
 const SUPPORTED_CONSUMER_BOOKS = new Set(["DraftKings", "FanDuel"]);
 const SUPPORTED_CONSUMER_MARKETS = new Set(["spread", "total", "moneyline"]);
 const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
@@ -1293,6 +1307,11 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
     recordWeek === undefined ? undefined : lt(gamesTable.week, recordWeek),
   ));
   const verifiedArtifacts = new Map(modelRuns.filter((run) => verifyArtifactIntegrity(run).valid).map((run) => [run.modelVersion, true]));
+  const predictionReasons = await getSnapshotIneligibilityReasons(
+    snapshotHistory,
+    games.filter((game) => !snapshots.has(game.gameId)),
+    asOf,
+  );
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
   const latestMarketAuditByGame = new Map(
     marketAudits.flatMap((audit) => audit.gameId ? [[audit.gameId, audit] as const] : []),
@@ -1466,25 +1485,15 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
         away: { name: away?.teamName ?? "Team unavailable", abbreviation: away?.abbreviation ?? "—", logoUrl: away?.logoUrl ?? null },
       },
       finalScore: consumerFinalScore(game, asOf),
-      prediction: snapshot ? {
-        modelLabel: "Gridline Production Model",
-        officialFinalPrediction: snapshot.officialFinalPrediction,
-        predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
-        projectedHomeScore: safeNumber(snapshot.projectedHomeScore),
-        projectedAwayScore: safeNumber(snapshot.projectedAwayScore),
-        projectedMargin: safeNumber(snapshot.projectedMargin),
-        projectedTotal: safeNumber(snapshot.projectedTotal),
-        homeWinProbability: safeNumber(snapshot.homeWinProbability),
-        awayWinProbability: safeNumber(snapshot.awayWinProbability),
-      } : null,
+      prediction: consumerProjection(snapshot),
       market,
       marketBoard,
       recommendation,
       dataConfidence,
       confidence: calculatedConfidence,
       availability: {
-        prediction: snapshot ? null : "Prediction pending — incomplete model inputs",
-        market: market.evidence.available ? null : "Sportsbook line updating",
+        prediction: snapshot ? null : predictionReasons.get(game.gameId) ?? "No eligible saved prediction is available.",
+        market: market.evidence.available ? null : "No eligible saved sportsbook line is available.",
       },
     };
   }));

@@ -420,3 +420,17 @@ mtime_ms = 1790388018758
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/c173b4ef-bcb2-42ed-b7c7-b5d66f3b1ff5/1c1fd5ae-3f60-46cc-b3bd-c7f40646d4d2"
 storage_version_token = "1790388043947350"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "8wMN4A0uz3pFKdmFJs1rE"
+uri = "file://screenshots/gridline-week3-corrected-labels.jpg"
+type = "image"
+title = "Week 3 Home — corrected development labels"
+description = "The development Home separates stale feeds, absent matchup odds, and unavailable eligible predictions."
+logical_id = "966543ee-5067-45d3-b381-0a4e0ed95174"
+content_hash = "sha256:8b73de3077ddd3e7d603caf9284da10007f3bca294de04b9af840e765c9bccd3"
+size = 68992
+mtime_ms = 1790387810213
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/966543ee-5067-45d3-b381-0a4e0ed95174/904c6f46-d65f-4d58-9dfc-c910c3676cf3"
+storage_version_token = "1790387824756090"
+content_type = "image/jpeg"
