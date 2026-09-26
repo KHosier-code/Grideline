@@ -128,12 +128,19 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
     // Only intercept consumer data; the actual React app, routing, and CSS run in Chromium.
     await cdp.send('Fetch.enable', { patterns: [{ urlPattern: '*://*/api/consumer/*', requestStage: 'Request' }] });
     const failures = [];
+    const evidenceRequests = [];
     cdp.on('Fetch.requestPaused', ({ requestId, request }) => {
       const path = new URL(request.url).pathname;
+      const isEvidence = /defense-vs-position|player-position-matchup|player-usage|red-zone/.test(path);
+      if (isEvidence) evidenceRequests.push(path);
       const body = path === '/api/consumer/dashboard'
         ? { status: 'available', games, note: 'Synthetic browser test', sourceHealth: health }
         : path === `/api/consumer/games/${games[0].gameId}` ? detail : null;
-      const action = body
+      const action = isEvidence
+        ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 503,
+          responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+          body: Buffer.from('{"message":"Source unavailable"}').toString('base64') })
+        : body
         ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 200,
           responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
           body: Buffer.from(JSON.stringify(body)).toString('base64') })
@@ -179,6 +186,7 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
         assert.equal(await cdp.evaluate('document.querySelectorAll(".weekly-card-toggle")[1].getAttribute("aria-expanded")'), 'false');
         const href = await cdp.evaluate('document.querySelector(".weekly-evidence .weekly-detail-link").getAttribute("href")');
         assert.equal(href, `/games/home-test-one?season=${season}&week=1`);
+        evidenceRequests.length = 0;
         await cdp.evaluate('document.querySelector(".weekly-evidence .weekly-detail-link").focus()');
         assert.deepEqual(await cdp.evaluate(`(() => {
           const link = document.querySelector('.weekly-evidence .weekly-detail-link');
@@ -197,14 +205,32 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
         assert.equal(await cdp.evaluate('document.querySelector(".detail-insights").textContent.includes("No sufficiently supported")'), true);
         assert.equal(await cdp.evaluate('document.querySelector(".detail-primary").textContent.includes("No current market comparison is eligible")'), true);
         assert.equal(await cdp.evaluate('document.querySelectorAll(".detail-disclosure:not([open])").length'), 4);
+        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-personnel] [data-section]")'), null, 'hidden personnel is not mounted');
+        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-matchups] [data-section]")'), null, 'hidden matchup charts are not mounted');
+        assert.deepEqual(evidenceRequests, [], 'first view must not fetch hidden evidence');
+        assert.equal(await cdp.evaluate(`performance.getEntriesByType('resource').some(entry => /(?:LineMovementPlot|PregameComparisonPlot)/.test(entry.name))`), false, 'first view must not load hidden chart chunks');
+        await cdp.evaluate('document.querySelector("[data-testid=disclosure-personnel] > summary").click()');
+        await until(() => evidenceRequests.includes('/api/consumer/defense-vs-position')
+          && evidenceRequests.includes('/api/consumer/player-position-matchup'), 'personnel requests start on open');
+        await until(() => cdp.evaluate('document.querySelector("[data-testid=button-retry-defense]") !== null'), 'defensive history error offers retry');
+        const defenseRequests = evidenceRequests.filter(path => path === '/api/consumer/defense-vs-position').length;
+        await cdp.evaluate('document.querySelector("[data-testid=button-retry-defense]").click()');
+        await until(() => evidenceRequests.filter(path => path === '/api/consumer/defense-vs-position').length > defenseRequests, 'defensive history retry starts a new request');
+        await cdp.evaluate('document.querySelector("[data-testid=disclosure-personnel] > summary").click()');
+        await until(() => cdp.evaluate('!document.querySelector("[data-testid=disclosure-personnel]").open'), 'personnel disclosure closes');
+        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=section-defense-vs-position]") !== null'), true, 'personnel stays mounted after collapse');
         assert.equal(await cdp.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), true, 'no horizontal overflow');
         await cdp.key('Tab');
         await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] > summary").focus()');
         await cdp.key('Enter');
         await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-sources]").open'), 'source disclosure opens by Enter');
-        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .consumer-source-health") !== null'), true);
+        await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .consumer-source-health") !== null'), 'source content mounts on open');
         await cdp.key(' ');
         await until(() => cdp.evaluate('!document.querySelector("[data-testid=disclosure-sources]").open'), 'source disclosure closes by Space');
+        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .consumer-source-health") !== null'), true, 'loaded source content remains mounted after collapse');
+        await cdp.key('Enter');
+        await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-sources]").open'), 'source disclosure reopens');
+        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .consumer-source-health") !== null'), true);
         detail = {
           ...detail,
           matchupBoard: {
@@ -228,7 +254,7 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
         await cdp.evaluate('document.querySelector("[data-testid=disclosure-matchups] > summary").focus()');
         await cdp.key('Enter');
         await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-matchups]").open'), 'matchup disclosure opens');
-        assert.equal(await cdp.evaluate('document.querySelector(".matchup-assessment summary").textContent.includes("1/2 games covered")'), true);
+        await until(() => cdp.evaluate('document.querySelector(".matchup-assessment summary")?.textContent.includes("1/2 games covered")'), 'matchup content mounts on open');
         assert.equal(await cdp.evaluate('document.querySelector(".detail-zero-coverage") !== null'), true);
         detail = { ...detail, matchupBoard: { ...detail.matchupBoard, status: 'unavailable', summary: [], assessments: [],
           completeness: { supportedCategories: 0, totalCategories: 0 } } };

@@ -10,6 +10,7 @@ import { ConsumerMarketEvidence } from '../../components/ConsumerMarketEvidence'
 import { ConsumerProjectionEvidence } from '../../components/ConsumerProjectionEvidence';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
+import { DeferredDetailDisclosure } from '../../components/DeferredDetailDisclosure';
 import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
 import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
 import { GameAlerts } from './GameAlerts';
@@ -25,7 +26,7 @@ export default function ConsumerGameDetail() {
   const [location] = useLocation();
   const detailSearch = location.includes('?') ? location.slice(location.indexOf('?')) : '';
   const backHref = detailSearch ? `/games${detailSearch}` : '/games';
-   const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
+  const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
   const now = useConsumerNow();
   useEffect(() => {
     if (query.data) {
@@ -103,25 +104,21 @@ export default function ConsumerGameDetail() {
         : <p>No sufficiently supported matchup advantage is available.</p>}
     </section>
     <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
-    <details className="detail-disclosure" data-testid="disclosure-market">
-      <summary>Market evidence and recorded line history <small>{beforeKickoff ? `${eligibleCount} eligible now` : 'Historical only'}</small></summary>
+    <DeferredDetailDisclosure key={`${game.gameId}-market`} testId="disclosure-market" title="Market evidence and recorded line history" status={beforeKickoff ? `${eligibleCount} eligible now` : 'Historical only'}>
       <ConsumerMarketEvidence game={game} beforeKickoff={beforeKickoff} />
       <LineMovementExperience movement={game.movement} beforeKickoff={beforeKickoff} />
-    </details>
-    <details className="detail-disclosure" data-testid="disclosure-matchups">
-      <summary>Detailed matchup evidence <small>{game.matchupBoard.completeness.supportedCategories}/{game.matchupBoard.completeness.totalCategories} categories supported</small></summary>
+    </DeferredDetailDisclosure>
+    <DeferredDetailDisclosure key={`${game.gameId}-matchups`} testId="disclosure-matchups" title="Detailed matchup evidence" status={`${game.matchupBoard.completeness.supportedCategories}/${game.matchupBoard.completeness.totalCategories} categories supported`}>
       <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
       <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
-    </details>
-    <details className="detail-disclosure" data-testid="disclosure-personnel">
-      <summary>Personnel and player context <small>{game.context.message ?? 'Depth, usage and matchups'}</small></summary>
+    </DeferredDetailDisclosure>
+    <DeferredDetailDisclosure key={`${game.gameId}-personnel`} testId="disclosure-personnel" title="Personnel and player context" status={game.context.message ?? 'Depth, usage and matchups'}>
       {beforeKickoff && <><GameDefenseVsPosition gameId={game.gameId} season={game.season} away={game.matchup.away} home={game.matchup.home} /><PlayerPositionMatchup gameId={game.gameId} /></>}
       <ConsumerDepthChart context={game.context} />
       <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
       <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
-    </details>
-    <details className="detail-disclosure" data-testid="disclosure-sources">
-      <summary>Source status, weather and analysis <small>Feeds {game.sourceHealth.status}</small></summary>
+    </DeferredDetailDisclosure>
+    <DeferredDetailDisclosure key={`${game.gameId}-sources`} testId="disclosure-sources" title="Source status, weather and analysis" status={`Feeds ${game.sourceHealth.status}`}>
       <div className="premium-weather" data-testid="game-weather"><CloudRain className="h-4 w-4" aria-hidden="true" /><span>{weatherParts.length > 0 ? weatherParts.join(' · ') : game.analysis.availability.weather ?? 'Weather unavailable'}</span></div>
       <ConsumerSourceHealth health={game.sourceHealth} />
       <section className="premium-analysis-section" data-section="projection-explanation" data-testid="premium-analysis" aria-labelledby="projection-explanation-heading">
@@ -141,6 +138,6 @@ export default function ConsumerGameDetail() {
         )}
       </div>
       </section>
-    </details>
+    </DeferredDetailDisclosure>
   </div>;
 }

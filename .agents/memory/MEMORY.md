@@ -54,3 +54,4 @@
 - [Player TD temporal evidence](player-td-temporal-evidence.md) — reconstructed game chronology is not a pregame source-release archive; strong backtests alone cannot activate live TD probabilities.
 - [Bundled API test resolution](bundled-api-test-resolution.md) — use the server build for standalone Node tests that import workspace TS packages; ad-hoc external bundles can fail at runtime.
 - [Player-position release evidence](player-position-release-evidence.md) — holdout player-only errors cannot authorize defense-adjusted live counts without paired coverage and archived pregame releases.
+- [Game evidence disclosure lifecycle](game-evidence-disclosures.md) — defer first mount, then retain loaded panels across collapse so cached evidence and normal freshness survive.

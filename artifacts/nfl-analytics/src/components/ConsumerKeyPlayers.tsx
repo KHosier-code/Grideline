@@ -142,6 +142,7 @@ export function ConsumerKeyPlayers({ players, away, home, season, week, gameId }
     };
     return <section className="premium-key-players" data-section="player-usage" data-testid="premium-key-players" aria-labelledby="key-player-usage-heading">
       <div className="consumer-section-heading"><div><p className="consumer-eyebrow">{RED_ZONE_FALLBACK_LABEL} · {season} season</p><h2 id="key-player-usage-heading">Inside-20 opportunities</h2></div></div>
+      {unavailable && <p role="alert">Red-zone evidence could not be loaded. <button type="button" onClick={() => { seasonQuery.refetch(); last3Query.refetch(); }}>Retry</button></p>}
       <p className="rz-fallback-note" role="status" data-testid="status-red-zone-fallback">
         <strong>{unavailable ? 'Red-zone source unavailable.' : 'Player usage unavailable; red-zone evidence shown separately.'}</strong>{' '}
         {loading ? 'Loading pregame evidence.' : 'Completed games before this matchup only. Up to three players per team ranked by recorded targets and carries; other usage metrics are not available.'}
@@ -160,6 +161,11 @@ export function ConsumerKeyPlayers({ players, away, home, season, week, gameId }
           <h2 id="key-player-usage-heading">Key player usage</h2>
         </div>
       </div>
+      {redZoneEnabled && (seasonQuery.isError || last3Query.isError) &&
+        <p role="alert">Some red-zone evidence could not be loaded. <button type="button" onClick={() => {
+          if (seasonQuery.isError) seasonQuery.refetch();
+          if (last3Query.isError) last3Query.refetch();
+        }}>Retry</button></p>}
       
       <div className="pkp-grid">
         <div className="pkp-team" data-testid="pkp-away">
