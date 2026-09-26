@@ -1,0 +1,71 @@
+You are working on my existing NFL analytics site, **Gridline**. Implement the first nflverse-based feature release: a **Red Zone Opportunity dashboard** and improved **Player Usage** cards on game detail pages.
+
+Gridline is already published and has schedules, historical NFL data, player data, predictions, and production models. **Inspect the repository and its instructions before making changes. Verify the actual architecture, database schema, ingestion jobs, and existing UI. Do not assume that a dataset is missing or that a feature is already working. Reuse existing tables and components where appropriate.**
+
+## Scope of this release
+
+Build source-backed, sortable player opportunity data for the current NFL season:
+
+1. Targets, carries, receiving touchdowns, and rushing touchdowns **inside the opponent’s 20, 10, and 5 yard lines**.
+2. Each player’s share of their team’s targets and carries in those zones.
+3. Full-season totals and a separate **last three completed games** view.
+4. Offensive snaps and snap percentage when a verified source is available.
+5. Clear source, update time, games played, and sample size labels.
+6. A Red Zone Opportunity table accessible from the site’s navigation, plus relevant opportunity figures on existing game detail Player Usage cards.
+
+This release is for **observed usage**. Do not build, retrain, promote, or publish a touchdown prediction model yet. Do not alter the existing spread, moneyline, or totals models, their official snapshots, historical predictions, or backtests.
+
+## Start with an audit
+
+Before coding, identify:
+
+- Which nflverse datasets and seasons Gridline already imports.
+- The current source of player stats, play by play, snap counts, schedules, and player IDs.
+- How a Gridline game ID maps to the nflverse game ID, and how player records map to GSIS IDs.
+- Existing data update schedules, source timestamps, caching, and failure handling.
+- The current Player Usage API and UI, including its receiving-touchdown fields and period labels.
+- The appropriate development database and migration process.
+
+Summarize the findings briefly in your work log, then proceed with implementation. Ask me only if an essential mapping or database decision cannot be resolved from the repository.
+
+## Data and calculation rules
+
+Use verified nflverse play by play for play location and the credited receiver or rusher. Use existing verified player stats and snap counts where they provide a better authoritative cross-check. Add only the ingestion and schema changes the audit shows are necessary.
+
+- “Inside the 20,” “inside the 10,” and “inside the 5” refer to the **ball’s position before the play**: `yardline_100 <= 20`, `<= 10`, or `<= 5`, respectively. These are overlapping ranges; label them clearly.
+- Count a **target** when a specific player is credited as the intended receiver, including an incomplete pass. Count a **carry** when a player is credited as the rusher. Follow source definitions for scrambles, and document how they are treated.
+- Count receiving and rushing touchdowns separately. Exclude two-point tries, kneeldowns, spikes, nullified plays, and plays without a reliably identified player from the corresponding opportunity count.
+- Calculate team target share as player targets divided by **all qualifying team targets in the same zone and period**. Calculate carry share using qualifying team carries. If a denominator is zero, display “—” rather than 0%.
+- Group by the player’s team **at the time of the game**, so trades do not misattribute historical opportunities.
+- “Last three” means that player’s last three **completed games in which they appeared**, within the selected regular season. Show the number of games actually available if fewer than three.
+- Keep regular season and postseason separate. Never include a future game or an unfinished game in observed totals.
+- Do not infer a cornerback assignment, coverage shell, or player matchup from participation on the same play.
+
+Validate aggregates against source play rows and, where comparable, official player touchdown totals. Investigate discrepancies instead of silently adjusting the numbers.
+
+## Data reliability
+
+Persist or expose the source name, source update time, ingestion time, season, and relevant game IDs. Handle corrections by safely refreshing affected games and recomputing aggregates without creating duplicate plays or opportunities. A stale or failed import must retain the last valid data and display its actual update time. Missing data must display as unavailable; never substitute fabricated zeros.
+
+Respect the existing production data boundaries. Use the development environment and the repository’s established migration workflow. Do not change production data, secrets, database bindings, scheduled provider calls, or deployments.
+
+## UI
+
+Make the dashboard feel native to Gridline’s current design. Provide filters for season, team, position, zone, and period, plus sorting by targets, carries, shares, and touchdowns. Keep receiving and rushing measures visibly distinct. On each game detail page, show the relevant players’ season and recent opportunity figures with compact sample labels. Use a sensible mobile layout and a helpful unavailable state when verified data has not arrived.
+
+Use plain labels such as “Targets inside 10,” “Team target share inside 10,” and “Last 3 games.” Include appropriate nflverse attribution. Do not describe these historical counts as projections, betting edges, or verified head-to-head defensive matchups.
+
+## Verification and handoff
+
+Run the repository’s relevant typechecks, focused tests, and production-mode build. Add meaningful tests for the zone boundaries, target and carry definitions, team-share denominators, missing data, duplicate imports, and completed-game cutoff. Manually inspect the dashboard and one game detail page at desktop and mobile sizes using development data.
+
+In your final response, report:
+
+1. What you found in the initial audit.
+2. Exactly what you implemented and where it appears.
+3. The source and update schedule of each displayed metric.
+4. Any unavailable fields or unresolved data discrepancies.
+5. Tests and build results.
+6. The commit hash and the specific steps needed to verify this candidate after a **user-initiated publish**.
+
+Commit the completed, verified development changes. **Do not publish or deploy Gridline.**
