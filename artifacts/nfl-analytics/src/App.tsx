@@ -2045,32 +2045,46 @@ const authBasePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 function AuthPageShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen">
-      <div className="hidden lg:flex w-1/2 bg-sidebar relative overflow-hidden flex-col justify-between">
-        <div className="absolute inset-0 z-0 bg-sidebar">
-          <img src={`${import.meta.env.BASE_URL}control-room-hero.png`} alt="Gridline football analytics control room" className="h-full w-full object-cover opacity-60" />
-          <div className="absolute inset-0 bg-gradient-to-r from-sidebar/90 via-sidebar/50 to-transparent" />
-        </div>
-        <div className="relative z-10 p-12">
-          <Link href="/">
-            <span className="brand-wordmark-frame brand-wordmark-auth"><img src={`${import.meta.env.BASE_URL}logo-wordmark.png`} alt="Gridline NFL Analytics" /></span>
+    <div className="flex min-h-[100dvh] flex-col bg-background lg:flex-row">
+      <section className="relative isolate flex min-h-[340px] flex-col overflow-hidden bg-[#17213b] text-[#f0f3fc] sm:min-h-[390px] lg:min-h-[100dvh] lg:w-[52%]" aria-label="About Gridline">
+        <img
+          src={`${import.meta.env.BASE_URL}gridline-auth-field.svg`}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-[50%_44%] opacity-90 lg:object-center"
+        />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-[#11192e]/65 via-[#11192e]/10 to-[#11192e]/95 lg:from-[#11192e]/45 lg:via-transparent lg:to-[#11192e]/95" />
+        <header className="flex items-start justify-between gap-4 px-6 pt-6 sm:px-10 sm:pt-9 lg:px-12 lg:pt-12">
+          <Link href="/" aria-label="Gridline home" data-testid="link-auth-brand-home" className="inline-flex shrink-0 rounded-lg focus-visible:outline-offset-4">
+            <span className="brand-wordmark-frame brand-wordmark-auth !w-[145px] !min-h-0 sm:!w-[192px]"><img src={`${import.meta.env.BASE_URL}logo-wordmark.png`} alt="Gridline NFL Analytics" /></span>
           </Link>
-        </div>
-        <div className="relative z-10 p-12 mt-auto">
-          <h1 className="text-4xl md:text-5xl font-serif text-white tracking-tight leading-tight mb-4">Smarter<br/>football decisions.</h1>
-          <p className="text-sidebar-foreground text-lg max-w-md leading-relaxed">Advanced analytics, real-time signals, and model-driven insights for the modern NFL.</p>
-        </div>
-      </div>
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-background relative">
-        <div className="absolute top-6 left-6 lg:hidden">
-          <Link href="/">
-            <img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-8 w-8" />
+          <Link href="/" data-testid="link-auth-return-home" className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b border-[#aec5f7]/50 text-[11px] font-bold tracking-[.03em] text-[#e7edfb] transition-colors hover:border-[#e7edfb] hover:text-white sm:text-xs">
+            Return home <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
           </Link>
+        </header>
+        <div className="mt-auto max-w-[660px] px-6 pb-7 pt-20 sm:px-10 sm:pb-10 lg:px-12 lg:pb-14">
+          <div className="mb-4 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[.22em] text-[#b5c9f4] sm:mb-5">
+            <span className="h-px w-9 bg-[#e7ca94]" aria-hidden="true" /> Football, examined
+          </div>
+          <h1 className="max-w-[560px] font-serif text-[31px] font-semibold leading-[1.08] tracking-[-.055em] text-[#f4f6fc] sm:text-[42px] lg:text-[clamp(42px,4.3vw,70px)]">
+            Read the field.<br /><span className="text-[#b9caf1]">Question the call.</span>
+          </h1>
+          <p className="mt-4 max-w-[450px] text-[13px] leading-[1.65] text-[#d2dbef] sm:text-[15px] lg:mt-6">
+            Football analysis with the evidence in view. Picks appear only when eligible evidence is available; sometimes there may be no pick.
+          </p>
         </div>
-        <div className="w-full max-w-[440px]">
-           {children}
+      </section>
+      <main className="flex min-h-[500px] flex-1 flex-col justify-center border-t border-border bg-background px-5 py-10 sm:px-10 lg:w-[48%] lg:border-l lg:border-t-0 lg:px-12 lg:py-16">
+        <div className="mx-auto w-full max-w-[440px]">
+          <div className="mb-7 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[.19em] text-muted-foreground sm:mb-9">
+            <span className="h-px w-7 bg-accent" aria-hidden="true" /> Your Gridline account
+          </div>
+          {children}
+          <p className="mt-8 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
+            Evidence informs a pick. It never guarantees an outcome.
+          </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

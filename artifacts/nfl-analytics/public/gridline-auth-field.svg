@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 980" fill="none">
+  <defs>
+    <linearGradient id="ground" x1="35" y1="15" x2="860" y2="980" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#202C4D"/>
+      <stop offset=".53" stop-color="#171F39"/>
+      <stop offset="1" stop-color="#101829"/>
+    </linearGradient>
+    <linearGradient id="field" x1="95" y1="143" x2="778" y2="800" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A5BFFB" stop-opacity=".21"/>
+      <stop offset=".52" stop-color="#7B9BD9" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#7797D0" stop-opacity=".17"/>
+    </linearGradient>
+    <linearGradient id="ball" x1="299" y1="279" x2="683" y2="650" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D4E0FF" stop-opacity=".24"/>
+      <stop offset=".52" stop-color="#8BA9E9" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#B6C9F3" stop-opacity=".19"/>
+    </linearGradient>
+    <pattern id="micro" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" stroke="#AEC5FC" stroke-opacity=".055"/>
+    </pattern>
+    <clipPath id="frame">
+      <rect width="900" height="980"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#frame)">
+    <rect width="900" height="980" fill="url(#ground)"/>
+    <rect width="900" height="980" fill="url(#micro)"/>
+    <path d="M-57 855 863-65M104 1074 1024 154" stroke="#A9BFFA" stroke-opacity=".08" stroke-width="2"/>
+    <path d="M-120 943 800 23M186 1066 1106 146" stroke="#A9BFFA" stroke-opacity=".055" stroke-width="2"/>
+
+    <!-- An unnumbered field study: geometry, not game data. -->
+    <g transform="translate(110 163) rotate(-12 340 326)">
+      <rect x="0" y="0" width="680" height="652" rx="10" fill="url(#field)" stroke="#A4BDF5" stroke-opacity=".28" stroke-width="2"/>
+      <rect x="24" y="24" width="632" height="604" rx="3" stroke="#A4BDF5" stroke-opacity=".20"/>
+      <path d="M0 130H680M0 260H680M0 390H680M0 520H680M136 0V652M272 0V652M408 0V652M544 0V652" stroke="#B2C8F9" stroke-opacity=".17" stroke-width="2"/>
+      <path d="M340 0V652" stroke="#C6D7FF" stroke-opacity=".28" stroke-width="3"/>
+      <circle cx="340" cy="326" r="178" stroke="#BDD1FC" stroke-opacity=".28" stroke-width="2"/>
+      <circle cx="340" cy="326" r="223" stroke="#BDD1FC" stroke-opacity=".10" stroke-width="2" stroke-dasharray="6 10"/>
+      <path d="M28 80h25M28 80v25M652 80h-25M652 80v25M28 572h25M28 572v-25M652 572h-25M652 572v-25" stroke="#D4E1FF" stroke-opacity=".46" stroke-width="2"/>
+      <path d="M76 24v13m136-13v13m136-13v13m136-13v13m136-13v13M76 615v13m136-13v13m136-13v13m136-13v13m136-13v13" stroke="#A9C0F5" stroke-opacity=".35" stroke-width="2"/>
+    </g>
+
+    <!-- A single diagrammatic ball; no teams, players, claims, or results. -->
+    <g transform="rotate(-28 457 483)">
+      <path d="M166 483c57-119 171-178 291-178s234 59 291 178c-57 119-171 178-291 178S223 602 166 483Z" fill="#1C2B4C" stroke="#C7D8FF" stroke-width="3"/>
+      <path d="M186 483c55-104 160-157 271-157s216 53 271 157c-55 104-160 157-271 157s-216-53-271-157Z" fill="url(#ball)" stroke="#9FB8EE" stroke-opacity=".34" stroke-width="2"/>
+      <path d="M304 340c-29 86-29 200 0 286M610 340c29 86 29 200 0 286" stroke="#DAE5FF" stroke-opacity=".72" stroke-width="4"/>
+      <path d="M381 483h152" stroke="#DCE8FF" stroke-width="4" stroke-linecap="round"/>
+      <path d="M401 467v32m28-32v32m28-32v32m28-32v32m28-32v32" stroke="#DCE8FF" stroke-width="4" stroke-linecap="round"/>
+      <path d="M213 483h76m336 0h76" stroke="#B2C9FC" stroke-opacity=".6" stroke-width="2" stroke-dasharray="3 7"/>
+    </g>
+    <circle cx="790" cy="221" r="5" fill="#EACD99"/>
+    <circle cx="790" cy="221" r="17" stroke="#EACD99" stroke-opacity=".46"/>
+    <path d="M720 221h-116M790 251v52" stroke="#EACD99" stroke-opacity=".30" stroke-width="2"/>
+    <path d="M78 725h164M78 742h93" stroke="#BAD0FC" stroke-opacity=".27" stroke-width="2"/>
+    <path d="M806 742h-104M806 758h-62" stroke="#BAD0FC" stroke-opacity=".27" stroke-width="2"/>
+  </g>
+</svg>
