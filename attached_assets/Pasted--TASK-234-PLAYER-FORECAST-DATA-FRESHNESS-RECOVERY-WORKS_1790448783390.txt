@@ -1,0 +1,141 @@
+# TASK #234 — PLAYER FORECAST DATA FRESHNESS RECOVERY
+
+WORKSTREAM: Player Projection Engine
+
+PRIORITY: CRITICAL
+
+OBJECTIVE
+
+Resolve the specific data-verification dependency blocking Gridline's upcoming player forecasts.
+
+The previous audit examined 15 upcoming games and 475 skill players, finding zero eligible players because current roster and injury freshness could not be established.
+
+Do not rebuild the player engine or create another general-purpose audit.
+
+Success means establishing genuine current-source verification, correcting any defective freshness logic, and generating development-only forecasts wherever the evidence supports them.
+
+## PHASE 1 — CHECK THE EXISTING INTEGRATIONS
+
+Inspect the existing Sleeper roster and ESPN injury integrations.
+
+Determine whether the development worker has successfully contacted each provider recently.
+
+For each integration, identify:
+- Last attempted request.
+- Last successful request.
+- Last successful complete and valid response.
+- Most recent provider timestamp, where supplied.
+- Most recent stored snapshot.
+- Whether unchanged records are deduplicated.
+- Any failed or missed scheduled executions.
+
+Distinguish provider retrieval from database modifications.
+
+Determine whether the existing scheduled synchronization is operating.
+
+## PHASE 2 — CORRECT PLAYER-LEVEL VERIFICATION
+
+Establish verifiable evidence that each player belongs to the team recorded by Gridline.
+
+Prefer reusing existing complete Sleeper snapshots, normalized player identities, and existing database structures.
+
+A successful API request alone is insufficient. Establish that the specific player and team association was actually present in the successfully retrieved snapshot.
+
+Record:
+- Source identity.
+- Retrieval timestamp.
+- Provider timestamp, if supplied.
+- Player identity.
+- Observed team assignment.
+- Snapshot identity.
+- Validation outcome.
+
+Preserve previously recorded evidence.
+
+If a provider does not supply an original publication timestamp, identify the record as verified by Gridline at retrieval time. Do not invent a provider update timestamp.
+
+Do not update individual player modification timestamps merely to satisfy freshness checks.
+
+## PHASE 3 — CORRECT INJURY VERIFICATION
+
+Apply the same approach to ESPN injury information.
+
+Verify whether the current injury data was genuinely retrieved and validated.
+
+Determine whether the feed provides complete team injury coverage or only selected injury records.
+
+Distinguish:
+- Currently reported injury.
+- No injury listed in a verified report.
+- Unknown injury information.
+- Stale information.
+
+Never interpret missing injury records as proof that a player is healthy.
+
+Do not require every player's injury record to change within 48 hours if a successful, complete and recent provider check establishes that its previously recorded information is unchanged.
+
+Preserve uncertainty where source coverage is incomplete.
+
+## PHASE 4 — DEVELOPMENT REFRESH
+
+If development needs fresh source data, identify the smallest approved refresh operation.
+
+Use existing integrations rather than introducing new providers.
+
+Before execution, verify the exact target database and ensure there is no possibility of production writes, unexpected paid requests, or unintended worker activation.
+
+If separate authorization is required for the refresh, stop and request it.
+
+After an authorized refresh, establish actual source coverage and immutable verification evidence.
+
+## PHASE 5 — REASSESS UPCOMING FORECASTS
+
+Rerun the existing Player Engine V1 readiness check against the same upcoming schedule, if still current.
+
+Use properly verified current team assignments and appropriately qualified injury information.
+
+Do not require confirmed starting status when sufficient evidence supports a baseline projection with explicitly uncertain playing time.
+
+Exclude players with unresolved critical identities, team assignments, disqualifying availability evidence or insufficient historical samples.
+
+Preserve the four existing model configurations.
+
+Generate development-only forecasts for eligible players.
+
+Report:
+- Games evaluated.
+- Players evaluated.
+- Fresh roster assignments.
+- Qualified injury evidence.
+- Eligible players.
+- Uncertain players.
+- Excluded players and reasons.
+- Actual development forecasts generated.
+
+Never manufacture eligibility simply to increase forecast coverage.
+
+## PHASE 6 — VALIDATION
+
+Test unchanged roster responses, missing players, trades, conflicting team assignments, stale provider checks, incomplete injury reports and failed synchronization.
+
+Verify that an unrelated successful synchronization cannot make an absent player's data appear current.
+
+Ensure every development forecast has reproducible source evidence and an actual calculation timestamp.
+
+Preserve historical simulation labeling.
+
+Do not modify Phase 6.1, retrain Player Engine V1, publish, change production or activate betting recommendations.
+
+## FINAL DELIVERABLE
+
+Update:
+
+reports/gridline-player-engine-upcoming-readiness.md
+
+GRIDLINE_PROJECT_CONTROL.md
+
+Provide a concise completion report identifying the root cause, actual corrections, successful source checks, revised eligibility counts, genuine development forecasts, and test results.
+
+If zero players remain eligible, explain the specific remaining dependency rather than launching another architectural investigation.
+
+Recommend exactly one next action.
