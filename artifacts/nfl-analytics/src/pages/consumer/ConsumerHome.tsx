@@ -1,4 +1,4 @@
-import { getGetConsumerDashboardQueryKey, useGetConsumerDashboard, type ConsumerGame } from '@workspace/api-client-react';
+import { getGetConsumerDashboardQueryKey, useGetConsumerDashboard, type ConsumerDashboard, type ConsumerGame } from '@workspace/api-client-react';
 import { ArrowRight, CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'wouter';
@@ -6,6 +6,8 @@ import { ConsumerLoading, ConsumerMessage, formatKickoff, useConsumerNow } from 
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 import { homeProjection, homeSpread, nextHomeSlate } from '../../lib/consumer-home';
 import { ConsumerHomeMatchupFeature } from '../../components/ConsumerHomeMatchupFeature';
+import { WeeklyPickSection } from './VisitorHomeContent';
+import './VisitorHome.css';
 
 const number = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? 'Unavailable' : value.toFixed(1);
 const signed = (value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)}`;
@@ -47,17 +49,28 @@ function HomeGame({ game, now, selected, onSelect }: {
 export default function ConsumerHome() {
   const query = useGetConsumerDashboard({ query: { queryKey: getGetConsumerDashboardQueryKey(), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
   const now = useConsumerNow();
+  return <ConsumerHomeContent dashboard={query.data} now={now}
+    state={query.isLoading ? 'loading' : query.isError || !query.data ? 'error' : 'ready'} />;
+}
+
+export function ConsumerHomeContent({ dashboard, now, state }: {
+  dashboard?: ConsumerDashboard;
+  now: number;
+  state: 'loading' | 'error' | 'ready';
+}) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  if (query.isLoading) return <ConsumerLoading label="Loading the persisted schedule and feed status…" />;
-  if (query.isError || !query.data) return <ConsumerMessage error title="Weekly view unavailable" detail="We couldn’t read the saved schedule and feed evidence. Please try again shortly." />;
-  const slate = nextHomeSlate(query.data.games, now);
-  const health = query.data.sourceHealth;
+  const pick = <WeeklyPickSection initialWeeklyPick={dashboard?.initialWeeklyPick} state={state} headingLevel="h2" />;
+  if (state === 'loading') return <div className="consumer-page weekly-home">{pick}<ConsumerLoading label="Loading the persisted schedule and feed status…" /></div>;
+  if (state === 'error' || !dashboard) return <div className="consumer-page weekly-home">{pick}<ConsumerMessage error title="Weekly view unavailable" detail="We couldn’t read the saved schedule and feed evidence. Please try again shortly." /></div>;
+  const slate = nextHomeSlate(dashboard.games, now);
+  const health = dashboard.sourceHealth;
   return <div className="consumer-page weekly-home">
     <header className="weekly-intro">
       <div><p className="consumer-eyebrow">Gridline / Weekly home</p><h1>{slate ? `${slate.season} · Week ${slate.week}` : 'No upcoming slate in the saved schedule'}</h1>
         <p>{slate ? `${slate.games.length} upcoming ${slate.games.length === 1 ? 'game' : 'games'} in the next saved week. Projections and lines appear only when eligible evidence exists.` : 'No future games are available here. Browse saved matchups and past weeks in Games.'}</p></div>
       <div className="weekly-status"><small>Persisted feed status</small><strong className={`market-state market-state-${health.status}`}>{health.status}</strong><span>Schedule: {health.sources.schedule.status} · Odds: {health.sources.odds.status}</span></div>
     </header>
+    {pick}
     {slate && <ConsumerHomeMatchupFeature key={slate.games[0].gameId} game={slate.games[0]} now={now} />}
     <div className="consumer-section-heading"><div><p className="consumer-eyebrow">Upcoming schedule</p><h2>{slate ? 'The next slate' : 'No upcoming games'}</h2></div><Link href="/games">Browse all games <ArrowRight className="h-4 w-4" /></Link></div>
     {slate ? <section className="weekly-list" aria-label={`${slate.season} week ${slate.week} matchups`}>
