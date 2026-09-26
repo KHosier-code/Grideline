@@ -11,7 +11,8 @@ These assets should be used in the production UI:
 
 ## Reference / Inspiration Assets
 - `dashboard-inspiration.png`: Layout inspiration/reference only. Do NOT display fake teams, stats, or imagery from this file in the production application. It serves as a visual system reference for spacing, typography, and density.
-- `control-room-hero.png`: Retired authentication concept, **not approved for display**. It contains invented dashboard output, capability claims and player imagery; do not reuse it in public UI or marketing.
+
+The retired authentication dashboard concept was removed from this directory. Do not restore it to public assets or use it in UI or marketing: it contained invented dashboard output, capability claims and player imagery.
 
 ## Missing / optional imagery
 - No identity- and rights-verified player or coach portrait library is supplied today. Player identity areas use the illustrated fallback; do not replace it with a guessed photo. Coach portraits are not supported.
