@@ -1,0 +1,180 @@
+# GRIDLINE — PERSONNEL-AWARE MODEL EVALUATION
+
+**Priority: HIGH**
+
+**Objective:** Execute the existing Task #68 evaluation framework to determine whether personnel-aware models improve upon Gridline's Phase 6.1 baseline.
+
+This is an evaluation task, not a model development or production deployment task.
+
+Do not build another evaluation framework if the existing one works.
+
+## PHASE 1 — RECOVER EXISTING WORK
+
+Locate and inspect:
+
+- Task #68's personnel-aware comparison runner.
+- The retained Phase 6.1 evaluation framework.
+- The immutable 2025 recorded-market baseline.
+- Existing personnel feature definitions.
+- Historical feature and prediction-cutoff safeguards.
+
+Determine whether the existing comparison can execute against the current development database.
+
+Do not retrain production models, change algorithms or modify production data.
+
+If a required dependency is missing, identify and repair only that dependency.
+
+## PHASE 2 — EXECUTE THE COMPARISON
+
+Evaluate three independent model families:
+
+1. Spread.
+2. Moneyline.
+3. Totals.
+
+Train the evaluation-only challengers using 2021–2024 data.
+
+Evaluate on the same eligible 2025 games used by the existing baseline, with identical eligibility rules and grading.
+
+Reconstruct personnel information using only evidence available before each game's historical prediction cutoff.
+
+Enforce chronological integrity and prevent future-data leakage.
+
+Keep the original Phase 6.1 baseline evidence immutable.
+
+Verify that the baseline and challenger use identical eligible game IDs within each market family.
+
+If the existing framework cannot reproduce the retained baseline, stop and report why.
+
+## PHASE 3 — MEASURE ACTUAL PERFORMANCE
+
+Produce the following comparisons.
+
+### Spread
+
+- Eligible game count.
+- Baseline MAE and RMSE.
+- Challenger MAE and RMSE.
+- Recorded-market MAE and RMSE.
+- Baseline ATS results.
+- Challenger ATS results.
+- Performance by model-versus-market difference.
+- Price-aware returns where actual historical prices exist.
+
+### Moneyline
+
+- Eligible game count.
+- Baseline accuracy.
+- Challenger accuracy.
+- Recorded-market benchmark.
+- Log loss.
+- Brier score.
+- Probability calibration.
+- Price-aware returns where available.
+
+### Totals
+
+- Eligible game count.
+- Baseline MAE and RMSE.
+- Challenger MAE and RMSE.
+- Recorded-market MAE and RMSE.
+- Baseline over/under results.
+- Challenger over/under results.
+- Performance by model-versus-market difference.
+- Price-aware returns where supported.
+
+Use recorded-market terminology unless the source actually proves that a historical observation was a closing line.
+
+Do not invent missing sportsbook prices or apply assumed odds.
+
+## PHASE 4 — PERSONNEL FEATURE ANALYSIS
+
+Determine which personnel features are genuinely contributing information.
+
+Evaluate the availability and historical validity of:
+
+- Starting QB certainty.
+- QB continuity.
+- Injury availability.
+- Offensive-line continuity.
+- Skill-position availability.
+- Defensive personnel.
+- Secondary availability.
+- Depth-chart information.
+
+Identify features that are missing, sparsely populated or reconstructed from potentially unreliable historical evidence.
+
+If the existing framework supports legitimate feature ablation, report the results. Otherwise, document feature coverage without claiming causal contributions.
+
+Do not fabricate historical injury or starter information.
+
+## PHASE 5 — STATISTICAL RELIABILITY
+
+Calculate paired game-level differences.
+
+Include reasonable uncertainty estimates for key metrics.
+
+Identify whether observed improvements are consistent across:
+
+- Regular-season weeks.
+- Different market conditions.
+- Different model-difference ranges.
+- High- and low-sample situations.
+
+Avoid claiming that a small historical improvement establishes a profitable betting strategy.
+
+Do not optimize thresholds, change weights or select a model based on repeatedly testing the same 2025 season.
+
+## PHASE 6 — PRESERVE THE RESULTS
+
+This is essential.
+
+The previous comparison framework was retained, but its numerical report was lost.
+
+Generate and save BOTH:
+
+reports/gridline-2025-personnel-comparison.json
+
+reports/gridline-2025-personnel-comparison.md
+
+The JSON must include paired game-level predictions, metrics, dataset provenance, relevant checksums and the exact evaluation configuration.
+
+The Markdown report must explain the findings in plain English.
+
+Confirm that both files exist, contain actual numerical results and remain available after the task is merged.
+
+## PHASE 7 — NEXT MODEL DEVELOPMENT DECISION
+
+Using the evidence, explain:
+
+- Which personnel-aware model families improved.
+- Which deteriorated.
+- Whether any observed gains are statistically distinguishable from noise.
+- Whether either model demonstrated an advantage over the recorded market.
+- Which additional personnel information appears worth investigating.
+- Which model-development experiments should be tested on independent future data.
+
+Do not automatically promote the challenger.
+
+Do not change production predictions.
+
+Do not publish.
+
+## REQUIRED FINAL RESPONSE
+
+Return a compact comparison table for all three market families.
+
+For each family, provide baseline, challenger, recorded-market benchmark, sample size and uncertainty where available.
+
+Then provide:
+
+1. Overall findings.
+2. Personnel-data limitations.
+3. Historical profitability evidence, if legitimately measurable.
+4. Three specific proposed model improvements supported by the results.
+5. Test results and confirmation that the numerical report is saved.
+6. Confirmation that Phase 6.1 and production remain unchanged.
+
+If execution fails, return the actual blocker rather than generating hypothetical numbers.
+
+**The objective is reproducible evidence, not a predetermined improvement.**
