@@ -22,7 +22,7 @@ const markets: Array<{ value: Market; label: string }> = [
   { value: 'moneyline', label: 'Moneyline' },
 ];
 const books: BookFilter[] = ['All', 'DraftKings', 'FanDuel'];
-const colors = ['#ef7d32', '#172033', '#637083', '#9aa3b2', '#b85e28', '#424d61'];
+const colors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 function price(value: number) {
   return value > 0 ? `+${value}` : String(value);
@@ -126,20 +126,23 @@ export function LineMovementExperience({ movement, beforeKickoff }: { movement: 
           <div className="movement-chart" role="img" aria-label={`${markets.find((item) => item.value === market)?.label} movement chart`}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chart} margin={{ top: 16, right: 8, bottom: 8, left: 0 }}>
-                <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 5" />
+                <CartesianGrid stroke="hsl(var(--chart-grid))" strokeDasharray="3 5" />
                 <XAxis
                   dataKey="capturedAt"
                   minTickGap={48}
                   tickFormatter={(value) => observedAt(String(value))}
-                  tick={{ fontSize: 9 }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--chart-axis))' }}
                 />
-                <YAxis yAxisId="point" hide={market === 'moneyline'} tick={{ fontSize: 9 }} width={42} />
-                <YAxis yAxisId="price" orientation="right" tickFormatter={price} tick={{ fontSize: 9 }} width={45} />
+                <YAxis yAxisId="point" hide={market === 'moneyline'} tick={{ fontSize: 10, fill: 'hsl(var(--chart-axis))' }} width={42} />
+                <YAxis yAxisId="price" orientation="right" tickFormatter={price} tick={{ fontSize: 10, fill: 'hsl(var(--chart-axis))' }} width={45} />
                 <Tooltip
+                  contentStyle={{ background: 'hsl(var(--tooltip))', border: '1px solid hsl(var(--border))', borderRadius: 9, color: 'hsl(var(--tooltip-foreground))' }}
+                  labelStyle={{ color: 'hsl(var(--tooltip-foreground))' }}
+                  itemStyle={{ color: 'hsl(var(--tooltip-foreground))' }}
                   labelFormatter={(value) => observedAt(String(value))}
                   formatter={(value, name) => [String(name).endsWith(' price') ? price(Number(value)) : value, name]}
                 />
-                <Legend />
+                 <Legend wrapperStyle={{ color: 'hsl(var(--chart-axis))', fontSize: 11 }} />
                 {streams.flatMap((stream, index) => {
                   const color = colors[index % colors.length];
                   const name = streamName(stream);

@@ -3,6 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <script>
+      try {
+        document.documentElement.classList.toggle('dark', localStorage.getItem('gridline-theme') !== 'light');
+      } catch (_) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
     <title>Gridline NFL Analytics</title>
     <meta name="description" content="Smarter football decisions. Advanced analytics, real-time signals, and model-driven insights for the modern NFL." />
     <meta name="robots" content="index, follow" />

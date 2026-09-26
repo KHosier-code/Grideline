@@ -10,3 +10,8 @@ These assets should be used in the production UI:
 
 ## Reference / Inspiration Assets
 - `dashboard-inspiration.png`: Layout inspiration/reference only. Do NOT display fake teams, stats, or imagery from this file in the production application. It serves as a visual system reference for spacing, typography, and density.
+
+## Missing / optional imagery
+- No identity- and rights-verified player or coach portrait library is supplied. Player identity areas use the consistent illustrated fallback; do not replace it with a guessed photo.
+- No locally maintained, rights-verified collection of team marks is supplied. Team abbreviations remain readable without optional remote logo URLs.
+- `dashboard-inspiration.png` is unused in the live UI by design.

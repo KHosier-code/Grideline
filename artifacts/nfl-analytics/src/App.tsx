@@ -23,6 +23,7 @@ import {
   Loader2,
   LockKeyhole,
   Menu,
+  Moon,
   Microscope,
   RefreshCw,
   Save,
@@ -30,6 +31,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Sun,
   Target,
   TrendingDown,
   TrendingUp,
@@ -83,6 +85,7 @@ import './index.css';
 
 import { AdminDepthChart } from '@/components/AdminDepthChart';
 import { AdminPlayerStatsImport } from '@/components/AdminPlayerStatsImport';
+import { useTheme } from '@/lib/theme';
 
 const queryClient = new QueryClient();
 
@@ -392,6 +395,14 @@ function DatabaseCapacityNotice({ item }: { item?: DataHealth }) {
   );
 }
 
+function ThemeToggle({ className = '' }: { className?: string }) {
+  const { theme, toggle } = useTheme();
+  return <button type="button" className={cx('theme-toggle', className)} onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} aria-pressed={theme === 'dark'} data-testid="button-theme-toggle">
+    {theme === 'dark' ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+    <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+  </button>;
+}
+
 function Shell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -426,6 +437,7 @@ function Shell({ children }: { children: ReactNode }) {
           ))}
         </div>
         <div className="sidebar-footer">
+          <ThemeToggle className="sidebar-theme-toggle" />
           <div className="connection-row">
             <span className={cx('connection-dot', isHealthy ? 'connection-live' : 'connection-muted')} />
             <span>{health.isLoading ? 'Checking API…' : isHealthy ? 'API connected' : 'API needs attention'}</span>
@@ -439,11 +451,11 @@ function Shell({ children }: { children: ReactNode }) {
         <div className="mobile-topbar">
           <button type="button" className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation" data-testid="button-open-navigation"><Menu className="h-5 w-5" /></button>
           <Link href="/admin" className="brand brand-mobile" data-testid="link-mobile-home"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-5 w-5" /><strong>Gridline</strong></Link>
-          <span className="ml-auto"><StatusPill status={isHealthy ? 'current' : 'unavailable'}>{isHealthy ? 'Live' : 'Offline'}</StatusPill></span>
+          <span className="ml-auto"><ThemeToggle /></span>
         </div>
         <div className="topbar">
           <div className="topbar-context"><span className="live-kicker"><span className="live-pulse" />CONTROL ROOM</span><span className="topbar-divider" />{new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div>
-          <div className="topbar-actions"><Link href="/" className="button button-subtle">Consumer view</Link><button type="button" className="icon-button" aria-label="Notifications" data-testid="button-notifications"><Bell className="h-4 w-4" /><span className="notification-dot" /></button>{isSignedIn ? <UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} /> : <Link href="/sign-in" className="button button-subtle" data-testid="link-sign-in">Sign in</Link>}<Link href="/admin/settings" className="avatar-link" aria-label="Open settings" data-testid="link-settings-quick"><span className="user-avatar user-avatar-small">A</span></Link></div>
+          <div className="topbar-actions"><ThemeToggle /><Link href="/" className="button button-subtle">Consumer view</Link><button type="button" className="icon-button" aria-label="Notifications" data-testid="button-notifications"><Bell className="h-4 w-4" /><span className="notification-dot" /></button>{isSignedIn ? <UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} /> : <Link href="/sign-in" className="button button-subtle" data-testid="link-sign-in">Sign in</Link>}<Link href="/admin/settings" className="avatar-link" aria-label="Open settings" data-testid="link-settings-quick"><span className="user-avatar user-avatar-small">A</span></Link></div>
         </div>
         <div className="page-wrap">{children}</div>
       </main>
@@ -468,6 +480,7 @@ function ConsumerShell({ children }: { children: ReactNode }) {
       <Link href="/" className="consumer-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-6 w-6" /><strong>Gridline</strong></Link>
       <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin"><ShieldCheck />Admin</Link>}</nav>
       <div className="consumer-account">
+        <ThemeToggle />
         {isSignedIn ? <>
           <Link href="/admin" className="button button-subtle">Open dashboard</Link>
           <UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} />
@@ -475,7 +488,7 @@ function ConsumerShell({ children }: { children: ReactNode }) {
         <button type="button" aria-label="Open navigation" aria-expanded={open} onClick={() => setOpen(!open)}><Menu /></button>
       </div>
     </header>
-    {open && <nav className="consumer-mobile-nav" aria-label="Mobile navigation">{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</Link>}{isSignedIn ? <Link href="/admin" onClick={() => setOpen(false)}>Open dashboard</Link> : <Link href="/sign-in" onClick={() => setOpen(false)}>Sign in</Link>}</nav>}
+    {open && <nav className="consumer-mobile-nav" aria-label="Mobile navigation">{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}{admin.data === true && <Link href="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</Link>}{isSignedIn ? <Link href="/admin" onClick={() => setOpen(false)}>Open dashboard</Link> : <Link href="/sign-in" onClick={() => setOpen(false)}>Sign in</Link>}<ThemeToggle /></nav>}
     <main className="consumer-main">{children}</main>
   </div>;
 }

@@ -350,3 +350,45 @@ mtime_ms = 1790386948330
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/29b293eb-eafb-4313-9e4c-ce4af33398f2/9dcbc32d-7245-46e7-ab11-6969df3f119f"
 storage_version_token = "1790386999374396"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "OTdYi8pEgo1EegVRZzHui"
+uri = "file://screenshots/gridline-home-comparison.jpg"
+type = "image"
+title = "Gridline Home — desktop and mobile"
+description = "Dark and light previews; dark desktop, light desktop, dark mobile, light mobile."
+logical_id = "313ab0e5-a889-4a35-bef5-1221e97a1ff2"
+content_hash = "sha256:b656939a90757210285385971a455d31a40d5c7e1b21228bd4b26ca391137980"
+size = 215115
+mtime_ms = 1790386616564
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/313ab0e5-a889-4a35-bef5-1221e97a1ff2/01f09994-f541-42b0-96bb-e4ccdfdd79f1"
+storage_version_token = "1790386652575311"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "2ERcHGgwULok9qLQBvYc1"
+uri = "file://screenshots/gridline-games-comparison.jpg"
+type = "image"
+title = "Gridline Games — desktop and mobile"
+description = "Both themes with live season/week and board availability labels."
+logical_id = "65c9ad2f-d0c1-475c-90b9-c9aacd770c09"
+content_hash = "sha256:365dc03ffd12c2644713d5e71f87d64f5c481b4249ffd022690798f9ebaf4444"
+size = 176753
+mtime_ms = 1790386616996
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/65c9ad2f-d0c1-475c-90b9-c9aacd770c09/c14c94d1-fcc3-46c5-9ac8-83548f06373f"
+storage_version_token = "1790386653146790"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "TOQ8SbB8D-3pboKqDSltP"
+uri = "file://screenshots/gridline-detail-comparison.jpg"
+type = "image"
+title = "Gridline Game Detail — desktop and mobile"
+description = "Both themes using a real persisted matchup with an updating projection state."
+logical_id = "79bc2771-6669-402f-afe3-3831fdc0f66e"
+content_hash = "sha256:897cba8bd628c30c51d80766db3960b6b921254ee0744bc6becd4c8fb432dacf"
+size = 134908
+mtime_ms = 1790386617428
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/79bc2771-6669-402f-afe3-3831fdc0f66e/f838347f-ad12-48e6-a6f8-c5f2bca42e91"
+storage_version_token = "1790386653692681"
+content_type = "image/jpeg"

@@ -76,12 +76,13 @@ function UsageChart({ games, position }: { games: ConsumerUsagePlayer['games']; 
   return (
     <ResponsiveContainer width="100%" height="100%">
       <LineChart data={data} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
-        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--chart-grid))" />
+        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'hsl(var(--chart-axis))' }} dy={10} />
+        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'hsl(var(--chart-axis))' }} />
         <Tooltip
-          contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', fontSize: '11px', borderRadius: '8px', color: 'hsl(var(--foreground))', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-          itemStyle={{ fontSize: '11px', fontWeight: 600 }}
+          contentStyle={{ backgroundColor: 'hsl(var(--tooltip))', borderColor: 'hsl(var(--border))', fontSize: '11px', borderRadius: '8px', color: 'hsl(var(--tooltip-foreground))', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+          labelStyle={{ color: 'hsl(var(--tooltip-foreground))' }}
+          itemStyle={{ fontSize: '11px', fontWeight: 600, color: 'hsl(var(--tooltip-foreground))' }}
           cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
         />
         {position === 'QB' ? (

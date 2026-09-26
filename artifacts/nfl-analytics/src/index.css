@@ -77,51 +77,58 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 210 20% 98%;
-  --foreground: 224 45% 10%;
+  --background: 225 33% 97%;
+  --foreground: 228 33% 15%;
 
-  --border: 215 16% 85%;
+  --border: 224 22% 82%;
 
   --card: 0 0% 100%;
-  --card-foreground: 224 45% 10%;
-  --card-border: 215 16% 85%;
+  --card-foreground: 228 33% 15%;
+  --card-border: 224 22% 82%;
 
-  --sidebar: 224 40% 11%;
+  --sidebar: 230 28% 13%;
   --sidebar-foreground: 210 15% 85%;
   --sidebar-border: 224 35% 18%;
-  --sidebar-primary: 26 90% 55%;
+  --sidebar-primary: 220 92% 72%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 224 35% 18%;
   --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-ring: 26 90% 55%;
+  --sidebar-ring: 220 92% 72%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 224 45% 10%;
-  --popover-border: 215 16% 85%;
+  --popover-foreground: 228 33% 15%;
+  --popover-border: 224 22% 82%;
 
-  --primary: 26 90% 55%;
+  --primary: 229 75% 43%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 215 15% 92%;
-  --secondary-foreground: 224 45% 10%;
+  --secondary: 227 38% 93%;
+  --secondary-foreground: 228 33% 15%;
 
-  --muted: 215 15% 92%;
-  --muted-foreground: 215 15% 45%;
+  --muted: 227 38% 93%;
+  --muted-foreground: 225 17% 36%;
 
-  --accent: 26 90% 55%;
+  --accent: 229 75% 43%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 80% 55%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 215 16% 85%;
-  --ring: 26 90% 55%;
+  --input: 224 22% 82%;
+  --ring: 229 75% 43%;
 
-  --chart-1: 26 90% 55%;
-  --chart-2: 215 15% 45%;
-  --chart-3: 224 45% 10%;
-  --chart-4: 215 16% 85%;
-  --chart-5: 0 0% 100%;
+  --chart-1: 229 75% 43%;
+  --chart-2: 270 60% 43%;
+  --chart-3: 171 70% 29%;
+  --chart-4: 18 85% 43%;
+  --chart-5: 320 59% 42%;
+  --chart-axis: 225 17% 36%;
+  --chart-grid: 224 22% 82%;
+  --status-good: 156 73% 27%;
+  --status-warn: 35 84% 30%;
+  --status-bad: 0 72% 42%;
+  --tooltip: 0 0% 100%;
+  --tooltip-foreground: 228 33% 15%;
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-serif: 'Inter', sans-serif;
@@ -210,51 +217,58 @@
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
-  --background: 224 40% 11%;
-  --foreground: 210 15% 90%;
+  --background: 228 28% 8%;
+  --foreground: 225 25% 95%;
 
-  --border: 224 35% 18%;
+  --border: 225 19% 26%;
 
-  --card: 224 35% 15%;
-  --card-foreground: 210 15% 90%;
-  --card-border: 224 35% 18%;
+  --card: 228 24% 13%;
+  --card-foreground: 225 25% 95%;
+  --card-border: 225 19% 26%;
 
-  --sidebar: 224 40% 11%;
-  --sidebar-foreground: 210 15% 85%;
-  --sidebar-border: 224 35% 18%;
-  --sidebar-primary: 26 90% 55%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 224 35% 18%;
-  --sidebar-accent-foreground: 210 15% 90%;
-  --sidebar-ring: 26 90% 55%;
+  --sidebar: 229 28% 10%;
+  --sidebar-foreground: 223 20% 84%;
+  --sidebar-border: 225 19% 26%;
+  --sidebar-primary: 220 92% 72%;
+  --sidebar-primary-foreground: 228 28% 8%;
+  --sidebar-accent: 228 23% 19%;
+  --sidebar-accent-foreground: 225 25% 95%;
+  --sidebar-ring: 220 92% 72%;
 
-  --popover: 224 35% 15%;
-  --popover-foreground: 210 15% 90%;
-  --popover-border: 224 35% 18%;
+  --popover: 228 24% 13%;
+  --popover-foreground: 225 25% 95%;
+  --popover-border: 225 19% 26%;
 
-  --primary: 26 90% 55%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 220 92% 72%;
+  --primary-foreground: 228 28% 8%;
 
-  --secondary: 224 35% 18%;
-  --secondary-foreground: 210 15% 90%;
+  --secondary: 228 23% 19%;
+  --secondary-foreground: 225 25% 95%;
 
-  --muted: 224 35% 18%;
-  --muted-foreground: 215 15% 65%;
+  --muted: 228 23% 19%;
+  --muted-foreground: 222 16% 72%;
 
-  --accent: 26 90% 55%;
-  --accent-foreground: 0 0% 100%;
+  --accent: 220 92% 72%;
+  --accent-foreground: 228 28% 8%;
 
   --destructive: 0 80% 55%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 224 35% 18%;
-  --ring: 26 90% 55%;
+  --input: 225 19% 35%;
+  --ring: 220 92% 72%;
 
-  --chart-1: 26 90% 55%;
-  --chart-2: 215 15% 65%;
-  --chart-3: 210 15% 90%;
-  --chart-4: 224 35% 18%;
-  --chart-5: 0 0% 100%;
+  --chart-1: 220 92% 72%;
+  --chart-2: 268 85% 76%;
+  --chart-3: 163 72% 65%;
+  --chart-4: 35 90% 70%;
+  --chart-5: 325 78% 75%;
+  --chart-axis: 222 16% 78%;
+  --chart-grid: 225 19% 35%;
+  --status-good: 156 69% 70%;
+  --status-warn: 40 90% 72%;
+  --status-bad: 0 85% 78%;
+  --tooltip: 228 21% 19%;
+  --tooltip-foreground: 225 25% 95%;
 
 
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
@@ -422,6 +436,73 @@
   button, input {
     font: inherit;
   }
+}
+
+/* Gridline's dark-first consumer language. All readable status/chart colors are
+   paired with the surface they appear on rather than using translucent text. */
+.dark { color-scheme: dark; }
+:root { --color-chart-axis: hsl(var(--chart-axis)); --color-chart-grid: hsl(var(--chart-grid)); }
+.theme-toggle { display: inline-flex !important; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 7px 11px; border: 1px solid hsl(var(--border)) !important; border-radius: 9px; background: hsl(var(--card)) !important; color: hsl(var(--foreground)); font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background .16s, border-color .16s; }
+.theme-toggle svg { width: 16px !important; height: 16px !important; color: hsl(var(--accent)); }
+.theme-toggle:hover { background: hsl(var(--secondary)) !important; border-color: hsl(var(--accent)) !important; }
+.sidebar-theme-toggle { width: 100%; margin-bottom: 12px; background: hsl(var(--sidebar-accent)) !important; color: hsl(var(--sidebar-foreground)); border-color: hsl(var(--sidebar-border)) !important; }
+:is(a, button, input, select, summary, [tabindex]):focus-visible { outline: 2px solid hsl(var(--ring)) !important; outline-offset: 3px; }
+.consumer-shell { background: radial-gradient(ellipse 70% 360px at 80% 0%, hsl(var(--chart-2) / .09), transparent), hsl(var(--background)); }
+.consumer-topbar { gap: 20px; }
+.consumer-topbar nav a.active { color: hsl(var(--accent)); box-shadow: inset 0 -2px hsl(var(--accent)); border-radius: 0; }
+.consumer-main { padding-top: 38px; }
+.consumer-page { gap: 28px; }
+.consumer-hero { position: relative; background: linear-gradient(120deg, hsl(229 28% 13%), hsl(226 30% 21%) 72%, hsl(260 30% 26%)); border: 1px solid hsl(220 40% 40% / .4); border-radius: 18px; min-height: 290px; }
+.consumer-hero::after { content: ''; pointer-events: none; position: absolute; inset: 0; opacity: .13; background: repeating-linear-gradient(90deg, transparent 0 39px, hsl(220 90% 85% / .3) 40px 41px); }
+.consumer-hero > * { position: relative; z-index: 1; }
+.consumer-hero h1 { max-width: 720px; color: white; }
+.consumer-hero .consumer-eyebrow { color: hsl(220 92% 77%); }
+.consumer-hero p:not(.consumer-eyebrow) { color: hsl(225 22% 89%); }
+.consumer-hero-icon { width: 125px; height: 125px; object-fit: contain; flex-shrink: 0; }
+.consumer-game-card, .premium-hero, .terminal-header, .board-disclosure, .consumer-source-health { box-shadow: 0 12px 35px hsl(228 34% 3% / .08); }
+.consumer-game-card { border-radius: 13px; transition: border-color .16s, transform .16s, box-shadow .16s; }
+.consumer-game-card:hover { border-color: hsl(var(--accent) / .7); transform: translateY(-2px); }
+.consumer-game-card-head, .consumer-game-card-foot { font-size: 10px; letter-spacing: .02em; line-height: 1.5; }
+.consumer-card-metrics { background: hsl(var(--secondary) / .55); }
+.terminal-header { border-radius: 15px; }
+.terminal-title { font-size: clamp(28px, 3vw, 38px); }
+.terminal-summary-bar { border-radius: 13px; }
+.ts-stat strong { font-size: 23px; font-variant-numeric: tabular-nums; }
+.board-game { transition: background .16s ease; }
+.board-game:hover { background: hsl(var(--secondary) / .35); }
+.board-game .tb-evidence { background: hsl(var(--secondary) / .48); }
+.ev-block { min-width: 0; border-left: 2px solid hsl(var(--accent) / .45); padding-left: 12px; }
+.board-record-grid > div { background: hsl(var(--secondary) / .6); border: 1px solid hsl(var(--border)); padding: 10px; border-radius: 8px; font-variant-numeric: tabular-nums; }
+.premium-hero { background: linear-gradient(135deg, hsl(var(--card)), hsl(var(--secondary) / .65)); border-radius: 18px; }
+.premium-team-abbr { letter-spacing: -.06em; }
+.premium-vs { color: hsl(var(--muted-foreground)); }
+.premium-personnel-warning { border-color: hsl(var(--status-warn) / .45); background: hsl(var(--status-warn) / .12); color: hsl(var(--foreground)); }
+.button-primary:hover { background: hsl(var(--primary) / .84); }
+.market-state-available, .market-state-healthy, .market-state-eligible, .status-good, .premium-final-result, .pm-evidence span { color: hsl(var(--status-good)); background: hsl(var(--status-good) / .12); border-color: hsl(var(--status-good) / .3); }
+.market-state-partial, .market-state-stale, .status-warn, .injury-statuses span { color: hsl(var(--status-warn)); background: hsl(var(--status-warn) / .12); border-color: hsl(var(--status-warn) / .3); }
+.status-bad { color: hsl(var(--status-bad)); background: hsl(var(--status-bad) / .12); border-color: hsl(var(--status-bad) / .3); }
+.puc-avatar { width: 44px; height: 44px; min-width: 44px; flex: 0 0 44px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--accent) / .12); color: hsl(var(--accent)); overflow: hidden; }
+.puc-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.movement-chart .recharts-cartesian-axis-tick-value, .movement-chart .recharts-legend-item-text { fill: hsl(var(--chart-axis)) !important; color: hsl(var(--chart-axis)) !important; }
+.movement-chart .recharts-cartesian-axis-line, .movement-chart .recharts-cartesian-axis-tick-line { stroke: hsl(var(--chart-grid)); }
+.movement-chart .recharts-default-tooltip { background: hsl(var(--tooltip)) !important; border: 1px solid hsl(var(--border)) !important; border-radius: 9px; color: hsl(var(--tooltip-foreground)) !important; }
+.movement-chart .recharts-tooltip-label, .movement-chart .recharts-tooltip-item { color: hsl(var(--tooltip-foreground)) !important; }
+@media (max-width: 900px) {
+  .consumer-account > .theme-toggle { display: inline-flex !important; }
+  .consumer-mobile-nav { gap: 4px; }
+  .consumer-mobile-nav .theme-toggle { grid-column: 1 / -1; justify-self: stretch; }
+}
+@media (max-width: 640px) {
+  .consumer-topbar { padding-inline: 14px; gap: 8px; }
+  .consumer-brand { font-size: 16px; }
+  .consumer-account { gap: 6px; }
+  .consumer-account > .button-subtle { display: none; }
+  .consumer-account > .theme-toggle span { display: none; }
+  .consumer-account > .theme-toggle { min-width: 38px; padding: 7px; }
+  .consumer-hero { min-height: 250px; }
+  .terminal-page { padding: 0; }
+  .board-game .tb-evidence { display: block; }
+  .board-game .tb-evidence > * + * { margin-top: 16px; }
 }
 
 @layer components {
@@ -1236,4 +1317,27 @@
   .scheduled-run-row { grid-template-columns: 1fr; gap: 7px; }
   .scheduled-run-row > .scheduled-run-time { display: inline-flex; flex-direction: row; gap: 6px; }
   .readiness-header, .feature-intro { padding: 15px; }
+}
+
+/* Status semantics override older hard-coded light-only variants. */
+.market-state-available, .market-state-healthy, .market-state-eligible,
+.status-good, .premium-final-result, .pm-evidence span,
+.depth-published_starter, .depth-published_backup {
+  color: hsl(var(--status-good)); background: hsl(var(--status-good) / .12);
+  border-color: hsl(var(--status-good) / .3);
+}
+.market-state-partial, .market-state-stale, .status-warn,
+.injury-statuses span, .depth-injury {
+  color: hsl(var(--status-warn)); background: hsl(var(--status-warn) / .12);
+  border-color: hsl(var(--status-warn) / .3);
+}
+.status-bad { color: hsl(var(--status-bad)); background: hsl(var(--status-bad) / .12); border-color: hsl(var(--status-bad) / .3); }
+.status-good .status-dot { background: hsl(var(--status-good)); }
+.status-warn .status-dot { background: hsl(var(--status-warn)); }
+.depth-projected_starter { color: hsl(var(--accent)); }
+.puc-avatar { width: 44px; height: 44px; min-width: 44px; flex: 0 0 44px; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--accent) / .12); color: hsl(var(--accent)); }
+@media (max-width: 640px) {
+  .terminal-page { padding: 0; }
+  .board-game .tb-evidence { display: block; }
+  .board-game .tb-evidence > * + * { margin-top: 16px; }
 }

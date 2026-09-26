@@ -54,7 +54,7 @@ function PlayerUsageCard({ player, testId, redZone }: { player: ConsumerKeyPlaye
   return (
     <article className="player-usage-card" data-testid={testId}>
       <header className="puc-header">
-        <div className="puc-avatar"><UserRound className="h-5 w-5" /></div>
+        <div className="puc-avatar" role="img" aria-label={`Photo unavailable for ${player.name}`}><UserRound className="h-5 w-5" aria-hidden="true" /></div>
         <div className="puc-info">
           <strong>{player.name}</strong>
           <span>
@@ -126,7 +126,7 @@ export function ConsumerKeyPlayers({ players, away, home, season, week, gameId }
           {loading && !entries.length ? <div className="skeleton h-40 rounded-xl" aria-label={`Loading ${team.name} red-zone opportunities`} /> :
             entries.length ? entries.map(player =>
               <article className="rz-fallback-card" key={`${player.playerId}:${player.team}`} data-testid={`rz-fallback-player-${player.team}-${player.playerId}`}>
-                <header className="puc-header"><div className="puc-avatar"><UserRound className="h-5 w-5" /></div>
+                 <header className="puc-header"><div className="puc-avatar" role="img" aria-label={`Photo unavailable for ${player.playerName}`}><UserRound className="h-5 w-5" aria-hidden="true" /></div>
                   <div className="puc-info"><strong>{player.playerName}</strong><span>{player.team} · {player.position}</span></div>
                 </header>
                 <RedZoneFigures playerId={player.playerId} {...redZoneFor({ playerId: player.playerId, teamId: player.team })} />
