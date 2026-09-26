@@ -55,3 +55,4 @@
 - [Bundled API test resolution](bundled-api-test-resolution.md) — use the server build for standalone Node tests that import workspace TS packages; ad-hoc external bundles can fail at runtime.
 - [Player-position release evidence](player-position-release-evidence.md) — holdout player-only errors cannot authorize defense-adjusted live counts without paired coverage and archived pregame releases.
 - [Game evidence disclosure lifecycle](game-evidence-disclosures.md) — defer first mount, then retain loaded panels across collapse so cached evidence and normal freshness survive.
+- [Vite reference assets](vite-reference-assets.md) — files outside public but inside the Vite app root may still be served in development; keep private references outside the app root.
