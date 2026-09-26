@@ -11,6 +11,7 @@
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "test:home-browser": "node --test tests/home.browser.test.mjs",
     "test:teams-browser": "playwright test --config tests/team-evidence.config.ts",
+    "test:usage-browser": "playwright test --config tests/player-usage.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
