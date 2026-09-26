@@ -10,8 +10,17 @@ export type ConsumerTeamAnalyticsCoverageWeeksItem = {
   week: number;
   /** Persisted regular-season schedule games for this week. */
   scheduledGames: number;
+  /**
+     * Games in the independently fetched provider schedule; null when unavailable.
+     * @nullable
+     */
+  expectedGames: number | null;
+  /** Provider matchups absent or mismatched in the persisted schedule. */
+  missingMatchups: string[];
+  /** Whether a nonempty provider fixture was available for comparison. */
+  fixtureVerified: boolean;
   finalGames: number;
   statGames: number;
-  /** At least one scheduled game exists and every scheduled game has an authoritative final result before now. */
+  /** Provider fixture matches the persisted schedule and every game has an authoritative final result before now. */
   allFinal: boolean;
 };

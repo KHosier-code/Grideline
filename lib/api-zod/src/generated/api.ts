@@ -2395,9 +2395,12 @@ export const GetConsumerTeamAnalyticsResponse = zod.object({
   "weeks": zod.array(zod.object({
   "week": zod.number().int(),
   "scheduledGames": zod.number().int().describe('Persisted regular-season schedule games for this week.'),
+  "expectedGames": zod.number().int().nullable().describe('Games in the independently fetched provider schedule; null when unavailable.'),
+  "missingMatchups": zod.array(zod.string()).describe('Provider matchups absent or mismatched in the persisted schedule.'),
+  "fixtureVerified": zod.boolean().describe('Whether a nonempty provider fixture was available for comparison.'),
   "finalGames": zod.number().int(),
   "statGames": zod.number().int(),
-  "allFinal": zod.boolean().describe('At least one scheduled game exists and every scheduled game has an authoritative final result before now.')
+  "allFinal": zod.boolean().describe('Provider fixture matches the persisted schedule and every game has an authoritative final result before now.')
 })),
   "partialReasons": zod.array(zod.string())
 }),

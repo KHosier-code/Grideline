@@ -39,6 +39,10 @@ export type TeamAnalyticsOptions = {
   window: TeamAnalyticsWindow;
   now: Date;
   selectedTeamIds?: string[];
+  fixtureWeeks?: Array<{
+    week: number;
+    games: Array<{ gameId: string; homeTeamId: string; awayTeamId: string }> | null;
+  }>;
 };
 
 function finite(value: number | null | undefined): number | null {
@@ -157,7 +161,14 @@ export function buildConsumerTeamAnalytics(
   const statsByGameAndTeam = new Map<string, TeamAnalyticsStat>();
   for (const stat of canonicalStats) statsByGameAndTeam.set(`${stat.gameId}\0${stat.teamId}`, stat);
 
+  const fixturesByWeek = new Map(options.fixtureWeeks?.map((entry) => [entry.week, entry.games]) ?? []);
   const weeks = [...gamesByWeek.entries()].sort(([a], [b]) => a - b).map(([week, weekGames]) => {
+    const fixture = fixturesByWeek.get(week);
+    const missingMatchups = fixture?.filter((expected) => !weekGames.some((game) =>
+      game.gameId === expected.gameId
+      && game.homeTeamId === expected.homeTeamId
+      && game.awayTeamId === expected.awayTeamId,
+    )).map((game) => `${game.awayTeamId} at ${game.homeTeamId} (${game.gameId})`) ?? [];
     const finalGames = weekGames.filter((game) =>
       authoritativeFinalRegularSeasonGame(game, now)
       && game.kickoffTime !== null
@@ -170,12 +181,23 @@ export function buildConsumerTeamAnalytics(
       finalGames,
       scheduledGames: weekGames.length,
       statGames: statGames.length,
-      complete: weekGames.length > 0 && finalGames.length === weekGames.length,
+      expectedGames: fixture?.length ?? null,
+      missingMatchups,
+      fixtureVerified: !!fixture?.length,
+      complete: !!fixture?.length && missingMatchups.length === 0
+        && weekGames.length === fixture.length && finalGames.length === weekGames.length,
     };
   });
 
   const partialReasons: string[] = [];
   for (const week of weeks) {
+    if (!week.fixtureVerified) {
+      partialReasons.push(`Week ${week.week} has no verifiable provider schedule fixture; schedule completeness cannot be confirmed.`);
+    } else if (week.missingMatchups.length) {
+      partialReasons.push(`Week ${week.week} is missing ${week.missingMatchups.length} provider schedule matchup(s): ${week.missingMatchups.join(", ")}.`);
+    } else if (week.scheduledGames !== week.expectedGames) {
+      partialReasons.push(`Week ${week.week} has ${week.scheduledGames} persisted games but ${week.expectedGames} provider schedule games.`);
+    }
     if (!week.complete) {
       partialReasons.push(
         `Week ${week.week} is not final-complete (${week.finalGames.length} of ${week.scheduledGames} games final before now).`,
@@ -192,13 +214,27 @@ export function buildConsumerTeamAnalytics(
       `No regular-season schedule games are available for season ${season} through week ${throughWeek}.`,
     );
   }
+  for (let week = 1; week <= throughWeek; week++) {
+    if (gamesByWeek.has(week)) continue;
+    const fixture = fixturesByWeek.get(week);
+    if (fixture?.length) {
+      partialReasons.push(`Week ${week} is missing all ${fixture.length} provider schedule matchups.`);
+    } else if (schedule.some((game) => game.week > week)) {
+      partialReasons.push(`Week ${week} has no persisted games and no verifiable provider schedule fixture.`);
+    }
+  }
   for (const [week, rowCount] of [...unmatchedStatsByWeek.entries()].sort(([a], [b]) => a - b)) {
     partialReasons.push(
       `Excluded ${rowCount} persisted team-game stat rows from week ${week} because no matching schedule matchup is available.`,
     );
   }
 
-  const completeWeeks = weeks.filter((week) => week.complete);
+  const completeWeeks = [];
+  for (let week = 1; week <= throughWeek; week++) {
+    const entry = weeks.find((item) => item.week === week);
+    if (!entry?.complete) break;
+    completeWeeks.push(entry);
+  }
   const requestedCount = window === "season" ? Number.POSITIVE_INFINITY : Number(window.slice(4));
   // Window size is measured in each team's games, not league weeks: bye weeks
   // must not silently shorten a last-N sample.
@@ -263,8 +299,9 @@ export function buildConsumerTeamAnalytics(
     window,
     source: "persisted team_game_stats; per-game EPA is averaged equally (not play-weighted); offense uses epa_per_play, defense uses defensive_epa_allowed_per_play",
     coverage: {
-      weeks: weeks.map(({ week, scheduledGames, finalGames, statGames, complete }) => ({
-        week, scheduledGames, finalGames: finalGames.length, statGames, allFinal: complete,
+      weeks: weeks.map(({ week, scheduledGames, finalGames, statGames, complete, expectedGames, missingMatchups, fixtureVerified }) => ({
+        week, scheduledGames, expectedGames, missingMatchups, fixtureVerified,
+        finalGames: finalGames.length, statGames, allFinal: complete,
       })),
       partialReasons,
     },

@@ -1,9 +1,30 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  buildConsumerTeamAnalytics,
+  buildConsumerTeamAnalytics as buildWithFixture,
   canonicalizeTeamAnalyticsStats,
+  type TeamAnalyticsGame,
+  type TeamAnalyticsOptions,
+  type TeamAnalyticsStat,
+  type TeamAnalyticsTeam,
 } from "./consumer-team-analytics";
+
+function buildConsumerTeamAnalytics(
+  games: TeamAnalyticsGame[],
+  stats: TeamAnalyticsStat[],
+  teams: TeamAnalyticsTeam[],
+  options: TeamAnalyticsOptions,
+) {
+  return buildWithFixture(games, stats, teams, {
+    ...options,
+    fixtureWeeks: Array.from({ length: options.throughWeek }, (_, index) => ({
+      week: index + 1,
+      games: games.filter((game) => game.week === index + 1).map((game) => ({
+        gameId: game.gameId, homeTeamId: game.homeTeamId, awayTeamId: game.awayTeamId,
+      })),
+    })),
+  });
+}
 
 function statFor(
   game: {
@@ -72,9 +93,9 @@ test("team analytics selects only complete weeks and averages persisted game EPA
   assert.equal(teamA.observations[0]!.opponent, "BBB");
   assert.equal(teamA.observations[1]!.defenseEpa, null);
   assert.deepEqual(response.coverage.weeks, [
-    { week: 1, scheduledGames: 1, finalGames: 1, statGames: 1, allFinal: true },
-    { week: 2, scheduledGames: 1, finalGames: 1, statGames: 1, allFinal: true },
-    { week: 3, scheduledGames: 1, finalGames: 0, statGames: 0, allFinal: false },
+    { week: 1, scheduledGames: 1, expectedGames: 1, missingMatchups: [], fixtureVerified: true, finalGames: 1, statGames: 1, allFinal: true },
+    { week: 2, scheduledGames: 1, expectedGames: 1, missingMatchups: [], fixtureVerified: true, finalGames: 1, statGames: 1, allFinal: true },
+    { week: 3, scheduledGames: 1, expectedGames: 1, missingMatchups: [], fixtureVerified: true, finalGames: 0, statGames: 0, allFinal: false },
   ]);
   assert.ok(response.coverage.partialReasons.some((reason) => reason.includes("Week 3 is not final-complete")));
   assert.match(response.source, /averaged equally \(not play-weighted\)/);
@@ -104,8 +125,8 @@ test("season window excludes incomplete weeks and missing stats never become num
   assert.equal(response.teams[0]!.offenseEpa, null);
   assert.equal(response.teams[0]!.offenseSamples, 0);
   assert.deepEqual(response.coverage.weeks, [
-    { week: 1, scheduledGames: 1, finalGames: 1, statGames: 0, allFinal: true },
-    { week: 2, scheduledGames: 1, finalGames: 0, statGames: 0, allFinal: false },
+    { week: 1, scheduledGames: 1, expectedGames: 1, missingMatchups: [], fixtureVerified: true, finalGames: 1, statGames: 0, allFinal: true },
+    { week: 2, scheduledGames: 1, expectedGames: 1, missingMatchups: [], fixtureVerified: true, finalGames: 0, statGames: 0, allFinal: false },
   ]);
 });
 
@@ -132,13 +153,13 @@ test("a week waits for every scheduled result and both reconciled team stat rows
   const read = (games: typeof first[], stats: ReturnType<typeof statFor>[]) =>
     buildConsumerTeamAnalytics(games, stats, teams, { season: 2025, throughWeek: 2, window: "season", now });
   const partial = read([first, second, third], [...pair(first, 1), ...pair(second, 2)]);
-  assert.deepEqual(partial.coverage.weeks[1], { week: 2, scheduledGames: 2, finalGames: 1, statGames: 1, allFinal: false });
+   assert.deepEqual(partial.coverage.weeks[1], { week: 2, scheduledGames: 2, expectedGames: 2, missingMatchups: [], fixtureVerified: true, finalGames: 1, statGames: 1, allFinal: false });
   assert.equal(partial.teams[0]!.offenseEpa, 1);
   const final = { ...third, gameStatus: "STATUS_FINAL", finalHomeScore: 10, finalAwayScore: 7 };
   const delayed = read([first, second, final], [...pair(first, 1), ...pair(second, 2)]);
-  assert.deepEqual(delayed.coverage.weeks[1], { week: 2, scheduledGames: 2, finalGames: 2, statGames: 1, allFinal: true });
+   assert.deepEqual(delayed.coverage.weeks[1], { week: 2, scheduledGames: 2, expectedGames: 2, missingMatchups: [], fixtureVerified: true, finalGames: 2, statGames: 1, allFinal: true });
   const covered = read([first, second, final], [...pair(first, 1), ...pair(second, 2), ...pair(final, 3)]);
-  assert.deepEqual(covered.coverage.weeks[1], { week: 2, scheduledGames: 2, finalGames: 2, statGames: 2, allFinal: true });
+   assert.deepEqual(covered.coverage.weeks[1], { week: 2, scheduledGames: 2, expectedGames: 2, missingMatchups: [], fixtureVerified: true, finalGames: 2, statGames: 2, allFinal: true });
   assert.equal(covered.teams[0]!.offenseEpa, 2);
 });
 
@@ -333,4 +354,45 @@ test("orphan historical stats without schedule evidence are excluded with explic
   assert.equal(partialResponse.coverage.weeks[0]!.statGames, 1);
   assert.ok(partialResponse.coverage.partialReasons.some((reason) => reason.includes("Excluded 2 persisted team-game stat rows from week 1")));
   assert.equal(partialResponse.teams.find((team) => team.teamId === "c")!.selectedGames, 0);
+});
+
+test("a missing provider matchup blocks a fully final and statistically covered persisted week, including later weeks", () => {
+  const now = new Date("2025-10-01T00:00:00Z");
+  const teams = ["a", "b", "c", "d"].map((teamId) => ({
+    teamId, abbreviation: teamId.toUpperCase(), name: teamId, logoUrl: null,
+  }));
+  const game = (week: number) => ({
+    gameId: `game-${week}`, week, kickoffTime: new Date("2025-09-01T00:00:00Z"),
+    gameStatus: "STATUS_FINAL", finalHomeScore: 10, finalAwayScore: 7,
+    homeTeamId: "a", awayTeamId: "b",
+  });
+  const games = [game(1), game(2), game(3)];
+  const stats = games.flatMap((entry) => [
+    statFor(entry, "A", "B", true, { epaPerPlay: 1 }),
+    statFor(entry, "B", "A", false, { epaPerPlay: -1 }),
+  ]);
+  const fixtureWeeks = games.map((entry) => ({
+    week: entry.week,
+    games: [{ gameId: entry.gameId, homeTeamId: "a", awayTeamId: "b" }],
+  }));
+  fixtureWeeks[1]!.games.push({ gameId: "missing", homeTeamId: "c", awayTeamId: "d" });
+  const response = buildWithFixture(games, stats, teams, {
+    season: 2025, throughWeek: 3, window: "season", now, fixtureWeeks,
+  });
+  assert.deepEqual(response.coverage.weeks[1], {
+    week: 2, scheduledGames: 1, expectedGames: 2,
+    missingMatchups: ["d at c (missing)"], fixtureVerified: true,
+    finalGames: 1, statGames: 1, allFinal: false,
+  });
+  assert.match(response.coverage.partialReasons.join(" "), /Week 2 is missing 1 provider schedule matchup/);
+  assert.deepEqual(response.teams.find((team) => team.teamId === "a")!.observations.map((entry) => entry.week), [1]);
+
+  const unavailable = buildWithFixture(games, stats, teams, {
+    season: 2025, throughWeek: 3, window: "season", now,
+    fixtureWeeks: fixtureWeeks.map((entry) => entry.week === 2 ? { week: 2, games: null } : entry),
+  });
+  assert.equal(unavailable.coverage.weeks[1]!.fixtureVerified, false);
+  assert.equal(unavailable.coverage.weeks[1]!.allFinal, false);
+  assert.deepEqual(unavailable.teams.find((team) => team.teamId === "a")!.observations.map((entry) => entry.week), [1]);
+  assert.match(unavailable.coverage.partialReasons.join(" "), /Week 2 has no verifiable provider schedule fixture/);
 });

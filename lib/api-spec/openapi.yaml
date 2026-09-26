@@ -2026,13 +2026,16 @@ components:
               type: array
               items:
                 type: object
-                required: [week, scheduledGames, finalGames, statGames, allFinal]
+                required: [week, scheduledGames, expectedGames, missingMatchups, fixtureVerified, finalGames, statGames, allFinal]
                 properties:
                   week: { type: integer }
                   scheduledGames: { type: integer, description: Persisted regular-season schedule games for this week. }
+                  expectedGames: { type: ["integer", "null"], description: Games in the independently fetched provider schedule; null when unavailable. }
+                  missingMatchups: { type: array, items: { type: string }, description: Provider matchups absent or mismatched in the persisted schedule. }
+                  fixtureVerified: { type: boolean, description: Whether a nonempty provider fixture was available for comparison. }
                   finalGames: { type: integer }
                   statGames: { type: integer }
-                  allFinal: { type: boolean, description: At least one scheduled game exists and every scheduled game has an authoritative final result before now. }
+                  allFinal: { type: boolean, description: Provider fixture matches the persisted schedule and every game has an authoritative final result before now. }
             partialReasons: { type: array, items: { type: string } }
         teams: { type: array, items: { $ref: "#/components/schemas/ConsumerTeamAnalyticsTeam" } }
     ConsumerGradedAggregate:

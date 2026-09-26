@@ -102,7 +102,7 @@ export default function ConsumerTeams() {
   const trendTeams = (trend.data?.season === season && trend.data.throughWeek === throughWeek && trend.data.window === windowValue
     ? trend.data.teams : []).filter(team => selected.includes(team.abbreviation));
   const observedPoints = trendTeams.reduce((sum, team) => sum + team.observations.filter(item => valid(item[metric])).length, 0);
-  const coverage = display?.coverage;
+  const coverage = display?.coverage ?? discoveryCoverage;
   const incomplete = (coverage?.weeks ?? []).filter(item => item.statGames < item.finalGames);
   const lastReportedWeek = Math.max(0, ...(coverage?.weeks ?? []).map(item => item.week));
   const unreportedWeeks = coverage
@@ -112,6 +112,8 @@ export default function ConsumerTeams() {
   const nextCoverage = discoveryCoverage?.weeks.find(item => item.week === nextWeek);
   const missingNextSchedule = !!discoveryCoverage?.weeks.some(item => item.week > nextWeek) && !nextCoverage;
   const delayedStats = !!nextCoverage && nextCoverage.finalGames > nextCoverage.statGames;
+  const missingNextMatchups = nextCoverage?.missingMatchups ?? [];
+  const unverifiedNextFixture = !!nextCoverage && !nextCoverage.fixtureVerified;
   const orphanNextStats = discoveryCoverage?.partialReasons.filter(reason => reason.startsWith('Excluded ') && reason.includes(`from week ${nextWeek} `)) ?? [];
   const toggle = (code: string) => {
     setSelection(current => {
@@ -156,12 +158,14 @@ export default function ConsumerTeams() {
       <p className="ct-toolbar-note">Last-N windows use games from the selected season only. Future weeks are never estimated.</p>
     </section>
 
-    {(coverage?.partialReasons.length || incomplete.length > 0 || (dataAvailable && unreportedWeeks.length > 0) || delayedStats || missingNextSchedule || orphanNextStats.length > 0) ? <div className="ct-alert" role="status" data-testid="status-teams-coverage">
+    {(coverage?.partialReasons.length || incomplete.length > 0 || (dataAvailable && unreportedWeeks.length > 0) || delayedStats || missingNextSchedule || missingNextMatchups.length > 0 || unverifiedNextFixture || orphanNextStats.length > 0) ? <div className="ct-alert" role="status" data-testid="status-teams-coverage">
       <AlertTriangle aria-hidden="true" /><div><strong>Coverage is incomplete</strong>
         <p>Charts stop at the last fully verified week. Missing final-game statistics and schedule evidence are not inferred.</p>
         {unreportedWeeks.length > 0 && <p>No week-level coverage reported for {unreportedWeeks.map(week => `W${week}`).join(', ')}.</p>}
         {delayedStats && <p>Week {nextWeek} has paired team statistics for {nextCoverage!.statGames} of {nextCoverage!.finalGames} final games. Charts remain through week {throughWeek || 'none'}.</p>}
         {missingNextSchedule && <p>Week {nextWeek} has no schedule coverage although later weeks are reported. Charts cannot skip it.</p>}
+        {missingNextMatchups.length > 0 && <p>Week {nextWeek} is missing {missingNextMatchups.length} provider matchup(s): {missingNextMatchups.join(', ')}. Charts cannot advance.</p>}
+        {unverifiedNextFixture && <p>Week {nextWeek} has no verifiable provider schedule fixture. Charts cannot advance.</p>}
         {orphanNextStats.map(reason => <p key={reason}>{reason}</p>)}
         {!!coverage?.partialReasons.length && <ul>{coverage.partialReasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>}
       </div>
@@ -230,9 +234,9 @@ export default function ConsumerTeams() {
 
     <section className="ct-panel" aria-labelledby="ct-coverage-title">
       <div className="ct-coverage"><div><p className="ct-overline">METHODOLOGY / PROVENANCE</p><h2 id="ct-coverage-title">Coverage, not confidence theater.</h2><p className="ct-subtitle">Final games vs. games with play statistics, by week. A missing week is not a zero.</p></div><span className="ct-tag" data-testid="text-covered-weeks">{coverage?.weeks.length ?? 0} weeks with coverage records</span></div>
-      <div className="ct-coverage-list" style={{ marginTop: 17 }}>{coverage ? Array.from({ length: throughWeek }, (_, index) => index + 1).map(week => {
+      <div className="ct-coverage-list" style={{ marginTop: 17 }}>{coverage ? Array.from({ length: throughWeek || lastReportedWeek }, (_, index) => index + 1).map(week => {
         const item = coverage.weeks.find(entry => entry.week === week);
-        return <div className={`ct-week ${item ? (item.statGames < item.finalGames ? 'is-partial' : '') : (week <= lastReportedWeek ? 'is-partial' : '')}`} key={week} data-testid={`status-coverage-week-${week}`}><b>WK {week}</b><small>{item ? `${item.statGames} / ${item.finalGames} games` : week <= lastReportedWeek ? 'Missing report' : 'Not reported'}</small></div>;
+        return <div className={`ct-week ${item ? (!item.allFinal || item.statGames < item.finalGames ? 'is-partial' : '') : (week <= lastReportedWeek ? 'is-partial' : '')}`} key={week} data-testid={`status-coverage-week-${week}`}><b>WK {week}</b><small>{item ? `${item.statGames} / ${item.finalGames} games${item.missingMatchups.length ? ` · ${item.missingMatchups.length} missing matchup(s)` : !item.fixtureVerified ? ' · fixture unverified' : ''}` : week <= lastReportedWeek ? 'Missing report' : 'Not reported'}</small></div>;
       }) : <p className="ct-muted">No week-level coverage reported for this selection.</p>}</div>
        <p className="ct-source" data-testid="text-teams-source"><strong>Source:</strong> {display?.source || 'Not available'} · Scatter EPA is the unweighted mean of available game-level EPA per-play values, not a play-weighted season estimate. Defense values represent EPA allowed, so lower is better. Success rates use the source's game observations. Windows never cross season boundaries.</p>
     </section>

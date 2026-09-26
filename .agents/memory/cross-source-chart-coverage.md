@@ -20,3 +20,9 @@ For Team Evidence's default cutoff, distinguish "every final game has paired sta
 **Why:** An in-progress week can have perfectly matched statistics for its one final game while many more scheduled games have not finished. Reusing its discovery response updates charts early and reports an expected partial-week warning.
 
 **How to apply:** Keep the week selector, plotted observations and coverage list on the same verified response. A missing schedule week or delayed paired statistics blocks advancing; do not suppress genuine evidence warnings just because the current week is unfinished.
+
+Treat a persisted week's own game count as insufficient proof of schedule completeness. Compare matchup identities with a fresh provider fixture independently of persisted games; if the fixture is missing or the identities differ, keep the cutoff before that week.
+
+**Why:** A week with a missing persisted matchup can still have every *recorded* game final and statistically covered, so count-based final/stat checks would advance falsely.
+
+**How to apply:** Fail closed when provider coverage cannot be verified; preserve the distinction between an absent provider fixture and a confirmed missing persisted matchup. Do not fabricate scores or statistics to close either gap.
