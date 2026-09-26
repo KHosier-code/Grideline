@@ -621,6 +621,55 @@ paths:
           $ref: "#/components/responses/ConsumerGameNotFound"
         "503":
           $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/games/{gameId}/alerts:
+    parameters:
+      - name: gameId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getConsumerGameAlerts
+      tags: [nfl]
+      summary: Check opted-in matchup changes against persisted evidence
+      responses:
+        "200":
+          description: Alert preference and detected changes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerGameAlerts" }
+        "401":
+          description: Sign-in required
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+    put:
+      operationId: enableConsumerGameAlerts
+      tags: [nfl]
+      summary: Opt in to in-app alerts for an upcoming game
+      responses:
+        "200":
+          description: Alerts enabled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerGameAlerts" }
+        "400":
+          $ref: "#/components/responses/ConsumerInvalidRequest"
+        "401":
+          description: Sign-in required
+        "404":
+          $ref: "#/components/responses/ConsumerGameNotFound"
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+    delete:
+      operationId: disableConsumerGameAlerts
+      tags: [nfl]
+      summary: Disable and clear this game's alerts
+      responses:
+        "204":
+          description: Alerts disabled
+        "401":
+          description: Sign-in required
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
   /consumer/performance:
     get:
       operationId: getConsumerPerformance
@@ -1019,6 +1068,21 @@ components:
       properties:
         error: { type: string }
         code: { type: string, enum: [consumer_data_unavailable, invalid_request, game_not_found] }
+    ConsumerGameAlert:
+      type: object
+      required: [category, detail, detectedAt]
+      properties:
+        category: { type: string, enum: [projection, personnel, market] }
+        detail: { type: string }
+        detectedAt: { type: string, format: date-time }
+    ConsumerGameAlerts:
+      type: object
+      required: [enabled, events]
+      properties:
+        enabled: { type: boolean }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerGameAlert" }
     ConsumerTeam:
       type: object
       required: [name, abbreviation, logoUrl]

@@ -29,6 +29,7 @@ import type {
   ConsumerDashboard,
   ConsumerDataUnavailableResponse,
   ConsumerDefenseVsPosition,
+  ConsumerGameAlerts,
   ConsumerGameDetail,
   ConsumerGameNotFoundResponse,
   ConsumerGames,
@@ -2607,6 +2608,231 @@ export function useGetConsumerGame<TData = Awaited<ReturnType<typeof getConsumer
 
 
 
+
+export const getGetConsumerGameAlertsUrl = (gameId: string,) => {
+
+
+
+
+  return `/api/consumer/games/${gameId}/alerts`
+}
+
+/**
+ * @summary Check opted-in matchup changes against persisted evidence
+ */
+export const getConsumerGameAlerts = async (gameId: string, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerGameAlerts> => {
+
+  return customFetch<ConsumerGameAlerts>(getGetConsumerGameAlertsUrl(gameId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerGameAlertsQueryKey = (gameId: string,) => {
+    return [
+    `/api/consumer/games/${gameId}/alerts`
+    ] as const;
+    }
+
+
+export const getGetConsumerGameAlertsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerGameAlerts>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(gameId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGameAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerGameAlertsQueryKey(gameId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerGameAlerts>>> = ({ signal }) => getConsumerGameAlerts(gameId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerGameAlerts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerGameAlertsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerGameAlerts>>>
+export type GetConsumerGameAlertsQueryError = ErrorType<void | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Check opted-in matchup changes against persisted evidence
+ */
+
+export function useGetConsumerGameAlerts<TData = Awaited<ReturnType<typeof getConsumerGameAlerts>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(
+ gameId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGameAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerGameAlertsQueryOptions(gameId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getEnableConsumerGameAlertsUrl = (gameId: string,) => {
+
+
+
+
+  return `/api/consumer/games/${gameId}/alerts`
+}
+
+/**
+ * @summary Opt in to in-app alerts for an upcoming game
+ */
+export const enableConsumerGameAlerts = async (gameId: string, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerGameAlerts> => {
+
+  return customFetch<ConsumerGameAlerts>(getEnableConsumerGameAlertsUrl(gameId),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+
+export const getEnableConsumerGameAlertsMutationKey = () => ['enableConsumerGameAlerts'] as const;
+
+export const getEnableConsumerGameAlertsMutationOptions = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerDataUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enableConsumerGameAlerts>>, TError,EnableConsumerGameAlertsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof enableConsumerGameAlerts>>, TError,EnableConsumerGameAlertsMutationVariables, TContext> => {
+
+const mutationKey = getEnableConsumerGameAlertsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof enableConsumerGameAlerts>>, EnableConsumerGameAlertsMutationVariables> = (props) => {
+          const {gameId} = props ?? {};
+
+          return  enableConsumerGameAlerts(gameId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EnableConsumerGameAlertsMutationResult = NonNullable<Awaited<ReturnType<typeof enableConsumerGameAlerts>>>
+
+    export type EnableConsumerGameAlertsMutationError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerDataUnavailableResponse>
+    export type EnableConsumerGameAlertsMutationVariables = {gameId: string}
+
+    /**
+ * @summary Opt in to in-app alerts for an upcoming game
+ */
+export const useEnableConsumerGameAlerts = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerDataUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enableConsumerGameAlerts>>, TError,EnableConsumerGameAlertsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof enableConsumerGameAlerts>>,
+        TError,
+        EnableConsumerGameAlertsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEnableConsumerGameAlertsMutationOptions(options));
+    }
+
+export const getDisableConsumerGameAlertsUrl = (gameId: string,) => {
+
+
+
+
+  return `/api/consumer/games/${gameId}/alerts`
+}
+
+/**
+ * @summary Disable and clear this game's alerts
+ */
+export const disableConsumerGameAlerts = async (gameId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDisableConsumerGameAlertsUrl(gameId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDisableConsumerGameAlertsMutationKey = () => ['disableConsumerGameAlerts'] as const;
+
+export const getDisableConsumerGameAlertsMutationOptions = <TError = ErrorType<void | ConsumerDataUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disableConsumerGameAlerts>>, TError,DisableConsumerGameAlertsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof disableConsumerGameAlerts>>, TError,DisableConsumerGameAlertsMutationVariables, TContext> => {
+
+const mutationKey = getDisableConsumerGameAlertsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disableConsumerGameAlerts>>, DisableConsumerGameAlertsMutationVariables> = (props) => {
+          const {gameId} = props ?? {};
+
+          return  disableConsumerGameAlerts(gameId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DisableConsumerGameAlertsMutationResult = NonNullable<Awaited<ReturnType<typeof disableConsumerGameAlerts>>>
+
+    export type DisableConsumerGameAlertsMutationError = ErrorType<void | ConsumerDataUnavailableResponse>
+    export type DisableConsumerGameAlertsMutationVariables = {gameId: string}
+
+    /**
+ * @summary Disable and clear this game's alerts
+ */
+export const useDisableConsumerGameAlerts = <TError = ErrorType<void | ConsumerDataUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disableConsumerGameAlerts>>, TError,DisableConsumerGameAlertsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof disableConsumerGameAlerts>>,
+        TError,
+        DisableConsumerGameAlertsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDisableConsumerGameAlertsMutationOptions(options));
+    }
 
 export const getGetConsumerPerformanceUrl = () => {
 

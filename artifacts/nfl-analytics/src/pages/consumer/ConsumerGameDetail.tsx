@@ -12,6 +12,7 @@ import { ConsumerProjectionEvidence } from '../../components/ConsumerProjectionE
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
+import { GameAlerts } from './GameAlerts';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -63,6 +64,8 @@ export default function ConsumerGameDetail() {
       </div>
 
     </section>
+
+    <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
 
     {personnelLimitation.active && (
       <aside className="premium-personnel-warning" role="status" data-testid="qb-model-limitation">

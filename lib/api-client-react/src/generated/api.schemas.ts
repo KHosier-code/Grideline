@@ -252,6 +252,7 @@ export interface ConsumerError {
   code: ConsumerErrorCode;
 }
 
+export type ConsumerGameAlertCategory = typeof ConsumerGameAlertCategory[keyof typeof ConsumerGameAlertCategory];
 export interface ConsumerTeam {
   name: string;
   abbreviation: string;
@@ -3238,3 +3239,20 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
+
+export const ConsumerGameAlertCategory = {
+  projection: 'projection',
+  personnel: 'personnel',
+  market: 'market',
+} as const;
+
+export interface ConsumerGameAlerts {
+  enabled: boolean;
+  events: ConsumerGameAlert[];
+}
+
+export interface ConsumerGameAlert {
+  category: ConsumerGameAlertCategory;
+  detail: string;
+  detectedAt: string;
+}

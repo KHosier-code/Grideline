@@ -46,3 +46,4 @@
 - [Disposable PostgreSQL rehearsals](disposable-postgres-rehearsal.md) — keep local server and test in one shell invocation; loopback identity may include /32.
 - [Development data repair boundaries](dev-data-repair-boundary.md) — a development-mode flag is not database identity; remove one-off writers or attest the actual target before writes.
 - [Recovery rehearsal evidence](recovery-rehearsal-evidence.md) — bundled logs can hide blocked-fetch errors; verify persisted selected failures and unchanged sentinel rows.
+- [Matchup alert evidence](matchup-alert-evidence.md) — compare overlapping persisted evidence against the last material baseline; missing coverage must not become a change.
