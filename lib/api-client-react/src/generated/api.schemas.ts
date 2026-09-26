@@ -2029,6 +2029,146 @@ export interface ConsumerDefenseVsPosition {
   defenses: ConsumerDefenseVsPositionDefensesItem[];
 }
 
+export interface PlayerMatchupObserved {
+  /** @nullable */
+  total: number | null;
+  /** @nullable */
+  perGame: number | null;
+  coveredGames: number;
+  requestedGames: number;
+  coveredWeeks: number[];
+  missingWeeks: number[];
+  /** @nullable */
+  reason: string | null;
+}
+
+export interface PlayerMatchupMetric {
+  label: string;
+  player: PlayerMatchupObserved;
+  defense: DefensePositionMetric | null;
+}
+
+export type ConsumerPlayerPositionMatchupStatus = typeof ConsumerPlayerPositionMatchupStatus[keyof typeof ConsumerPlayerPositionMatchupStatus];
+
+
+export const ConsumerPlayerPositionMatchupStatus = {
+  empty: 'empty',
+  selected: 'selected',
+} as const;
+
+export type ConsumerPlayerPositionMatchupWindow = typeof ConsumerPlayerPositionMatchupWindow[keyof typeof ConsumerPlayerPositionMatchupWindow];
+
+
+export const ConsumerPlayerPositionMatchupWindow = {
+  season: 'season',
+  last3: 'last3',
+  last5: 'last5',
+} as const;
+
+export type ConsumerPlayerPositionMatchupPosition = typeof ConsumerPlayerPositionMatchupPosition[keyof typeof ConsumerPlayerPositionMatchupPosition];
+
+
+export const ConsumerPlayerPositionMatchupPosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+} as const;
+
+export type ConsumerPlayerPositionMatchupCandidatesItem = {
+  selectionKey: string;
+  playerId: string;
+  playerName: string;
+  team: string;
+  opponent: string;
+  position: string;
+  appearances: number;
+};
+
+/**
+ * @nullable
+ */
+export type ConsumerPlayerPositionMatchupSelected = {
+  selectionKey: string;
+  playerId: string;
+  playerName: string;
+  team: string;
+  opponent: string;
+  position: string;
+  appearances: number;
+} | null;
+
+export type ConsumerPlayerPositionMatchupMetrics = {[key: string]: PlayerMatchupMetric};
+
+export type ConsumerPlayerPositionMatchupScoreKind = typeof ConsumerPlayerPositionMatchupScoreKind[keyof typeof ConsumerPlayerPositionMatchupScoreKind];
+
+
+export const ConsumerPlayerPositionMatchupScoreKind = {
+  descriptive_index: 'descriptive_index',
+} as const;
+
+export type ConsumerPlayerPositionMatchupScoreIngredients = { [key: string]: unknown };
+
+export type ConsumerPlayerPositionMatchupScore = {
+  version: string;
+  /** @nullable */
+  value: number | null;
+  kind: ConsumerPlayerPositionMatchupScoreKind;
+  direction: string;
+  ingredients: ConsumerPlayerPositionMatchupScoreIngredients;
+  /** @nullable */
+  reason: string | null;
+};
+
+export type ConsumerPlayerPositionMatchupProjectionsKind = typeof ConsumerPlayerPositionMatchupProjectionsKind[keyof typeof ConsumerPlayerPositionMatchupProjectionsKind];
+
+
+export const ConsumerPlayerPositionMatchupProjectionsKind = {
+  expected_count: 'expected_count',
+  probability: 'probability',
+} as const;
+
+export type ConsumerPlayerPositionMatchupProjections = {[key: string]: {
+  /** @nullable */
+  value: number | null;
+  kind: ConsumerPlayerPositionMatchupProjectionsKind;
+  /** @nullable */
+  modelVersion: string | null;
+  /** @nullable */
+  cutoffAt: string | null;
+  /** @nullable */
+  quality: string | null;
+  /** @nullable */
+  recentAverage: number | null;
+  /** @nullable */
+  leaguePositionBaseline: number | null;
+  /** @nullable */
+  reason: string | null;
+}};
+
+export interface ConsumerPlayerPositionMatchup {
+  status: ConsumerPlayerPositionMatchupStatus;
+  season: number;
+  week: number;
+  gameId: string;
+  cutoff: string;
+  asOf: string;
+  window: ConsumerPlayerPositionMatchupWindow;
+  position: ConsumerPlayerPositionMatchupPosition;
+  candidates: ConsumerPlayerPositionMatchupCandidatesItem[];
+  /** @nullable */
+  selected: ConsumerPlayerPositionMatchupSelected;
+  metrics: ConsumerPlayerPositionMatchupMetrics;
+  source: string;
+  /** @nullable */
+  sourceUpdatedAt: string | null;
+  /** @nullable */
+  ingestedAt: string | null;
+  score: ConsumerPlayerPositionMatchupScore;
+  projections: ConsumerPlayerPositionMatchupProjections;
+  note: string;
+}
+
 export type ConsumerPlayerUsageStatus = typeof ConsumerPlayerUsageStatus[keyof typeof ConsumerPlayerUsageStatus];
 
 
@@ -3383,6 +3523,39 @@ export type GetConsumerDefenseVsPositionWindow = typeof GetConsumerDefenseVsPosi
 
 
 export const GetConsumerDefenseVsPositionWindow = {
+  season: 'season',
+  last3: 'last3',
+  last5: 'last5',
+} as const;
+
+export type GetConsumerPlayerPositionMatchupParams = {
+/**
+ * @minLength 1
+ * @maxLength 128
+ */
+game: string;
+position: GetConsumerPlayerPositionMatchupPosition;
+window?: GetConsumerPlayerPositionMatchupWindow;
+/**
+ * @maxLength 128
+ */
+player?: string;
+};
+
+export type GetConsumerPlayerPositionMatchupPosition = typeof GetConsumerPlayerPositionMatchupPosition[keyof typeof GetConsumerPlayerPositionMatchupPosition];
+
+
+export const GetConsumerPlayerPositionMatchupPosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+} as const;
+
+export type GetConsumerPlayerPositionMatchupWindow = typeof GetConsumerPlayerPositionMatchupWindow[keyof typeof GetConsumerPlayerPositionMatchupWindow];
+
+
+export const GetConsumerPlayerPositionMatchupWindow = {
   season: 'season',
   last3: 'last3',
   last5: 'last5',

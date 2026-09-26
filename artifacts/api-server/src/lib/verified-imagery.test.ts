@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
 import { approvedPlayerHeadshotUrl, createImageRefreshGate, IMAGE_PARSER_VERSION, parseImageCsv, PLAYER_HEADSHOT_RIGHTS, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages, validPersistedImageRows } from "./verified-imagery";
-import { createImageRefreshGate, IMAGE_PARSER_VERSION, parseImageCsv, reconcilePlayerImages, reconcileTeamImages, playerHeadshot, safeImageUrl, staleVerifiedImages, validPersistedImageRows } from "./verified-imagery";
 
 test("a cold or timed-out image source never blocks consumer responses and retries are bounded", async () => {
   let finish!: () => void;
@@ -53,7 +52,7 @@ test("team aliases work in either direction without replacing schedule IDs", () 
     source("OAK", "Oakland Raiders", url("vegas")),
   ]);
   assert.deepEqual([...images.logos.keys()], schedule.map(row => row.teamId));
-  assert.equal(images.logos.get("espn-rams"), url("rams"));
+  assert.equal(images.logos.get("schedule-la"), url("rams"));
   assert.equal(reconcileTeamImages([team("espn-la", "LA", "Los Angeles Rams")],
     [source("LAR", "Los Angeles Rams", url("rams"))]).logos.get("espn-la"), url("rams"));
 });
@@ -106,7 +105,10 @@ test("NFL-hosted and unknown headshots fail closed despite verified identity", (
 });
 
 test("colliding crosswalk IDs and conflicting weekly headshots fail closed", () => {
-  const rows = [source("LA", "Los Angeles Rams", url("rams"))];
+  const crosswalk = (gsisId: string) => ({
+    gsisId, espnId: "100", pfrId: null, pffId: null, esbId: null, smartId: null,
+  });
+  const rows = [crosswalk("00-1"), crosswalk("00-2")];
   const collision = reconcilePlayerImages([player("", "100", url("someone"))], rows);
   assert.equal(playerHeadshot("100", collision), null);
   assert.equal(collision.photos.size, 0);

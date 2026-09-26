@@ -948,6 +948,38 @@ paths:
               schema: { $ref: "#/components/schemas/ConsumerDefenseVsPosition" }
         "400": { $ref: "#/components/responses/ConsumerInvalidRequest" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/player-position-matchup:
+    get:
+      operationId: getConsumerPlayerPositionMatchup
+      tags: [nfl]
+      summary: Compare a player's observed prior appearances with opponent position allowances
+      description: >
+        Upcoming game only. The score is a descriptive index, never a verified
+        predictive score. Projection fields remain unavailable unless separately
+        qualified; missing rows are not zero. TD probability has a separate gate.
+      parameters:
+        - name: game
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+        - name: position
+          in: query
+          required: true
+          schema: { type: string, enum: [QB, RB, WR, TE] }
+        - name: window
+          in: query
+          schema: { type: string, enum: [season, last3, last5], default: last5 }
+        - name: player
+          in: query
+          schema: { type: string, maxLength: 128 }
+      responses:
+        "200":
+          description: Bounded player choices and selected comparison
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerPlayerPositionMatchup" }
+        "400": { $ref: "#/components/responses/ConsumerInvalidRequest" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
   /consumer/player-usage:
     get:
       operationId: getConsumerPlayerUsage
@@ -2340,6 +2372,94 @@ components:
                 additionalProperties:
                   type: object
                   additionalProperties: { $ref: "#/components/schemas/DefensePositionMetric" }
+    PlayerMatchupObserved:
+      type: object
+      required: [total, perGame, coveredGames, requestedGames, coveredWeeks, missingWeeks, reason]
+      properties:
+        total: { type: ["number", "null"] }
+        perGame: { type: ["number", "null"] }
+        coveredGames: { type: integer }
+        requestedGames: { type: integer }
+        coveredWeeks: { type: array, items: { type: integer } }
+        missingWeeks: { type: array, items: { type: integer } }
+        reason: { type: ["string", "null"] }
+    PlayerMatchupMetric:
+      type: object
+      required: [label, player, defense]
+      properties:
+        label: { type: string }
+        player: { $ref: "#/components/schemas/PlayerMatchupObserved" }
+        defense:
+          anyOf:
+            - { $ref: "#/components/schemas/DefensePositionMetric" }
+            - { type: "null" }
+    ConsumerPlayerPositionMatchup:
+      type: object
+      required: [status, season, week, gameId, cutoff, asOf, window, position, candidates, selected, metrics, source, sourceUpdatedAt, ingestedAt, score, projections, note]
+      properties:
+        status: { type: string, enum: [empty, selected] }
+        season: { type: integer }
+        week: { type: integer }
+        gameId: { type: string }
+        cutoff: { type: string, format: date-time }
+        asOf: { type: string, format: date-time }
+        window: { type: string, enum: [season, last3, last5] }
+        position: { type: string, enum: [QB, RB, WR, TE] }
+        candidates:
+          type: array
+          items:
+            type: object
+            required: [selectionKey, playerId, playerName, team, opponent, position, appearances]
+            properties:
+              selectionKey: { type: string }
+              playerId: { type: string }
+              playerName: { type: string }
+              team: { type: string }
+              opponent: { type: string }
+              position: { type: string }
+              appearances: { type: integer }
+        selected:
+          type: ["object", "null"]
+          required: [selectionKey, playerId, playerName, team, opponent, position, appearances]
+          properties:
+            selectionKey: { type: string }
+            playerId: { type: string }
+            playerName: { type: string }
+            team: { type: string }
+            opponent: { type: string }
+            position: { type: string }
+            appearances: { type: integer }
+        metrics:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/PlayerMatchupMetric" }
+        source: { type: string }
+        sourceUpdatedAt: { type: ["string", "null"], format: date-time }
+        ingestedAt: { type: ["string", "null"], format: date-time }
+        score:
+          type: object
+          required: [version, value, kind, direction, ingredients, reason]
+          properties:
+            version: { type: string }
+            value: { type: ["integer", "null"] }
+            kind: { type: string, enum: [descriptive_index] }
+            direction: { type: string }
+            ingredients: { type: object, additionalProperties: true }
+            reason: { type: ["string", "null"] }
+        projections:
+          type: object
+          additionalProperties:
+            type: object
+            required: [value, kind, modelVersion, cutoffAt, quality, recentAverage, leaguePositionBaseline, reason]
+            properties:
+              value: { type: ["number", "null"] }
+              kind: { type: string, enum: [expected_count, probability] }
+              modelVersion: { type: ["string", "null"] }
+              cutoffAt: { type: ["string", "null"], format: date-time }
+              quality: { type: ["string", "null"] }
+              recentAverage: { type: ["number", "null"] }
+              leaguePositionBaseline: { type: ["number", "null"] }
+              reason: { type: ["string", "null"] }
+        note: { type: string }
     ConsumerPlayerUsage:
       type: object
       required: [status, season, players, availableTeams, filters, metricAvailability, sourceCoverage]

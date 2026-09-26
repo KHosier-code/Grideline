@@ -2750,6 +2750,100 @@ export const GetConsumerDefenseVsPositionResponse = zod.object({
 
 
 /**
+ * Upcoming game only. The score is a descriptive index, never a verified predictive score. Projection fields remain unavailable unless separately qualified; missing rows are not zero. TD probability has a separate gate.
+ * @summary Compare a player's observed prior appearances with opponent position allowances
+ */
+export const getConsumerPlayerPositionMatchupQueryGameMax = 128;
+
+export const getConsumerPlayerPositionMatchupQueryWindowDefault = `last5`;
+export const getConsumerPlayerPositionMatchupQueryPlayerMax = 128;
+
+
+
+export const GetConsumerPlayerPositionMatchupQueryParams = zod.object({
+  "game": zod.coerce.string().min(1).max(getConsumerPlayerPositionMatchupQueryGameMax),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE']),
+  "window": zod.enum(['season', 'last3', 'last5']).default(getConsumerPlayerPositionMatchupQueryWindowDefault),
+  "player": zod.coerce.string().max(getConsumerPlayerPositionMatchupQueryPlayerMax).optional()
+})
+
+export const GetConsumerPlayerPositionMatchupResponse = zod.object({
+  "status": zod.enum(['empty', 'selected']),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "gameId": zod.string(),
+  "cutoff": zod.coerce.date(),
+  "asOf": zod.coerce.date(),
+  "window": zod.enum(['season', 'last3', 'last5']),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE']),
+  "candidates": zod.array(zod.object({
+  "selectionKey": zod.string(),
+  "playerId": zod.string(),
+  "playerName": zod.string(),
+  "team": zod.string(),
+  "opponent": zod.string(),
+  "position": zod.string(),
+  "appearances": zod.number().int()
+})),
+  "selected": zod.object({
+  "selectionKey": zod.string(),
+  "playerId": zod.string(),
+  "playerName": zod.string(),
+  "team": zod.string(),
+  "opponent": zod.string(),
+  "position": zod.string(),
+  "appearances": zod.number().int()
+}).nullable(),
+  "metrics": zod.record(zod.string(), zod.object({
+  "label": zod.string(),
+  "player": zod.object({
+  "total": zod.number().nullable(),
+  "perGame": zod.number().nullable(),
+  "coveredGames": zod.number().int(),
+  "requestedGames": zod.number().int(),
+  "coveredWeeks": zod.array(zod.number().int()),
+  "missingWeeks": zod.array(zod.number().int()),
+  "reason": zod.string().nullable()
+}),
+  "defense": zod.union([zod.object({
+  "label": zod.string(),
+  "unit": zod.enum(['yards', 'count']),
+  "perGame": zod.number().nullable(),
+  "total": zod.number().nullable(),
+  "coveredGames": zod.number().int(),
+  "completedGames": zod.number().int(),
+  "coveredWeeks": zod.array(zod.number().int()),
+  "missingWeeks": zod.array(zod.number().int()),
+  "missingGames": zod.array(zod.string()),
+  "reason": zod.string().nullable()
+}),zod.null()])
+})),
+  "source": zod.string(),
+  "sourceUpdatedAt": zod.coerce.date().nullable(),
+  "ingestedAt": zod.coerce.date().nullable(),
+  "score": zod.object({
+  "version": zod.string(),
+  "value": zod.number().int().nullable(),
+  "kind": zod.enum(['descriptive_index']),
+  "direction": zod.string(),
+  "ingredients": zod.record(zod.string(), zod.unknown()),
+  "reason": zod.string().nullable()
+}),
+  "projections": zod.record(zod.string(), zod.object({
+  "value": zod.number().nullable(),
+  "kind": zod.enum(['expected_count', 'probability']),
+  "modelVersion": zod.string().nullable(),
+  "cutoffAt": zod.coerce.date().nullable(),
+  "quality": zod.string().nullable(),
+  "recentAverage": zod.number().nullable(),
+  "leaguePositionBaseline": zod.number().nullable(),
+  "reason": zod.string().nullable()
+})),
+  "note": zod.string()
+})
+
+
+/**
  * @summary Read cutoff-safe player usage history
  */
 export const getConsumerPlayerUsageQueryWindowDefault = `last5`;

@@ -11,6 +11,7 @@ import { ConsumerProjectionEvidence } from '../../components/ConsumerProjectionE
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
+import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
 import { GameAlerts } from './GameAlerts';
 import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useConsumerNow } from './consumer-ui';
 import { useEffect } from 'react';
@@ -98,7 +99,7 @@ export default function ConsumerGameDetail() {
     <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
     <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
 
-    {(game.gameState === 'pregame' || game.gameState === 'scheduled') && <GameDefenseVsPosition gameId={game.gameId} season={game.season} away={game.matchup.away} home={game.matchup.home} />}
+    {beforeKickoff && <><GameDefenseVsPosition gameId={game.gameId} season={game.season} away={game.matchup.away} home={game.matchup.home} /><PlayerPositionMatchup gameId={game.gameId} /></>}
 
     <ConsumerDepthChart context={game.context} />
 

@@ -48,6 +48,9 @@ import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
+import { attachQualifiedScoringTdProbability, buildPlayerPositionMatchup } from "../lib/player-position-matchup";
+import { readDevelopmentPlayerTdForecastReadiness } from "../lib/player-td-forecast-readiness";
+import { GetConsumerPlayerPositionMatchupResponse } from "@workspace/api-zod";
 import { GetConsumerScheduleSelectionResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 import { consumerVerifiedImages, playerHeadshot } from "../lib/verified-imagery";
@@ -2093,7 +2096,7 @@ router.get("/consumer/props", (_req, res): void => {
 });
 
 router.get("/consumer/defense-vs-position", async (req, res): Promise<void> => {
-  const season = req.query.season === undefined ? undefined : Number(req.query.season);
+  const season = typeof req.query.season === "string" ? Number(req.query.season) : undefined;
   const window = typeof req.query.window === "string" ? req.query.window : "season";
   const gameId = typeof req.query.game === "string" ? req.query.game : undefined;
   if ((season !== undefined && (!Number.isInteger(season) || season < 2000 || season > 2100))
@@ -2119,6 +2122,45 @@ router.get("/consumer/defense-vs-position", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Consumer defense vs position read failed");
     res.status(503).json({ error: "Defensive history is being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/consumer/player-position-matchup", async (req, res): Promise<void> => {
+  const gameId = typeof req.query.game === "string" ? req.query.game : "";
+  const playerId = typeof req.query.player === "string" ? req.query.player : undefined;
+  const position = req.query.position;
+  const window = req.query.window ?? "last5";
+  if (!gameId || gameId.length > 128 || (req.query.player !== undefined && (!playerId || playerId.length > 128))
+    || typeof position !== "string" || !["QB", "RB", "WR", "TE"].includes(position)
+    || !WINDOWS.includes(window as typeof WINDOWS[number])) {
+    res.status(400).json({ error: "Choose a valid upcoming game, position, player and window.", code: "invalid_request" });
+    return;
+  }
+  try {
+    const [game] = await db.select().from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1);
+    const now = new Date();
+    if (!game || !game.kickoffTime || game.kickoffTime <= now || game.week < 1 || game.week > 18
+      || !/scheduled|pregame/i.test(game.gameStatus)) {
+      res.status(400).json({ error: "A verified upcoming regular-season game is required.", code: "invalid_request" });
+      return;
+    }
+    const result = buildPlayerPositionMatchup(await readDefenseInputs(game.season, game.kickoffTime),
+      game, now, position as "QB" | "RB" | "WR" | "TE", window as typeof WINDOWS[number], playerId);
+    if (!result) {
+      res.status(400).json({ error: "Matchup identities could not be verified.", code: "invalid_request" });
+      return;
+    }
+    if (result.selected && process.env.NODE_ENV === "development" && !process.env.REPLIT_DEPLOYMENT) {
+      try {
+        attachQualifiedScoringTdProbability(result, await readDevelopmentPlayerTdForecastReadiness(now));
+      } catch (error) {
+        req.log.warn({ error }, "Separate TD forecast gate unavailable; probability withheld");
+      }
+    }
+    res.json(GetConsumerPlayerPositionMatchupResponse.parse(result));
+  } catch (error) {
+    req.log.error({ error }, "Player-position matchup read failed");
+    res.status(503).json({ error: "Player-position matchup unavailable", code: "consumer_data_unavailable" });
   }
 });
 

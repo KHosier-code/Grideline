@@ -37,6 +37,7 @@ import type {
   ConsumerGradedCharts,
   ConsumerInvalidRequestResponse,
   ConsumerPerformance,
+  ConsumerPlayerPositionMatchup,
   ConsumerPlayerProjections,
   ConsumerPlayerTdForecasts,
   ConsumerPlayerUsage,
@@ -52,6 +53,7 @@ import type {
   Game,
   GetConsumerDefenseVsPositionParams,
   GetConsumerGradedChartsParams,
+  GetConsumerPlayerPositionMatchupParams,
   GetConsumerPlayerUsageParams,
   GetConsumerRedZoneOpportunitiesParams,
   GetConsumerTeamAnalyticsParams,
@@ -4079,6 +4081,91 @@ export function useGetConsumerDefenseVsPosition<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerDefenseVsPositionQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerPlayerPositionMatchupUrl = (params: GetConsumerPlayerPositionMatchupParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/player-position-matchup?${stringifiedParams}` : `/api/consumer/player-position-matchup`
+}
+
+/**
+ * Upcoming game only. The score is a descriptive index, never a verified predictive score. Projection fields remain unavailable unless separately qualified; missing rows are not zero. TD probability has a separate gate.
+ * @summary Compare a player's observed prior appearances with opponent position allowances
+ */
+export const getConsumerPlayerPositionMatchup = async (params: GetConsumerPlayerPositionMatchupParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPlayerPositionMatchup> => {
+
+  return customFetch<ConsumerPlayerPositionMatchup>(getGetConsumerPlayerPositionMatchupUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerPlayerPositionMatchupQueryKey = (params?: GetConsumerPlayerPositionMatchupParams,) => {
+    return [
+    `/api/consumer/player-position-matchup`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerPlayerPositionMatchupQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPlayerPositionMatchup>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(params: GetConsumerPlayerPositionMatchupParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerPositionMatchup>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPlayerPositionMatchupQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPlayerPositionMatchup>>> = ({ signal }) => getConsumerPlayerPositionMatchup(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerPositionMatchup>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerPlayerPositionMatchupQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerPlayerPositionMatchup>>>
+export type GetConsumerPlayerPositionMatchupQueryError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Compare a player's observed prior appearances with opponent position allowances
+ */
+
+export function useGetConsumerPlayerPositionMatchup<TData = Awaited<ReturnType<typeof getConsumerPlayerPositionMatchup>>, TError = ErrorType<ConsumerInvalidRequestResponse | ConsumerDataUnavailableResponse>>(
+ params: GetConsumerPlayerPositionMatchupParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerPositionMatchup>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerPlayerPositionMatchupQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
