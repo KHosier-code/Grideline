@@ -497,14 +497,14 @@ function ConsumerShell({ children }: { children: ReactNode }) {
   return <div className="consumer-shell">
     <header className="consumer-topbar">
       <Link href="/" className="consumer-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-6 w-6" /><strong>Gridline</strong></Link>
-      <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''}><Icon />{item.label}</Link>; })}<ConsumerWorkspaceLink verified={account.adminVerified} /></nav>
+      <nav aria-label="Primary navigation">{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined}><Icon />{item.label}</Link>; })}<ConsumerWorkspaceLink verified={account.adminVerified} /></nav>
       <div className="consumer-account">
         <ThemeToggle />
         <ConsumerAccountAction state={account} mobile={false} accountControl={<UserButton appearance={{ elements: { avatarBox: 'grayscale saturate-0' } }} />} />
         <button ref={menuButton} className="consumer-menu-toggle" type="button" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-controls="consumer-mobile-navigation" aria-expanded={open} onClick={() => setOpen(!open)}><Menu aria-hidden="true" /></button>
       </div>
     </header>
-    {open && <nav id="consumer-mobile-navigation" className="consumer-mobile-nav" aria-label="Mobile navigation" onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); } }}>{consumerNav.map(item => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}<ConsumerWorkspaceLink verified={account.adminVerified} onNavigate={() => setOpen(false)} /><ConsumerAccountAction state={account} mobile onNavigate={() => setOpen(false)} onManageAccount={() => { setOpen(false); openUserProfile(); }} /><ThemeToggle /></nav>}
+      {open && <nav id="consumer-mobile-navigation" className="consumer-mobile-nav" aria-label="Mobile navigation" onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); } }}>{consumerNav.map(item => { const Icon = item.icon; const active = item.href === '/' ? location === '/' : location.startsWith(item.href); return <Link key={item.href} href={item.href} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined} onClick={() => setOpen(false)}><Icon />{item.label}</Link>; })}<ConsumerWorkspaceLink verified={account.adminVerified} onNavigate={() => setOpen(false)} /><ConsumerAccountAction state={account} mobile onNavigate={() => setOpen(false)} onManageAccount={() => { setOpen(false); openUserProfile(); }} /><ThemeToggle /></nav>}
     <main className="consumer-main">{children}</main>
   </div>;
 }
@@ -2122,6 +2122,7 @@ function Router() {
   const publicRoute = location === '/' || location === '/games' || location.startsWith('/games/')
     || location === '/performance' || location === '/methodology'
     || location === '/defense-vs-position' || location === '/teams' || location === '/usage'
+    || location === '/saved-games'
     || (redZoneEnabled && location === '/red-zone');
   if (!isLoaded && !publicRoute) return <ConsumerLoadingFallback />;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
@@ -2129,7 +2130,7 @@ function Router() {
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
     <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
-    <Route path="/saved-games"><ConsumerShell><div className="consumer-page"><h1>Saved games</h1><p>Sign in to keep your favorite matchups across visits.</p><Link href="/sign-in" className="button button-primary">Sign in</Link></div></ConsumerShell></Route>
+    <Route path="/saved-games"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
     <Route path="/methodology"><ConsumerShell><ConsumerMethodology /></ConsumerShell></Route>
     <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
     <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>

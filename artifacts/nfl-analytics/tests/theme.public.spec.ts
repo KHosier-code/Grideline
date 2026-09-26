@@ -99,3 +99,36 @@ test('signed-out Home and authentication agree whether a weekly pick is availabl
     await page.unroute('**/api/consumer/dashboard*');
   }
 });
+test('consumer palette and route hierarchy remain readable across themes and widths', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const theme of ['dark', 'light'] as const) {
+    await page.goto('/');
+    if (theme === 'light') await page.locator('.consumer-account .theme-toggle').click();
+    await expectTheme(page, theme);
+    for (const [route, title] of [
+      ['/', /Pick of the week/i],
+      ['/teams', /The league, in context/i],
+      ['/defense-vs-position', /Defense vs/i],
+      ['/saved-games', /Saved games/i],
+    ] as const) {
+      await page.goto(route);
+      await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+      await expectTheme(page, theme);
+      const selected = page.getByRole('navigation', { name: 'Primary navigation' }).locator('a[aria-current="page"]');
+      await expect(selected).toHaveCount(1);
+      const colors = await selected.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { background: style.backgroundColor, accent: getComputedStyle(document.querySelector('.consumer-shell')!).getPropertyValue('--accent').trim() };
+      });
+      expect(colors.accent).toBe(theme === 'dark' ? '21 100% 70%' : '21 88% 36%');
+      expect(colors.background).not.toBe('rgba(0, 0, 0, 0)');
+      for (const width of [1280, 390]) {
+        await page.setViewportSize({ width, height: 850 });
+        await expectNoHorizontalOverflow(page);
+        await page.screenshot({ path: testInfo.outputPath(`gridline-${theme}-${route === '/' ? 'home' : route.slice(1)}-${width}.png`) });
+      }
+      await page.setViewportSize({ width: 1280, height: 850 });
+    }
+  }
+});
