@@ -4,6 +4,142 @@ import { performance } from "node:perf_hooks";
 import { pool } from "@workspace/db";
 import { consumerScheduleSummaryQuery } from "./consumer";
 import { selectConsumerSlate, selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
+import { interpretNflGameState } from "../lib/game-state";
+
+type ScheduleRow = {
+  season: number; week: number; first: Date; last: Date; live: boolean; upcoming: boolean;
+};
+
+type ConnectCallback = Exclude<Parameters<typeof pool.connect>[0], undefined>;
+type PoolClient = NonNullable<Parameters<ConnectCallback>[1]>;
+
+async function databaseSummaries(client: PoolClient, now: Date) {
+  const compiled = consumerScheduleSummaryQuery(now).toSQL();
+  const { rows } = await client.query<ScheduleRow>(compiled.sql, compiled.params);
+  return rows;
+}
+
+// Each status occupies its own slate so bool_or cannot hide a mistaken classification.
+// Include every terminal/live marker recognized by interpretNflGameState, alongside
+// the provider's scheduled/unknown forms and normalization/precedence cases.
+const statusCases = [
+  { status: "STATUS_POSTPONED", state: "postponed" },
+  { status: "Postponed", state: "postponed" },
+  { status: "STATUS_CANCELED", state: "cancelled" },
+  { status: "STATUS_CANCELLED", state: "cancelled" },
+  { status: "Cancelled", state: "cancelled" },
+  { status: "STATUS_FINAL", state: "final" },
+  { status: "Final", state: "final" },
+  { status: "STATUS_COMPLETED", state: "final" },
+  { status: "closed", state: "final" },
+  { status: "STATUS_IN_PROGRESS", state: "live" },
+  { status: "in-progress", state: "live" },
+  { status: "STATUS_HALFTIME", state: "live" },
+  { status: "END_OF_PERIOD", state: "live" },
+  { status: "SECOND_QUARTER", state: "live" },
+  { status: "STATUS_SCHEDULED", state: "pregame" },
+  { status: "Pre-Game", state: "pregame" },
+  { status: "STATUS_UNKNOWN", state: "pregame" },
+  { status: "unrecognized provider status", state: "pregame" },
+  { status: "  STATUS_FINAL_IN_PROGRESS  ", state: "final" },
+  { status: "STATUS_POSTPONED_IN_PROGRESS", state: "postponed" },
+  { status: "STATUS_CANCELLED_IN_PROGRESS", state: "cancelled" },
+] as const;
+
+test("database schedule eligibility matches every supported provider status at kickoff and the eight-hour boundary", async () => {
+  const client = await pool.connect();
+  const kickoff = new Date("2026-09-20T20:00:00.000Z");
+  const before = new Date(kickoff.getTime() - 1);
+  const cutoff = new Date(kickoff.getTime() + 8 * 60 * 60_000);
+  try {
+    await client.query(`CREATE TEMP TABLE games (
+      season integer NOT NULL, week integer NOT NULL,
+      kickoff_time timestamptz, game_status text NOT NULL
+    )`);
+    for (const [index, { status }] of statusCases.entries()) {
+      await client.query(
+        "INSERT INTO games (season, week, kickoff_time, game_status) VALUES ($1, 1, $2, $3)",
+        [2100 + index, kickoff, status],
+      );
+    }
+    for (const [label, now] of [
+      ["before kickoff", before],
+      ["at kickoff", kickoff],
+      ["at eight hours", cutoff],
+      ["past eight hours", new Date(cutoff.getTime() + 1)],
+    ] as const) {
+      const summaries = await databaseSummaries(client, now);
+      assert.equal(summaries.length, statusCases.length, label);
+      for (const [index, { status, state }] of statusCases.entries()) {
+        const actual = summaries.find((row) => row.season === 2100 + index);
+        assert.ok(actual, `${label}: ${status} missing from SQL`);
+        const terminal = ["final", "postponed", "cancelled"].includes(state);
+        const expectedState = state === "pregame" && now >= kickoff ? "live" : state;
+        assert.equal(interpretNflGameState({ gameStatus: status, kickoffTime: kickoff }, now),
+          expectedState, `${label}: canonical state for ${status}`);
+        assert.deepEqual(
+          { live: actual.live, upcoming: actual.upcoming },
+          { live: !terminal && now >= kickoff && now <= cutoff,
+            upcoming: state === "pregame" && now < kickoff },
+          `${label}: SQL eligibility for ${status}`,
+        );
+        assert.deepEqual(
+          selectConsumerSlateSummaries([actual]),
+          selectConsumerSlate([{ season: 2100 + index, week: 1, kickoffTime: kickoff, gameStatus: status }], now),
+          `${label}: selector parity for ${status}`,
+        );
+      }
+    }
+  } finally {
+    await client.query("DROP TABLE IF EXISTS pg_temp.games");
+    client.release();
+  }
+});
+
+test("mixed-status slates choose live, upcoming, then past across kickoff and expiry", async () => {
+  const client = await pool.connect();
+  const kickoff = new Date("2026-09-20T20:00:00.000Z");
+  const at = (offset: number) => new Date(kickoff.getTime() + offset);
+  const games = [
+    { season: 2026, week: 1, kickoffTime: at(-60_000), gameStatus: "STATUS_FINAL" },
+    { season: 2026, week: 1, kickoffTime: kickoff, gameStatus: "STATUS_SCHEDULED" },
+    { season: 2026, week: 1, kickoffTime: at(60_000), gameStatus: "STATUS_POSTPONED" },
+    { season: 2026, week: 2, kickoffTime: at(60_000), gameStatus: "STATUS_IN_PROGRESS" },
+    { season: 2026, week: 2, kickoffTime: at(2 * 60_000), gameStatus: "STATUS_UNKNOWN" },
+    { season: 2026, week: 3, kickoffTime: at(10 * 60 * 60_000), gameStatus: "STATUS_SCHEDULED" },
+  ];
+  try {
+    await client.query(`CREATE TEMP TABLE games (
+      season integer NOT NULL, week integer NOT NULL,
+      kickoff_time timestamptz, game_status text NOT NULL
+    )`);
+    for (const game of games) {
+      await client.query(
+        "INSERT INTO games (season, week, kickoff_time, game_status) VALUES ($1, $2, $3, $4)",
+        [game.season, game.week, game.kickoffTime, game.gameStatus],
+      );
+    }
+    for (const [label, now, expected] of [
+      ["before kickoff", at(-1), { selection: { season: 2026, week: 1 }, reason: "upcoming" }],
+      ["at kickoff", kickoff, { selection: { season: 2026, week: 1 }, reason: "live" }],
+      ["just before next kickoff", at(60_000 - 1), { selection: { season: 2026, week: 1 }, reason: "live" }],
+      ["at next kickoff", at(60_000), { selection: { season: 2026, week: 2 }, reason: "live" }],
+      ["at eight hours after first kickoff", at(8 * 60 * 60_000), { selection: { season: 2026, week: 2 }, reason: "live" }],
+      ["at eight hours after last kickoff", at(8 * 60 * 60_000 + 2 * 60_000), { selection: { season: 2026, week: 2 }, reason: "live" }],
+      ["just after eight hours after last kickoff", at(8 * 60 * 60_000 + 2 * 60_000 + 1), { selection: { season: 2026, week: 3 }, reason: "upcoming" }],
+      ["after all kickoffs", at(20 * 60 * 60_000), { selection: { season: 2026, week: 3 }, reason: "past" }],
+    ] as const) {
+      const summaries = await databaseSummaries(client, now);
+      assert.deepEqual(selectConsumerSlateSummaries(summaries), expected, `${label}: database choice`);
+      assert.deepEqual(selectConsumerSlate(games, now), expected, `${label}: canonical choice`);
+      assert.equal(summaries.find((row) => row.week === 1)?.first.getTime(), at(-60_000).getTime(),
+        `${label}: a final game still sets the first kickoff`);
+    }
+  } finally {
+    await client.query("DROP TABLE IF EXISTS pg_temp.games");
+    client.release();
+  }
+});
 
 test("schedule selection aggregates a century of games without transferring game history", async () => {
   const client = await pool.connect();
