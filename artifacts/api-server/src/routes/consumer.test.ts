@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import { desc, eq, inArray, like } from "drizzle-orm";
 import {
-  db, gamesTable, identitySourceImportsTable, injuriesTable, nflversePlayerIdentitiesTable,
+  db, gamesTable, identitySourceImportsTable, injuriesTable, nflversePlayerIdentitiesTable, predictionSnapshotsTable,
   playerGameStatsTable, playersTable, snapCountsTable, teamsTable,
 } from "@workspace/db";
 import {
@@ -55,7 +55,108 @@ import consumerRouter, {
   verifyTeamRecords,
 } from "./consumer";
 import { deriveCurrentTeamDepth } from "../lib/current-personnel-derivation";
+import { selectVerifiedHistoricalOfficialSnapshots } from "../lib/live-predictions";
+import { PHASE6_VECTOR_FEATURE_NAMES, PHASE6_VECTOR_SCHEMA_FINGERPRINT } from "../lib/modeling";
 import { logger } from "../lib/logger";
+
+test("historical consumer recovery keeps only verified frozen official pregame evidence from promoted models", () => {
+  const gameId = "historical-game";
+  const kickoff = new Date("2026-09-01T17:00:00Z");
+  const predicted = new Date("2026-09-01T16:00:00Z");
+  const vector = PHASE6_VECTOR_FEATURE_NAMES.map(() => 0);
+  const selectedValues = Object.fromEntries(PHASE6_VECTOR_FEATURE_NAMES.slice(0, -3).map((name) => [name, 0]));
+  const evidence = {
+    rows: [true, false].map((isHome) => ({
+      gameId, isHome, teamId: isHome ? "H" : "A", opponentTeamId: isHome ? "A" : "H",
+      sourceCutoff: "2026-09-01T15:00:00Z", generatedAt: "2026-09-01T15:30:00Z",
+      selectedValues, lowSample: false, qbDataConfidence: 0.8,
+    })),
+  };
+  const row = {
+    id: 1, gameId, kickoffTime: kickoff, predictionTimestamp: predicted, snapshotLabel: "final",
+    marketSnapshot: {}, marketComparison: {}, lowSample: false, qbConfidence: 0.8,
+    frozenAt: new Date("2026-09-01T16:40:00Z"), evaluationCutoffAt: new Date("2026-09-01T16:30:00Z"),
+    officialFinalPrediction: true, featureVersion: "historical-feature",
+    spreadModelVersion: "old-spread", moneylineModelVersion: "old-moneyline", totalsModelVersion: "old-totals",
+    trainingCutoff: "totals:2026-W3; spread:2026-W1; moneyline:2026-W2",
+    projectedHomeScore: 24, projectedAwayScore: 20, projectedMargin: 4, projectedTotal: 44,
+    homeWinProbability: 0.6, awayWinProbability: 0.4,
+    inputFeatureCount: vector.length, inputMissingFeatureCount: 0, inputVector: vector,
+    vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES], vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
+    inputSourceEvidence: evidence,
+    snapshotKey: `${gameId}:final:old-spread:old-moneyline:old-totals:input-integrity-v3:${PHASE6_VECTOR_SCHEMA_FINGERPRINT}`,
+  } as typeof predictionSnapshotsTable.$inferSelect;
+  const promotions = (["spread", "moneyline", "totals"] as const).map((family, index) => ({
+    family, modelVersion: `old-${family}`, role: "production", featureVersion: row.featureVersion,
+    trainingCutoff: `2026-W${index + 1}`, promotedAt: new Date("2026-08-30T12:00:00Z"),
+  })) as Array<typeof import("@workspace/db").modelPromotionHistoryTable.$inferSelect>;
+  const verified = new Set(["old-spread", "old-moneyline", "old-totals"]);
+  const games = new Map([[gameId, kickoff]]);
+  const asOf = new Date("2026-09-02T12:00:00Z");
+  const pick = (candidate: typeof row, evidencePromotions = promotions, artifacts = verified, date = asOf) =>
+    selectVerifiedHistoricalOfficialSnapshots([candidate], games, evidencePromotions, artifacts, date).get(gameId);
+  assert.equal(pick(row), row);
+  assert.equal(pick({ ...row, officialFinalPrediction: false }), undefined);
+  assert.equal(pick({ ...row, predictionTimestamp: kickoff }), undefined);
+  assert.equal(pick({ ...row, frozenAt: new Date("2026-09-01T17:01:00Z") }), undefined);
+  assert.equal(pick({ ...row, inputVector: null }), undefined);
+  assert.equal(pick({ ...row, inputSourceEvidence: null }), undefined);
+  assert.equal(pick({ ...row, projectedTotal: Number.NaN }), undefined);
+  assert.equal(pick(row, promotions.slice(1)), undefined);
+  assert.equal(pick({ ...row, trainingCutoff: "spread:2026-W1; moneyline:2026-W2; totals:2026-W4" }), undefined);
+  assert.equal(pick(row, promotions.map((promotion) => ({ ...promotion, promotedAt: kickoff }))), undefined);
+  assert.equal(pick(row, promotions, new Set(["old-spread", "old-moneyline"])), undefined);
+  assert.equal(pick(row, promotions, verified, new Date("2026-09-01T16:35:00Z")), undefined);
+  assert.equal(selectVerifiedHistoricalOfficialSnapshots([row], new Map([[gameId, new Date("2026-09-01T18:00:00Z")]]),
+    promotions, verified, asOf).size, 0);
+});
+
+test("consumerGames displays an earlier promoted official prediction after the active-model lookup misses", async (t) => {
+  const gameId = `history-${randomUUID()}`;
+  const kickoff = new Date("2026-09-01T17:00:00Z");
+  const asOf = new Date("2026-09-02T12:00:00Z");
+  const homeId = `home-${gameId}`;
+  const awayId = `away-${gameId}`;
+  await db.insert(teamsTable).values([
+    { teamId: homeId, abbreviation: "HME", teamName: "Archived Home" },
+    { teamId: awayId, abbreviation: "AWY", teamName: "Archived Away" },
+  ]);
+  t.after(async () => {
+    await db.delete(gamesTable).where(eq(gamesTable.gameId, gameId));
+    await db.delete(teamsTable).where(inArray(teamsTable.teamId, [homeId, awayId]));
+  });
+  await db.insert(gamesTable).values({
+    gameId, season: 2026, week: 1, gameDate: kickoff, kickoffTime: kickoff,
+    homeTeamId: homeId, awayTeamId: awayId, gameStatus: "STATUS_FINAL",
+    finalHomeScore: 21, finalAwayScore: 17,
+  });
+  // The official row is an in-memory read fixture: real official rows cannot
+  // be removed from this database after insertion.
+  const saved = {
+    gameId, kickoffTime: kickoff, predictionTimestamp: new Date("2026-09-01T16:00:00Z"),
+    frozenAt: new Date("2026-09-01T16:40:00Z"), evaluationCutoffAt: new Date("2026-09-01T16:30:00Z"),
+    officialFinalPrediction: true, projectedHomeScore: 24, projectedAwayScore: 20,
+    projectedMargin: 4, projectedTotal: 44, homeWinProbability: 0.6, awayWinProbability: 0.4,
+    qbConfidence: 0.8, lowSample: false, inputFeatureCount: PHASE6_VECTOR_FEATURE_NAMES.length,
+    inputMissingFeatureCount: 0, inputSourceEvidence: null,
+    spreadModelVersion: "old-spread", moneylineModelVersion: "old-moneyline", totalsModelVersion: "old-totals",
+    snapshotKey: `${gameId}:old`,
+  } as typeof predictionSnapshotsTable.$inferSelect;
+  const games = await consumerGames({ gameId, asOf }, false, async (requested, cutoff) => {
+    assert.deepEqual(requested, [gameId]);
+    assert.equal(cutoff.getTime(), asOf.getTime());
+    return new Map([[gameId, saved]]);
+  });
+  assert.equal(games[0]?.prediction?.officialFinalPrediction, true);
+  assert.equal(games[0]?.prediction?.projectedHomeScore, 24);
+  assert.equal(games[0]?.availability.prediction, null);
+  await db.update(gamesTable).set({ gameStatus: "STATUS_IN_PROGRESS" }).where(eq(gamesTable.gameId, gameId));
+  const live = await consumerGames({ gameId, asOf }, false, async (requested) => {
+    assert.deepEqual(requested, [], "a game still in progress must not use historical recovery");
+    return new Map();
+  });
+  assert.equal(live[0]?.prediction, null);
+});
 
 const boardRow = (
   sportsbook: string,

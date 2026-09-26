@@ -22,6 +22,7 @@ import {
 } from "@workspace/db";
 import {
   gameSpecificSnapshot,
+  getHistoricalOfficialPredictionSnapshots,
   getLatestValidPredictionSnapshots,
   getSnapshotIneligibilityReasons,
   snapshotUnavailableMessages,
@@ -1278,7 +1279,11 @@ export function serializePerformance(performance: Awaited<ReturnType<typeof getP
   };
 }
 
-export async function consumerGames(filters: ConsumerFilters = {}, persistConfidence = false) {
+export async function consumerGames(
+  filters: ConsumerFilters = {},
+  persistConfidence = false,
+  historicalLoader: typeof getHistoricalOfficialPredictionSnapshots = getHistoricalOfficialPredictionSnapshots,
+) {
   const asOf = filters.asOf ?? new Date();
   const sourceHealth = await getConsumerSourceHealth(asOf);
   const conditions = [
@@ -1346,6 +1351,15 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
         desc(oddsEventAuditsTable.id),
       ) : [],
   ]);
+  // Only final games without an active-model selection can recover their
+  // already-frozen official prediction. Current-model selections always win.
+  const historical = await historicalLoader(
+    games.filter((game) => game.kickoffTime && game.kickoffTime <= asOf
+      && interpretNflGameState(game, asOf) === "final" && !snapshots.has(game.gameId))
+      .map((game) => game.gameId),
+    asOf,
+  );
+  for (const [gameId, snapshot] of historical) snapshots.set(gameId, snapshot);
   const recordTeams = recordSeason === undefined ? [] : await db.select({
     teamId: teamsTable.teamId,
     abbreviation: teamsTable.abbreviation,

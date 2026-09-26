@@ -1508,6 +1508,51 @@ export async function getLatestValidPredictionSnapshots(
   return latest;
 }
 
+/**
+ * Consumer-only historical recovery. This does not participate in live model
+ * selection or freezing: the database's unique official flag identifies the
+ * saved prediction, and its original promoted model versions must still verify.
+ */
+export function selectVerifiedHistoricalOfficialSnapshots(
+  rows: Array<typeof predictionSnapshotsTable.$inferSelect>,
+  games: Map<string, Date>,
+  promotions: Array<typeof modelPromotionHistoryTable.$inferSelect>,
+  verifiedRuns: Set<string>,
+  asOf: Date,
+) {
+  const selected = new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
+  for (const row of rows) {
+    const kickoff = games.get(row.gameId);
+    const cutoffs = row.trainingCutoff.split("; ");
+    const savedCutoffs = new Map(cutoffs.map((entry) => {
+      const separator = entry.indexOf(":");
+      return [entry.slice(0, separator), entry.slice(separator + 1)] as const;
+    }));
+    if (!kickoff || kickoff > asOf || !row.officialFinalPrediction
+      || !row.frozenAt || row.frozenAt > asOf || row.frozenAt >= kickoff
+      || !row.evaluationCutoffAt || row.evaluationCutoffAt >= kickoff
+      || row.predictionTimestamp > row.evaluationCutoffAt
+      || row.predictionTimestamp >= kickoff || row.predictionTimestamp > asOf
+      || !row.kickoffTime || row.kickoffTime.getTime() !== kickoff.getTime()
+      || cutoffs.length !== 3 || savedCutoffs.size !== 3
+      || !isEligiblePredictionSnapshot(row)
+      || row.snapshotKey !== `${row.gameId}:${row.snapshotLabel}:${row.spreadModelVersion}:${row.moneylineModelVersion}:${row.totalsModelVersion}:input-integrity-v3:${row.vectorSchemaFingerprint}`) continue;
+    const versions = [
+      ["spread", row.spreadModelVersion],
+      ["moneyline", row.moneylineModelVersion],
+      ["totals", row.totalsModelVersion],
+    ] as const;
+    if (!versions.every(([family, version]) => version && verifiedRuns.has(version)
+      && promotions.some((promotion) => promotion.role === "production"
+        && promotion.family === family && promotion.modelVersion === version
+        && promotion.featureVersion === row.featureVersion
+        && promotion.trainingCutoff === savedCutoffs.get(family)
+        && promotion.promotedAt <= row.predictionTimestamp))) continue;
+    selected.set(row.gameId, row);
+  }
+  return selected;
+}
+
 export const snapshotUnavailableMessages = {
   missing_promoted_models: "A complete set of promoted production models is not available.",
   schema_version_mismatch: "Saved projections use a different model version or input schema than the current production models.",
@@ -1771,4 +1816,53 @@ export async function generateWeeklyLearningReport(season: number, week: number)
 
 export async function getLatestLearningReports() {
   return db.select().from(weeklyLearningReportsTable).orderBy(desc(weeklyLearningReportsTable.generatedAt)).limit(12);
+}
+
+export async function getHistoricalOfficialPredictionSnapshots(gameIds: string[], asOf: Date) {
+  if (!gameIds.length) return new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
+  const candidates = await db.select({ prediction: predictionSnapshotsTable, kickoff: gamesTable.kickoffTime })
+    .from(predictionSnapshotsTable)
+    .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
+    .where(and(
+      inArray(predictionSnapshotsTable.gameId, gameIds),
+      eq(predictionSnapshotsTable.officialFinalPrediction, true),
+      lte(gamesTable.kickoffTime, asOf),
+      lte(predictionSnapshotsTable.predictionTimestamp, asOf),
+      lte(predictionSnapshotsTable.frozenAt, asOf),
+    ));
+  if (!candidates.length) return new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
+  const rows = candidates.map(({ prediction }) => prediction);
+  const versions = [...new Set(rows.flatMap((row) =>
+    [row.spreadModelVersion, row.moneylineModelVersion, row.totalsModelVersion].filter((value): value is string => Boolean(value))))];
+  if (!versions.length) return new Map<string, typeof predictionSnapshotsTable.$inferSelect>();
+  const [promotions, runs] = await Promise.all([
+    db.select().from(modelPromotionHistoryTable).where(and(
+      eq(modelPromotionHistoryTable.role, "production"),
+      inArray(modelPromotionHistoryTable.modelVersion, versions),
+    )),
+    db.select().from(modelTrainingRunsTable).where(inArray(modelTrainingRunsTable.modelVersion, versions)),
+  ]);
+  const verifiedRuns = new Set(runs.filter((run) =>
+    verifyArtifactIntegrity(run).valid
+    && artifactMetadataMatchesTrainingRun(run)
+    && isFittedModelArtifact(run.modelArtifact, PHASE6_VECTOR_FEATURE_NAMES.length)
+    && JSON.stringify(run.vectorFeatureNames) === JSON.stringify(PHASE6_VECTOR_FEATURE_NAMES)
+    && run.vectorSchemaFingerprint === PHASE6_VECTOR_SCHEMA_FINGERPRINT
+    && rows.some((row) => row.featureVersion === run.featureVersion
+      && row.vectorSchemaFingerprint === run.vectorSchemaFingerprint
+      && run.trainedAt <= row.predictionTimestamp
+      && (row.spreadModelVersion === run.modelVersion && run.family === "spread"
+        || row.moneylineModelVersion === run.modelVersion && run.family === "moneyline"
+        || row.totalsModelVersion === run.modelVersion && run.family === "totals")),
+  ).map((run) => run.modelVersion));
+  const verifiedPromotions = promotions.filter((promotion) => runs.some((run) =>
+    run.modelVersion === promotion.modelVersion && run.family === promotion.family
+    && run.featureVersion === promotion.featureVersion && run.algorithm === promotion.algorithm));
+  return selectVerifiedHistoricalOfficialSnapshots(
+    rows,
+    new Map(candidates.flatMap(({ prediction, kickoff }) => kickoff ? [[prediction.gameId, kickoff] as const] : [])),
+    verifiedPromotions,
+    verifiedRuns,
+    asOf,
+  );
 }

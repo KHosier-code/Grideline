@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import type { ConsumerGame } from '@workspace/api-client-react';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { Router } from 'wouter';
 import { homeProjection, homeSpread, nextHomeSlate, weeklyHomePick } from './consumer-home.ts';
 import { ConsumerProjectionEvidence } from '../components/ConsumerProjectionEvidence.tsx';
 import { VisitorHomeContent } from '../pages/consumer/VisitorHomeContent.tsx';
@@ -67,14 +68,18 @@ test('equal winner strengths break ties by kickoff then game ID, independent of 
 });
 
 test('visitor Home renders only its pick or concise states, never signed-in Home evidence', () => {
+  const staticLocation = () => ['/', () => {}] as [string, (path: string) => void];
+  const renderVisitor = (props: Parameters<typeof VisitorHomeContent>[0]) =>
+    renderToStaticMarkup(createElement(Router, { hook: staticLocation },
+      createElement(VisitorHomeContent, props)));
   for (const [state, expected] of [['ready', 'Home'], ['loading', 'Loading this week'], ['error', 'Pick unavailable right now']] as const) {
-    const html = renderToStaticMarkup(createElement(VisitorHomeContent, { games: [official], now, state }));
+    const html = renderVisitor({ games: [official], now, state });
     assert.match(html, new RegExp(expected));
     assert.match(html, /Pick of the week/);
     assert.doesNotMatch(html, /weekly-list|weekly-intro|weekly-status|ch-feature|Saved projection|Upcoming schedule|Persisted feed status|Home spread evidence|weekly-evidence|consumer-source-health/);
     if (state !== 'ready') assert.doesNotMatch(html, /weekly-pick-team/);
   }
-  const missing = renderToStaticMarkup(createElement(VisitorHomeContent, { games: [game], now, state: 'ready' }));
+  const missing = renderVisitor({ games: [game], now, state: 'ready' });
   assert.match(missing, /A pick is unavailable/);
 });
 
@@ -116,4 +121,23 @@ test('SYNTHETIC Week 3 API fixture renders a saved outlook in Home and Game Deta
   const detail = renderToStaticMarkup(createElement(ConsumerProjectionEvidence, { game: saved as any }));
   assert.match(detail, /Saved model projection, not a verified official pregame prediction/);
   assert.match(detail, /20.0 – 24.0/);
+});
+
+test('Game Detail renders a recovered historical official projection without changing its saved status', () => {
+  const historical = { ...game, kickoffTime: '2026-09-01T17:00:00Z', gameState: 'final',
+    prediction: { ...game.prediction!, officialFinalPrediction: true,
+      projectedHomeScore: 24, projectedAwayScore: 20, projectedMargin: 4, projectedTotal: 44,
+      homeWinProbability: 0.6, awayWinProbability: 0.4 },
+    dataConfidence: { label: 'Standard', score: 0.8, reason: null },
+    finalScore: { home: 21, away: 17 },
+  } as unknown as Parameters<typeof ConsumerProjectionEvidence>[0]['game'];
+  const detail = renderToStaticMarkup(createElement(ConsumerProjectionEvidence, { game: historical }));
+  assert.match(detail, /Verified official pregame prediction, frozen before kickoff/);
+  assert.match(detail, /20.0 – 24.0/);
+  assert.match(detail, /Verified final score/);
+  const missing = renderToStaticMarkup(createElement(ConsumerProjectionEvidence, {
+    game: { ...historical, prediction: null, availability: { prediction: 'No verified snapshot', market: null } },
+  }));
+  assert.match(missing, /No eligible saved projection/);
+  assert.doesNotMatch(missing, /Verified official pregame prediction/);
 });
