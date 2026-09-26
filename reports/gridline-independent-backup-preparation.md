@@ -1,5 +1,13 @@
 # Gridline independent production backup — owner-run procedure
 
+## Report sections
+
+- Phase 1: Windows client, credential, BitLocker folder, and ACL preparation.
+- Phase 2: guarded owner-run PowerShell backup, including production identity and TLS checks.
+- Backup checks: dump status, UTC timestamp, SHA-256, and archive listing.
+- Phase 3: isolated Windows restore procedure, **not authorized** without separate approval.
+- Phase 4: evidence to record after an owner-run backup and any separately approved restore.
+
 **Status: BACKUP NOT YET VERIFIED.** No production credential was accessed, no dump was executed, no restore was attempted, and no production data, worker, binding, or deployment was changed by this preparation.
 
 **Authorization boundary:** The owner authorized **one** independent, read-only logical backup using the standard production credential, while acknowledging that the credential itself may have write privileges. Authorization is conditional on local verification of the BitLocker destination, restricted ACLs, exact commands, and live production database identity. **The owner will run the reviewed commands on their own Windows computer; the Agent must not run a production dump from Replit.** Restoring data anywhere, publishing, migrations, worker restarts, provider synchronization, and production writes are **not authorized**. No archive or password file belongs in this project or Git.
