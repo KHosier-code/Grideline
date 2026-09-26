@@ -163,7 +163,7 @@ test("missing or invalid constraint and index block startup too", async () => {
   }
 });
 
-test("migrated fixture starts worker and API after readiness and evidence", async () => {
+test("migrated fixture starts API then worker after readiness and evidence", async () => {
   const fixture = schemaFixture();
   const started: string[] = [];
   const evidence = await startProductionServices(
@@ -171,10 +171,32 @@ test("migrated fixture starts worker and API after readiness and evidence", asyn
     () => { started.push("worker"); },
     () => { started.push("api"); },
   );
-  assert.deepEqual(started, ["worker", "api"]);
+  assert.deepEqual(started, ["api", "worker"]);
   assert.deepEqual(fixture.queries.map((query) =>
     query === "SELECT 1 AS connection_check" ? "connect"
       : query.includes("pg_catalog.pg_constraint") ? "schema" : "evidence",
   ), ["connect", "schema", "evidence"]);
   assert.equal(evidence.buildId, "build-1");
+});
+
+test("worker waits for API startup and is not started when API startup fails", async () => {
+  const started: string[] = [];
+  let releaseApi!: () => void;
+  const apiReady = new Promise<void>((resolve) => { releaseApi = resolve; });
+  const startup = startProductionServices(
+    () => runProductionDatabasePreflight(schemaFixture(), "build-2"),
+    () => { started.push("worker"); },
+    () => { started.push("api"); return apiReady; },
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(started, ["api"]);
+  releaseApi();
+  await startup;
+  assert.deepEqual(started, ["api", "worker"]);
+  await assert.rejects(startProductionServices(
+    () => runProductionDatabasePreflight(schemaFixture(), "build-3"),
+    () => { started.push("unexpected-worker"); },
+    () => { throw new Error("API startup failed"); },
+  ), /API startup failed/);
+  assert.equal(started.includes("unexpected-worker"), false);
 });

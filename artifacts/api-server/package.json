@@ -10,6 +10,7 @@
     "worker": "node --enable-source-maps ./dist/worker.mjs",
     "import:player-stats:dev": "node --enable-source-maps ./dist/player-stats-dev-cli.mjs",
     "derive:red-zone:dev": "export NODE_ENV=development && node --enable-source-maps ./dist/red-zone-opportunities-dev-cli.mjs",
+    "refresh:red-zone-week2:dev": "export NODE_ENV=development && node --enable-source-maps ./dist/red-zone-week2-refresh-dev-cli.mjs --confirm-development-pbp-2026",
     "personnel-comparison": "export NODE_ENV=development && node --enable-source-maps ./dist/personnel-comparison-cli.mjs",
     "test:personnel-comparison": "pnpm run build && node --test ./dist/lib/personnel-comparison.test.mjs",
     "test:personnel-comparison-performance": "pnpm run build && node --test ./dist/lib/personnel-comparison-performance.test.mjs",

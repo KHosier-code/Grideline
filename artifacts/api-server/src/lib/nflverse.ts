@@ -326,7 +326,7 @@ function createAccumulator(row: CsvRow, teamId: string, opponentTeamId: string):
   };
 }
 
-async function ingestPlayByPlay(season: number, filePath: string) {
+export async function ingestPlayByPlay(season: number, filePath: string) {
   const games = new Map<string, TeamGameAccumulator>();
   const quarterbacks = new Map<string, QbGameAccumulator>();
   const rows = await forEachCsvRow(filePath, (row) => {
@@ -595,12 +595,95 @@ async function ingestPlayByPlay(season: number, filePath: string) {
   return { sourceRows: rows, records: values.length, quarterbackRecords: qbValues.length };
 }
 
+export function assertExactWeek2SourceGames(
+  expectedGameIds: readonly string[],
+  sourceToCanonical: ReadonlyMap<string, string>,
+): void {
+  const expected = new Set(expectedGameIds);
+  const actual = new Set(sourceToCanonical.values());
+  if (expected.size !== 16 || expectedGameIds.length !== 16
+    || sourceToCanonical.size !== 16 || actual.size !== 16
+    || [...expected].some((gameId) => !actual.has(gameId))) {
+    throw new Error("Fresh NFLverse PBP does not match all 16 distinct final canonical Week 2 games");
+  }
+}
+
+/** Validate a fresh candidate before replacing the cache or any persisted facts. */
+export async function validateFreshWeek2Pbp(season: number, filePath: string) {
+  if (season !== 2026) throw new Error("Fresh Week 2 recovery is restricted to season 2026");
+  const teamRows = await db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable);
+  const bySource = new Map<string, string>();
+  const byId = new Map<string, string>();
+  for (const team of teamRows) {
+    const abbreviation = team.abbreviation.toUpperCase();
+    byId.set(team.teamId, abbreviation);
+    for (const source of nflverseTeamCandidates(abbreviation)) bySource.set(source, abbreviation);
+    if (abbreviation === "WSH") bySource.set("WAS", abbreviation);
+  }
+  const games = await db.select({
+    gameId: gamesTable.gameId, week: gamesTable.week, season: gamesTable.season,
+    homeTeamId: gamesTable.homeTeamId, awayTeamId: gamesTable.awayTeamId,
+    gameStatus: gamesTable.gameStatus, kickoffTime: gamesTable.kickoffTime,
+  }).from(gamesTable).where(and(eq(gamesTable.season, season), eq(gamesTable.week, 2)));
+  const expected = games.filter((game) => game.gameStatus === "STATUS_FINAL" && game.kickoffTime);
+  if (games.length !== 16 || expected.length !== 16) {
+    throw new Error("Development schedule does not contain exactly 16 final Week 2 games");
+  }
+  const byMatchup = new Map(expected.map((game) =>
+    [`${byId.get(game.homeTeamId)}:${byId.get(game.awayTeamId)}`, game.gameId]));
+  if (byMatchup.size !== 16 || [...byMatchup.keys()].some((key) => key.includes("undefined"))) {
+    throw new Error("Week 2 schedule contains unmapped or duplicate team matchups");
+  }
+  const sourceGames = new Map<string, string>();
+  const canonicalSources = new Map<string, string>();
+  let week2Rows = 0;
+  const rows = await forEachCsvRow(filePath, (row, rowNumber) => {
+    if (rowNumber === 1) {
+      const required = ["game_id", "play_id", "season", "week", "season_type", "home_team", "away_team",
+        "posteam", "defteam", "yardline_100", "pass_attempt", "rush_attempt",
+        "receiver_player_id", "rusher_player_id"];
+      const missing = required.filter((column) => !(column in row));
+      if (missing.length) throw new Error(`Fresh PBP missing required columns: ${missing.join(", ")}`);
+    }
+    if (integerValue(row.season) !== season) {
+      throw new Error(`Fresh PBP contains a row outside season ${season}`);
+    }
+    if (row.season_type?.toUpperCase() !== "REG" || integerValue(row.week) !== 2) return;
+    week2Rows += 1;
+    const home = bySource.get(row.home_team?.toUpperCase());
+    const away = bySource.get(row.away_team?.toUpperCase());
+    const gameId = byMatchup.get(`${home}:${away}`);
+    if (!row.game_id || !row.play_id || !gameId) {
+      throw new Error("Fresh Week 2 PBP has an unidentified source game, play, or matchup");
+    }
+    const previous = sourceGames.get(row.game_id);
+    const previousSource = canonicalSources.get(gameId);
+    if ((previous && previous !== gameId) || (previousSource && previousSource !== row.game_id)) {
+      throw new Error("Fresh Week 2 PBP has conflicting source-to-canonical game identity");
+    }
+    sourceGames.set(row.game_id, gameId);
+    canonicalSources.set(gameId, row.game_id);
+  });
+  if (!rows || !week2Rows) throw new Error("Fresh PBP contains no Week 2 rows");
+  assertExactWeek2SourceGames(expected.map((game) => game.gameId), sourceGames);
+  return {
+    sourceRows: rows, week2Rows, sourceGames: [...sourceGames.entries()].sort(),
+    canonicalGameIds: [...canonicalSources.keys()].sort(),
+    firstKickoff: new Date(Math.min(...expected.map((game) => game.kickoffTime!.getTime()))).toISOString(),
+    lastKickoff: new Date(Math.max(...expected.map((game) => game.kickoffTime!.getTime()))).toISOString(),
+  };
+}
+
 /**
  * Build the consumer-only red-zone facts from an already acquired local PBP
  * file. All parsing and validation completes before replacement begins; a bad
  * read therefore leaves the last valid per-game facts intact.
  */
-export async function deriveAndPersistRedZoneOpportunities(season: number, filePath: string) {
+export async function deriveAndPersistRedZoneOpportunities(
+  season: number,
+  filePath: string,
+  options?: { expectedGameIds?: readonly string[]; validateOnly?: boolean },
+) {
   const teamRows = await db.select({ teamId: teamsTable.teamId, abbreviation: teamsTable.abbreviation }).from(teamsTable);
   const abbreviationBySource = new Map<string, string>();
   for (const team of teamRows) {
@@ -677,6 +760,9 @@ export async function deriveAndPersistRedZoneOpportunities(season: number, fileP
     gameIds = redZoneReplacementGameIds(derived.teams);
   } catch {
     throw new Error(`pbp ${season}: matched source games contained no usable red-zone denominator evidence`);
+  }
+  if (options?.expectedGameIds?.some((gameId) => !gameIds.includes(gameId))) {
+    throw new Error(`pbp ${season}: at least one expected Week 2 game lacks usable red-zone opportunity evidence`);
   }
   const playerFactsByKey = new Map(derived.players.map((fact) =>
     [`${fact.gameId}:${fact.teamId}:${fact.playerId}:${fact.zone}`, fact]));
@@ -768,16 +854,18 @@ export async function deriveAndPersistRedZoneOpportunities(season: number, fileP
     sourceUpdatedAt: null,
     ingestedAt,
   }));
-  await db.transaction(async (tx) => {
-    await tx.delete(redZonePlayerGameFactsTable).where(inArray(redZonePlayerGameFactsTable.gameId, gameIds));
-    await tx.delete(redZoneTeamGameFactsTable).where(inArray(redZoneTeamGameFactsTable.gameId, gameIds));
-    for (let index = 0; index < playerValues.length; index += 200) {
-      await tx.insert(redZonePlayerGameFactsTable).values(playerValues.slice(index, index + 200));
-    }
-    for (let index = 0; index < teamValues.length; index += 250) {
-      await tx.insert(redZoneTeamGameFactsTable).values(teamValues.slice(index, index + 250));
-    }
-  });
+  if (!options?.validateOnly) {
+    await db.transaction(async (tx) => {
+      await tx.delete(redZonePlayerGameFactsTable).where(inArray(redZonePlayerGameFactsTable.gameId, gameIds));
+      await tx.delete(redZoneTeamGameFactsTable).where(inArray(redZoneTeamGameFactsTable.gameId, gameIds));
+      for (let index = 0; index < playerValues.length; index += 200) {
+        await tx.insert(redZonePlayerGameFactsTable).values(playerValues.slice(index, index + 200));
+      }
+      for (let index = 0; index < teamValues.length; index += 250) {
+        await tx.insert(redZoneTeamGameFactsTable).values(teamValues.slice(index, index + 250));
+      }
+    });
+  }
   return {
     sourceRows: rows,
     games: gameIds.length,

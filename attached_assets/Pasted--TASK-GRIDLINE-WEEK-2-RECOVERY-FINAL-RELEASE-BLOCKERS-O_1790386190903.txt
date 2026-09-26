@@ -1,0 +1,109 @@
+# TASK — GRIDLINE WEEK 2 RECOVERY & FINAL RELEASE BLOCKERS
+
+**Objective:** Resolve the four remaining red-zone release requirements. Do not repeat the entire production audit.
+
+The previous release-gate report passed gates 1, 2, 3, 5, 8 and 9.
+
+Failed: Gate 6.
+
+Unverified: Gates 4, 7 and 10.
+
+Keep all previously passed safeguards intact.
+
+## PHASE 1 — FRESH DEVELOPMENT DATA
+
+The existing development NFLverse cache was downloaded September 17 and contains Week 1 only.
+
+A separate read confirmed that the upstream source contains all 16 Week 2 games.
+
+Implement or use an existing approved development-only mechanism to:
+
+1. Download the current NFLverse PBP file.
+2. Validate its schema and source identity.
+3. Verify all 16 Week 2 games are present.
+4. Safely update the development cache.
+5. Derive player-zone and team-zone facts through the normal Gridline pipeline.
+
+Do not trigger a production synchronization.
+
+Do not modify historical production data.
+
+Do not request unnecessary paid provider data.
+
+Preserve existing Week 1 facts and verify that refreshing does not duplicate them.
+
+## PHASE 2 — VALIDATE RED-ZONE ACCURACY
+
+After the fresh development download:
+
+- Confirm Week 1 and Week 2 coverage.
+- Reconcile representative Week 2 player and team records against the source play-by-play.
+- Validate inside-20, inside-10 and inside-5 calculations.
+- Verify targets, carries, touchdowns and zero-usage cases.
+- Check season totals and last-three calculations.
+- Confirm missing weeks remain explicitly identified.
+- Confirm incomplete data is never represented as zero.
+
+Produce a reproducible Week 2 validation report.
+
+Do not mark accuracy PASS simply because the expected number of games is present.
+
+## PHASE 3 — DEPLOYMENT ORDER
+
+Verify that the production publishing process guarantees this sequence:
+
+1. Apply approved additive migrations.
+2. Verify new tables, constraints and indexes.
+3. Start the updated API.
+4. Start the updated data worker.
+
+Where possible, validate the sequence using an isolated test environment or deployment configuration inspection.
+
+If this order cannot be guaranteed, identify the exact required change.
+
+Do not publish.
+
+## PHASE 4 — STARTUP SAFEGUARDS
+
+Verify that:
+
+- The API handles missing red-zone tables safely.
+- The worker cannot write red-zone facts before the required migration is complete.
+- Database identity is verified.
+- Duplicate execution does not duplicate facts.
+- Failed synchronization is recorded.
+- Provider activity follows the approved scheduler.
+- The deployment does not initiate unexpected catch-up jobs.
+- Existing Phase 6.1 predictions remain unaffected.
+
+Run focused regression tests and all relevant typechecks.
+
+## FINAL DELIVERABLE
+
+Generate:
+
+reports/gridline-red-zone-release-unblock.md
+
+Report the four outstanding gates individually:
+
+Gate 4: Migration-before-start ordering.
+
+Gate 6: Development Week 2 coverage.
+
+Gate 7: Week 2 calculation accuracy.
+
+Gate 10: Startup safeguards.
+
+Include actual record counts, test results, evidence and any remaining limitations.
+
+Finish with one of two conclusions:
+
+READY FOR OWNER APPROVAL
+
+or
+
+HOLD
+
+Do not publish, start the production worker, modify production data or change production model artifacts.
+
+If production publication is ready, provide the exact deployment procedure and the post-publish checks required before declaring production verified.

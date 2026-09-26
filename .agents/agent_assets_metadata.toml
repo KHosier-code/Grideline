@@ -336,3 +336,17 @@ mtime_ms = 1790371303005
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/b049e621-489a-4d62-8446-7a239ec30bb2/1210ee9b-93e8-461c-a811-65583cb3895c"
 storage_version_token = "1790371390886050"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "7P9EsCffMnhlJJHtmSZQ0"
+uri = "file://reports/gridline-red-zone-release-unblock.md"
+type = "text"
+title = "Gridline red-zone release unblock report"
+description = "Week 2 recovery, source reconciliation, four release gates, and HOLD decision."
+logical_id = "29b293eb-eafb-4313-9e4c-ce4af33398f2"
+content_hash = "sha256:4459b1995785fed3406b2ee807179a48a7f6168d22f2eb86d82d0cddeb509166"
+size = 13275
+mtime_ms = 1790386948330
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/29b293eb-eafb-4313-9e4c-ce4af33398f2/9dcbc32d-7245-46e7-ab11-6969df3f119f"
+storage_version_token = "1790386999374396"
+content_type = "text/markdown"

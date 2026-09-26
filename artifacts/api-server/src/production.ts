@@ -44,7 +44,7 @@ try {
   const evidence = await startProductionServices(
     () => verifyProductionDatabase(__GRIDLINE_BUILD_ID__),
     () => start("Gridline data worker", workerPath),
-    () => start("Gridline API", apiPath),
+    () => { start("Gridline API", apiPath); },
   );
   console.info("Production database smoke check passed", {
     buildId: evidence.buildId,
