@@ -1,0 +1,5 @@
+.visitor-home { width: 100%; max-width: 760px; margin: clamp(24px, 6vw, 90px) auto; padding: 0 16px; }
+.visitor-pick { padding: clamp(24px, 5vw, 48px); border: 1px solid hsl(var(--border)); border-radius: 18px; background: hsl(var(--card)); color: hsl(var(--card-foreground)); }
+.visitor-pick h1 { margin: 8px 0 22px; font-family: var(--app-font-serif); font-size: clamp(28px, 5vw, 44px); line-height: 1.15; letter-spacing: -.04em; }
+.visitor-pick strong { display: block; overflow-wrap: anywhere; font-size: clamp(26px, 5vw, 42px); line-height: 1.2; }
+.visitor-pick p:last-child { margin: 12px 0 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.5; }

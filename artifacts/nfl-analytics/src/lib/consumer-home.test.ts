@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import type { ConsumerGame } from '@workspace/api-client-react';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { homeProjection, homeSpread, nextHomeSlate } from './consumer-home.ts';
+import { homeProjection, homeSpread, nextHomeSlate, weeklyHomePick } from './consumer-home.ts';
 import { ConsumerProjectionEvidence } from '../components/ConsumerProjectionEvidence.tsx';
+import { VisitorHomeContent } from '../pages/consumer/VisitorHomeContent.tsx';
 import synthetic from '../../../../test-fixtures/synthetic-week3-consumer.json' with { type: 'json' };
 
 const now = Date.parse('2026-09-25T12:00:00Z');
@@ -23,6 +24,58 @@ test('next slate contains only the first future season and week, without inventi
   assert.deepEqual(nextHomeSlate([next, game], now)?.games.map(item => item.gameId), ['one']);
   assert.equal(nextHomeSlate([{ ...game, kickoffTime: '2026-09-24T12:00:00Z' }], now), null);
   assert.equal(nextHomeSlate([], now), null);
+});
+
+const official = { ...game, prediction: { ...game.prediction!,
+  officialFinalPrediction: true, homeWinProbability: 0.7, awayWinProbability: 0.3 } } as ConsumerGame;
+
+test('weekly pick selects strongest official winner only from next upcoming slate', () => {
+  const strongest = { ...official, gameId: 'strong', kickoffTime: '2026-09-27T19:00:00Z',
+    prediction: { ...official.prediction!, homeWinProbability: 0.1, awayWinProbability: 0.9 } } as ConsumerGame;
+  const nextWeek = { ...official, gameId: 'next', week: 4, kickoffTime: '2026-10-02T12:00:00Z',
+    prediction: { ...official.prediction!, homeWinProbability: 0.99, awayWinProbability: 0.01 } } as ConsumerGame;
+  assert.deepEqual(weeklyHomePick([nextWeek, official, strongest], now), { teamName: 'Away' });
+  assert.deepEqual(weeklyHomePick([official, strongest, nextWeek].reverse(), now), { teamName: 'Away' });
+  assert.equal(weeklyHomePick([nextWeek, { ...official, prediction: null }], now), null);
+  assert.equal(weeklyHomePick([official], Date.parse(official.kickoffTime!)), null);
+  assert.equal(weeklyHomePick([], now), null);
+});
+
+test('weekly pick rejects outlooks, completed games, invalid timestamps and malformed probabilities', () => {
+  const invalid = [
+    { ...official, prediction: { ...official.prediction!, officialFinalPrediction: false } },
+    { ...official, finalScore: { home: 0, away: 0 } },
+    { ...official, gameState: 'final' },
+    { ...official, prediction: { ...official.prediction!, predictionTimestamp: official.kickoffTime } },
+    { ...official, prediction: { ...official.prediction!, predictionTimestamp: 'not a date' } },
+    { ...official, prediction: { ...official.prediction!, predictionTimestamp: new Date(now + 1).toISOString() } },
+    ...[[0.5, 0.5], [NaN, 0.4], [Infinity, 0], [-0.1, 1.1], [0.7, 0.7], [null, 0.5]]
+      .map(([home, away]) => ({ ...official, prediction: { ...official.prediction!,
+        homeWinProbability: home, awayWinProbability: away } })),
+  ] as ConsumerGame[];
+  for (const candidate of invalid) assert.equal(weeklyHomePick([candidate], now), null);
+  assert.deepEqual(weeklyHomePick([invalid[0], official], now), { teamName: 'Home' });
+});
+
+test('equal winner strengths break ties by kickoff then game ID, independent of input order', () => {
+  const early = { ...official, gameId: 'z', kickoffTime: '2026-09-27T16:00:00Z',
+    matchup: { ...official.matchup, home: { ...official.matchup.home, name: 'Early' } } };
+  const firstId = { ...early, gameId: 'a',
+    matchup: { ...early.matchup, home: { ...early.matchup.home, name: 'First ID' } } };
+  for (const input of [[official, early, firstId], [firstId, official, early]])
+    assert.deepEqual(weeklyHomePick(input, now), { teamName: 'First ID' });
+});
+
+test('visitor Home renders only its pick or concise states, never signed-in Home evidence', () => {
+  for (const [state, expected] of [['ready', 'Home'], ['loading', 'Loading this week'], ['error', 'Pick unavailable right now']] as const) {
+    const html = renderToStaticMarkup(createElement(VisitorHomeContent, { games: [official], now, state }));
+    assert.match(html, new RegExp(expected));
+    assert.match(html, /Pick of the week/);
+    assert.doesNotMatch(html, /weekly-list|weekly-intro|weekly-status|ch-feature|Saved projection|Upcoming schedule|Persisted feed status|Home spread evidence|weekly-evidence|consumer-source-health/);
+    if (state !== 'ready') assert.doesNotMatch(html, /weekly-pick-team/);
+  }
+  const missing = renderToStaticMarkup(createElement(VisitorHomeContent, { games: [game], now, state: 'ready' }));
+  assert.match(missing, /A pick is unavailable/);
 });
 
 test('snapshot provenance stays distinct from absence and official freeze', () => {

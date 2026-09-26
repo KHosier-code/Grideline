@@ -72,6 +72,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import ConsumerHome from '@/pages/consumer/ConsumerHome';
+import VisitorHome from '@/pages/consumer/VisitorHome';
 import ConsumerGames from '@/pages/consumer/ConsumerGames';
 import ConsumerGameDetail from '@/pages/consumer/ConsumerGameDetail';
 import ConsumerPerformance from '@/pages/consumer/ConsumerPerformance';
@@ -2094,7 +2095,7 @@ function Router() {
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
     <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
     {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}
-    <Route path="/"><ConsumerShell><ConsumerHome /></ConsumerShell></Route>
+    <Route path="/"><ConsumerShell><VisitorHome /></ConsumerShell></Route>
     <Route component={SignInPage} />
   </Switch></RoutedErrorBoundary>;
   return <RoutedErrorBoundary><Switch>

@@ -14,6 +14,29 @@ export function nextHomeSlate(games: ConsumerGame[], now: number) {
   };
 }
 
+export function weeklyHomePick(games: ConsumerGame[], now: number): { teamName: string } | null {
+  const slate = nextHomeSlate(games, now);
+  if (!slate) return null;
+  const eligible = slate.games.flatMap((game) => {
+    const prediction = game.prediction;
+    const savedAt = prediction?.predictionTimestamp ? Date.parse(prediction.predictionTimestamp) : NaN;
+    const kickoff = Date.parse(game.kickoffTime!);
+    const home = prediction?.homeWinProbability;
+    const away = prediction?.awayWinProbability;
+    if (game.finalScore || prediction?.officialFinalPrediction !== true
+      || !Number.isFinite(savedAt) || savedAt >= kickoff || savedAt > now
+      || typeof home !== 'number' || typeof away !== 'number'
+      || !Number.isFinite(home) || !Number.isFinite(away)
+      || home < 0 || home > 1 || away < 0 || away > 1
+      || Math.abs(home + away - 1) > 0.001 || home === away) return [];
+    const teamName = home > away ? game.matchup.home?.name : game.matchup.away?.name;
+    if (typeof teamName !== 'string' || !teamName.trim()) return [];
+    return [{ teamName: teamName.trim(), probability: Math.max(home, away), kickoff, gameId: game.gameId }];
+  });
+  eligible.sort((a, b) => b.probability - a.probability || a.kickoff - b.kickoff || a.gameId.localeCompare(b.gameId));
+  return eligible[0] ? { teamName: eligible[0].teamName } : null;
+}
+
 export function homeProjection(game: ConsumerGame) {
   if (!game.prediction) return { label: 'No eligible saved projection', detail: game.availability.prediction ?? 'No eligible saved prediction is available.' };
   return {
