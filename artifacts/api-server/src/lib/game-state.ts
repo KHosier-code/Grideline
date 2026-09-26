@@ -1,8 +1,22 @@
 export const NFL_GAME_STATES = ["scheduled", "pregame", "live", "final", "postponed", "cancelled"] as const;
 export type NflGameState = (typeof NFL_GAME_STATES)[number];
 
+// These are fragments of the normalized provider status, except for exact matches.
+// Keep the priority below: terminal statuses take precedence over live markers.
+export const NFL_STATUS_VOCABULARY = {
+  postponed: { includes: ["postpon"], exact: [] },
+  cancelled: { includes: ["cancel"], exact: [] },
+  final: { includes: ["final", "completed"], exact: ["closed"] },
+  live: { includes: ["progress", "halftime", "in progress", "end of", "quarter"], exact: [] },
+} as const;
+
 function normalizedStatus(status: string | null | undefined) {
   return (status ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
+}
+
+function matchesStatus(status: string, rule: { includes: readonly string[]; exact: readonly string[] }) {
+  return rule.includes.some((fragment) => status.includes(fragment))
+    || rule.exact.some((value) => status === value);
 }
 
 export function interpretNflGameState(
@@ -10,16 +24,10 @@ export function interpretNflGameState(
   now = new Date(),
 ): NflGameState {
   const status = normalizedStatus(game.gameStatus);
-  if (status.includes("postpon")) return "postponed";
-  if (status.includes("cancel")) return "cancelled";
-  if (status.includes("final") || status.includes("completed") || status === "closed") return "final";
-  if (
-    status.includes("progress") ||
-    status.includes("halftime") ||
-    status.includes("in progress") ||
-    status.includes("end of") ||
-    status.includes("quarter")
-  ) return "live";
+  if (matchesStatus(status, NFL_STATUS_VOCABULARY.postponed)) return "postponed";
+  if (matchesStatus(status, NFL_STATUS_VOCABULARY.cancelled)) return "cancelled";
+  if (matchesStatus(status, NFL_STATUS_VOCABULARY.final)) return "final";
+  if (matchesStatus(status, NFL_STATUS_VOCABULARY.live)) return "live";
   if (game.kickoffTime && game.kickoffTime.getTime() <= now.getTime()) return "live";
   if (status.includes("scheduled") || status.includes("pre game") || status === "status unknown") {
     return game.kickoffTime ? "pregame" : "scheduled";

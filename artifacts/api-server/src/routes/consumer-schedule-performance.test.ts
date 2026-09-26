@@ -32,6 +32,8 @@ const statusCases = [
   { status: "Final", state: "final" },
   { status: "STATUS_COMPLETED", state: "final" },
   { status: "closed", state: "final" },
+  { status: "  CLOSED  ", state: "final" },
+  { status: "unclosed", state: "pregame" },
   { status: "STATUS_IN_PROGRESS", state: "live" },
   { status: "in-progress", state: "live" },
   { status: "STATUS_HALFTIME", state: "live" },
@@ -44,6 +46,7 @@ const statusCases = [
   { status: "  STATUS_FINAL_IN_PROGRESS  ", state: "final" },
   { status: "STATUS_POSTPONED_IN_PROGRESS", state: "postponed" },
   { status: "STATUS_CANCELLED_IN_PROGRESS", state: "cancelled" },
+  { status: "STATUS_COMPLETED_IN_PROGRESS", state: "final" },
 ] as const;
 
 test("database schedule eligibility matches every supported provider status at kickoff and the eight-hour boundary", async () => {
