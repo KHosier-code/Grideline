@@ -1256,6 +1256,109 @@ export interface ConsumerTrends {
   note: string;
 }
 
+export interface ConsumerTeamObservation {
+  gameId: string;
+  week: number;
+  kickoffTime: string;
+  opponent: string;
+  /** @nullable */
+  offenseEpa: number | null;
+  /** @nullable */
+  defenseEpa: number | null;
+  /** @nullable */
+  offenseSuccessRate: number | null;
+  /** @nullable */
+  defenseSuccessRate: number | null;
+}
+
+export interface ConsumerTeamAnalyticsTeam {
+  teamId: string;
+  abbreviation: string;
+  name: string;
+  /** @nullable */
+  logoUrl: string | null;
+  /** @nullable */
+  offenseEpa: number | null;
+  /** @nullable */
+  defenseEpa: number | null;
+  offenseSamples: number;
+  defenseSamples: number;
+  selectedGames: number;
+  observations: ConsumerTeamObservation[];
+}
+
+export type ConsumerTeamAnalyticsWindow = typeof ConsumerTeamAnalyticsWindow[keyof typeof ConsumerTeamAnalyticsWindow];
+
+
+export const ConsumerTeamAnalyticsWindow = {
+  season: 'season',
+  last3: 'last3',
+  last5: 'last5',
+  last8: 'last8',
+} as const;
+
+export type ConsumerTeamAnalyticsCoverageWeeksItem = {
+  week: number;
+  finalGames: number;
+  statGames: number;
+};
+
+export type ConsumerTeamAnalyticsCoverage = {
+  weeks: ConsumerTeamAnalyticsCoverageWeeksItem[];
+  partialReasons: string[];
+};
+
+export interface ConsumerTeamAnalytics {
+  season: number;
+  throughWeek: number;
+  window: ConsumerTeamAnalyticsWindow;
+  source: string;
+  coverage: ConsumerTeamAnalyticsCoverage;
+  teams: ConsumerTeamAnalyticsTeam[];
+}
+
+export interface ConsumerGradedAggregate {
+  season: number;
+  graded: number;
+  winnerGraded: number;
+  winnerCorrect: number;
+  /** @nullable */
+  winnerAccuracy: number | null;
+  marginGraded: number;
+  /** @nullable */
+  marginMae: number | null;
+  totalGraded: number;
+  /** @nullable */
+  totalMae: number | null;
+}
+
+export type ConsumerGradedPoint = ConsumerGradedAggregate & {
+  week: number;
+  gameId: string;
+  kickoffTime: string;
+};
+
+export type ConsumerGradedChartsStatus = typeof ConsumerGradedChartsStatus[keyof typeof ConsumerGradedChartsStatus];
+
+
+export const ConsumerGradedChartsStatus = {
+  measured: 'measured',
+  not_configured: 'not_configured',
+} as const;
+
+export interface ConsumerGradedCharts {
+  status: ConsumerGradedChartsStatus;
+  source: string;
+  note: string;
+  /** @nullable */
+  season: number | null;
+  bySeason: ConsumerGradedAggregate[];
+  cumulative: ConsumerGradedPoint[];
+  openingClosingAvailable: boolean;
+  openingClosingReason: string;
+  truncated: boolean;
+}
+
 export interface ConsumerPropsAvailability {
   status: 'unavailable';
   message: string;
@@ -1540,7 +1643,6 @@ export const ConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
-
 /**
  * @nullable
  */
@@ -2607,6 +2709,42 @@ season?: number;
  * @maximum 22
  */
 week?: number;
+};
+
+export type GetConsumerTeamAnalyticsParams = {
+/**
+ * @minimum 2000
+ * @maximum 2100
+ */
+season: number;
+/**
+ * @minimum 1
+ * @maximum 18
+ */
+throughWeek: number;
+window?: GetConsumerTeamAnalyticsWindow;
+/**
+ * Optional comma-separated canonical abbreviations, at most four, for trend selection.
+ */
+teams?: string;
+};
+
+export type GetConsumerTeamAnalyticsWindow = typeof GetConsumerTeamAnalyticsWindow[keyof typeof GetConsumerTeamAnalyticsWindow];
+
+
+export const GetConsumerTeamAnalyticsWindow = {
+  season: 'season',
+  last3: 'last3',
+  last5: 'last5',
+  last8: 'last8',
+} as const;
+
+export type GetConsumerGradedChartsParams = {
+/**
+ * @minimum 2000
+ * @maximum 2100
+ */
+season?: number;
 };
 
 export type GetConsumerPlayerUsageParams = {

@@ -31,6 +31,7 @@ import type {
   ConsumerGameDetail,
   ConsumerGameNotFoundResponse,
   ConsumerGames,
+  ConsumerGradedCharts,
   ConsumerInvalidRequestResponse,
   ConsumerPerformance,
   ConsumerPlayerUsage,
@@ -38,12 +39,15 @@ import type {
   ConsumerPropsAvailability,
   ConsumerRedZoneOpportunities,
   ConsumerScheduleSelection,
+  ConsumerTeamAnalytics,
   ConsumerTrends,
   DashboardSummary,
   DataHealth,
   Game,
+  GetConsumerGradedChartsParams,
   GetConsumerPlayerUsageParams,
   GetConsumerRedZoneOpportunitiesParams,
+  GetConsumerTeamAnalyticsParams,
   GetPregameFeatureHealthParams,
   GetUsageAnalyticsSummaryParams,
   HealthStatus,
@@ -2654,6 +2658,174 @@ export function useGetConsumerTrends<TData = Awaited<ReturnType<typeof getConsum
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerTrendsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerTeamAnalyticsUrl = (params: GetConsumerTeamAnalyticsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/team-analytics?${stringifiedParams}` : `/api/consumer/team-analytics`
+}
+
+/**
+ * @summary Read final-game NFLverse team EPA and success-rate observations
+ */
+export const getConsumerTeamAnalytics = async (params: GetConsumerTeamAnalyticsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerTeamAnalytics> => {
+
+  return customFetch<ConsumerTeamAnalytics>(getGetConsumerTeamAnalyticsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerTeamAnalyticsQueryKey = (params?: GetConsumerTeamAnalyticsParams,) => {
+    return [
+    `/api/consumer/team-analytics`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerTeamAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerTeamAnalytics>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(params: GetConsumerTeamAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerTeamAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerTeamAnalyticsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerTeamAnalytics>>> = ({ signal }) => getConsumerTeamAnalytics(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerTeamAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerTeamAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerTeamAnalytics>>>
+export type GetConsumerTeamAnalyticsQueryError = ErrorType<void | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read final-game NFLverse team EPA and success-rate observations
+ */
+
+export function useGetConsumerTeamAnalytics<TData = Awaited<ReturnType<typeof getConsumerTeamAnalytics>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(
+ params: GetConsumerTeamAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerTeamAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerTeamAnalyticsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerGradedChartsUrl = (params?: GetConsumerGradedChartsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/graded-charts?${stringifiedParams}` : `/api/consumer/graded-charts`
+}
+
+/**
+ * @summary Read complete official pregame final-game grading aggregates
+ */
+export const getConsumerGradedCharts = async (params?: GetConsumerGradedChartsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerGradedCharts> => {
+
+  return customFetch<ConsumerGradedCharts>(getGetConsumerGradedChartsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerGradedChartsQueryKey = (params?: GetConsumerGradedChartsParams,) => {
+    return [
+    `/api/consumer/graded-charts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerGradedChartsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(params?: GetConsumerGradedChartsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerGradedChartsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerGradedCharts>>> = ({ signal }) => getConsumerGradedCharts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerGradedChartsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerGradedCharts>>>
+export type GetConsumerGradedChartsQueryError = ErrorType<void | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read complete official pregame final-game grading aggregates
+ */
+
+export function useGetConsumerGradedCharts<TData = Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerGradedChartsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerGradedChartsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

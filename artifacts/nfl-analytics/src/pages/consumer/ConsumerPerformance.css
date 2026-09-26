@@ -1,0 +1,224 @@
+.consumer-graded-charts {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.consumer-chart-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.consumer-chart-heading h2 {
+  margin: 0;
+  font-family: var(--app-font-serif);
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: -.04em;
+}
+
+.consumer-chart-heading p:not(.consumer-eyebrow) {
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.consumer-chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.consumer-chart-controls label {
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.consumer-chart-controls select {
+  display: block;
+  min-width: 145px;
+  height: 40px;
+  margin-top: 5px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--card));
+  padding: 0 10px;
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-sans);
+  font-size: 13px;
+  text-transform: none;
+}
+
+.consumer-chart-partial {
+  margin: 0;
+  border: 1px solid hsl(var(--status-warn) / .45);
+  border-radius: 10px;
+  background: hsl(var(--status-warn) / .1);
+  padding: 12px 14px;
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.consumer-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.consumer-chart-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card));
+  padding: 18px;
+}
+
+.consumer-chart-card-heading h3,
+.consumer-chart-counts h3 {
+  margin: 0;
+  font-family: var(--app-font-serif);
+  font-size: 18px;
+  letter-spacing: -.02em;
+}
+
+.consumer-chart-card-heading p,
+.consumer-chart-counts > p {
+  margin: 6px 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.consumer-chart-plot {
+  width: 100%;
+  height: 300px;
+  margin-top: 12px;
+  aspect-ratio: auto;
+}
+
+.consumer-chart-empty {
+  display: grid;
+  min-height: 255px;
+  place-items: center;
+  margin: 12px 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  text-align: center;
+}
+
+.consumer-chart-counts {
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--card));
+  padding: 16px 18px;
+}
+
+.consumer-chart-counts ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.consumer-chart-counts li {
+  display: grid;
+  gap: 4px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--secondary) / .35);
+  padding: 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.consumer-chart-counts li strong {
+  color: hsl(var(--accent));
+}
+
+.consumer-chart-counts li span {
+  color: hsl(var(--muted-foreground));
+}
+
+.consumer-chart-data {
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  background: hsl(var(--card));
+}
+
+.consumer-chart-data summary {
+  padding: 12px 15px;
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.consumer-chart-tables {
+  display: grid;
+  gap: 18px;
+  overflow-x: auto;
+  border-top: 1px solid hsl(var(--border));
+  padding: 14px;
+}
+
+.consumer-chart-tables table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.consumer-chart-tables caption {
+  padding: 0 0 8px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.consumer-chart-tables th,
+.consumer-chart-tables td {
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.consumer-chart-tables thead th {
+  color: hsl(var(--muted-foreground));
+  font-size: 10px;
+}
+
+@media (max-width: 760px) {
+  .consumer-chart-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .consumer-chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .consumer-chart-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .consumer-chart-controls select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .consumer-chart-card {
+    padding: 13px;
+  }
+}

@@ -623,6 +623,57 @@ paths:
                 $ref: "#/components/schemas/ConsumerTrends"
         "503":
           $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/team-analytics:
+    get:
+      operationId: getConsumerTeamAnalytics
+      tags: [nfl]
+      summary: Read final-game NFLverse team EPA and success-rate observations
+      parameters:
+        - in: query
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: query
+          name: throughWeek
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 18 }
+        - in: query
+          name: window
+          required: true
+          schema: { type: string, enum: [season, last3, last5, last8], default: season }
+        - in: query
+          name: teams
+          description: Optional comma-separated canonical abbreviations, at most four, for trend selection.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Coverage-aware game-mean EPA and per-game team observations
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerTeamAnalytics" }
+        "400":
+          description: Invalid season, week, window, or team selection
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/graded-charts:
+    get:
+      operationId: getConsumerGradedCharts
+      tags: [nfl]
+      summary: Read complete official pregame final-game grading aggregates
+      parameters:
+        - in: query
+          name: season
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+      responses:
+        "200":
+          description: Season totals and chronological cumulative grades, not betting returns
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerGradedCharts" }
+        "400":
+          description: Invalid season
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
   /consumer/props:
     get:
       operationId: getConsumerPropsAvailability
@@ -1504,6 +1555,90 @@ components:
             maximumOfficialPredictions: { type: integer, const: 5000 }
             truncated: { type: boolean }
         note: { type: string }
+    ConsumerTeamObservation:
+      type: object
+      required: [gameId, week, kickoffTime, opponent, offenseEpa, defenseEpa, offenseSuccessRate, defenseSuccessRate]
+      properties:
+        gameId: { type: string }
+        week: { type: integer }
+        kickoffTime: { type: string }
+        opponent: { type: string }
+        offenseEpa: { type: ["number", "null"] }
+        defenseEpa: { type: ["number", "null"] }
+        offenseSuccessRate: { type: ["number", "null"] }
+        defenseSuccessRate: { type: ["number", "null"] }
+    ConsumerTeamAnalyticsTeam:
+      type: object
+      required: [teamId, abbreviation, name, logoUrl, offenseEpa, defenseEpa, offenseSamples, defenseSamples, selectedGames, observations]
+      properties:
+        teamId: { type: string }
+        abbreviation: { type: string }
+        name: { type: string }
+        logoUrl: { type: ["string", "null"] }
+        offenseEpa: { type: ["number", "null"] }
+        defenseEpa: { type: ["number", "null"] }
+        offenseSamples: { type: integer }
+        defenseSamples: { type: integer }
+        selectedGames: { type: integer }
+        observations: { type: array, items: { $ref: "#/components/schemas/ConsumerTeamObservation" } }
+    ConsumerTeamAnalytics:
+      type: object
+      required: [season, throughWeek, window, source, coverage, teams]
+      properties:
+        season: { type: integer }
+        throughWeek: { type: integer }
+        window: { type: string, enum: [season, last3, last5, last8] }
+        source: { type: string }
+        coverage:
+          type: object
+          required: [weeks, partialReasons]
+          properties:
+            weeks:
+              type: array
+              items:
+                type: object
+                required: [week, finalGames, statGames]
+                properties:
+                  week: { type: integer }
+                  finalGames: { type: integer }
+                  statGames: { type: integer }
+            partialReasons: { type: array, items: { type: string } }
+        teams: { type: array, items: { $ref: "#/components/schemas/ConsumerTeamAnalyticsTeam" } }
+    ConsumerGradedAggregate:
+      type: object
+      required: [season, graded, winnerGraded, winnerCorrect, winnerAccuracy, marginGraded, marginMae, totalGraded, totalMae]
+      properties:
+        season: { type: integer }
+        graded: { type: integer }
+        winnerGraded: { type: integer }
+        winnerCorrect: { type: integer }
+        winnerAccuracy: { type: ["number", "null"] }
+        marginGraded: { type: integer }
+        marginMae: { type: ["number", "null"] }
+        totalGraded: { type: integer }
+        totalMae: { type: ["number", "null"] }
+    ConsumerGradedPoint:
+      allOf:
+        - $ref: "#/components/schemas/ConsumerGradedAggregate"
+        - type: object
+          required: [week, gameId, kickoffTime]
+          properties:
+            week: { type: integer }
+            gameId: { type: string }
+            kickoffTime: { type: string }
+    ConsumerGradedCharts:
+      type: object
+      required: [status, source, note, season, bySeason, cumulative, openingClosingAvailable, openingClosingReason, truncated]
+      properties:
+        status: { type: string, enum: [measured, not_configured] }
+        source: { type: string }
+        note: { type: string }
+        season: { type: ["integer", "null"] }
+        bySeason: { type: array, items: { $ref: "#/components/schemas/ConsumerGradedAggregate" } }
+        cumulative: { type: array, items: { $ref: "#/components/schemas/ConsumerGradedPoint" } }
+        openingClosingAvailable: { type: boolean }
+        openingClosingReason: { type: string }
+        truncated: { type: boolean }
     ConsumerPropsAvailability:
       type: object
       required: [status, message, available]

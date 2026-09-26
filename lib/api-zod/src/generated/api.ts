@@ -20,8 +20,6 @@ export const GetConfidenceAuditResponse = zod.object({
   "historicalEvidence": zod.record(zod.string(), zod.unknown()),
   "results": zod.array(zod.record(zod.string(), zod.unknown()))
 })
-
-
 /**
  * @summary Calculate and append confidence evidence for a season and week
  */
@@ -671,8 +669,6 @@ export const GetLiveModelInputIntegrityResponse = zod.object({
   "phase7UsedForValidationOnly": zod.boolean()
 }))
 })
-
-
 /**
  * Requires authenticated administrator access. The optional featureVersion pregame-v4-personnel-context creates additive rows from pregame-v3 and never overwrites v3. Never trains or scores a betting model.
  * @summary Build an immutable version of historical pregame features
@@ -858,7 +854,6 @@ export const GetChallengerReadinessReportResponse = zod.object({
   "requiredAction": zod.string()
 }))
 })
-
 
 /**
  * @summary List NFL teams
@@ -2006,6 +2001,107 @@ export const GetConsumerTrendsResponse = zod.object({
 
 
 /**
+ * @summary Read final-game NFLverse team EPA and success-rate observations
+ */
+export const getConsumerTeamAnalyticsQuerySeasonMin = 2000;
+export const getConsumerTeamAnalyticsQuerySeasonMax = 2100;
+
+export const getConsumerTeamAnalyticsQueryThroughWeekMax = 18;
+
+export const getConsumerTeamAnalyticsQueryWindowDefault = `season`;
+
+export const GetConsumerTeamAnalyticsQueryParams = zod.object({
+  "season": zod.coerce.number().int().min(getConsumerTeamAnalyticsQuerySeasonMin).max(getConsumerTeamAnalyticsQuerySeasonMax),
+  "throughWeek": zod.coerce.number().int().min(1).max(getConsumerTeamAnalyticsQueryThroughWeekMax),
+  "window": zod.enum(['season', 'last3', 'last5', 'last8']).default(getConsumerTeamAnalyticsQueryWindowDefault),
+  "teams": zod.coerce.string().optional().describe('Optional comma-separated canonical abbreviations, at most four, for trend selection.')
+})
+
+export const GetConsumerTeamAnalyticsResponse = zod.object({
+  "season": zod.number().int(),
+  "throughWeek": zod.number().int(),
+  "window": zod.enum(['season', 'last3', 'last5', 'last8']),
+  "source": zod.string(),
+  "coverage": zod.object({
+  "weeks": zod.array(zod.object({
+  "week": zod.number().int(),
+  "finalGames": zod.number().int(),
+  "statGames": zod.number().int()
+})),
+  "partialReasons": zod.array(zod.string())
+}),
+  "teams": zod.array(zod.object({
+  "teamId": zod.string(),
+  "abbreviation": zod.string(),
+  "name": zod.string(),
+  "logoUrl": zod.string().nullable(),
+  "offenseEpa": zod.number().nullable(),
+  "defenseEpa": zod.number().nullable(),
+  "offenseSamples": zod.number().int(),
+  "defenseSamples": zod.number().int(),
+  "selectedGames": zod.number().int(),
+  "observations": zod.array(zod.object({
+  "gameId": zod.string(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.string(),
+  "opponent": zod.string(),
+  "offenseEpa": zod.number().nullable(),
+  "defenseEpa": zod.number().nullable(),
+  "offenseSuccessRate": zod.number().nullable(),
+  "defenseSuccessRate": zod.number().nullable()
+}))
+}))
+})
+/**
+ * @summary Read complete official pregame final-game grading aggregates
+ */
+export const getConsumerGradedChartsQuerySeasonMin = 2000;
+export const getConsumerGradedChartsQuerySeasonMax = 2100;
+
+
+
+export const GetConsumerGradedChartsQueryParams = zod.object({
+  "season": zod.coerce.number().int().min(getConsumerGradedChartsQuerySeasonMin).max(getConsumerGradedChartsQuerySeasonMax).optional()
+})
+
+export const GetConsumerGradedChartsResponse = zod.object({
+  "status": zod.enum(['measured', 'not_configured']),
+  "source": zod.string(),
+  "note": zod.string(),
+  "season": zod.number().int().nullable(),
+  "bySeason": zod.array(zod.object({
+  "season": zod.number().int(),
+  "graded": zod.number().int(),
+  "winnerGraded": zod.number().int(),
+  "winnerCorrect": zod.number().int(),
+  "winnerAccuracy": zod.number().nullable(),
+  "marginGraded": zod.number().int(),
+  "marginMae": zod.number().nullable(),
+  "totalGraded": zod.number().int(),
+  "totalMae": zod.number().nullable()
+})),
+  "cumulative": zod.array(zod.object({
+  "season": zod.number().int(),
+  "graded": zod.number().int(),
+  "winnerGraded": zod.number().int(),
+  "winnerCorrect": zod.number().int(),
+  "winnerAccuracy": zod.number().nullable(),
+  "marginGraded": zod.number().int(),
+  "marginMae": zod.number().nullable(),
+  "totalGraded": zod.number().int(),
+  "totalMae": zod.number().nullable()
+}).and(zod.object({
+  "week": zod.number().int(),
+  "gameId": zod.string(),
+  "kickoffTime": zod.string()
+}))),
+  "openingClosingAvailable": zod.boolean(),
+  "openingClosingReason": zod.string(),
+  "truncated": zod.boolean()
+})
+
+
+/**
  * Player props are intentionally not available in V1.
  * @summary Read player props availability
  */
@@ -2253,3 +2349,5 @@ export const GetConsumerRedZoneOpportunitiesResponse = zod.object({
 }))
 }))
 })
+
+

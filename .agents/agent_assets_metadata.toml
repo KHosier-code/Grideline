@@ -434,3 +434,311 @@ mtime_ms = 1790387810213
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/966543ee-5067-45d3-b381-0a4e0ed95174/904c6f46-d65f-4d58-9dfc-c910c3676cf3"
 storage_version_token = "1790387824756090"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "XNj5x5xDDJpm_o4WxOS4t"
+uri = "file://screenshots/gridline-teams-populated-dark-desktop.jpg"
+type = "image"
+title = "Populated — dark desktop"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "a5d00700-2023-4772-b16b-ff3b9d1cc0d5"
+content_hash = "sha256:e683fd098e4c61575a0b22b944b69fe10756cea74c6f54e0487f566814e1cc67"
+size = 93719
+mtime_ms = 1790387710518
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/a5d00700-2023-4772-b16b-ff3b9d1cc0d5/fb325acd-8145-46ba-b43f-b2bda5942bd5"
+storage_version_token = "1790388219332786"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "ZAY87QE0f9LpPmnB_ty0I"
+uri = "file://screenshots/gridline-teams-populated-dark-mobile.jpg"
+type = "image"
+title = "Populated — dark mobile"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "8f479a50-7d1d-4a2b-b9ff-c60445cc17c4"
+content_hash = "sha256:d764858923e2ef0d7caaf75cded1784ba254f05e54f5ec9fd7be4bfb3223f5c1"
+size = 39473
+mtime_ms = 1790387713082
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/8f479a50-7d1d-4a2b-b9ff-c60445cc17c4/bd8c2969-2d3a-4ba7-b5e7-b10542659eec"
+storage_version_token = "1790388219933101"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "JhrGagwR5Qt7e8hf1eGb0"
+uri = "file://screenshots/gridline-teams-populated-light-desktop.png"
+type = "image"
+title = "Populated — light desktop"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "78d37186-03f4-4194-89d4-5fb8549b99c1"
+content_hash = "sha256:59bc58c511f14f128d000870e7923a488a59bfea783d0ebe3b368df851d51f1c"
+size = 315217
+mtime_ms = 1790387744570
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/78d37186-03f4-4194-89d4-5fb8549b99c1/ee7e11d4-8303-4116-9033-4e5135129e25"
+storage_version_token = "1790388220631749"
+content_type = "image/png"
+
+[[outputs]]
+id = "s3WDd8-hacQJm6OOQ5QGK"
+uri = "file://screenshots/gridline-teams-populated-light-mobile.png"
+type = "image"
+title = "Populated — light mobile"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "79341777-fe17-43da-99d8-029407bb9e72"
+content_hash = "sha256:2dc848ced9c4604d86f325e5dded29feba097c4c1e868e306c0c260c51c0b11b"
+size = 110479
+mtime_ms = 1790387745714
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/79341777-fe17-43da-99d8-029407bb9e72/89f1e419-aad3-4f45-997d-ef21d07f2948"
+storage_version_token = "1790388221247016"
+content_type = "image/png"
+
+[[outputs]]
+id = "zQ2np_VgvBWn4wcoBnxV1"
+uri = "file://screenshots/gridline-teams-partial-dark-desktop.png"
+type = "image"
+title = "Partial Week 3 — dark desktop"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "669cee81-9517-491a-ae52-272231fecb2a"
+content_hash = "sha256:50b90b098853533868eb95180089fa450c53cdf13e10ed353feacecb4b369f28"
+size = 318902
+mtime_ms = 1790387905925
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/669cee81-9517-491a-ae52-272231fecb2a/191c60ab-9111-4e01-a716-f8b247f162e5"
+storage_version_token = "1790388221870573"
+content_type = "image/png"
+
+[[outputs]]
+id = "HqCLUAuCYyQLlNdyuwC83"
+uri = "file://screenshots/gridline-teams-partial-dark-mobile.png"
+type = "image"
+title = "Partial Week 3 — dark mobile"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "eb2ab7fb-9028-4087-8cd1-e1eb2f076a18"
+content_hash = "sha256:7b82835edcf6b32a135d0a1e151f33c88a5ff9451ad7d3e39586ec5a2b39e0b5"
+size = 117110
+mtime_ms = 1790387906873
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/eb2ab7fb-9028-4087-8cd1-e1eb2f076a18/2aaa2739-4e94-4b88-a043-94b68c66a1bc"
+storage_version_token = "1790388222418364"
+content_type = "image/png"
+
+[[outputs]]
+id = "qq5Gv4IS8_pXxmBE_xnDw"
+uri = "file://screenshots/gridline-teams-partial-light-desktop.png"
+type = "image"
+title = "Partial Week 3 — light desktop"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "71617b32-f9f7-4e86-a8ea-eaf248e3e21d"
+content_hash = "sha256:d136334b4451309f07970082fd13c18669f4d94d4df074739e2991b4cb4ddf3a"
+size = 312242
+mtime_ms = 1790387871346
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/71617b32-f9f7-4e86-a8ea-eaf248e3e21d/078c8213-f1a7-4f88-829e-e0c80d6153e9"
+storage_version_token = "1790388222972628"
+content_type = "image/png"
+
+[[outputs]]
+id = "rhvBljFJlLKTCxMU0gcsF"
+uri = "file://screenshots/gridline-teams-partial-light-mobile.png"
+type = "image"
+title = "Partial Week 3 — light mobile"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "4f17eda1-964c-4475-a4f9-db6484a9fd3e"
+content_hash = "sha256:8a429aa1ec4a8b1747c7e58382ad495bdca4f15315e3627289b5f0aac90646f7"
+size = 115060
+mtime_ms = 1790387870358
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/4f17eda1-964c-4475-a4f9-db6484a9fd3e/4a746eea-2a68-4a12-a760-3fd2cb95f8d6"
+storage_version_token = "1790388223617607"
+content_type = "image/png"
+
+[[outputs]]
+id = "4IbKv2H4ib6-wOH4CSHXJ"
+uri = "file://screenshots/gridline-teams-unavailable-dark-desktop.png"
+type = "image"
+title = "Unavailable 2021 — dark desktop"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "143a4bcc-a5ed-423e-953b-7b6a20920fc3"
+content_hash = "sha256:6f18af516f9dbaf8373a09fce46a3ddd53ab89b85c9b3aa334236b0558153007"
+size = 299881
+mtime_ms = 1790388108241
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/143a4bcc-a5ed-423e-953b-7b6a20920fc3/0c9832e8-b11c-4fc6-a916-7165f43e001d"
+storage_version_token = "1790388224142531"
+content_type = "image/png"
+
+[[outputs]]
+id = "nLPMVaZ0YUViWxN0YIPZb"
+uri = "file://screenshots/gridline-teams-unavailable-dark-mobile.png"
+type = "image"
+title = "Unavailable 2021 — dark mobile"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "823584d7-97a6-424b-867d-6f97b674969f"
+content_hash = "sha256:6c3b8dd166eaa4742aa3492290be215d6fd9b04a5ecc13f3995ef0830891502b"
+size = 125489
+mtime_ms = 1790388109001
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/823584d7-97a6-424b-867d-6f97b674969f/af131116-0e84-46ee-bc62-fe79cae129f9"
+storage_version_token = "1790388224675484"
+content_type = "image/png"
+
+[[outputs]]
+id = "823Vkj0D9VkjS-2goCgFH"
+uri = "file://screenshots/gridline-teams-unavailable-light-desktop.png"
+type = "image"
+title = "Unavailable 2021 — light desktop"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "839317d2-dd20-43aa-b98c-d29cc0723c59"
+content_hash = "sha256:442c0a0e75303b37fdbfd05a41f622cbf5fe0a34d7d3fd7b79a3fd6942c859b9"
+size = 290951
+mtime_ms = 1790388109885
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/839317d2-dd20-43aa-b98c-d29cc0723c59/44a91702-01b5-4d87-9623-ba68fd285f40"
+storage_version_token = "1790388225227432"
+content_type = "image/png"
+
+[[outputs]]
+id = "YPGgIQ_-bWFugSBJp8XXM"
+uri = "file://screenshots/gridline-teams-unavailable-light-mobile.png"
+type = "image"
+title = "Unavailable 2021 — light mobile"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "cec0f8e1-f6a3-4377-a172-2f03470b6368"
+content_hash = "sha256:1e9cc9c002792a2e489a1e87cc5f72bbaccc07424f192e81b8f7bfa258701311"
+size = 122758
+mtime_ms = 1790388110637
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/cec0f8e1-f6a3-4377-a172-2f03470b6368/5412b3a1-63a9-474d-9c34-175ba9f5ec3d"
+storage_version_token = "1790388225759551"
+content_type = "image/png"
+
+[[outputs]]
+id = "SwVkbchbIEq-6wadFLUE3"
+uri = "file://screenshots/gridline-scatter-populated-dark-mobile.png"
+type = "image"
+title = "Scatter detail — dark mobile"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "4039c22b-d03d-44bd-8c1c-9ec7f5ac51e5"
+content_hash = "sha256:774588db4d2add531e28ab651b05ad56a67288882f96d0cf13df8381b4b8b2d8"
+size = 75550
+mtime_ms = 1790388182525
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/4039c22b-d03d-44bd-8c1c-9ec7f5ac51e5/13f6b682-7926-4861-8a90-41b7ea97ba6f"
+storage_version_token = "1790388226317593"
+content_type = "image/png"
+
+[[outputs]]
+id = "KPQXpVh8Kl1VpbpBMq6Zf"
+uri = "file://screenshots/gridline-scatter-populated-light-mobile.png"
+type = "image"
+title = "Scatter detail — light mobile"
+description = "Read-only Gridline development preview; no production data was changed."
+logical_id = "64a461dd-2451-4f67-871e-05e434aaefa5"
+content_hash = "sha256:1736c3f2af26c0853406c790f45428851ccd7f59170db485e709557ec2794bb0"
+size = 73855
+mtime_ms = 1790388181793
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/64a461dd-2451-4f67-871e-05e434aaefa5/5eb14774-c07d-4d33-a1da-81da43505061"
+storage_version_token = "1790388226929652"
+content_type = "image/png"
+
+[[outputs]]
+id = "xwJ4QGgnx2xu-WwA2xWDp"
+uri = "file://screenshots/gridline-weekly-home-dark-desktop.png"
+type = "image"
+title = "Weekly Home — dark desktop"
+description = "Development preview: populated Week 1–2 final-game team trends and unavailable pregame comparison metrics for the upcoming Week 3 game. No production data changed."
+logical_id = "bec26f3f-196f-4889-81f1-d8887e590c3c"
+content_hash = "sha256:b37f5c25844daa9d19bb57baeb6ccf0d88c5c5522b63b409ea769e70bc8a453c"
+size = 514731
+mtime_ms = 1790388963477
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/bec26f3f-196f-4889-81f1-d8887e590c3c/5818034d-264b-4db3-979f-e3ef97e9c73c"
+storage_version_token = "1790388993423947"
+content_type = "image/png"
+
+[[outputs]]
+id = "Bcdr62-wmO73oIeUhiLud"
+uri = "file://screenshots/gridline-weekly-home-dark-mobile.png"
+type = "image"
+title = "Weekly Home — dark mobile"
+description = "Development preview: populated Week 1–2 final-game team trends and unavailable pregame comparison metrics for the upcoming Week 3 game. No production data changed."
+logical_id = "0f237b01-c41a-4351-831f-f52738ff4bb6"
+content_hash = "sha256:73ba67bda395c0bd7faaea78c8001811b0388f5158f05255c822be45cf6e4950"
+size = 282814
+mtime_ms = 1790388965433
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/0f237b01-c41a-4351-831f-f52738ff4bb6/40fd42de-8473-44b0-8e00-59ceb9dbcaf2"
+storage_version_token = "1790388994046753"
+content_type = "image/png"
+
+[[outputs]]
+id = "n4TuCg8CknQewudAIV6jG"
+uri = "file://screenshots/gridline-weekly-home-light-desktop.png"
+type = "image"
+title = "Weekly Home — light desktop"
+description = "Development preview: populated Week 1–2 final-game team trends and unavailable pregame comparison metrics for the upcoming Week 3 game. No production data changed."
+logical_id = "fdf398ec-538f-44e1-9a90-05e9506a7fe0"
+content_hash = "sha256:05c66bb9271a36f47a1f8ee962efdaeac3a9039cdb909c581db89b386247a6ce"
+size = 511338
+mtime_ms = 1790388967513
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/fdf398ec-538f-44e1-9a90-05e9506a7fe0/1078915b-e53d-4cbe-b162-7a41555ef12f"
+storage_version_token = "1790388994627443"
+content_type = "image/png"
+
+[[outputs]]
+id = "7lXJRhxd9uq9c7a8WHhXd"
+uri = "file://screenshots/gridline-weekly-home-light-mobile.png"
+type = "image"
+title = "Weekly Home — light mobile"
+description = "Development preview: populated Week 1–2 final-game team trends and unavailable pregame comparison metrics for the upcoming Week 3 game. No production data changed."
+logical_id = "19e21301-9581-490e-86cf-6c9635d01ce1"
+content_hash = "sha256:5c76afe7b1c2ccda32359b27ecddd65adf6802bde9c08594497aa3157837abe1"
+size = 280943
+mtime_ms = 1790388969293
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/19e21301-9581-490e-86cf-6c9635d01ce1/8e816d02-8ee9-48d8-b7ea-21447284fbfb"
+storage_version_token = "1790388995310203"
+content_type = "image/png"
+
+[[outputs]]
+id = "uUdtS115T3qJnOPzDs_t0"
+uri = "file://screenshots/gridline-weekly-final-dark-desktop.png"
+type = "image"
+title = "Final Weekly Home — dark desktop"
+description = "Final combined weekly Home development preview: verified Week 1–2 historical form, unavailable pregame comparison metrics, and eligibility-gated slate."
+logical_id = "467b7faf-051c-4172-b5cc-a6804170ba67"
+content_hash = "sha256:ae56a923b210d781e70ea894ceae3fc820075e0a97e84061c89a257fcd355908"
+size = 361705
+mtime_ms = 1790389281301
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/467b7faf-051c-4172-b5cc-a6804170ba67/9826a53c-4772-4c8b-b4c9-1db37c8e1121"
+storage_version_token = "1790389297767165"
+content_type = "image/png"
+
+[[outputs]]
+id = "OzQLhWWxGrpGQ-16ws2QI"
+uri = "file://screenshots/gridline-weekly-final-dark-mobile.png"
+type = "image"
+title = "Final Weekly Home — dark mobile"
+description = "Final combined weekly Home development preview: verified Week 1–2 historical form, unavailable pregame comparison metrics, and eligibility-gated slate."
+logical_id = "bd463aa4-48c9-4036-981f-f1bae5a3a113"
+content_hash = "sha256:67e170f0efb151b6947e0d5e02ca8fb54eeec8da1c4661fc90f95461f9eb5aed"
+size = 250756
+mtime_ms = 1790389283185
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/bd463aa4-48c9-4036-981f-f1bae5a3a113/a0437087-be53-4891-8c22-cc706591e6b4"
+storage_version_token = "1790389298320001"
+content_type = "image/png"
+
+[[outputs]]
+id = "8fZJ5yo8DmsK9d4TLSg6v"
+uri = "file://screenshots/gridline-weekly-final-light-desktop.png"
+type = "image"
+title = "Final Weekly Home — light desktop"
+description = "Final combined weekly Home development preview: verified Week 1–2 historical form, unavailable pregame comparison metrics, and eligibility-gated slate."
+logical_id = "c8273b61-23e6-4216-be9e-d1d18de4b806"
+content_hash = "sha256:9e57b8897085acd6ac5c4f8f7140d741956c394cad0e91c71d70a4d027a86a8d"
+size = 375765
+mtime_ms = 1790389284937
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/c8273b61-23e6-4216-be9e-d1d18de4b806/d3c97d2c-7f3b-40f2-a6e8-33ea50a5f381"
+storage_version_token = "1790389298856940"
+content_type = "image/png"
+
+[[outputs]]
+id = "OFr11LqcMxiWVc0DuCtBP"
+uri = "file://screenshots/gridline-weekly-final-light-mobile.png"
+type = "image"
+title = "Final Weekly Home — light mobile"
+description = "Final combined weekly Home development preview: verified Week 1–2 historical form, unavailable pregame comparison metrics, and eligibility-gated slate."
+logical_id = "71fe6034-c43d-4a0c-846a-d8a9be04dd99"
+content_hash = "sha256:76b06e2155af241daeb3dde59e754c76abafb5eab8a1560156d5fe48d6553f72"
+size = 272993
+mtime_ms = 1790389286721
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/71fe6034-c43d-4a0c-846a-d8a9be04dd99/cf725867-790f-4df5-93cc-ab19ba0e384d"
+storage_version_token = "1790389299405531"
+content_type = "image/png"

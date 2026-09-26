@@ -5,6 +5,7 @@ import { Link } from 'wouter';
 import { ConsumerLoading, ConsumerMessage, formatKickoff, useConsumerNow } from './consumer-ui';
 import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 import { homeProjection, homeSpread, nextHomeSlate } from '../../lib/consumer-home';
+import { ConsumerHomeMatchupFeature } from '../../components/ConsumerHomeMatchupFeature';
 
 const number = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? 'Unavailable' : value.toFixed(1);
 const signed = (value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)}`;
@@ -57,6 +58,7 @@ export default function ConsumerHome() {
         <p>{slate ? `${slate.games.length} upcoming ${slate.games.length === 1 ? 'game' : 'games'} in the next saved week. Projections and lines appear only when eligible evidence exists.` : 'No future games are available here. Browse saved matchups and past weeks in Games.'}</p></div>
       <div className="weekly-status"><small>Persisted feed status</small><strong className={`market-state market-state-${health.status}`}>{health.status}</strong><span>Schedule: {health.sources.schedule.status} · Odds: {health.sources.odds.status}</span></div>
     </header>
+    {slate && <ConsumerHomeMatchupFeature key={slate.games[0].gameId} game={slate.games[0]} now={now} />}
     <div className="consumer-section-heading"><div><p className="consumer-eyebrow">Upcoming schedule</p><h2>{slate ? 'The next slate' : 'No upcoming games'}</h2></div><Link href="/games">Browse all games <ArrowRight className="h-4 w-4" /></Link></div>
     {slate ? <section className="weekly-list" aria-label={`${slate.season} week ${slate.week} matchups`}>
       {slate.games.map(game => <HomeGame key={game.gameId} game={game} now={now} selected={selectedId === game.gameId} onSelect={() => setSelectedId(current => current === game.gameId ? null : game.gameId)} />)}

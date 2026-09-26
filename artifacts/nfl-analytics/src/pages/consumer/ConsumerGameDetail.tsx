@@ -6,6 +6,7 @@ import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { LineMovementExperience } from '../../components/LineMovementExperience';
 import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
+import { ConsumerPregameComparisonChart } from '../../components/ConsumerPregameComparisonChart';
 import { ConsumerMarketEvidence } from '../../components/ConsumerMarketEvidence';
 import { ConsumerProjectionEvidence } from '../../components/ConsumerProjectionEvidence';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
@@ -76,6 +77,7 @@ export default function ConsumerGameDetail() {
     <ConsumerSourceHealth health={game.sourceHealth} />
 
     <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
+    <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
 
     <ConsumerDepthChart context={game.context} />
 
