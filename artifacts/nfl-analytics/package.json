@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
-    "perf:report": "pnpm run build && node tests/performance.mjs",
-    "perf:budget": "pnpm run build && PERF_ENFORCE=1 node tests/performance.mjs",
+    "perf:report": "node tests/build-performance.mjs && node tests/performance.mjs",
+    "perf:budget": "node tests/build-performance.mjs && PERF_ENFORCE=1 node tests/performance.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "test:home-browser": "node --test tests/home.browser.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"

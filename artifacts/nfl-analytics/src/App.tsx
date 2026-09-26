@@ -2139,6 +2139,8 @@ function Router() {
       <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
       <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><ConsumerProps /></ConsumerShell></Route>
+      {/* The production-build performance fixture mounts this same weekly Home
+          component without Clerk; only this branch grants signed-in routing. */}
       <Route path="/"><ConsumerShell><ConsumerHome /></ConsumerShell></Route>
       <Route component={NotFound} />
   </Switch></RoutedErrorBoundary>;

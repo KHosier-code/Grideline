@@ -1,5 +1,6 @@
-// Run after `pnpm --filter @workspace/nfl-analytics build`.
-// Measures the real production build; API and Clerk availability are reported, never mocked.
+// Run after `node tests/build-performance.mjs`. The app entry is the ordinary
+// production bundle; the separately optimized fixture uses the real Home
+// component and API, but intentionally does not measure Clerk.
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { readdir, stat, writeFile } from 'node:fs/promises';
@@ -10,7 +11,7 @@ const base = process.env.BASE_PATH ?? '/';
 const prefix = base === '/' ? '' : `/${base.split('/').filter(Boolean).join('/')}`;
 const port = Number(process.env.PERF_PORT ?? 5198);
 const origin = `http://127.0.0.1:${port}`;
-const routes = ['/', '/games', '/games/perf-not-a-real-game', '/performance'];
+const routes = ['/', '/tests/performance-home.html', '/games', '/games/perf-not-a-real-game', '/performance'];
 let sparseGameId = null;
 const profiles = {
   mobile: { viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 2, cpu: 4, latency: 150, throughput: 200 * 1024 },
@@ -33,6 +34,10 @@ try {
     await sleep(100);
   }
   if (!ready) throw new Error(`Preview did not start: ${output}`);
+  const fixtureResponse = await fetch(`${origin}${prefix}/tests/performance-home.html`);
+  if (!fixtureResponse.ok || !(await fixtureResponse.text()).includes('Weekly Home performance fixture')) {
+    throw new Error('The production build is missing the weekly Home fixture. Run tests/build-performance.mjs first.');
+  }
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? '/repl/tools/bin/chromium', args: ['--no-sandbox'] });
   try {
     const results = [];
@@ -40,7 +45,7 @@ try {
       for (const [index] of routes.entries()) {
         // Measure Home and Games before the first explicit dashboard lookup.
         // Pre-fetching the dashboard here would hide cold API work from Home.
-        if (index === 2 && routes[2] === '/games/perf-not-a-real-game') {
+        if (index === 3 && routes[3] === '/games/perf-not-a-real-game') {
           const dashboardResponse = await fetch('http://localhost:80/api/consumer/dashboard');
           if (!dashboardResponse.ok) throw new Error(`Consumer API unavailable (${dashboardResponse.status}); start the API workflow before measuring.`);
           const dashboard = await dashboardResponse.json();
@@ -60,9 +65,10 @@ try {
             }
           }
           if (!sparseGameId) throw new Error('Consumer dashboard has no genuinely sparse Game Detail with an unavailable saved projection.');
-          routes[2] = `/games/${encodeURIComponent(sparseGameId)}`;
+          routes[3] = `/games/${encodeURIComponent(sparseGameId)}`;
         }
         const route = routes[index];
+        const isHomeFixture = route === '/tests/performance-home.html';
         const context = await browser.newContext({ viewport: settings.viewport, isMobile: settings.isMobile, deviceScaleFactor: settings.deviceScaleFactor });
         const page = await context.newPage();
         await page.route('**/api/**', async route => {
@@ -89,7 +95,12 @@ try {
         const url = `${origin}${prefix}${route}`;
         const start = Date.now();
         const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-        await page.locator('main h1, main .consumer-state h2, main .consumer-state p').first().waitFor({ timeout: 12_000 }).catch(() => {});
+        if (isHomeFixture) {
+          await page.locator('main .weekly-home h1').waitFor({ timeout: 12_000 });
+          if (await page.locator('main .consumer-state').count()) throw new Error(`${profile}: signed-in Home fixture remained in a loading or error state`);
+        } else {
+          await page.locator('main h1, main .consumer-state h2, main .consumer-state p').first().waitFor({ timeout: 12_000 }).catch(() => {});
+        }
         if (route.startsWith('/games/')) {
           await page.waitForFunction(() => !document.querySelector('main')?.textContent?.includes('Loading matchup details…'), { timeout: 12_000 }).catch(() => {});
         }
@@ -131,7 +142,7 @@ try {
         )) {
           throw new Error('Sparse Game Detail must show both unavailable states without downloading chart code or rendering a chart.');
         }
-        results.push({ profile, route, httpStatus: response?.status(), routeReadyMs, interactionMs, ...data });
+        results.push({ profile, route, scenario: isHomeFixture ? 'signed-in-weekly-home-component-fixture' : 'anonymous-production-route', httpStatus: response?.status(), routeReadyMs, interactionMs, ...data });
         await context.close();
       }
       const boundary = await browser.newPage();

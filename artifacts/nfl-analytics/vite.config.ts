@@ -80,8 +80,13 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, 'dist/public'),
+    outDir: path.resolve(import.meta.dirname, process.env.PERF_HOME_FIXTURE === '1' ? 'dist/performance-fixture' : 'dist/public'),
     emptyOutDir: true,
+    // Build the fixture as a separate production entry so the actual app
+    // bundle and its chunking remain byte-for-byte the ordinary build.
+    ...(process.env.PERF_HOME_FIXTURE === '1' ? {
+      rollupOptions: { input: path.resolve(import.meta.dirname, 'tests/performance-home.html') },
+    } : {}),
   },
   server: {
     port,
