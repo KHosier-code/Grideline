@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { Router, type IRouter } from "express";
 import {
   GetConsumerPlayerProjectionsResponse,
+  GetConsumerPlayerTdForecastsResponse,
   GetConsumerUpcomingPlayerProjectionReadinessResponse,
   GetConsumerUpcomingPlayerProjectionsResponse,
 } from "@workspace/api-zod";
@@ -11,6 +12,7 @@ import {
 } from "../lib/player-forecast-readiness";
 import type { PlayerProjectionReport } from "../lib/player-projections";
 import { readDevelopmentUpcomingPlayerProjections } from "../lib/player-upcoming";
+import { buildPlayerTdForecastReadiness, readDevelopmentPlayerTdForecastReadiness } from "../lib/player-td-forecast-readiness";
 
 const router: IRouter = Router();
 const reportPath = resolve(process.cwd(), "../../reports/gridline-player-projection-baseline.json");
@@ -154,6 +156,24 @@ router.get("/consumer/player-projections/upcoming", async (req, res): Promise<vo
   } catch (error) {
     req.log.error({ error }, "Development upcoming player projections unavailable");
     res.status(503).json({ error: "Upcoming player projections are unavailable", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/consumer/player-td-forecasts", async (req, res): Promise<void> => {
+  if (process.env.NODE_ENV !== "development" || process.env.REPLIT_DEPLOYMENT) {
+    res.json(GetConsumerPlayerTdForecastsResponse.parse(buildPlayerTdForecastReadiness({
+      asOf: null, upcomingGames: 0, candidates: [],
+      blockers: ["Weekly scoring-TD forecasts have not been qualified or approved for production."],
+      modelVersion: null,
+    })));
+    return;
+  }
+  try {
+    const report = await readDevelopmentPlayerTdForecastReadiness();
+    res.json(GetConsumerPlayerTdForecastsResponse.parse(report));
+  } catch (error) {
+    req.log.error({ error }, "Player scoring-TD readiness unavailable");
+    res.status(503).json({ error: "Player scoring-TD readiness is unavailable", code: "consumer_data_unavailable" });
   }
 });
 

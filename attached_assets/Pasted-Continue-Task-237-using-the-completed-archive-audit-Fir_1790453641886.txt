@@ -1,0 +1,18 @@
+Continue Task #237 using the completed archive audit. First resolve one question that materially changes its conclusion: **what cutoff do the existing player TD features require?**
+
+Inspect the actual feature code and training pipeline. Classify every input as either:
+
+- **Previous-completed-week input:** frozen before the first kickoff of the target week; or
+- **Per-game input:** refreshed with results from games earlier in that same week.
+
+Do not change a feature’s meaning to make more games pass. Report the existing policy and identify any feature that mixes the two.
+
+Re-evaluate the 48 game decisions under the policy the code actually uses. In a separate, clearly labeled analysis, test whether a consistently frozen weekly policy is feasible: the September 17 weekly-stat/PBP pair contains Week 1, and the September 24 pair contains Weeks 1–2. Check the exact asset availability time against the **first kickoff** of Weeks 2 and 3, confirm complete prior-week rows, and show whether every required feature can be calculated without same-week results. Check the September 3 archive and other pre-Week-1 sources for any Week 1 baseline; do not assume one exists.
+
+Keep both counts in the report: games qualifying under the current feature contract and games that *would* qualify under a proposed weekly-frozen contract. Explain every difference. Do not describe an intentionally excluded same-week result as missing data under a weekly-frozen contract.
+
+Then finish the 2021–2025 provenance audit. Inventory exact training bytes, asset IDs, availability timestamps, row coverage, and integrity evidence for each season and cutoff. Treat assets without GitHub digests as a distinct evidence category; a hash calculated today does not establish their historical contents. Identify which seasons support a strict as-published walk-forward evaluation. Keep retrospective reconstructions clearly separate.
+
+**Refit only after these gates pass:** the feature contract is fixed and documented, the qualifying training/evaluation rows are identified, and the repository has a clean API typecheck. A separate #184 merge recently damaged consumer routes and tests; inspect the current tree and coordinate that repair before changing overlapping code. Do not restore a checkpoint without accounting for work and audit records added since it.
+
+If the gates pass, refit in development, evaluate on genuinely held-out cutoff-qualified games, and report sample size, calibration, and results by week and position. If they do not pass, report the precise blocker and the strongest descriptive Defense vs Position view the verified data can support. Do not enable TD probabilities, publish, or change production as part of this task.

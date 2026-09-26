@@ -38,6 +38,7 @@ import type {
   ConsumerInvalidRequestResponse,
   ConsumerPerformance,
   ConsumerPlayerProjections,
+  ConsumerPlayerTdForecasts,
   ConsumerPlayerUsage,
   ConsumerPlayerUsageGames,
   ConsumerPropsAvailability,
@@ -97,6 +98,7 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+
 const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
@@ -115,9 +117,83 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
 export const getGetVerifiedImageryReportUrl = () => {
 
 
+
+
   return `/api/admin/verified-imagery/report`
 }
+
+/**
+ * @summary Inspect unmatched and ambiguous nflverse imagery evidence
+ */
+export const getVerifiedImageryReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<VerifiedImageryReport> => {
+
+  return customFetch<VerifiedImageryReport>(getGetVerifiedImageryReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVerifiedImageryReportQueryKey = () => {
+    return [
+    `/api/admin/verified-imagery/report`
+    ] as const;
+    }
+
+
+export const getGetVerifiedImageryReportQueryOptions = <TData = Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVerifiedImageryReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVerifiedImageryReport>>> = ({ signal }) => getVerifiedImageryReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVerifiedImageryReportQueryResult = NonNullable<Awaited<ReturnType<typeof getVerifiedImageryReport>>>
+export type GetVerifiedImageryReportQueryError = ErrorType<void>
+
+
+/**
+ * @summary Inspect unmatched and ambiguous nflverse imagery evidence
+ */
+
+export function useGetVerifiedImageryReport<TData = Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVerifiedImageryReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetConfidenceAuditUrl = () => {
+
+
 
 
   return `/api/admin/confidence/audit`
@@ -138,6 +214,9 @@ export const getConfidenceAudit = async ( options?: Parameters<typeof customFetc
 );}
 
 
+
+
+
 export const getGetConfidenceAuditQueryKey = () => {
     return [
     `/api/admin/confidence/audit`
@@ -153,7 +232,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConfidenceAuditQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfidenceAudit>>> = ({ signal }) => getConfidenceAudit({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfidenceAudit>>, TError, TData> & { queryKey: QueryKey }
@@ -178,6 +261,11 @@ export function useGetConfidenceAudit<TData = Awaited<ReturnType<typeof getConfi
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getAppendConfidenceEvidenceUrl = (params?: AppendConfidenceEvidenceParams,) => {
@@ -210,6 +298,9 @@ export const appendConfidenceEvidence = async (params?: AppendConfidenceEvidence
 );}
 
 
+
+
+
 export const getAppendConfidenceEvidenceMutationKey = () => ['appendConfidenceEvidence'] as const;
 
 export const getAppendConfidenceEvidenceMutationOptions = <TError = ErrorType<void>,
@@ -224,11 +315,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof appendConfidenceEvidence>>, AppendConfidenceEvidenceMutationVariables> = (props) => {
           const {params} = props ?? {};
 
           return  appendConfidenceEvidence(params,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -255,6 +352,8 @@ export const useAppendConfidenceEvidence = <TError = ErrorType<void>,
 export const getHealthCheckUrl = () => {
 
 
+
+
   return `/api/healthz`
 }
 
@@ -274,6 +373,9 @@ export const healthCheck = async ( options?: Parameters<typeof customFetch>[1]):
 );}
 
 
+
+
+
 export const getHealthCheckQueryKey = () => {
     return [
     `/api/healthz`
@@ -289,7 +391,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getHealthCheckQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof healthCheck>>> = ({ signal }) => healthCheck({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData> & { queryKey: QueryKey }
@@ -316,7 +422,14 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 }
 
 
+
+
+
+
+
 export const getGetDashboardSummaryUrl = () => {
+
+
 
 
   return `/api/dashboard/summary`
@@ -337,6 +450,9 @@ export const getDashboardSummary = async ( options?: Parameters<typeof customFet
 );}
 
 
+
+
+
 export const getGetDashboardSummaryQueryKey = () => {
     return [
     `/api/dashboard/summary`
@@ -352,7 +468,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetDashboardSummaryQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboardSummary>>> = ({ signal }) => getDashboardSummary({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboardSummary>>, TError, TData> & { queryKey: QueryKey }
@@ -379,7 +499,14 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
 }
 
 
+
+
+
+
+
 export const getCaptureUsageAnalyticsEventUrl = () => {
+
+
 
 
   return `/api/analytics/usage-event`
@@ -414,6 +541,9 @@ return customFetch<void>(getCaptureUsageAnalyticsEventUrl(),
 );}
 
 
+
+
+
 export const getCaptureUsageAnalyticsEventMutationKey = () => ['captureUsageAnalyticsEvent'] as const;
 
 export const getCaptureUsageAnalyticsEventMutationOptions = <TError = ErrorType<void>,
@@ -428,11 +558,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof captureUsageAnalyticsEvent>>, CaptureUsageAnalyticsEventMutationVariables> = (props) => {
           const {data} = props ?? {};
 
           return  captureUsageAnalyticsEvent(data,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -486,6 +622,9 @@ export const getUsageAnalyticsSummary = async (params?: GetUsageAnalyticsSummary
 );}
 
 
+
+
+
 export const getGetUsageAnalyticsSummaryQueryKey = (params?: GetUsageAnalyticsSummaryParams,) => {
     return [
     `/api/admin/usage-analytics`, ...(params ? [params] : [])
@@ -501,7 +640,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetUsageAnalyticsSummaryQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>> = ({ signal }) => getUsageAnalyticsSummary(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsageAnalyticsSummary>>, TError, TData> & { queryKey: QueryKey }
@@ -528,7 +671,14 @@ export function useGetUsageAnalyticsSummary<TData = Awaited<ReturnType<typeof ge
 }
 
 
+
+
+
+
+
 export const getGetDataHealthUrl = () => {
+
+
 
 
   return `/api/data-health`
@@ -549,6 +699,9 @@ export const getDataHealth = async ( options?: Parameters<typeof customFetch>[1]
 );}
 
 
+
+
+
 export const getGetDataHealthQueryKey = () => {
     return [
     `/api/data-health`
@@ -564,7 +717,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetDataHealthQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getDataHealth>>> = ({ signal }) => getDataHealth({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDataHealth>>, TError, TData> & { queryKey: QueryKey }
@@ -591,7 +748,14 @@ export function useGetDataHealth<TData = Awaited<ReturnType<typeof getDataHealth
 }
 
 
+
+
+
+
+
 export const getGetSleeperIdentityReportUrl = () => {
+
+
 
 
   return `/api/admin/sleeper-identity-report`
@@ -613,6 +777,9 @@ export const getSleeperIdentityReport = async ( options?: Parameters<typeof cust
 );}
 
 
+
+
+
 export const getGetSleeperIdentityReportQueryKey = () => {
     return [
     `/api/admin/sleeper-identity-report`
@@ -628,7 +795,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetSleeperIdentityReportQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getSleeperIdentityReport>>> = ({ signal }) => getSleeperIdentityReport({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSleeperIdentityReport>>, TError, TData> & { queryKey: QueryKey }
@@ -653,6 +824,11 @@ export function useGetSleeperIdentityReport<TData = Awaited<ReturnType<typeof ge
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getListGamesUrl = (params?: ListGamesParams,) => {
@@ -685,6 +861,9 @@ export const listGames = async (params?: ListGamesParams, options?: Parameters<t
 );}
 
 
+
+
+
 export const getListGamesQueryKey = (params?: ListGamesParams,) => {
     return [
     `/api/games`, ...(params ? [params] : [])
@@ -700,7 +879,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListGamesQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listGames>>> = ({ signal }) => listGames(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGames>>, TError, TData> & { queryKey: QueryKey }
@@ -727,7 +910,14 @@ export function useListGames<TData = Awaited<ReturnType<typeof listGames>>, TErr
 }
 
 
+
+
+
+
+
 export const getGetGameUrl = (gameId: string,) => {
+
+
 
 
   return `/api/games/${gameId}`
@@ -748,6 +938,9 @@ export const getGame = async (gameId: string, options?: Parameters<typeof custom
 );}
 
 
+
+
+
 export const getGetGameQueryKey = (gameId: string,) => {
     return [
     `/api/games/${gameId}`
@@ -763,7 +956,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetGameQueryKey(gameId);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getGame>>> = ({ signal }) => getGame(gameId, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGame>>, TError, TData> & { queryKey: QueryKey }
@@ -790,7 +987,14 @@ export function useGetGame<TData = Awaited<ReturnType<typeof getGame>>, TError =
 }
 
 
+
+
+
+
+
 export const getGetOddsHistoryUrl = (gameId: string,) => {
+
+
 
 
   return `/api/games/${gameId}/odds-history`
@@ -811,6 +1015,9 @@ export const getOddsHistory = async (gameId: string, options?: Parameters<typeof
 );}
 
 
+
+
+
 export const getGetOddsHistoryQueryKey = (gameId: string,) => {
     return [
     `/api/games/${gameId}/odds-history`
@@ -826,7 +1033,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetOddsHistoryQueryKey(gameId);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getOddsHistory>>> = ({ signal }) => getOddsHistory(gameId, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOddsHistory>>, TError, TData> & { queryKey: QueryKey }
@@ -853,7 +1064,14 @@ export function useGetOddsHistory<TData = Awaited<ReturnType<typeof getOddsHisto
 }
 
 
+
+
+
+
+
 export const getCaptureOddsUrl = () => {
+
+
 
 
   return `/api/odds/capture`
@@ -875,6 +1093,9 @@ export const captureOdds = async ( options?: Parameters<typeof customFetch>[1]):
 );}
 
 
+
+
+
 export const getCaptureOddsMutationKey = () => ['captureOdds'] as const;
 
 export const getCaptureOddsMutationOptions = <TError = ErrorType<void>,
@@ -889,11 +1110,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof captureOdds>>, void> = () => {
 
 
           return  captureOdds(requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -948,6 +1175,9 @@ export const listOddsAudits = async (params?: ListOddsAuditsParams, options?: Pa
 );}
 
 
+
+
+
 export const getListOddsAuditsQueryKey = (params?: ListOddsAuditsParams,) => {
     return [
     `/api/odds/audit`, ...(params ? [params] : [])
@@ -963,7 +1193,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListOddsAuditsQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listOddsAudits>>> = ({ signal }) => listOddsAudits(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOddsAudits>>, TError, TData> & { queryKey: QueryKey }
@@ -988,6 +1222,11 @@ export function useListOddsAudits<TData = Awaited<ReturnType<typeof listOddsAudi
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getListPlayerRecoveryReceiptsUrl = (params?: ListPlayerRecoveryReceiptsParams,) => {
@@ -1021,6 +1260,9 @@ export const listPlayerRecoveryReceipts = async (params?: ListPlayerRecoveryRece
 );}
 
 
+
+
+
 export const getListPlayerRecoveryReceiptsQueryKey = (params?: ListPlayerRecoveryReceiptsParams,) => {
     return [
     `/api/admin/player-recovery/receipts`, ...(params ? [params] : [])
@@ -1036,7 +1278,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListPlayerRecoveryReceiptsQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>> = ({ signal }) => listPlayerRecoveryReceipts(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlayerRecoveryReceipts>>, TError, TData> & { queryKey: QueryKey }
@@ -1063,7 +1309,14 @@ export function useListPlayerRecoveryReceipts<TData = Awaited<ReturnType<typeof 
 }
 
 
+
+
+
+
+
 export const getGetPlayerRecoveryReceiptCleanupHealthUrl = () => {
+
+
 
 
   return `/api/admin/player-recovery/cleanup-health`
@@ -1084,6 +1337,9 @@ export const getPlayerRecoveryReceiptCleanupHealth = async ( options?: Parameter
 );}
 
 
+
+
+
 export const getGetPlayerRecoveryReceiptCleanupHealthQueryKey = () => {
     return [
     `/api/admin/player-recovery/cleanup-health`
@@ -1099,7 +1355,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetPlayerRecoveryReceiptCleanupHealthQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlayerRecoveryReceiptCleanupHealth>>> = ({ signal }) => getPlayerRecoveryReceiptCleanupHealth({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlayerRecoveryReceiptCleanupHealth>>, TError, TData> & { queryKey: QueryKey }
@@ -1126,7 +1386,14 @@ export function useGetPlayerRecoveryReceiptCleanupHealth<TData = Awaited<ReturnT
 }
 
 
+
+
+
+
+
 export const getSyncScheduleUrl = () => {
+
+
 
 
   return `/api/data-sync/schedule`
@@ -1162,6 +1429,9 @@ return customFetch<ScheduleSyncResult>(getSyncScheduleUrl(),
 );}
 
 
+
+
+
 export const getSyncScheduleMutationKey = () => ['syncSchedule'] as const;
 
 export const getSyncScheduleMutationOptions = <TError = ErrorType<void>,
@@ -1176,11 +1446,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncSchedule>>, SyncScheduleMutationVariables> = (props) => {
           const {data} = props ?? {};
 
           return  syncSchedule(data,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -1234,6 +1510,9 @@ export const getPregameFeatureHealth = async (params?: GetPregameFeatureHealthPa
 );}
 
 
+
+
+
 export const getGetPregameFeatureHealthQueryKey = (params?: GetPregameFeatureHealthParams,) => {
     return [
     `/api/features/pregame/health`, ...(params ? [params] : [])
@@ -1249,7 +1528,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetPregameFeatureHealthQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getPregameFeatureHealth>>> = ({ signal }) => getPregameFeatureHealth(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPregameFeatureHealth>>, TError, TData> & { queryKey: QueryKey }
@@ -1276,7 +1559,14 @@ export function useGetPregameFeatureHealth<TData = Awaited<ReturnType<typeof get
 }
 
 
+
+
+
+
+
 export const getGetPregameFeaturesForGameUrl = (gameId: string,) => {
+
+
 
 
   return `/api/features/pregame/game/${gameId}`
@@ -1297,6 +1587,9 @@ export const getPregameFeaturesForGame = async (gameId: string, options?: Parame
 );}
 
 
+
+
+
 export const getGetPregameFeaturesForGameQueryKey = (gameId: string,) => {
     return [
     `/api/features/pregame/game/${gameId}`
@@ -1312,7 +1605,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetPregameFeaturesForGameQueryKey(gameId);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getPregameFeaturesForGame>>> = ({ signal }) => getPregameFeaturesForGame(gameId, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPregameFeaturesForGame>>, TError, TData> & { queryKey: QueryKey }
@@ -1337,6 +1634,11 @@ export function useGetPregameFeaturesForGame<TData = Awaited<ReturnType<typeof g
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getListPregameFeatureAuditUrl = (params?: ListPregameFeatureAuditParams,) => {
@@ -1369,6 +1671,9 @@ export const listPregameFeatureAudit = async (params?: ListPregameFeatureAuditPa
 );}
 
 
+
+
+
 export const getListPregameFeatureAuditQueryKey = (params?: ListPregameFeatureAuditParams,) => {
     return [
     `/api/features/audit`, ...(params ? [params] : [])
@@ -1384,7 +1689,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListPregameFeatureAuditQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listPregameFeatureAudit>>> = ({ signal }) => listPregameFeatureAudit(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPregameFeatureAudit>>, TError, TData> & { queryKey: QueryKey }
@@ -1411,7 +1720,14 @@ export function useListPregameFeatureAudit<TData = Awaited<ReturnType<typeof lis
 }
 
 
+
+
+
+
+
 export const getGetLiveModelInputIntegrityUrl = () => {
+
+
 
 
   return `/api/features/live-input-integrity`
@@ -1432,6 +1748,9 @@ export const getLiveModelInputIntegrity = async ( options?: Parameters<typeof cu
 );}
 
 
+
+
+
 export const getGetLiveModelInputIntegrityQueryKey = () => {
     return [
     `/api/features/live-input-integrity`
@@ -1447,7 +1766,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetLiveModelInputIntegrityQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>> = ({ signal }) => getLiveModelInputIntegrity({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError, TData> & { queryKey: QueryKey }
@@ -1474,7 +1797,14 @@ export function useGetLiveModelInputIntegrity<TData = Awaited<ReturnType<typeof 
 }
 
 
+
+
+
+
+
 export const getBuildPregameFeaturesUrl = () => {
+
+
 
 
   return `/api/features/pregame/build`
@@ -1510,6 +1840,9 @@ return customFetch<void>(getBuildPregameFeaturesUrl(),
 );}
 
 
+
+
+
 export const getBuildPregameFeaturesMutationKey = () => ['buildPregameFeatures'] as const;
 
 export const getBuildPregameFeaturesMutationOptions = <TError = ErrorType<void>,
@@ -1524,11 +1857,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof buildPregameFeatures>>, BuildPregameFeaturesMutationVariables> = (props) => {
           const {data} = props ?? {};
 
           return  buildPregameFeatures(data,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -1555,6 +1894,8 @@ export const useBuildPregameFeatures = <TError = ErrorType<void>,
 export const getGetPersonnelContextForGameUrl = (gameId: string,) => {
 
 
+
+
   return `/api/features/personnel-context/game/${gameId}`
 }
 
@@ -1574,6 +1915,9 @@ export const getPersonnelContextForGame = async (gameId: string, options?: Param
 );}
 
 
+
+
+
 export const getGetPersonnelContextForGameQueryKey = (gameId: string,) => {
     return [
     `/api/features/personnel-context/game/${gameId}`
@@ -1589,7 +1933,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetPersonnelContextForGameQueryKey(gameId);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getPersonnelContextForGame>>> = ({ signal }) => getPersonnelContextForGame(gameId, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPersonnelContextForGame>>, TError, TData> & { queryKey: QueryKey }
@@ -1614,6 +1962,11 @@ export function useGetPersonnelContextForGame<TData = Awaited<ReturnType<typeof 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getListPersonnelContextAuditUrl = (params?: ListPersonnelContextAuditParams,) => {
@@ -1646,6 +1999,9 @@ export const listPersonnelContextAudit = async (params?: ListPersonnelContextAud
 );}
 
 
+
+
+
 export const getListPersonnelContextAuditQueryKey = (params?: ListPersonnelContextAuditParams,) => {
     return [
     `/api/features/personnel-context/audit`, ...(params ? [params] : [])
@@ -1661,7 +2017,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListPersonnelContextAuditQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listPersonnelContextAudit>>> = ({ signal }) => listPersonnelContextAudit(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPersonnelContextAudit>>, TError, TData> & { queryKey: QueryKey }
@@ -1688,7 +2048,14 @@ export function useListPersonnelContextAudit<TData = Awaited<ReturnType<typeof l
 }
 
 
+
+
+
+
+
 export const getGetPersonnelContextCoverageUrl = () => {
+
+
 
 
   return `/api/features/personnel-context/coverage`
@@ -1709,6 +2076,9 @@ export const getPersonnelContextCoverage = async ( options?: Parameters<typeof c
 );}
 
 
+
+
+
 export const getGetPersonnelContextCoverageQueryKey = () => {
     return [
     `/api/features/personnel-context/coverage`
@@ -1724,7 +2094,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetPersonnelContextCoverageQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getPersonnelContextCoverage>>> = ({ signal }) => getPersonnelContextCoverage({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPersonnelContextCoverage>>, TError, TData> & { queryKey: QueryKey }
@@ -1751,7 +2125,14 @@ export function useGetPersonnelContextCoverage<TData = Awaited<ReturnType<typeof
 }
 
 
+
+
+
+
+
 export const getGetChallengerReadinessReportUrl = () => {
+
+
 
 
   return `/api/features/personnel-context/challenger-readiness`
@@ -1773,6 +2154,9 @@ export const getChallengerReadinessReport = async ( options?: Parameters<typeof 
 );}
 
 
+
+
+
 export const getGetChallengerReadinessReportQueryKey = () => {
     return [
     `/api/features/personnel-context/challenger-readiness`
@@ -1788,7 +2172,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetChallengerReadinessReportQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getChallengerReadinessReport>>> = ({ signal }) => getChallengerReadinessReport({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChallengerReadinessReport>>, TError, TData> & { queryKey: QueryKey }
@@ -1815,7 +2203,14 @@ export function useGetChallengerReadinessReport<TData = Awaited<ReturnType<typeo
 }
 
 
+
+
+
+
+
 export const getListTeamsUrl = () => {
+
+
 
 
   return `/api/teams`
@@ -1836,6 +2231,9 @@ export const listTeams = async ( options?: Parameters<typeof customFetch>[1]): P
 );}
 
 
+
+
+
 export const getListTeamsQueryKey = () => {
     return [
     `/api/teams`
@@ -1851,7 +2249,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListTeamsQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeams>>> = ({ signal }) => listTeams({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeams>>, TError, TData> & { queryKey: QueryKey }
@@ -1878,7 +2280,14 @@ export function useListTeams<TData = Awaited<ReturnType<typeof listTeams>>, TErr
 }
 
 
+
+
+
+
+
 export const getGetSettingsUrl = () => {
+
+
 
 
   return `/api/settings`
@@ -1899,6 +2308,9 @@ export const getSettings = async ( options?: Parameters<typeof customFetch>[1]):
 );}
 
 
+
+
+
 export const getGetSettingsQueryKey = () => {
     return [
     `/api/settings`
@@ -1914,7 +2326,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetSettingsQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getSettings>>> = ({ signal }) => getSettings({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData> & { queryKey: QueryKey }
@@ -1941,7 +2357,14 @@ export function useGetSettings<TData = Awaited<ReturnType<typeof getSettings>>, 
 }
 
 
+
+
+
+
+
 export const getUpdateSettingsUrl = () => {
+
+
 
 
   return `/api/settings`
@@ -1976,6 +2399,9 @@ return customFetch<AppSettings>(getUpdateSettingsUrl(),
 );}
 
 
+
+
+
 export const getUpdateSettingsMutationKey = () => ['updateSettings'] as const;
 
 export const getUpdateSettingsMutationOptions = <TError = ErrorType<unknown>,
@@ -1990,11 +2416,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSettings>>, UpdateSettingsMutationVariables> = (props) => {
           const {data} = props ?? {};
 
           return  updateSettings(data,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -2021,6 +2453,8 @@ export const useUpdateSettings = <TError = ErrorType<unknown>,
 export const getGetConsumerDashboardUrl = () => {
 
 
+
+
   return `/api/consumer/dashboard`
 }
 
@@ -2040,6 +2474,9 @@ export const getConsumerDashboard = async ( options?: Parameters<typeof customFe
 );}
 
 
+
+
+
 export const getGetConsumerDashboardQueryKey = () => {
     return [
     `/api/consumer/dashboard`
@@ -2055,7 +2492,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerDashboardQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerDashboard>>> = ({ signal }) => getConsumerDashboard({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerDashboard>>, TError, TData> & { queryKey: QueryKey }
@@ -2082,7 +2523,14 @@ export function useGetConsumerDashboard<TData = Awaited<ReturnType<typeof getCon
 }
 
 
+
+
+
+
+
 export const getGetConsumerScheduleSelectionUrl = () => {
+
+
 
 
   return `/api/consumer/schedule-selection`
@@ -2103,6 +2551,9 @@ export const getConsumerScheduleSelection = async ( options?: Parameters<typeof 
 );}
 
 
+
+
+
 export const getGetConsumerScheduleSelectionQueryKey = () => {
     return [
     `/api/consumer/schedule-selection`
@@ -2118,7 +2569,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerScheduleSelectionQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerScheduleSelection>>> = ({ signal }) => getConsumerScheduleSelection({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerScheduleSelection>>, TError, TData> & { queryKey: QueryKey }
@@ -2143,6 +2598,11 @@ export function useGetConsumerScheduleSelection<TData = Awaited<ReturnType<typeo
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getListConsumerGamesUrl = (params?: ListConsumerGamesParams,) => {
@@ -2176,6 +2636,9 @@ export const listConsumerGames = async (params?: ListConsumerGamesParams, option
 );}
 
 
+
+
+
 export const getListConsumerGamesQueryKey = (params?: ListConsumerGamesParams,) => {
     return [
     `/api/consumer/games`, ...(params ? [params] : [])
@@ -2191,7 +2654,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListConsumerGamesQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listConsumerGames>>> = ({ signal }) => listConsumerGames(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConsumerGames>>, TError, TData> & { queryKey: QueryKey }
@@ -2218,7 +2685,14 @@ export function useListConsumerGames<TData = Awaited<ReturnType<typeof listConsu
 }
 
 
+
+
+
+
+
 export const getGetConsumerGameUrl = (gameId: string,) => {
+
+
 
 
   return `/api/consumer/games/${gameId}`
@@ -2239,6 +2713,9 @@ export const getConsumerGame = async (gameId: string, options?: Parameters<typeo
 );}
 
 
+
+
+
 export const getGetConsumerGameQueryKey = (gameId: string,) => {
     return [
     `/api/consumer/games/${gameId}`
@@ -2254,7 +2731,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerGameQueryKey(gameId);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerGame>>> = ({ signal }) => getConsumerGame(gameId, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerGame>>, TError, TData> & { queryKey: QueryKey }
@@ -2281,7 +2762,14 @@ export function useGetConsumerGame<TData = Awaited<ReturnType<typeof getConsumer
 }
 
 
+
+
+
+
+
 export const getGetConsumerGameAlertsUrl = (gameId: string,) => {
+
+
 
 
   return `/api/consumer/games/${gameId}/alerts`
@@ -2302,6 +2790,9 @@ export const getConsumerGameAlerts = async (gameId: string, options?: Parameters
 );}
 
 
+
+
+
 export const getGetConsumerGameAlertsQueryKey = (gameId: string,) => {
     return [
     `/api/consumer/games/${gameId}/alerts`
@@ -2317,7 +2808,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerGameAlertsQueryKey(gameId);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerGameAlerts>>> = ({ signal }) => getConsumerGameAlerts(gameId, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, enabled: gameId !== null && gameId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerGameAlerts>>, TError, TData> & { queryKey: QueryKey }
@@ -2344,7 +2839,14 @@ export function useGetConsumerGameAlerts<TData = Awaited<ReturnType<typeof getCo
 }
 
 
+
+
+
+
+
 export const getEnableConsumerGameAlertsUrl = (gameId: string,) => {
+
+
 
 
   return `/api/consumer/games/${gameId}/alerts`
@@ -2365,6 +2867,9 @@ export const enableConsumerGameAlerts = async (gameId: string, options?: Paramet
 );}
 
 
+
+
+
 export const getEnableConsumerGameAlertsMutationKey = () => ['enableConsumerGameAlerts'] as const;
 
 export const getEnableConsumerGameAlertsMutationOptions = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerDataUnavailableResponse>,
@@ -2379,11 +2884,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof enableConsumerGameAlerts>>, EnableConsumerGameAlertsMutationVariables> = (props) => {
           const {gameId} = props ?? {};
 
           return  enableConsumerGameAlerts(gameId,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -2410,6 +2921,8 @@ export const useEnableConsumerGameAlerts = <TError = ErrorType<ConsumerInvalidRe
 export const getDisableConsumerGameAlertsUrl = (gameId: string,) => {
 
 
+
+
   return `/api/consumer/games/${gameId}/alerts`
 }
 
@@ -2428,6 +2941,9 @@ export const disableConsumerGameAlerts = async (gameId: string, options?: Parame
 );}
 
 
+
+
+
 export const getDisableConsumerGameAlertsMutationKey = () => ['disableConsumerGameAlerts'] as const;
 
 export const getDisableConsumerGameAlertsMutationOptions = <TError = ErrorType<void | ConsumerDataUnavailableResponse>,
@@ -2442,11 +2958,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof disableConsumerGameAlerts>>, DisableConsumerGameAlertsMutationVariables> = (props) => {
           const {gameId} = props ?? {};
 
           return  disableConsumerGameAlerts(gameId,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -2473,6 +2995,8 @@ export const useDisableConsumerGameAlerts = <TError = ErrorType<void | ConsumerD
 export const getListSavedGameIdsUrl = () => {
 
 
+
+
   return `/api/consumer/saved-games/ids`
 }
 
@@ -2491,6 +3015,9 @@ export const listSavedGameIds = async ( options?: Parameters<typeof customFetch>
 );}
 
 
+
+
+
 export const getListSavedGameIdsQueryKey = () => {
     return [
     `/api/consumer/saved-games/ids`
@@ -2506,7 +3033,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListSavedGameIdsQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listSavedGameIds>>> = ({ signal }) => listSavedGameIds({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSavedGameIds>>, TError, TData> & { queryKey: QueryKey }
@@ -2533,7 +3064,14 @@ export function useListSavedGameIds<TData = Awaited<ReturnType<typeof listSavedG
 }
 
 
+
+
+
+
+
 export const getListSavedGamesUrl = () => {
+
+
 
 
   return `/api/consumer/saved-games`
@@ -2554,6 +3092,9 @@ export const listSavedGames = async ( options?: Parameters<typeof customFetch>[1
 );}
 
 
+
+
+
 export const getListSavedGamesQueryKey = () => {
     return [
     `/api/consumer/saved-games`
@@ -2569,7 +3110,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListSavedGamesQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listSavedGames>>> = ({ signal }) => listSavedGames({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSavedGames>>, TError, TData> & { queryKey: QueryKey }
@@ -2596,7 +3141,14 @@ export function useListSavedGames<TData = Awaited<ReturnType<typeof listSavedGam
 }
 
 
+
+
+
+
+
 export const getSaveConsumerGameUrl = (gameId: string,) => {
+
+
 
 
   return `/api/consumer/saved-games/${gameId}`
@@ -2617,6 +3169,9 @@ export const saveConsumerGame = async (gameId: string, options?: Parameters<type
 );}
 
 
+
+
+
 export const getSaveConsumerGameMutationKey = () => ['saveConsumerGame'] as const;
 
 export const getSaveConsumerGameMutationOptions = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse>,
@@ -2631,11 +3186,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveConsumerGame>>, SaveConsumerGameMutationVariables> = (props) => {
           const {gameId} = props ?? {};
 
           return  saveConsumerGame(gameId,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -2662,6 +3223,8 @@ export const useSaveConsumerGame = <TError = ErrorType<ConsumerInvalidRequestRes
 export const getRemoveSavedConsumerGameUrl = (gameId: string,) => {
 
 
+
+
   return `/api/consumer/saved-games/${gameId}`
 }
 
@@ -2680,6 +3243,9 @@ export const removeSavedConsumerGame = async (gameId: string, options?: Paramete
 );}
 
 
+
+
+
 export const getRemoveSavedConsumerGameMutationKey = () => ['removeSavedConsumerGame'] as const;
 
 export const getRemoveSavedConsumerGameMutationOptions = <TError = ErrorType<ConsumerInvalidRequestResponse | void>,
@@ -2694,11 +3260,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       : {mutation: { mutationKey, }, request: undefined};
 
 
+
+
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeSavedConsumerGame>>, RemoveSavedConsumerGameMutationVariables> = (props) => {
           const {gameId} = props ?? {};
 
           return  removeSavedConsumerGame(gameId,requestOptions)
         }
+
+
+
+
 
 
   return  { mutationFn, ...mutationOptions }}
@@ -2725,6 +3297,8 @@ export const useRemoveSavedConsumerGame = <TError = ErrorType<ConsumerInvalidReq
 export const getGetConsumerPerformanceUrl = () => {
 
 
+
+
   return `/api/consumer/performance`
 }
 
@@ -2743,6 +3317,9 @@ export const getConsumerPerformance = async ( options?: Parameters<typeof custom
 );}
 
 
+
+
+
 export const getGetConsumerPerformanceQueryKey = () => {
     return [
     `/api/consumer/performance`
@@ -2758,7 +3335,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerPerformanceQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPerformance>>> = ({ signal }) => getConsumerPerformance({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData> & { queryKey: QueryKey }
@@ -2785,7 +3366,14 @@ export function useGetConsumerPerformance<TData = Awaited<ReturnType<typeof getC
 }
 
 
+
+
+
+
+
 export const getGetConsumerTrendsUrl = () => {
+
+
 
 
   return `/api/consumer/trends`
@@ -2806,6 +3394,9 @@ export const getConsumerTrends = async ( options?: Parameters<typeof customFetch
 );}
 
 
+
+
+
 export const getGetConsumerTrendsQueryKey = () => {
     return [
     `/api/consumer/trends`
@@ -2821,7 +3412,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerTrendsQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerTrends>>> = ({ signal }) => getConsumerTrends({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerTrends>>, TError, TData> & { queryKey: QueryKey }
@@ -2846,6 +3441,11 @@ export function useGetConsumerTrends<TData = Awaited<ReturnType<typeof getConsum
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getGetConsumerTeamAnalyticsUrl = (params: GetConsumerTeamAnalyticsParams,) => {
@@ -2878,6 +3478,9 @@ export const getConsumerTeamAnalytics = async (params: GetConsumerTeamAnalyticsP
 );}
 
 
+
+
+
 export const getGetConsumerTeamAnalyticsQueryKey = (params?: GetConsumerTeamAnalyticsParams,) => {
     return [
     `/api/consumer/team-analytics`, ...(params ? [params] : [])
@@ -2893,7 +3496,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerTeamAnalyticsQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerTeamAnalytics>>> = ({ signal }) => getConsumerTeamAnalytics(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerTeamAnalytics>>, TError, TData> & { queryKey: QueryKey }
@@ -2918,6 +3525,11 @@ export function useGetConsumerTeamAnalytics<TData = Awaited<ReturnType<typeof ge
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getGetConsumerGradedChartsUrl = (params?: GetConsumerGradedChartsParams,) => {
@@ -2950,6 +3562,9 @@ export const getConsumerGradedCharts = async (params?: GetConsumerGradedChartsPa
 );}
 
 
+
+
+
 export const getGetConsumerGradedChartsQueryKey = (params?: GetConsumerGradedChartsParams,) => {
     return [
     `/api/consumer/graded-charts`, ...(params ? [params] : [])
@@ -2965,7 +3580,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerGradedChartsQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerGradedCharts>>> = ({ signal }) => getConsumerGradedCharts(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError, TData> & { queryKey: QueryKey }
@@ -2992,7 +3611,14 @@ export function useGetConsumerGradedCharts<TData = Awaited<ReturnType<typeof get
 }
 
 
+
+
+
+
+
 export const getGetConsumerPropsAvailabilityUrl = () => {
+
+
 
 
   return `/api/consumer/props`
@@ -3014,6 +3640,9 @@ export const getConsumerPropsAvailability = async ( options?: Parameters<typeof 
 );}
 
 
+
+
+
 export const getGetConsumerPropsAvailabilityQueryKey = () => {
     return [
     `/api/consumer/props`
@@ -3029,7 +3658,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerPropsAvailabilityQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPropsAvailability>>> = ({ signal }) => getConsumerPropsAvailability({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPropsAvailability>>, TError, TData> & { queryKey: QueryKey }
@@ -3056,7 +3689,14 @@ export function useGetConsumerPropsAvailability<TData = Awaited<ReturnType<typeo
 }
 
 
+
+
+
+
+
 export const getGetConsumerPlayerProjectionsUrl = () => {
+
+
 
 
   return `/api/consumer/player-projections`
@@ -3078,6 +3718,9 @@ export const getConsumerPlayerProjections = async ( options?: Parameters<typeof 
 );}
 
 
+
+
+
 export const getGetConsumerPlayerProjectionsQueryKey = () => {
     return [
     `/api/consumer/player-projections`
@@ -3093,7 +3736,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerPlayerProjectionsQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPlayerProjections>>> = ({ signal }) => getConsumerPlayerProjections({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerProjections>>, TError, TData> & { queryKey: QueryKey }
@@ -3120,7 +3767,14 @@ export function useGetConsumerPlayerProjections<TData = Awaited<ReturnType<typeo
 }
 
 
+
+
+
+
+
 export const getGetConsumerUpcomingPlayerProjectionsUrl = () => {
+
+
 
 
   return `/api/consumer/player-projections/upcoming`
@@ -3142,6 +3796,9 @@ export const getConsumerUpcomingPlayerProjections = async ( options?: Parameters
 );}
 
 
+
+
+
 export const getGetConsumerUpcomingPlayerProjectionsQueryKey = () => {
     return [
     `/api/consumer/player-projections/upcoming`
@@ -3157,7 +3814,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerUpcomingPlayerProjectionsQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>> = ({ signal }) => getConsumerUpcomingPlayerProjections({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjections>>, TError, TData> & { queryKey: QueryKey }
@@ -3184,7 +3845,92 @@ export function useGetConsumerUpcomingPlayerProjections<TData = Awaited<ReturnTy
 }
 
 
+
+
+
+
+
+export const getGetConsumerPlayerTdForecastsUrl = () => {
+
+
+
+
+  return `/api/consumer/player-td-forecasts`
+}
+
+/**
+ * Development-only touchdown probability estimates ranked within each matchup. These are model estimates, not betting advice or odds. Defensive context is team-level; individual wide receiver-cornerback assignments are not inferred.
+ * @summary Read upcoming player touchdown probability rankings
+ */
+export const getConsumerPlayerTdForecasts = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPlayerTdForecasts> => {
+
+  return customFetch<ConsumerPlayerTdForecasts>(getGetConsumerPlayerTdForecastsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerPlayerTdForecastsQueryKey = () => {
+    return [
+    `/api/consumer/player-td-forecasts`
+    ] as const;
+    }
+
+
+export const getGetConsumerPlayerTdForecastsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPlayerTdForecasts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerTdForecasts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPlayerTdForecastsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPlayerTdForecasts>>> = ({ signal }) => getConsumerPlayerTdForecasts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerTdForecasts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerPlayerTdForecastsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerPlayerTdForecasts>>>
+export type GetConsumerPlayerTdForecastsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read upcoming player touchdown probability rankings
+ */
+
+export function useGetConsumerPlayerTdForecasts<TData = Awaited<ReturnType<typeof getConsumerPlayerTdForecasts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerTdForecasts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerPlayerTdForecastsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetConsumerUpcomingPlayerProjectionReadinessUrl = () => {
+
+
 
 
   return `/api/consumer/player-projections/upcoming-readiness`
@@ -3206,6 +3952,9 @@ export const getConsumerUpcomingPlayerProjectionReadiness = async ( options?: Pa
 );}
 
 
+
+
+
 export const getGetConsumerUpcomingPlayerProjectionReadinessQueryKey = () => {
     return [
     `/api/consumer/player-projections/upcoming-readiness`
@@ -3221,7 +3970,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerUpcomingPlayerProjectionReadinessQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjectionReadiness>>> = ({ signal }) => getConsumerUpcomingPlayerProjectionReadiness({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerUpcomingPlayerProjectionReadiness>>, TError, TData> & { queryKey: QueryKey }
@@ -3246,6 +3999,11 @@ export function useGetConsumerUpcomingPlayerProjectionReadiness<TData = Awaited<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getGetConsumerDefenseVsPositionUrl = (params?: GetConsumerDefenseVsPositionParams,) => {
@@ -3279,6 +4037,9 @@ export const getConsumerDefenseVsPosition = async (params?: GetConsumerDefenseVs
 );}
 
 
+
+
+
 export const getGetConsumerDefenseVsPositionQueryKey = (params?: GetConsumerDefenseVsPositionParams,) => {
     return [
     `/api/consumer/defense-vs-position`, ...(params ? [params] : [])
@@ -3294,7 +4055,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerDefenseVsPositionQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>> = ({ signal }) => getConsumerDefenseVsPosition(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerDefenseVsPosition>>, TError, TData> & { queryKey: QueryKey }
@@ -3319,6 +4084,11 @@ export function useGetConsumerDefenseVsPosition<TData = Awaited<ReturnType<typeo
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getGetConsumerPlayerUsageUrl = (params?: GetConsumerPlayerUsageParams,) => {
@@ -3351,6 +4121,9 @@ export const getConsumerPlayerUsage = async (params?: GetConsumerPlayerUsagePara
 );}
 
 
+
+
+
 export const getGetConsumerPlayerUsageQueryKey = (params?: GetConsumerPlayerUsageParams,) => {
     return [
     `/api/consumer/player-usage`, ...(params ? [params] : [])
@@ -3366,7 +4139,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerPlayerUsageQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPlayerUsage>>> = ({ signal }) => getConsumerPlayerUsage(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPlayerUsage>>, TError, TData> & { queryKey: QueryKey }
@@ -3393,7 +4170,14 @@ export function useGetConsumerPlayerUsage<TData = Awaited<ReturnType<typeof getC
 }
 
 
+
+
+
+
+
 export const getListConsumerPlayerUsageGamesUrl = () => {
+
+
 
 
   return `/api/consumer/player-usage-games`
@@ -3415,6 +4199,9 @@ export const listConsumerPlayerUsageGames = async ( options?: Parameters<typeof 
 );}
 
 
+
+
+
 export const getListConsumerPlayerUsageGamesQueryKey = () => {
     return [
     `/api/consumer/player-usage-games`
@@ -3430,7 +4217,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getListConsumerPlayerUsageGamesQueryKey();
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>> = ({ signal }) => listConsumerPlayerUsageGames({ signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConsumerPlayerUsageGames>>, TError, TData> & { queryKey: QueryKey }
@@ -3455,6 +4246,11 @@ export function useListConsumerPlayerUsageGames<TData = Awaited<ReturnType<typeo
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 
 export const getGetConsumerRedZoneOpportunitiesUrl = (params?: GetConsumerRedZoneOpportunitiesParams,) => {
@@ -3488,6 +4284,9 @@ export const getConsumerRedZoneOpportunities = async (params?: GetConsumerRedZon
 );}
 
 
+
+
+
 export const getGetConsumerRedZoneOpportunitiesQueryKey = (params?: GetConsumerRedZoneOpportunitiesParams,) => {
     return [
     `/api/consumer/red-zone-opportunities`, ...(params ? [params] : [])
@@ -3503,7 +4302,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
   const queryKey =  queryOptions?.queryKey ?? getGetConsumerRedZoneOpportunitiesQueryKey(params);
 
 
+
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>> = ({ signal }) => getConsumerRedZoneOpportunities(params, { signal, ...requestOptions });
+
+
+
 
 
    return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerRedZoneOpportunities>>, TError, TData> & { queryKey: QueryKey }
@@ -3528,57 +4331,3 @@ export function useGetConsumerRedZoneOpportunities<TData = Awaited<ReturnType<ty
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-export const getGetVerifiedImageryReportQueryKey = () => {
-    return [
-    `/api/admin/verified-imagery/report`
-    ] as const;
-    }
-
-export const getGetVerifiedImageryReportQueryOptions = <TData = Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetVerifiedImageryReportQueryKey();
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVerifiedImageryReport>>> = ({ signal }) => getVerifiedImageryReport({ signal, ...requestOptions });
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetVerifiedImageryReportQueryResult = NonNullable<Awaited<ReturnType<typeof getVerifiedImageryReport>>>
-
-/**
- * @summary Inspect unmatched and ambiguous nflverse imagery evidence
- */
-
-export function useGetVerifiedImageryReport<TData = Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerifiedImageryReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetVerifiedImageryReportQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-export type GetVerifiedImageryReportQueryError = ErrorType<void>
-
-/**
- * @summary Inspect unmatched and ambiguous nflverse imagery evidence
- */
-export const getVerifiedImageryReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<VerifiedImageryReport> => {
-
-  return customFetch<VerifiedImageryReport>(getGetVerifiedImageryReportUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}

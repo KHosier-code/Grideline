@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react';
 import {
   getGetConsumerPlayerProjectionsQueryKey,
+  getGetConsumerPlayerTdForecastsQueryKey,
   getGetConsumerPropsAvailabilityQueryKey,
   getGetConsumerUpcomingPlayerProjectionReadinessQueryKey,
   getGetConsumerUpcomingPlayerProjectionsQueryKey,
   useGetConsumerPlayerProjections,
+  useGetConsumerPlayerTdForecasts,
   useGetConsumerPropsAvailability,
   useGetConsumerUpcomingPlayerProjectionReadiness,
   useGetConsumerUpcomingPlayerProjections,
   type ConsumerPlayerProjection,
   type ConsumerPlayerProjectionModel,
+  type ConsumerPlayerTdForecast,
   type ConsumerUpcomingPlayerForecast,
 } from '@workspace/api-client-react';
 import { AlertCircle, CalendarDays, ChevronDown, FlaskConical, LockKeyhole, RotateCcw, ShieldAlert } from 'lucide-react';
@@ -35,6 +38,19 @@ const label = (value: string) => value
 
 function modelFor(row: ConsumerPlayerProjection, models: ConsumerPlayerProjectionModel[]) {
   return models.find(model => model.modelVersion === row.modelVersion && model.statistic === row.statistic);
+}
+
+function groupTdForecasts(forecasts: ConsumerPlayerTdForecast[]) {
+  const groups = new Map<string, ConsumerPlayerTdForecast[]>();
+  for (const forecast of forecasts) {
+    const group = groups.get(forecast.gameId) ?? [];
+    group.push(forecast);
+    groups.set(forecast.gameId, group);
+  }
+  return [...groups.entries()].map(([gameId, rows]) => ({
+    gameId,
+    rows: rows.sort((a, b) => b.probability - a.probability || a.playerName.localeCompare(b.playerName)),
+  }));
 }
 
 function UpcomingForecastRow({ row }: { row: ConsumerUpcomingPlayerForecast }) {
@@ -150,6 +166,9 @@ export default function ConsumerProps() {
   const upcomingForecastsQuery = useGetConsumerUpcomingPlayerProjections({
     query: { queryKey: getGetConsumerUpcomingPlayerProjectionsQueryKey(), staleTime: 60_000, refetchOnMount: 'always' },
   });
+  const tdForecastsQuery = useGetConsumerPlayerTdForecasts({
+    query: { queryKey: getGetConsumerPlayerTdForecastsQueryKey(), staleTime: 60_000, refetchOnMount: 'always' },
+  });
 
   const data = projectionsQuery.data;
   const models = data?.models ?? [];
@@ -159,6 +178,10 @@ export default function ConsumerProps() {
   const filtered = useMemo(() => projections.filter(row =>
     (!team || row.teamId === team) && (!family || modelFor(row, models)?.family === family),
   ), [projections, models, team, family]);
+  const tdMatchups = useMemo(
+    () => groupTdForecasts(tdForecastsQuery.data?.forecasts ?? []),
+    [tdForecastsQuery.data?.forecasts],
+  );
 
   const lockedMessage = availabilityQuery.data?.message ??
     'Betting player props are not available in this version of Gridline.';
@@ -191,6 +214,120 @@ export default function ConsumerProps() {
         <div><span>Eligible players</span><strong data-testid="text-eligible-players">{data?.eligiblePlayers ?? '—'}</strong><small>In the available simulation</small></div>
         <div><span>Archive generated</span><strong data-testid="text-generated-at">{data?.generatedAt ? dateTime(data.generatedAt) : '—'}</strong><small>Not a live update timestamp</small></div>
       </div>
+
+      <section className="pp-td" aria-labelledby="td-forecast-heading" data-testid="panel-td-forecasts">
+        <div className="pp-upcoming-heading">
+          <div className="pp-upcoming-title">
+            <FlaskConical aria-hidden="true" />
+            <div>
+              <span className="pp-upcoming-kicker">Separate development ranking</span>
+              <h2 id="td-forecast-heading">Player touchdown probabilities</h2>
+            </div>
+          </div>
+          <span className={`pp-upcoming-status${tdForecastsQuery.data?.status === 'forecasts' ? ' is-ready' : ''}`} data-testid="status-td-forecasts">
+            {tdForecastsQuery.data?.status === 'forecasts' ? 'Model estimates' : 'Unavailable'}
+          </span>
+        </div>
+        <p className="pp-td-note">Probability estimates are ranked within each matchup and are not betting advice, odds, or guarantees.</p>
+        <p className="pp-td-note">WR1 defensive context is a team-level estimate against the opponent defense. Named WR–CB assignments are unavailable; no individual cornerback matchup is inferred.</p>
+        <p className="pp-td-evidence-link"><a href="/usage" data-testid="link-td-usage-evidence">Explore player usage evidence <span aria-hidden="true">↗</span></a></p>
+        {tdForecastsQuery.isLoading ? (
+          <div className="pp-upcoming-state" role="status" data-testid="status-td-forecasts-loading">
+            <div className="pp-skeleton" />
+            <p>Loading matchup touchdown rankings…</p>
+          </div>
+        ) : tdForecastsQuery.isError ? (
+          <div className="pp-upcoming-state is-error" role="alert" data-testid="status-td-forecasts-error">
+            <p><AlertCircle size={15} aria-hidden="true" /> Touchdown estimates could not be loaded. No other projection is substituted.</p>
+            <button type="button" onClick={() => void tdForecastsQuery.refetch()} data-testid="button-retry-td-forecasts"><RotateCcw size={13} aria-hidden="true" /> Try again</button>
+          </div>
+        ) : tdForecastsQuery.data ? (
+          <>
+            <div className="pp-upcoming-message" data-testid="text-td-forecasts-message">
+              <p>{tdForecastsQuery.data.message}</p>
+              {tdForecastsQuery.data.status === 'unavailable' && (
+                <small>Touchdown probability forecasts are unavailable for this environment.</small>
+              )}
+            </div>
+            {tdForecastsQuery.data.status === 'forecasts' && (
+              <div className="pp-td-summary" aria-label="Touchdown forecast coverage">
+                <div><span>Upcoming games</span><strong>{tdForecastsQuery.data.upcomingGames}</strong></div>
+                <div><span>Forecasts</span><strong>{tdForecastsQuery.data.forecasts.length}</strong></div>
+                <div><span>Withheld</span><strong>{tdForecastsQuery.data.withheld.length}</strong></div>
+                <div><span>Model version</span><strong>{tdForecastsQuery.data.modelVersion ?? 'Not available'}</strong></div>
+                <div><span>As of</span><strong>{dateTime(tdForecastsQuery.data.asOf)}</strong></div>
+              </div>
+            )}
+            {tdForecastsQuery.data.blockers.length > 0 && (
+              <ul className="pp-td-blockers" aria-label="Touchdown forecast blockers">
+                {tdForecastsQuery.data.blockers.map((blocker, index) => <li key={`${blocker}-${index}`}>{blocker}</li>)}
+              </ul>
+            )}
+            {tdMatchups.length > 0 ? (
+              <div className="pp-td-matchups" data-testid="td-forecast-matchups">
+                {tdMatchups.map(({ gameId, rows }) => (
+                  <section className="pp-td-matchup" key={gameId} aria-label={`Touchdown probability rankings for game ${gameId}`}>
+                    <div className="pp-td-matchup-heading">
+                      <div><span>Matchup ranking</span><h3>{rows[0].teamId} vs {rows[0].opponentTeamId}</h3></div>
+                      <small>{rows[0].season} · Week {rows[0].week} · {formatKickoff(rows[0].kickoffTime)}</small>
+                    </div>
+                    <ol className="pp-td-rankings">
+                      {rows.map((row, index) => (
+                        <li className="pp-td-player" key={`${row.playerId}-${row.gameId}`} data-testid={`td-forecast-${row.playerId}-${row.gameId}`}>
+                          <span className="pp-td-rank" aria-label={`Rank ${index + 1}`}>{index + 1}</span>
+                          <div className="pp-td-player-main">
+                            <strong>{row.playerName}</strong>
+                            <small>{row.position} · {row.teamId} vs {row.opponentTeamId} · {row.priorAppearances} prior appearances</small>
+                          </div>
+                          <strong className="pp-td-probability">{(row.probability * 100).toFixed(1)}<small>%</small></strong>
+                          <details className="pp-td-details">
+                            <summary>Evidence & limits</summary>
+                            <dl>
+                              <div><dt>Recent targets</dt><dd>{number(row.recentTargets)}</dd></div>
+                              <div><dt>Recent carries</dt><dd>{number(row.recentCarries)}</dd></div>
+                              <div><dt>Red-zone opportunities</dt><dd>{number(row.redZoneOpportunities)}</dd></div>
+                              <div><dt>Opponent WR role evidence</dt><dd>{row.opponentWrRole ?? 'Not available'}</dd></div>
+                              <div><dt>Opponent defensive context</dt><dd>{number(row.opponentDefensiveContext)}</dd></div>
+                              <div><dt>Model</dt><dd>{row.modelVersion}</dd></div>
+                              <div><dt>Evidence cutoff</dt><dd>{dateTime(row.cutoffAt)}</dd></div>
+                            </dl>
+                            <ul>
+                              {row.limitations.length > 0
+                                ? row.limitations.map((limitation, limitationIndex) => <li key={`${limitation}-${limitationIndex}`}>{limitation}</li>)
+                                : <li>Named WR–CB assignment is unavailable; defensive context is team-level.</li>}
+                            </ul>
+                          </details>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                ))}
+              </div>
+            ) : tdForecastsQuery.data.status === 'forecasts' ? (
+              <p className="pp-upcoming-empty" data-testid="text-td-forecasts-empty">No player touchdown forecasts are available for the upcoming matchups.</p>
+            ) : null}
+            {tdForecastsQuery.data.withheld.length > 0 && (
+              <section className="pp-td-withheld" aria-label="Players withheld from touchdown rankings">
+                <h3>Players withheld</h3>
+                <ul>
+                  {tdForecastsQuery.data.withheld.slice(0, 16).map(row => (
+                    <li key={`${row.playerId}-${row.gameId}`} data-testid={`td-withheld-${row.playerId}-${row.gameId}`}>
+                      <strong>{row.playerName}</strong><span>Game {row.gameId} · {row.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+                {tdForecastsQuery.data.withheld.length > 16 && (
+                  <p>{tdForecastsQuery.data.withheld.length - 16} more players withheld for this slate. The readiness blockers above apply to all of them.</p>
+                )}
+              </section>
+            )}
+          </>
+        ) : (
+          <div className="pp-upcoming-state" role="status" data-testid="status-td-forecasts-empty">
+            <p>Touchdown probability estimates are not available. No yardage projection is substituted.</p>
+          </div>
+        )}
+      </section>
 
       <section className="pp-upcoming" aria-labelledby="upcoming-readiness-heading" data-testid="panel-upcoming-readiness">
         <div className="pp-upcoming-heading">

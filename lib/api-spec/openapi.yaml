@@ -886,6 +886,23 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerUpcomingPlayerProjections" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/player-td-forecasts:
+    get:
+      operationId: getConsumerPlayerTdForecasts
+      tags: [nfl]
+      summary: Read upcoming player touchdown probability rankings
+      description: >
+        Development-only touchdown probability estimates ranked within each
+        matchup. These are model estimates, not betting advice or odds. Defensive
+        context is team-level; individual wide receiver-cornerback assignments
+        are not inferred.
+      responses:
+        "200":
+          description: Touchdown forecasts or explicit unavailability
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerPlayerTdForecasts" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
   /consumer/player-projections/upcoming-readiness:
     get:
       operationId: getConsumerUpcomingPlayerProjectionReadiness
@@ -2189,6 +2206,61 @@ components:
         missingFeatures:
           type: array
           items: { type: string }
+    ConsumerPlayerTdForecasts:
+      type: object
+      required: [status, message, asOf, modelVersion, upcomingGames, blockers, forecasts, withheld]
+      properties:
+        status: { type: string, enum: [unavailable, forecasts] }
+        message: { type: string }
+        asOf: { type: ["string", "null"], format: date-time }
+        modelVersion: { type: ["string", "null"] }
+        upcomingGames: { type: integer, minimum: 0 }
+        blockers:
+          type: array
+          items: { type: string }
+        forecasts:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerPlayerTdForecast" }
+        withheld:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerPlayerTdWithheld" }
+    ConsumerPlayerTdForecast:
+      type: object
+      required:
+        [playerId, playerName, position, teamId, opponentTeamId, gameId, season,
+         week, kickoffTime, probability, modelVersion, cutoffAt, priorAppearances,
+         recentTargets, recentCarries, redZoneOpportunities, opponentWrRole,
+         opponentDefensiveContext, limitations]
+      properties:
+        playerId: { type: string }
+        playerName: { type: string }
+        position: { type: string }
+        teamId: { type: string }
+        opponentTeamId: { type: string }
+        gameId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        kickoffTime: { type: string, format: date-time }
+        probability: { type: number, minimum: 0, maximum: 1 }
+        modelVersion: { type: string }
+        cutoffAt: { type: string, format: date-time }
+        priorAppearances: { type: integer, minimum: 0 }
+        recentTargets: { type: ["number", "null"], minimum: 0 }
+        recentCarries: { type: ["number", "null"], minimum: 0 }
+        redZoneOpportunities: { type: ["number", "null"], minimum: 0 }
+        opponentWrRole: { type: ["string", "null"] }
+        opponentDefensiveContext: { type: ["number", "null"] }
+        limitations:
+          type: array
+          items: { type: string }
+    ConsumerPlayerTdWithheld:
+      type: object
+      required: [playerId, playerName, gameId, reason]
+      properties:
+        playerId: { type: string }
+        playerName: { type: string }
+        gameId: { type: string }
+        reason: { type: string }
     ConsumerUsageMetric:
       type: object
       required: [value, available, reason]

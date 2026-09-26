@@ -1,0 +1,10 @@
+---
+name: Player TD temporal evidence
+description: Why an encouraging reconstructed TD backtest must not automatically activate live probabilities
+---
+
+Do not promote a player scoring-TD classifier from a retrospective game-date backtest to live forecasts solely because its held-out metrics beat simple baselines. Require independently archived weekly upstream publication evidence, complete observed player-team/availability status, covered red-zone inputs where used, and an explicit release decision. Some later seasons have dated public archives, but they do not retroactively authenticate earlier training seasons.
+
+**Why:** The existing imported nflverse history is mutable and was downloaded after its games. Game-date cutoff logic can prevent target-game leakage in code, but it cannot prove that those exact corrected rows were public before each historical kickoff. Apparent improvement in a reconstructed evaluation is not a validated point-in-time operational record; missing defensive/red-zone ablation benefit also limits feature claims.
+
+**How to apply:** When extending research or enabling a weekly endpoint, distinguish chronology of football games from chronology of data releases. A dated release tag is insufficient: use the latest of release publication and both required asset upload/update timestamps, verify digests **and file type**, and inspect week/game rows. A season summary must never stand in for a weekly player-game file. Match completeness to the model's actual dependency set: a per-game player/team/opponent history need not include other teams' same-week games; a weekly freeze would be a new feature contract. Older weekly formats can lack game IDs or API digests. Preserve unknown coverage rather than zero-fill, and keep the gate closed until each source and player assignment has independently verifiable as-of evidence.

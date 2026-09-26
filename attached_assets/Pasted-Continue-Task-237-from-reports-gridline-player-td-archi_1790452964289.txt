@@ -1,0 +1,17 @@
+Continue Task #237 from `reports/gridline-player-td-archive-2026-audit.md`. Preserve the verified release timestamps and SHA-256 results; do not repeat that work.
+
+**Correct a possible granularity error first:** The audited `stats_player_reg_2026.rds` files are regular-season summaries. Check whether each dated archive also contains `stats_player_week_2026.rds`, which nflreadr identifies as the weekly player-stat file. For each weekly asset found, record its release and asset availability timestamps, verify its SHA-256 digest, and inspect its actual columns and row granularity. Do not treat a season summary as player-by-game records or claim Week 2 and Week 3 have verified *weekly player-stat* inputs until this check passes.
+
+Then perform a **read-only row audit** for each usable 2026 archive:
+
+1. List the game IDs, weeks, and row counts in the archived weekly player stats and play by play. Identify games with complete rows, partial rows, or no rows.
+2. Check uniqueness using the actual source keys, including `(game_id, play_id)` for play by play and the appropriate player/game key for weekly stats. Investigate duplicates and missing IDs.
+3. Reconcile player/team/opponent IDs and key QB, RB, WR, and TE totals between weekly stats, play by play, and Gridline’s existing completed-game records. Show discrepancies explicitly.
+4. For **each individual game**, establish which exact asset versions were available before its kickoff. Week 1 is a per-game decision: the first game failed the September 10 asset-time check, while the other 15 passed timing only. Verify content separately for all 16. Apply the same per-game check to Weeks 2 and 3.
+5. Verify that each pregame input contains only results known before that game. A timely asset with missing prior games or unexpected future-game results must fail or be marked partial. Preserve the source release, asset ID, digest, and effective availability time for every accepted input.
+
+Next, inventory **2021–2025 training inputs**. For each season and pregame week, identify any genuine saved source version with a verifiable availability time. Distinguish it from a current file filtered to earlier game dates: the latter is a retrospective reconstruction and does not prove what was published at the time. Report exact coverage and gaps; do not infer historical publication times from a season label, Git tag creation date, or game date.
+
+Produce a clear matrix with one row per 2026 game and one summary per 2021–2025 season: weekly player stats available by kickoff, play by play available by kickoff, row completeness, reconciliation result, and whether the input passes Gridline’s strict as-of gate.
+
+Keep the observed Defense vs Position feature separate from Task #237’s player TD probabilities. Do not enable or present a player TD probability as fully backtested while required training-input provenance or live player availability remains unresolved. Do not publish, change production data or bindings, or trigger unrelated providers. Update the audit report with your findings and the exact remaining blockers.

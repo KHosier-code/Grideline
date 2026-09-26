@@ -1842,6 +1842,76 @@ export interface ConsumerUpcomingPlayerProjections {
   withheld: ConsumerUpcomingPlayerProjectionsWithheldItem[];
 }
 
+export type ConsumerPlayerTdForecastsStatus = typeof ConsumerPlayerTdForecastsStatus[keyof typeof ConsumerPlayerTdForecastsStatus];
+
+
+export const ConsumerPlayerTdForecastsStatus = {
+  unavailable: 'unavailable',
+  forecasts: 'forecasts',
+} as const;
+
+export interface ConsumerPlayerTdForecast {
+  playerId: string;
+  playerName: string;
+  position: string;
+  teamId: string;
+  opponentTeamId: string;
+  gameId: string;
+  season: number;
+  week: number;
+  kickoffTime: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  probability: number;
+  modelVersion: string;
+  cutoffAt: string;
+  /** @minimum 0 */
+  priorAppearances: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  recentTargets: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  recentCarries: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  redZoneOpportunities: number | null;
+  /** @nullable */
+  opponentWrRole: string | null;
+  /** @nullable */
+  opponentDefensiveContext: number | null;
+  limitations: string[];
+}
+
+export interface ConsumerPlayerTdWithheld {
+  playerId: string;
+  playerName: string;
+  gameId: string;
+  reason: string;
+}
+
+export interface ConsumerPlayerTdForecasts {
+  status: ConsumerPlayerTdForecastsStatus;
+  message: string;
+  /** @nullable */
+  asOf: string | null;
+  /** @nullable */
+  modelVersion: string | null;
+  /** @minimum 0 */
+  upcomingGames: number;
+  blockers: string[];
+  forecasts: ConsumerPlayerTdForecast[];
+  withheld: ConsumerPlayerTdWithheld[];
+}
+
 export interface ConsumerUsageMetric {
   /** @nullable */
   value: number | null;
@@ -3390,4 +3460,3 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
-
