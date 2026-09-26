@@ -392,3 +392,17 @@ mtime_ms = 1790386617428
 storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/79bc2771-6669-402f-afe3-3831fdc0f66e/f838347f-ad12-48e6-a6f8-c5f2bca42e91"
 storage_version_token = "1790386653692681"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "d2t9XSOmIuA5-RcmrEaXz"
+uri = "file://reports/gridline-final-publish-safety-gate.md"
+type = "text"
+title = "Gridline Publish safety gate report"
+description = "Verified startup safeguards, disposable-schema test, outstanding Publish sequencing risk, and owner checklist."
+logical_id = "67bf04fc-8cce-4e59-b2b5-8662d79ab9c6"
+content_hash = "sha256:1c334a44451d053d7c55758ed9d7cd229800682efe0921427c1f57105f0dcb97"
+size = 9739
+mtime_ms = 1790387471034
+storage_uri = "gcs://replit-rams-assets-reed/rams/assets/repl:6f09a888-408c-4537-ad8a-548c8ac7cc39/67bf04fc-8cce-4e59-b2b5-8662d79ab9c6/c2031b20-fd66-44a2-a684-f95a34849d10"
+storage_version_token = "1790387539331663"
+content_type = "text/markdown"

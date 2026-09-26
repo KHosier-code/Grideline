@@ -8,7 +8,7 @@ import {
   runProductionDatabasePreflight,
   runProductionDatabaseSmokeCheck,
 } from "./production-database-smoke";
-import { startProductionServices } from "./production-startup";
+import { startProductionServices, waitForApiHealth } from "./production-startup";
 
 test("uses a metadata-free connectivity query", async () => {
   let query = "";
@@ -199,4 +199,21 @@ test("worker waits for API startup and is not started when API startup fails", a
     () => { throw new Error("API startup failed"); },
   ), /API startup failed/);
   assert.equal(started.includes("unexpected-worker"), false);
+});
+
+test("API must answer its local health check before the worker can start", async () => {
+  let attempts = 0;
+  await waitForApiHealth("http://127.0.0.1:8080/api/healthz", () => true, async () => {
+    attempts += 1;
+    return { ok: attempts >= 2 };
+  }, 2_000);
+  assert.equal(attempts, 2);
+  await assert.rejects(
+    waitForApiHealth("http://127.0.0.1:8080/api/healthz", () => false, async () => ({ ok: true })),
+    /exited before becoming healthy/,
+  );
+  await assert.rejects(
+    waitForApiHealth("http://127.0.0.1:8080/api/healthz", () => true, async () => ({ ok: false }), 5),
+    /did not become healthy/,
+  );
 });

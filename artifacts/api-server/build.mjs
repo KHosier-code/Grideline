@@ -62,6 +62,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/personnel-comparison.test.ts"),
       path.resolve(artifactDir, "src/lib/personnel-comparison-performance.test.ts"),
       path.resolve(artifactDir, "src/lib/production-database-smoke.test.ts"),
+      path.resolve(artifactDir, "src/lib/production-schema-order.dev.test.ts"),
       path.resolve(artifactDir, "src/lib/production-startup-alert.test.ts"),
     ],
     platform: "node",

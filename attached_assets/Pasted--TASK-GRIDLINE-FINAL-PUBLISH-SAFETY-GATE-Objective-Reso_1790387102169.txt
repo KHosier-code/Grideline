@@ -1,0 +1,70 @@
+# TASK — GRIDLINE FINAL PUBLISH SAFETY GATE
+
+**Objective:** Resolve Gate 4 without modifying production or repeating previously passed validations.
+
+All other release gates have passed, including Week 2 fact coverage, independent calculation reconciliation and local startup safeguards.
+
+The only unresolved question is whether Replit Publish completes the required schema migration before starting the updated API and worker.
+
+### 1. Investigate actual deployment behavior
+
+Inspect this project's deployment configuration and the supported Replit publishing workflow.
+
+Determine whether migration completion before application startup is explicitly guaranteed for this deployment configuration.
+
+Do not assume that migrations are completed first simply because Replit documentation says schema changes are applied during publishing.
+
+### 2. Establish an enforceable startup dependency
+
+Confirm that both the API and worker cannot start successfully until the required red-zone tables, indexes and constraints exist.
+
+Investigate whether an explicitly ordered migration-and-start command is supported.
+
+Prefer an enforceable solution over relying on undocumented deployment behavior.
+
+Do not introduce an automatic destructive migration process.
+
+### 3. Validate safely
+
+Where supported, perform an isolated deployment-equivalent test using a disposable database.
+
+Test:
+- Schema initially absent.
+- Approved additive migration applied.
+- Required schema objects verified.
+- API starts successfully.
+- Worker starts only after schema verification.
+- Missing or failed migration prevents unsafe startup.
+- Existing tables and records are preserved.
+
+Do not use production for this experiment.
+
+### 4. Final determination
+
+If the deployment ordering can be proven, provide the supporting configuration and test evidence.
+
+If it cannot be proven, propose the safest supported alternative, including an explicitly approved separate migration step if necessary.
+
+Do not make unsupported assumptions.
+
+### 5. Final report
+
+Provide:
+
+1. Verified deployment sequence.
+2. Evidence supporting that sequence.
+3. Required configuration changes, if any.
+4. Remaining risks.
+5. Exact owner actions required.
+6. Recommended deployment procedure.
+7. Post-publish verification checklist.
+
+Conclude with either:
+
+**READY FOR OWNER APPROVAL**
+
+or
+
+**HOLD — EXTERNAL DEPLOYMENT VERIFICATION REQUIRED**
+
+Do not publish, start the production worker, trigger provider synchronization, or change production data.
