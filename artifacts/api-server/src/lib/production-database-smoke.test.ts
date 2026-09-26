@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertReceiptCleanupSchemaReady,
   assertRedZoneSchemaReady,
   assertNoPostgresTlsCompatibilityWarnings,
   isPostgresTlsCompatibilityWarning,
@@ -109,6 +110,7 @@ async function withRedZoneFlag<T>(value: string | undefined, callback: () => Pro
 function schemaFixture(
   missing: { object_type: string; object_name: string }[] = [],
   buildId = "build-1",
+  receiptCleanupPresent = true,
 ) {
   const queries: string[] = [];
   return {
@@ -117,6 +119,9 @@ function schemaFixture(
       queries.push(text);
       if (text === "SELECT 1 AS connection_check") return { rows: [{ connection_check: 1 }] };
       if (text.includes("pg_catalog.pg_constraint")) return { rows: missing };
+      if (text.includes("player_recovery_receipt_cleanup")) {
+        return { rows: receiptCleanupPresent ? [{ schema_check: 1 }] : [] };
+      }
       if (text.includes("INSERT INTO release_security_evidence")) {
         return { rows: [{
           build_id: buildId, checked_at: checkedAt,
@@ -127,6 +132,18 @@ function schemaFixture(
     },
   };
 }
+
+test("receipt cleanup readiness checks for a table in the current schema without changing it", async () => {
+  const fixture = schemaFixture();
+  await assertReceiptCleanupSchemaReady(fixture);
+  const [query] = fixture.queries;
+  assert.match(query, /pg_catalog\.pg_class/);
+  assert.match(query, /pg_catalog\.pg_namespace/);
+  assert.match(query, /n\.nspname = current_schema\(\)/);
+  assert.match(query, /c\.relname = 'player_recovery_receipt_cleanup'/);
+  assert.match(query, /c\.relkind IN \('r', 'p'\)/);
+  assert.doesNotMatch(query, /\b(CREATE|ALTER|DROP|TRUNCATE|INSERT|UPDATE|DELETE)\b/i);
+});
 
 test("read-only readiness query checks both tables and their owned, valid constraints and indexes", async () => {
   const fixture = schemaFixture();
@@ -180,6 +197,24 @@ test("missing or invalid constraint and index block startup too", async () => {
   });
 });
 
+test("missing receipt cleanup table blocks API, worker, and release evidence even without red-zone", async () => {
+  const fixture = schemaFixture([], "build-1", false);
+  const started: string[] = [];
+  let tlsChecked = false;
+  await withRedZoneFlag(undefined, () => assert.rejects(
+    startProductionServices(
+      () => runProductionDatabasePreflight(fixture, "build-1", async () => { tlsChecked = true; }),
+      () => { started.push("worker"); },
+      () => { started.push("api"); },
+    ),
+    /Production player recovery receipt cleanup schema is not ready: missing table player_recovery_receipt_cleanup.*Replit Publish/,
+  ));
+  assert.deepEqual(started, []);
+  assert.equal(tlsChecked, false);
+  assert.equal(fixture.queries.length, 2);
+  assert.ok(fixture.queries.every((query) => /^\s*SELECT\b/i.test(query)));
+});
+
 test("migrated fixture starts API then worker after readiness and evidence", async () => {
   const fixture = schemaFixture();
   const started: string[] = [];
@@ -191,8 +226,9 @@ test("migrated fixture starts API then worker after readiness and evidence", asy
   assert.deepEqual(started, ["api", "worker"]);
   assert.deepEqual(fixture.queries.map((query) =>
     query === "SELECT 1 AS connection_check" ? "connect"
-      : query.includes("pg_catalog.pg_constraint") ? "schema" : "evidence",
-  ), ["connect", "schema", "evidence"]);
+      : query.includes("pg_catalog.pg_constraint") ? "red-zone schema"
+        : query.includes("player_recovery_receipt_cleanup") ? "receipt cleanup schema" : "evidence",
+  ), ["connect", "red-zone schema", "receipt cleanup schema", "evidence"]);
   assert.equal(evidence.buildId, "build-1");
 });
 
@@ -218,7 +254,7 @@ test("worker waits for API startup and is not started when API startup fails", a
   assert.equal(started.includes("unexpected-worker"), false);
 });
 
-test("disabled preflight skips absent red-zone schema while retaining connectivity and release evidence", async () => {
+test("disabled red-zone preflight still checks receipt cleanup and release evidence", async () => {
   const fixture = schemaFixture([
     { object_type: "table", object_name: "red_zone_player_game_facts" },
     { object_type: "table", object_name: "red_zone_team_game_facts" },
@@ -233,16 +269,17 @@ test("disabled preflight skips absent red-zone schema while retaining connectivi
   assert.equal(evidence.buildId, "build-disabled");
   assert.deepEqual(started, ["api", "worker"]);
   assert.equal(tlsChecked, true);
-  assert.equal(fixture.queries.length, 2);
+  assert.equal(fixture.queries.length, 3);
   assert.equal(fixture.queries[0], "SELECT 1 AS connection_check");
-  assert.match(fixture.queries[1]!, /INSERT INTO release_security_evidence/);
+  assert.match(fixture.queries[1]!, /player_recovery_receipt_cleanup/);
+  assert.match(fixture.queries[2]!, /INSERT INTO release_security_evidence/);
 });
 
 test("only the exact string 1 enables the red-zone schema readiness check", async () => {
   for (const value of ["", "true", "yes", "01"]) {
     const fixture = schemaFixture([{ object_type: "table", object_name: "red_zone_player_game_facts" }]);
     await withRedZoneFlag(value, () => runProductionDatabasePreflight(fixture, "build-disabled"));
-    assert.equal(fixture.queries.length, 2, `flag value ${JSON.stringify(value)} should remain disabled`);
+    assert.equal(fixture.queries.length, 3, `flag value ${JSON.stringify(value)} should remain disabled`);
   }
 });
 

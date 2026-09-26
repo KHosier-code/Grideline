@@ -106,6 +106,22 @@ export async function assertRedZoneSchemaReady(pool: QueryablePool): Promise<voi
   }
 }
 
+export async function assertReceiptCleanupSchemaReady(pool: QueryablePool): Promise<void> {
+  const result = await pool.query(`
+    SELECT 1 AS schema_check
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = current_schema()
+      AND c.relname = 'player_recovery_receipt_cleanup'
+      AND c.relkind IN ('r', 'p')
+  `);
+  if (result.rows.length !== 1) {
+    throw new Error(
+      "Production player recovery receipt cleanup schema is not ready: missing table player_recovery_receipt_cleanup. Apply the managed schema diff through Replit Publish before starting the API and worker.",
+    );
+  }
+}
+
 export async function runProductionDatabasePreflight(
   pool: QueryablePool,
   buildId: string,
@@ -113,6 +129,7 @@ export async function runProductionDatabasePreflight(
 ): Promise<ProductionDatabaseEvidence> {
   const selectOneResult = await runProductionDatabaseSmokeCheck(pool);
   if (isRedZoneFeatureEnabled()) await assertRedZoneSchemaReady(pool);
+  await assertReceiptCleanupSchemaReady(pool);
   await checkTlsWarnings();
   return recordReleaseSecurityEvidence(pool, buildId, selectOneResult);
 }

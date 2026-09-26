@@ -72,6 +72,8 @@ test("current approved additive diff gates API then worker in an isolated schema
       build_id text PRIMARY KEY, checked_at timestamptz NOT NULL DEFAULT now(),
       select_one_result integer NOT NULL, verify_full_passed boolean NOT NULL
     )`);
+    // The receipt cleanup migration is independent of this red-zone diff.
+    await client.query(`CREATE TABLE player_recovery_receipt_cleanup (id integer PRIMARY KEY)`);
     delete process.env.GRIDLINE_RED_ZONE_ENABLED;
     await runProductionDatabasePreflight(queryable, "isolated-disabled-without-schema");
     process.env.GRIDLINE_RED_ZONE_ENABLED = "1";
