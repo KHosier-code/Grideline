@@ -568,9 +568,33 @@ export type ConsumerGameDataConfidence = {
   reason: string | null;
 };
 
+/**
+ * Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.
+ * @nullable
+ */
+export type ConsumerGameAvailabilityPredictionReason = typeof ConsumerGameAvailabilityPredictionReason[keyof typeof ConsumerGameAvailabilityPredictionReason] | null;
+
+
+export const ConsumerGameAvailabilityPredictionReason = {
+  missing_promoted_models: 'missing_promoted_models',
+  schema_version_mismatch: 'schema_version_mismatch',
+  missing_eligible_snapshot: 'missing_eligible_snapshot',
+  invalid_inputs: 'invalid_inputs',
+  invalid_snapshot: 'invalid_snapshot',
+  cutoff_rejection: 'cutoff_rejection',
+} as const;
+
 export type ConsumerGameAvailability = {
-  /** @nullable */
+  /**
+     * Safe, user-facing explanation when no eligible projection was selected.
+     * @nullable
+     */
   prediction: string | null;
+  /**
+     * Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.
+     * @nullable
+     */
+  predictionReason: ConsumerGameAvailabilityPredictionReason;
   /** @nullable */
   market: string | null;
 };

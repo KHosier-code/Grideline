@@ -66,6 +66,7 @@ export * from './consumerExpectedQbAvailability';
 export * from './consumerExpectedQbStatus';
 export * from './consumerGame';
 export * from './consumerGameAvailability';
+export * from './consumerGameAvailabilityPredictionReason';
 export * from './consumerGameDataConfidence';
 export * from './consumerGameDataConfidenceLabel';
 export * from './consumerGameDetail';

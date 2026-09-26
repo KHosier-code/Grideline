@@ -1208,9 +1208,13 @@ components:
         confidence: { $ref: "#/components/schemas/ConsumerConfidence" }
         availability:
           type: object
-          required: [prediction, market]
+          required: [prediction, predictionReason, market]
           properties:
-            prediction: { type: ["string", "null"] }
+            prediction: { type: ["string", "null"], description: "Safe, user-facing explanation when no eligible projection was selected." }
+            predictionReason:
+              type: ["string", "null"]
+              enum: [missing_promoted_models, schema_version_mismatch, missing_eligible_snapshot, invalid_inputs, invalid_snapshot, cutoff_rejection, null]
+              description: "Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence."
             market: { type: ["string", "null"] }
     ConsumerScheduleSelection:
       type: object

@@ -1222,7 +1222,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
         calculatedAt: "2026-09-17T12:00:00.000Z",
       })),
     },
-    availability: { prediction: "Prediction pending — incomplete model inputs", market: "Sportsbook line updating" },
+    availability: { prediction: "No eligible saved projection exists for this game as of this request.", predictionReason: "missing_eligible_snapshot", market: "Sportsbook line updating" },
   };
   const detail = {
     ...game,

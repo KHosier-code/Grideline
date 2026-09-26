@@ -555,7 +555,6 @@ export const ListPlayerRecoveryReceiptsResponse = zod.object({
 }))
 })
 
-
 /**
  * Performs an explicit ESPN schedule sync and only upserts games; it never deletes schedule history or calls the Odds API.
  * @summary Persist the current and next two exposed NFL weeks
@@ -1129,7 +1128,8 @@ export const GetConsumerDashboardResponse = zod.object({
 })).min(getConsumerDashboardResponseGamesItemConfidenceMarketsMin).max(getConsumerDashboardResponseGamesItemConfidenceMarketsMax)
 }),
   "availability": zod.object({
-  "prediction": zod.string().nullable(),
+  "prediction": zod.string().nullable().describe('Safe, user-facing explanation when no eligible projection was selected.'),
+  "predictionReason": zod.union([zod.literal('missing_promoted_models'),zod.literal('schema_version_mismatch'),zod.literal('missing_eligible_snapshot'),zod.literal('invalid_inputs'),zod.literal('invalid_snapshot'),zod.literal('cutoff_rejection'),zod.literal(null)]).nullable().describe('Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.'),
   "market": zod.string().nullable()
 })
 })),
@@ -1362,7 +1362,8 @@ export const ListConsumerGamesResponse = zod.object({
 })).min(listConsumerGamesResponseGamesItemConfidenceMarketsMin).max(listConsumerGamesResponseGamesItemConfidenceMarketsMax)
 }),
   "availability": zod.object({
-  "prediction": zod.string().nullable(),
+  "prediction": zod.string().nullable().describe('Safe, user-facing explanation when no eligible projection was selected.'),
+  "predictionReason": zod.union([zod.literal('missing_promoted_models'),zod.literal('schema_version_mismatch'),zod.literal('missing_eligible_snapshot'),zod.literal('invalid_inputs'),zod.literal('invalid_snapshot'),zod.literal('cutoff_rejection'),zod.literal(null)]).nullable().describe('Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.'),
   "market": zod.string().nullable()
 })
 })),
@@ -1612,7 +1613,8 @@ export const GetConsumerGameResponse = zod.object({
 })).min(getConsumerGameResponseOneConfidenceMarketsMin).max(getConsumerGameResponseOneConfidenceMarketsMax)
 }),
   "availability": zod.object({
-  "prediction": zod.string().nullable(),
+  "prediction": zod.string().nullable().describe('Safe, user-facing explanation when no eligible projection was selected.'),
+  "predictionReason": zod.union([zod.literal('missing_promoted_models'),zod.literal('schema_version_mismatch'),zod.literal('missing_eligible_snapshot'),zod.literal('invalid_inputs'),zod.literal('invalid_snapshot'),zod.literal('cutoff_rejection'),zod.literal(null)]).nullable().describe('Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.'),
   "market": zod.string().nullable()
 })
 }).and(zod.object({
@@ -2605,3 +2607,4 @@ export const GetConsumerRedZoneOpportunitiesResponse = zod.object({
 }))
 }))
 })
+

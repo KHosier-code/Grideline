@@ -5,10 +5,19 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerGameAvailabilityPredictionReason } from './consumerGameAvailabilityPredictionReason';
 
 export type ConsumerGameAvailability = {
-  /** @nullable */
+  /**
+     * Safe, user-facing explanation when no eligible projection was selected.
+     * @nullable
+     */
   prediction: string | null;
+  /**
+     * Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.
+     * @nullable
+     */
+  predictionReason: ConsumerGameAvailabilityPredictionReason;
   /** @nullable */
   market: string | null;
 };

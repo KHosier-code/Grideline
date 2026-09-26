@@ -218,8 +218,17 @@ test("consumer snapshot provenance must match every active model and exact vecto
   const deficient = { ...snapshot, spreadModelVersion: "legacy-spread", moneylineModelVersion: "legacy-moneyline",
     totalsModelVersion: "legacy-totals", inputFeatureCount: 0, inputVector: null,
     inputSourceEvidence: null, vectorSchemaFingerprint: null };
-  assert.match(snapshotIneligibilityReason([deficient], snapshot.kickoffTime, snapshot.predictionTimestamp, models), /model versions do not match.*input vector and source evidence/);
-  assert.match(snapshotIneligibilityReason([], snapshot.kickoffTime, snapshot.predictionTimestamp, models), /No saved prediction snapshot/);
+  assert.equal(snapshotIneligibilityReason([deficient], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "schema_version_mismatch");
+  assert.equal(snapshotIneligibilityReason([], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "missing_eligible_snapshot");
+  assert.equal(snapshotIneligibilityReason([snapshot], snapshot.kickoffTime, snapshot.predictionTimestamp, new Map()), "missing_promoted_models");
+  assert.equal(snapshotIneligibilityReason([snapshot], snapshot.kickoffTime, snapshot.predictionTimestamp,
+    new Map([...models].map(([family, model]: [string, any]) => [family, { ...model, featureVersion: family === "spread" ? "different" : model.featureVersion }])) as any), "schema_version_mismatch");
+  assert.equal(snapshotIneligibilityReason([{ ...snapshot, predictionTimestamp: snapshot.kickoffTime }], snapshot.kickoffTime, snapshot.kickoffTime, models), "cutoff_rejection");
+  assert.equal(snapshotIneligibilityReason([{ ...snapshot, inputVector: null }], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "invalid_inputs");
+  assert.equal(snapshotIneligibilityReason([{ ...snapshot, vectorFeatureNames: null }], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "invalid_inputs");
+  assert.equal(snapshotIneligibilityReason([{ ...snapshot, projectedTotal: Number.NaN }], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "invalid_snapshot");
+  assert.equal(snapshotIneligibilityReason([{ ...snapshot, snapshotKey: "legacy" }], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "invalid_inputs");
+  assert.equal(snapshotIneligibilityReason([snapshot, deficient], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "missing_eligible_snapshot");
 });
 
 test("SYNTHETIC Week 3 fixture: quote, verified snapshot, API projection and consumer comparison", () => {

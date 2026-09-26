@@ -25,7 +25,7 @@ function HomeGame({ game, now, selected, onSelect }: {
       <span className="weekly-teams"><strong>{game.matchup.away.abbreviation} <small>at</small> {game.matchup.home.abbreviation}</strong><span>{game.matchup.away.name} at {game.matchup.home.name}</span></span>
       <span className="weekly-metric"><small>Saved projection</small>{game.prediction
         ? `${number(game.prediction.projectedAwayScore)} – ${number(game.prediction.projectedHomeScore)}`
-        : 'Unavailable'}<em>{game.prediction ? game.prediction.officialFinalPrediction ? 'Official frozen pregame' : 'Saved outlook · not official' : 'No eligible projection returned'}</em></span>
+        : 'Unavailable'}<em>{game.prediction ? game.prediction.officialFinalPrediction ? 'Official frozen pregame' : 'Saved outlook · not official' : game.availability.prediction ?? 'No eligible projection returned'}</em></span>
       <span className="weekly-metric"><small>Home spread evidence</small>{spread.comparison
         ? `${game.matchup.home.abbreviation} ${signed(spread.comparison.selectedQuote!.point!)}`
         : spread.reason}{spread.comparison && <em>{spread.comparison.selectedQuote!.sportsbook} · {new Date(spread.comparison.selectedQuote!.capturedAt!).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })}</em>}</span>
@@ -38,7 +38,7 @@ function HomeGame({ game, now, selected, onSelect }: {
         <strong>{game.matchup.home.abbreviation} {signed(spread.comparison.selectedQuote!.point!)} ({spread.comparison.selectedQuote!.price > 0 ? '+' : ''}{spread.comparison.selectedQuote!.price}) · {spread.comparison.selectedQuote!.sportsbook}</strong>
         <p>Observed {new Date(spread.comparison.selectedQuote!.capturedAt!).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}. Model home margin {signed(spread.comparison.modelValue!)} vs market implied home margin {signed(-spread.comparison.marketValue!)}. Difference {signed(spread.comparison.difference!)} points (model minus market implied margin).</p>
       </> : <><strong>{spread.reason}</strong><p>{game.recommendation.reason ?? 'A fresh, complete comparison is not available.'}</p></>}</div>
-      <p className="weekly-disclaimer">Informational evidence only; not a recommendation. {game.prediction ? game.dataConfidence.reason ?? `${game.dataConfidence.label} data confidence.` : 'No eligible saved prediction was returned.'}</p>
+       <p className="weekly-disclaimer">Informational evidence only; not a recommendation. {game.prediction ? game.dataConfidence.reason ?? `${game.dataConfidence.label} data confidence.` : game.availability.prediction ?? 'No eligible saved prediction was returned.'}</p>
       <Link href={detailHref} className="weekly-detail-link">Open Game Detail <ArrowRight size={16} aria-hidden="true" /></Link>
     </div>}
   </article>;

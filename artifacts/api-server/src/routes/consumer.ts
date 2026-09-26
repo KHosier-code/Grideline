@@ -22,6 +22,7 @@ import {
   gameSpecificSnapshot,
   getLatestValidPredictionSnapshots,
   getSnapshotIneligibilityReasons,
+  snapshotUnavailableMessages,
   getPredictionPerformance,
 } from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
@@ -1493,7 +1494,8 @@ export async function consumerGames(filters: ConsumerFilters = {}, persistConfid
       dataConfidence,
       confidence: calculatedConfidence,
       availability: {
-        prediction: snapshot ? null : predictionReasons.get(game.gameId) ?? "No eligible saved prediction is available.",
+        prediction: snapshot ? null : snapshotUnavailableMessages[predictionReasons.get(game.gameId) ?? "missing_eligible_snapshot"],
+        predictionReason: snapshot ? null : predictionReasons.get(game.gameId) ?? "missing_eligible_snapshot",
         market: market.evidence.available ? null : "No eligible saved sportsbook line is available.",
       },
     };

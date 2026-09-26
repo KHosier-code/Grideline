@@ -1508,48 +1508,64 @@ export async function getLatestValidPredictionSnapshots(
   return latest;
 }
 
-/** Explain the saved evidence behind a null consumer prediction; never changes selection. */
+export const snapshotUnavailableMessages = {
+  missing_promoted_models: "A complete set of promoted production models is not available.",
+  schema_version_mismatch: "Saved projections use a different model version or input schema than the current production models.",
+  missing_eligible_snapshot: "No eligible saved projection exists for this game as of this request.",
+  invalid_inputs: "Saved projection inputs are incomplete or could not be verified.",
+  invalid_snapshot: "Saved projection values did not pass validation.",
+  cutoff_rejection: "A saved projection could not be verified as earlier than the game's kickoff.",
+} as const;
+
+export type SnapshotUnavailableReason = keyof typeof snapshotUnavailableMessages;
+
+/** Explain a null consumer prediction using only allow-listed categories; never changes selection. */
 export function snapshotIneligibilityReason(
   rows: Array<typeof predictionSnapshotsTable.$inferSelect>,
   kickoff: Date | null,
   cutoff: Date,
   models: Map<Family, ProductionModel>,
-): string {
-  const available = rows.filter((row) => row.predictionTimestamp <= cutoff);
-  if (!available.length) return "No saved prediction snapshot exists as of this request.";
-  const pregame = available.filter((row) => kickoff && row.predictionTimestamp < kickoff);
-  if (!pregame.length) return "Saved predictions are not earlier than the recorded kickoff.";
+): SnapshotUnavailableReason {
   const schema = sharedProductionSchema([...models.values()]);
-  if (!schema) return "Current production model artifacts are unavailable or have incompatible feature schemas.";
-  const candidate = pregame.reduce((latest, row) => row.predictionTimestamp > latest.predictionTimestamp ? row : latest);
-  const failures: string[] = [];
-  if (candidate.featureVersion !== schema.featureVersion
-    || candidate.spreadModelVersion !== models.get("spread")?.modelVersion
-    || candidate.moneylineModelVersion !== models.get("moneyline")?.modelVersion
-    || candidate.totalsModelVersion !== models.get("totals")?.modelVersion) {
-    failures.push("saved snapshot model versions do not match the promoted production models");
+  if (!schema) return models.size < 3 || [...models.values()].some((model) => !model.modelArtifact)
+    ? "missing_promoted_models" : "schema_version_mismatch";
+  const available = rows.filter((row) => row.predictionTimestamp <= cutoff);
+  if (!available.length) return "missing_eligible_snapshot";
+  const pregame = available.filter((row) => kickoff && row.predictionTimestamp < kickoff);
+  if (!pregame.length) return "cutoff_rejection";
+  const failures = new Set<SnapshotUnavailableReason>();
+  for (const candidate of pregame) {
+    if (candidate.featureVersion !== schema.featureVersion
+      || candidate.spreadModelVersion !== models.get("spread")?.modelVersion
+      || candidate.moneylineModelVersion !== models.get("moneyline")?.modelVersion
+      || candidate.totalsModelVersion !== models.get("totals")?.modelVersion
+      || (candidate.vectorSchemaFingerprint && candidate.vectorSchemaFingerprint !== schema.fingerprint)
+      || (candidate.vectorFeatureNames && JSON.stringify(candidate.vectorFeatureNames) !== JSON.stringify(schema.names))) {
+      failures.add("schema_version_mismatch");
+    } else if (!isValidPredictionSnapshot(candidate)) {
+      failures.add("invalid_snapshot");
+    } else if (!hasVerifiedPredictionInputs(candidate) || !Array.isArray(candidate.inputVector)
+      || !candidate.inputSourceEvidence || !isEligiblePredictionSnapshot(candidate)) {
+      failures.add("invalid_inputs");
+    } else if (!snapshotMatchesProductionModels(candidate, models)) {
+      failures.add("invalid_inputs");
+    } else {
+      // Selection is authoritative. Do not imply a rejected input when it passed these checks.
+      return "missing_eligible_snapshot";
+    }
   }
-  if (!hasVerifiedPredictionInputs(candidate) || !Array.isArray(candidate.inputVector)
-    || !candidate.inputSourceEvidence || !candidate.vectorSchemaFingerprint || !candidate.vectorFeatureNames) {
-    failures.push("saved snapshot lacks the required complete input vector and source evidence");
-  } else if (candidate.vectorSchemaFingerprint !== schema.fingerprint
-    || JSON.stringify(candidate.vectorFeatureNames) !== JSON.stringify(schema.names)) {
-    failures.push("saved snapshot input schema does not match the production schema");
-  }
-  if (!isValidPredictionSnapshot(candidate)) failures.push("saved snapshot outputs fail validation");
-  if (!failures.length && !snapshotMatchesProductionModels(candidate, models)) {
-    failures.push("saved snapshot input chronology or integrity does not verify");
-  }
-  return failures.length
-    ? `Latest saved pregame snapshot is ineligible: ${failures.join("; ")}.`
-    : "No eligible saved prediction was selected for this request.";
+  // An old-version complete snapshot is more informative than a newer incomplete row.
+  return failures.has("schema_version_mismatch") ? "schema_version_mismatch"
+    : failures.has("invalid_inputs") ? "invalid_inputs"
+    : failures.has("invalid_snapshot") ? "invalid_snapshot"
+    : "missing_eligible_snapshot";
 }
 
 export async function getSnapshotIneligibilityReasons(
   rows: Array<typeof predictionSnapshotsTable.$inferSelect>,
   games: Array<{ gameId: string; kickoffTime: Date | null }>,
   cutoff: Date,
-): Promise<Map<string, string>> {
+): Promise<Map<string, SnapshotUnavailableReason>> {
   if (!games.length) return new Map();
   const models = await productionModels();
   const byGame = new Map<string, typeof rows>();
