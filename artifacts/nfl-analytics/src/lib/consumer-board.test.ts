@@ -31,6 +31,8 @@ test('market labels retain independent gates and meaningful blockers', () => {
   assert.equal(marketBlocker(game, comparisons[1] as ConsumerGame['marketBoard']['comparisons'][number], now), 'Market observation stale');
   assert.equal(marketBlocker(game, comparisons[2] as ConsumerGame['marketBoard']['comparisons'][number], now), 'No market observation');
   assert.deepEqual(eligibleMarkets({ ...game, recommendation: { ...game.recommendation, markets: { spread: false, total: false, moneyline: false } } } as ConsumerGame, now), []);
-  assert.equal(marketBlocker({ ...game, recommendation: { ...game.recommendation, status: 'stale' } } as ConsumerGame, comparisons[0] as ConsumerGame['marketBoard']['comparisons'][number], now), 'Schedule or odds feed stale');
+  const stale = { ...game, recommendation: { ...game.recommendation, status: 'stale',
+    reason: 'Sportsbook odds stale; last complete game observation 2026-09-24T12:00:00Z. Current recommendations are unavailable.' } } as ConsumerGame;
+  assert.match(marketBlocker(stale, comparisons[0] as ConsumerGame['marketBoard']['comparisons'][number], now) ?? '', /Sportsbook odds stale/);
   assert.deepEqual(eligibleMarkets({ ...game, gameState: 'live' } as ConsumerGame, now), []);
 });

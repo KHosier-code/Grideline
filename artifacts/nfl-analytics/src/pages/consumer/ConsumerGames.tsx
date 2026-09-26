@@ -158,7 +158,12 @@ export default function ConsumerGames() {
       {!manual && schedule.data?.reason === 'upcoming' && <p className="board-slate-note">Next upcoming slate selected from the persisted schedule.</p>}
       {schedule.isError && !manual && <ConsumerMessage error title="Schedule selection unavailable" detail="We couldn’t read persisted schedule evidence. Select a season and week to browse history." />}
       {!resolved && !schedule.isError && !schedule.isLoading && <ConsumerMessage title="No persisted schedule" detail="There is no dated schedule evidence to select a current week. Enter a season and week to browse manually." />}
-      {query.data && !query.isError && <ConsumerSourceHealth health={query.data.sourceHealth} compact />}
+      {query.data && !query.isError && <>
+        <ConsumerSourceHealth health={query.data.sourceHealth} compact />
+        {['stale', 'unavailable'].some((status) =>
+          query.data.sourceHealth.sources.schedule.status === status || query.data.sourceHealth.sources.odds.status === status)
+          && <p className="board-slate-note">Feed timestamps do not prove the durable worker is running. Operators can inspect overdue jobs, last scheduled attempts, and their results in <Link href="/admin/data-health">Data health</Link>. A manual schedule sync does not restore scheduled odds capture.</p>}
+      </>}
 
       {query.data && !query.isError && (
         <section className="terminal-summary-bar" aria-label="Board coverage">

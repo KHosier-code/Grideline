@@ -13,6 +13,26 @@ type Quote = {
 };
 type Comparison = { market: Market; state: "available" | "stale" | "absent"; modelValue: number | null };
 
+function sourceBlocker(health: ConsumerSourceHealth, name: "schedule" | "odds") {
+  const source = health.sources[name];
+  const label = name === "odds" ? "Sportsbook odds" : "Schedule";
+  return `${label} ${source.status} (last successful sync ${source.lastSuccessAt ?? "not recorded"}; last verified observation ${source.sourceTimestamp ?? "not recorded"}; latest attempt ${source.lastAttemptStatus ?? "none"} at ${source.lastAttemptAt ?? "not recorded"})`;
+}
+
+function gameEvidence(input: { verifiedAt: Date | null; rows: Quote[]; audit?: {
+  auditedAt: Date; outcome: string; observationsReceived: number; rejectedObservations: number;
+} | null; lastCompleteAt?: Date | null }) {
+  const lastQuote = input.rows.reduce<Date | null>((latest, row) =>
+    !latest || row.capturedAt > latest ? row.capturedAt : latest, null);
+  const observation = [
+    `last complete game observation ${input.lastCompleteAt?.toISOString() ?? input.verifiedAt?.toISOString() ?? "not recorded"}`,
+    input.audit && !input.verifiedAt
+      ? `latest game audit ${input.audit.auditedAt.toISOString()} (${input.audit.outcome}, ${input.audit.observationsReceived} observations, ${input.audit.rejectedObservations} rejected); latest audit is not complete`
+      : null,
+  ].filter(Boolean).join("; ");
+  return `${observation}; last saved quote ${lastQuote?.toISOString() ?? "not recorded"}`;
+}
+
 function validPrice(price: number) {
   return Number.isInteger(price) && (price <= -100 || price >= 100);
 }
@@ -65,6 +85,8 @@ export function consumerRecommendation(input: {
   rows: Quote[];
   comparisons: Comparison[];
   verifiedAt: Date | null;
+  audit?: { auditedAt: Date; outcome: string; observationsReceived: number; rejectedObservations: number } | null;
+  lastCompleteAt?: Date | null;
 }) {
   const empty = { spread: false, total: false, moneyline: false };
   if (!["scheduled", "pregame"].includes(input.gameState)
@@ -73,14 +95,17 @@ export function consumerRecommendation(input: {
   }
   const schedule = input.sourceHealth.sources.schedule.status;
   const odds = input.sourceHealth.sources.odds.status;
+  const blockedSources = (["schedule", "odds"] as const).filter((name) =>
+    input.sourceHealth.sources[name].status !== "healthy");
+  const evidence = gameEvidence(input);
   if (schedule === "stale" || odds === "stale") {
-    return { status: "stale" as const, reason: "Schedule or odds feed is stale. Current recommendations are unavailable.", markets: empty };
+    return { status: "stale" as const, reason: `${blockedSources.map((name) => sourceBlocker(input.sourceHealth, name)).join("; ")}. Game: ${evidence}. Current recommendations are unavailable.`, markets: empty };
   }
   if (schedule === "unavailable" || odds === "unavailable") {
-    return { status: "unavailable" as const, reason: "Schedule or odds feed is unavailable. Current recommendations are unavailable.", markets: empty };
+    return { status: "unavailable" as const, reason: `${blockedSources.map((name) => sourceBlocker(input.sourceHealth, name)).join("; ")}. Game: ${evidence}. Current recommendations are unavailable.`, markets: empty };
   }
   if (schedule !== "healthy" || odds !== "healthy") {
-    return { status: "partial" as const, reason: "A required feed is incomplete. Current recommendations are unavailable.", markets: empty };
+    return { status: "partial" as const, reason: `${blockedSources.map((name) => sourceBlocker(input.sourceHealth, name)).join("; ")}. Game: ${evidence}. Current recommendations are unavailable.`, markets: empty };
   }
   const markets = Object.fromEntries((["spread", "total", "moneyline"] as const).map((market) => {
     const comparison = input.comparisons.find((value) => value.market === market);
@@ -91,7 +116,7 @@ export function consumerRecommendation(input: {
   const available = Object.values(markets).filter(Boolean).length;
   return {
     status: available === 3 ? "healthy" as const : available ? "partial" as const : "unavailable" as const,
-    reason: available === 3 ? null : "One or more markets lack a fresh, complete DraftKings and FanDuel price pair. Only eligible markets may be considered.",
+    reason: available === 3 ? null : `One or more markets lack a fresh, complete DraftKings and FanDuel price pair (${evidence}). Only eligible markets may be considered.`,
     markets,
   };
 }

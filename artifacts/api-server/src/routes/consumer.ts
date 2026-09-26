@@ -1306,7 +1306,7 @@ export async function consumerGames(
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
   const recordSeason = filters.season ?? games[0]?.season;
   const recordWeek = filters.week ?? games[0]?.week;
-  const [teams, snapshots, marketRows, modelRuns, snapshotHistory, marketAudits] = await Promise.all([
+  const [teams, snapshots, marketRows, modelRuns, snapshotHistory, marketAudits, completeMarketAudits] = await Promise.all([
     teamIds.length ? db.select().from(teamsTable).where(inArray(teamsTable.teamId, teamIds)) : [],
     getLatestValidPredictionSnapshots(games.map((game) => game.gameId), {
       preKickoffOnly: true,
@@ -1351,6 +1351,20 @@ export async function consumerGames(
         desc(oddsEventAuditsTable.auditedAt),
         desc(oddsEventAuditsTable.id),
       ) : [],
+    games.length ? db.selectDistinctOn([oddsEventAuditsTable.matchedGridlineGameId], {
+      gameId: oddsEventAuditsTable.matchedGridlineGameId,
+      auditedAt: oddsEventAuditsTable.auditedAt,
+    }).from(oddsEventAuditsTable)
+      .innerJoin(oddsApiRequestsTable, eq(oddsApiRequestsTable.id, oddsEventAuditsTable.requestId))
+      .where(and(
+        inArray(oddsEventAuditsTable.matchedGridlineGameId, games.map((game) => game.gameId)),
+        eq(oddsApiRequestsTable.status, "success"),
+        eq(oddsEventAuditsTable.outcome, "matched_saved"),
+        eq(oddsEventAuditsTable.observationsReceived, 12),
+        eq(oddsEventAuditsTable.rejectedObservations, 0),
+        lte(oddsEventAuditsTable.auditedAt, asOf),
+      ))
+      .orderBy(oddsEventAuditsTable.matchedGridlineGameId, desc(oddsEventAuditsTable.auditedAt), desc(oddsEventAuditsTable.id)) : [],
   ]);
   // Only final games without an active-model selection can recover their
   // already-frozen official prediction. Current-model selections always win.
@@ -1391,6 +1405,9 @@ export async function consumerGames(
   const latestMarketAuditByGame = new Map(
     marketAudits.flatMap((audit) => audit.gameId ? [[audit.gameId, audit] as const] : []),
   );
+  const lastCompleteAuditByGame = new Map(
+    completeMarketAudits.flatMap((audit) => audit.gameId ? [[audit.gameId, audit.auditedAt] as const] : []),
+  );
   let persistedConfidenceResults = 0;
   if (persistConfidence) await persistConfidenceMethodology();
   const results = await Promise.all(games.map(async (game) => {
@@ -1419,6 +1436,8 @@ export async function consumerGames(
       rows: marketRows.filter((row) => row.gameId === game.gameId),
       comparisons: marketBoard.comparisons,
       verifiedAt: marketVerifiedAt,
+      audit: latestMarketAudit,
+      lastCompleteAt: lastCompleteAuditByGame.get(game.gameId) ?? null,
     });
     const dataConfidence = confidence(snapshot);
     const confidenceData = snapshot ? snapshotDataConfidence({

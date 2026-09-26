@@ -26,8 +26,9 @@ export function marketBlocker(game: ConsumerGame, comparison: ConsumerMarketComp
   if (eligibleMarkets(game, now).some((item) => item.market === comparison.market)) return null;
   if (!game.kickoffTime || new Date(game.kickoffTime).getTime() <= now
     || !['scheduled', 'pregame'].includes(game.gameState)) return 'Closed at kickoff';
-  if (game.recommendation.status === 'stale') return 'Schedule or odds feed stale';
-  if (game.recommendation.status === 'unavailable' && /feed/i.test(game.recommendation.reason ?? '')) return 'Required feed unavailable';
+  if (['stale', 'partial', 'unavailable'].includes(game.recommendation.status)
+    && /Current recommendations are unavailable/.test(game.recommendation.reason ?? ''))
+    return game.recommendation.reason;
   if (comparison.state === 'stale') return 'Market observation stale';
   if (comparison.state === 'absent') return 'No market observation';
   if (comparison.modelValue === null) return 'Saved model value unavailable';

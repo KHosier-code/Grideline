@@ -272,8 +272,9 @@ export async function getConsumerSourceHealth(now = new Date()): Promise<Consume
       lastAttemptAt: latestOddsRequest?.requestedAt ?? null,
       lastAttemptStatus: latestOddsRequest?.status ?? null,
       lastSuccessAt: latestOddsSuccess?.requestedAt ?? null,
-      sourceTimestamp: latestCompleteOddsObservation?.requestedAt
-        ?? aggregateDate(oddsData?.sourceTimestamp ?? oddsData?.capturedAt),
+      // Changed quotes and generic successful requests cannot stand in for a
+      // complete provider response. Per-game audits are checked separately.
+      sourceTimestamp: latestCompleteOddsObservation?.requestedAt ?? null,
       hasSource: Number(oddsData?.count ?? 0) > 0,
       staleAfterMinutes: oddsStaleAfterMinutes,
       observationRequired: true,

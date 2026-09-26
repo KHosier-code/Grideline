@@ -45,6 +45,42 @@ test("a stale required feed suppresses each market even if price rows are fresh"
   const result = consumerRecommendation({ ...input, sourceHealth: staleHealth });
   assert.equal(result.status, "stale");
   assert.equal(result.markets.moneyline, false);
+  assert.match(result.reason ?? "", /Sportsbook odds stale/);
+  assert.doesNotMatch(result.reason ?? "", /Schedule stale/);
+  assert.match(result.reason ?? "", /last complete game observation 2026-09-20T15:55:00.000Z/);
+});
+
+test("Week 3-like mixed slate explains stale feeds, missing game audits, and kickoff independently", () => {
+  const stale: ConsumerSourceHealth = { ...health, sources: {
+    ...health.sources,
+    schedule: { ...source, status: "stale", sourceTimestamp: "2026-09-19T12:00:00Z" },
+    odds: { ...source, status: "stale", lastAttemptStatus: "running", sourceTimestamp: "2026-09-19T10:00:00Z" },
+  } };
+  const future = consumerRecommendation({ ...input, sourceHealth: stale, verifiedAt: null, rows: [],
+    lastCompleteAt: new Date("2026-09-19T12:00:00Z"),
+    audit: { auditedAt: observed, outcome: "partial", observationsReceived: 6, rejectedObservations: 0 } });
+  assert.equal(future.status, "stale");
+  assert.deepEqual(future.markets, { spread: false, total: false, moneyline: false });
+  assert.match(future.reason ?? "", /Schedule stale.*Sportsbook odds stale/);
+  assert.match(future.reason ?? "", /partial, 6 observations/);
+  assert.match(future.reason ?? "", /last complete game observation 2026-09-19T12:00:00.000Z/);
+  assert.match(future.reason ?? "", /last saved quote not recorded/);
+  const absent = consumerRecommendation({ ...input, sourceHealth: health, verifiedAt: null, rows: [], audit: null });
+  assert.equal(absent.status, "unavailable");
+  assert.match(absent.reason ?? "", /last complete game observation not recorded/);
+  const closed = consumerRecommendation({ ...input, gameState: "final", sourceHealth: stale, verifiedAt: null });
+  assert.equal(closed.status, "historical");
+  assert.match(closed.reason ?? "", /close at kickoff/);
+});
+
+test("partial source cannot be cleared by complete per-game evidence", () => {
+  const partial: ConsumerSourceHealth = { ...health, sources: {
+    ...health.sources, odds: { ...source, status: "partial", lastAttemptStatus: "partial" },
+  } };
+  const result = consumerRecommendation({ ...input, sourceHealth: partial });
+  assert.equal(result.status, "partial");
+  assert.equal(result.markets.spread, false);
+  assert.match(result.reason ?? "", /Sportsbook odds partial/);
 });
 
 test("missing moneyline price suppresses moneyline only", () => {
