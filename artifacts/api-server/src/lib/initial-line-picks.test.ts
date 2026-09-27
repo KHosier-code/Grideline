@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { eq, gt, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { captureInitialLineOutcome, completeInitialQuotes, nextInitialSlate, publicFirstLines, rankInitialPicks, readInitialLineAudit, readInitialWeeklyPickArchive, verifySavedPick, type InitialQuote } from "./initial-line-picks";
 import { inferInitialLineGame } from "./live-predictions";
-import { db, gamesTable, initialLinePicksTable, initialWeeklyPicksTable, oddsApiRequestsTable, pregameTeamFeaturesTable, sportsbookOddsTable, teamsTable } from "@workspace/db";
+import { inspectRetrospectiveWeek, recordRetrospectiveReview, retrospectiveEvidenceId, retrospectiveScope } from "./retrospective-weekly-reviews";
+import { db, gamesTable, initialLinePicksTable, initialWeeklyPicksTable, oddsApiRequestsTable, pregameTeamFeaturesTable, retrospectiveWeeklyReviewsTable, sportsbookOddsTable, teamsTable } from "@workspace/db";
 
 const home = "HME", away = "AWY";
 const quote = (sportsbook: string, market: string, selection: string, point: number | null, price: number): InitialQuote =>
@@ -33,6 +34,57 @@ test("weekly winner ranks by locked probability, kickoff and game identity", () 
     { gameId: "a", winnerProbability: .8, kickoffTime },
   ])?.gameId, "a");
   assert.equal(rankInitialPicks([]), null);
+});
+
+test("retrospective scope and evidence identity are deterministic and do not depend on row ordering", () => {
+  assert.equal(retrospectiveScope(2026, 3), true);
+  assert.equal(retrospectiveScope(2025, 3), false);
+  assert.equal(retrospectiveScope(2026, 4), false);
+  const rows = [
+    { gameId: "b", requestId: 2, cutoffAt: new Date("2026-09-10T00:00:00Z"), winnerTeamId: "two", winnerProbability: .65 },
+    { gameId: "a", requestId: 1, cutoffAt: new Date("2026-09-09T00:00:00Z"), winnerTeamId: "one", winnerProbability: .7 },
+  ];
+  assert.equal(retrospectiveEvidenceId(rows), retrospectiveEvidenceId([...rows].reverse()));
+  assert.notEqual(retrospectiveEvidenceId(rows), retrospectiveEvidenceId([{ ...rows[0]!, winnerProbability: .66 }, rows[1]!]));
+});
+
+test("2026 development review refuses unsupported snapshots without writing a selection", async () => {
+  assert.equal(process.env.NODE_ENV, "development");
+  const historical = await readInitialWeeklyPickArchive(2026, new Date("2026-09-27T00:00:00Z"));
+  assert.deepEqual(historical.weeks.map((item) => item.week), [2, 1],
+    "an unfinished Week 3 must not appear in past-pick history");
+  for (const week of [1, 2, 3]) {
+    const report = await inspectRetrospectiveWeek(2026, week);
+    assert.equal(report.candidate, null);
+    assert.ok(report.reason);
+    const [selection] = await db.select().from(initialWeeklyPicksTable)
+      .where(and(eq(initialWeeklyPicksTable.season, 2026), eq(initialWeeklyPicksTable.week, week))).limit(1);
+    assert.equal(selection, undefined);
+  }
+  await assert.rejects(recordRetrospectiveReview(2026, 3, "test-reviewer", "a".repeat(64), true), /lack|past|changed|cannot|missing/i);
+  await assert.rejects(recordRetrospectiveReview(2026, 1, "test-reviewer", "a".repeat(64), false), /lack|changed|missing/i);
+  assert.equal((await db.select().from(retrospectiveWeeklyReviewsTable)
+    .where(and(eq(retrospectiveWeeklyReviewsTable.season, 2026), eq(retrospectiveWeeklyReviewsTable.week, 3)))).length, 0);
+});
+
+test("review storage rejects duplicates and mutations inside a rolled-back development fixture", async () => {
+  assert.equal(process.env.NODE_ENV, "development");
+  const marker = new Error("rollback-review-fixture");
+  await assert.rejects(db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(retrospectiveWeeklyReviewsTable)
+      .where(and(eq(retrospectiveWeeklyReviewsTable.season, 2026), eq(retrospectiveWeeklyReviewsTable.week, 1))).limit(1);
+    if (existing) return;
+    const value = { season: 2026, week: 1, status: "unavailable", reason: "Fixture only", reviewerId: "fixture" };
+    await tx.insert(retrospectiveWeeklyReviewsTable).values(value);
+    const duplicate = await tx.insert(retrospectiveWeeklyReviewsTable).values(value)
+      .onConflictDoNothing().returning();
+    assert.equal(duplicate.length, 0);
+    await assert.rejects(tx.transaction(async (nested) =>
+      nested.update(retrospectiveWeeklyReviewsTable).set({ reason: "Modified" })
+        .where(and(eq(retrospectiveWeeklyReviewsTable.season, 2026), eq(retrospectiveWeeklyReviewsTable.week, 1)))),
+      (error: unknown) => /immutable/i.test(String((error as { cause?: Error }).cause?.message)));
+    throw marker;
+  }), (error) => error === marker);
 });
 
 test("next initial-line slate follows kickoff across week and season transitions", () => {
@@ -72,9 +124,9 @@ test("development first-pull outcomes are terminal across retries and concurrent
     await db.delete(teamsTable).where(inArray(teamsTable.teamId, [homeId, awayId]));
   });
   const first = { gameId, requestId: request!.id, requestedAt, observedAt, quotes: [] };
-  assert.deepEqual(await Promise.all([
+  assert.deepEqual((await Promise.all([
     captureInitialLineOutcome(first), captureInitialLineOutcome(first),
-  ]), [true, false]);
+  ])).sort(), [false, true]);
   const [saved] = await db.select().from(initialLinePicksTable).where(eq(initialLinePicksTable.gameId, gameId));
   assert.equal(saved?.status, "no_line");
   assert.equal(saved?.cutoffAt.toISOString(), observedAt.toISOString());

@@ -10,8 +10,8 @@ export function WeeklyPickArchiveContent({ archive, state, onSeasonChange }: {
 }) {
   return <div className="consumer-page pick-archive">
     <header className="consumer-page-header">
-      <div><p className="consumer-eyebrow">Gridline / Official picks</p><h1>Weekly pick history</h1>
-        <p>Past winners are shown only when Gridline saved an official weekly selection and its first-line evidence still verifies. Saved outlooks and later odds are not used to fill gaps.</p></div>
+      <div><p className="consumer-eyebrow">Gridline / Pick history</p><h1>Weekly pick history</h1>
+        <p>Official selections require saved first-line evidence. Retrospective reviews are separate, recorded later, and never count as original picks. Saved outlooks and later odds do not fill gaps.</p></div>
     </header>
     {state === 'loading' ? <ConsumerLoading label="Loading official weekly pick history…" />
       : state === 'error' || !archive ? <ConsumerMessage error title="Pick history unavailable" detail="The saved weekly selections could not be loaded right now. Please try again later." />
@@ -30,6 +30,16 @@ export function WeeklyPickArchiveContent({ archive, state, onSeasonChange }: {
                 <p className="consumer-eyebrow">{item.season} · Week {item.week}</p>
                 {item.pick ? <><h2>{item.pick.teamName}</h2><p>Official weekly winner · first verified lines. Not a guaranteed result.</p></>
                   : <><h2>Official pick unavailable</h2><p>{item.reason ?? 'Saved initial-line evidence is unavailable.'}</p></>}
+                {item.retrospective && <div className="mt-4 border-t border-border pt-3">
+                  <p className="consumer-eyebrow"><strong>{item.retrospective.label}</strong></p>
+                  {item.retrospective.choice ? <>
+                    <h3>{item.retrospective.choice.teamName}</h3>
+                    <p>{item.retrospective.choice.matchup} · algorithm probability {(item.retrospective.choice.probability * 100).toFixed(1)}%</p>
+                    <p>Original evidence cutoff {new Date(item.retrospective.choice.cutoffAt).toLocaleString()} · reviewed {new Date(item.retrospective.choice.reviewedAt).toLocaleString()}
+                      {item.retrospective.choice.publishedAt && <> · published {new Date(item.retrospective.choice.publishedAt).toLocaleString()}</>}</p>
+                    <p>Evidence identity: {item.retrospective.choice.evidenceId}</p>
+                  </> : <p>Choice cannot be established: {item.retrospective.reason}</p>}
+                </div>}
               </article>
             </li>)}
           </ol>}

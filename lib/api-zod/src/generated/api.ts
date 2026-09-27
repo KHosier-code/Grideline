@@ -418,6 +418,88 @@ export const GetInitialLineAuditResponse = zod.object({
 
 
 /**
+ * @summary Preview saved 2026 retrospective evidence without publishing
+ */
+export const getRetrospectiveWeeklyReviewQueryWeekMax = 3;
+
+
+
+export const GetRetrospectiveWeeklyReviewQueryParams = zod.object({
+  "season": zod.literal(2026),
+  "week": zod.coerce.number().int().min(1).max(getRetrospectiveWeeklyReviewQueryWeekMax)
+})
+
+export const GetRetrospectiveWeeklyReviewResponse = zod.object({
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "reason": zod.string().nullable(),
+  "officialExists": zod.boolean(),
+  "candidate": zod.union([zod.null(),zod.object({
+  "gameId": zod.string(),
+  "teamId": zod.string(),
+  "teamName": zod.string(),
+  "matchup": zod.string(),
+  "probability": zod.number(),
+  "cutoffAt": zod.coerce.date(),
+  "evidenceId": zod.string()
+})]),
+  "review": zod.union([zod.null(),zod.object({
+  "status": zod.enum(['unavailable', 'reviewed', 'published']),
+  "reason": zod.string().nullable(),
+  "gameId": zod.string().nullable(),
+  "teamId": zod.string().nullable(),
+  "probability": zod.number().nullable(),
+  "cutoffAt": zod.coerce.date().nullable(),
+  "evidenceId": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date(),
+  "publishedAt": zod.coerce.date().nullable()
+})])
+})
+
+
+/**
+ * @summary Record an unavailable review or manually publish the verified Week 3 choice once
+ */
+export const recordRetrospectiveWeeklyReviewBodyWeekMax = 3;
+
+
+
+export const RecordRetrospectiveWeeklyReviewBody = zod.object({
+  "season": zod.literal(2026),
+  "week": zod.number().int().min(1).max(recordRetrospectiveWeeklyReviewBodyWeekMax),
+  "evidenceId": zod.string().nullable(),
+  "confirm": zod.enum(['I confirm this is retrospective, not an official first-line pick'])
+})
+
+export const RecordRetrospectiveWeeklyReviewResponse = zod.object({
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "reason": zod.string().nullable(),
+  "officialExists": zod.boolean(),
+  "candidate": zod.union([zod.null(),zod.object({
+  "gameId": zod.string(),
+  "teamId": zod.string(),
+  "teamName": zod.string(),
+  "matchup": zod.string(),
+  "probability": zod.number(),
+  "cutoffAt": zod.coerce.date(),
+  "evidenceId": zod.string()
+})]),
+  "review": zod.union([zod.null(),zod.object({
+  "status": zod.enum(['unavailable', 'reviewed', 'published']),
+  "reason": zod.string().nullable(),
+  "gameId": zod.string().nullable(),
+  "teamId": zod.string().nullable(),
+  "probability": zod.number().nullable(),
+  "cutoffAt": zod.coerce.date().nullable(),
+  "evidenceId": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date(),
+  "publishedAt": zod.coerce.date().nullable()
+})])
+})
+
+
+/**
  * Returns immutable mapping coverage, classification totals, position coverage, all-team depth candidates, a deterministic validation sample, risks, suitability, and safety assertions. Provider diagnostics are never exposed through consumer APIs.
  * @summary Read the administrator-only Sleeper identity mapping report
  */
@@ -1452,7 +1534,7 @@ export const GetConsumerDashboardResponse = zod.object({
 
 
 /**
- * @summary Read past persisted official weekly selections
+ * @summary Read past official selections separately from retrospective reviews
  */
 export const getConsumerWeeklyPicksQuerySeasonMin = 2020;
 
@@ -1476,7 +1558,22 @@ export const GetConsumerWeeklyPicksResponse = zod.object({
   "probability": zod.number(),
   "observedAt": zod.coerce.date()
 })]),
-  "reason": zod.string().nullable()
+  "reason": zod.string().nullable(),
+  "retrospective": zod.union([zod.null(),zod.object({
+  "status": zod.enum(['reviewed', 'published', 'unavailable']),
+  "label": zod.string(),
+  "reason": zod.string().nullable(),
+  "choice": zod.union([zod.null(),zod.object({
+  "gameId": zod.string(),
+  "teamName": zod.string(),
+  "matchup": zod.string(),
+  "probability": zod.number(),
+  "cutoffAt": zod.coerce.date(),
+  "evidenceId": zod.string(),
+  "reviewedAt": zod.coerce.date(),
+  "publishedAt": zod.coerce.date().nullable()
+})])
+})])
 }))
 })
 

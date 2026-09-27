@@ -3,6 +3,7 @@ import {
   db, gamesTable, initialLinePicksTable, initialWeeklyPicksTable,
   modelPromotionHistoryTable, modelTrainingRunsTable, oddsApiRequestsTable, sportsbookOddsTable, teamsTable,
 } from "@workspace/db";
+import { inspectRetrospectiveWeek } from "./retrospective-weekly-reviews";
 import { artifactMetadataMatchesTrainingRun, isFittedModelArtifact, PHASE6_VECTOR_FEATURE_NAMES, predictPersistedModelArtifact, verifyArtifactIntegrity } from "./modeling";
 import { inferInitialLineGame, isEligiblePredictionSnapshot } from "./live-predictions";
 
@@ -315,6 +316,12 @@ export async function readInitialWeeklyPickArchive(requestedSeason?: number, now
     const row = rows.find((item) => item.gameId === selection?.gameId && item.season === season && item.week === slate.week);
     const verified = row && await verifySavedPick(row);
     const team = verified ? winners.find((item) => item.id === row.winnerTeamId) : null;
+    const retrospective = season === 2026 && slate.week <= 3
+      ? await inspectRetrospectiveWeek(season, slate.week) : null;
+    const published = ["published", "reviewed"].includes(retrospective?.review?.status ?? "") && retrospective?.review?.gameId
+      && retrospective.candidate?.evidenceId === retrospective.review.evidenceId
+      && retrospective.candidate.gameId === retrospective.review.gameId
+      && retrospective.candidate.teamId === retrospective.review.teamId;
     outcomes.push({
       season: slate.season, week: slate.week,
       pick: team ? { gameId: row!.gameId, teamName: team.name, season: slate.season, week: slate.week,
@@ -322,6 +329,21 @@ export async function readInitialWeeklyPickArchive(requestedSeason?: number, now
       reason: team ? null : selection
         ? "Saved official weekly pick evidence could not be verified."
         : "No persisted official weekly selection is available for this week.",
+      retrospective: retrospective ? {
+        status: published ? retrospective!.review!.status : "unavailable",
+        label: slate.week === 3 && published ? "manually published retrospective choice"
+          : slate.week === 3 ? "Week 3 retrospective publication unavailable" : "retrospective algorithm review",
+        reason: published ? null : retrospective.review?.status === "unavailable"
+          ? retrospective.review.reason : retrospective.reason ?? (retrospective.candidate
+            ? "A verified candidate exists but has not been reviewed by an operator."
+            : "Saved retrospective evidence no longer verifies."),
+        choice: published ? {
+          gameId: retrospective.candidate!.gameId, teamName: retrospective.candidate!.teamName,
+          matchup: retrospective.candidate!.matchup, probability: retrospective.candidate!.probability,
+          cutoffAt: retrospective.candidate!.cutoffAt, evidenceId: retrospective.candidate!.evidenceId,
+          reviewedAt: retrospective.review!.reviewedAt, publishedAt: retrospective.review!.publishedAt,
+        } : null,
+      } : null,
     });
   }
   return { seasons, season, weeks: outcomes };

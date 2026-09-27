@@ -290,6 +290,50 @@ paths:
         "401": { description: Authentication required }
         "403": { description: Administrator access required }
         "503": { description: First-line audit unavailable }
+  /admin/retrospective-weekly-review:
+    get:
+      operationId: getRetrospectiveWeeklyReview
+      tags: [nfl]
+      security: [{ clerk: [] }]
+      summary: Preview saved 2026 retrospective evidence without publishing
+      parameters:
+        - { in: query, name: season, required: true, schema: { type: integer, enum: [2026] } }
+        - { in: query, name: week, required: true, schema: { type: integer, minimum: 1, maximum: 3 } }
+      responses:
+        "200":
+          description: Evidence assessment and immutable review if recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RetrospectiveWeeklyReview" }
+        "401": { description: Sign in required }
+        "403": { description: Administrator access required }
+    post:
+      operationId: recordRetrospectiveWeeklyReview
+      tags: [nfl]
+      security: [{ clerk: [] }]
+      summary: Record an unavailable review or manually publish the verified Week 3 choice once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [season, week, evidenceId, confirm]
+              properties:
+                season: { type: integer, enum: [2026] }
+                week: { type: integer, minimum: 1, maximum: 3 }
+                evidenceId: { type: ["string", "null"] }
+                confirm: { type: string, enum: ["I confirm this is retrospective, not an official first-line pick"] }
+      responses:
+        "201":
+          description: Append-only review recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RetrospectiveWeeklyReview" }
+        "400": { description: Invalid confirmation or scope }
+        "401": { description: Sign in required }
+        "403": { description: Administrator access required }
+        "409": { description: "Duplicate, changed, or inadequate evidence" }
   /admin/sleeper-identity-report:
     get:
       operationId: getSleeperIdentityReport
@@ -730,7 +774,7 @@ paths:
     get:
       operationId: getConsumerWeeklyPicks
       tags: [nfl]
-      summary: Read past persisted official weekly selections
+      summary: Read past official selections separately from retrospective reviews
       parameters:
         - name: season
           in: query
@@ -1852,7 +1896,7 @@ components:
           items: { $ref: "#/components/schemas/ConsumerArchivedWeeklyPick" }
     ConsumerArchivedWeeklyPick:
       type: object
-      required: [season, week, pick, reason]
+      required: [season, week, pick, reason, retrospective]
       properties:
         season: { type: integer }
         week: { type: integer }
@@ -1869,6 +1913,67 @@ components:
                 probability: { type: number }
                 observedAt: { type: string, format: date-time }
         reason: { type: ["string", "null"] }
+        retrospective:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [status, label, reason, choice]
+              properties:
+                status: { type: string, enum: [reviewed, published, unavailable] }
+                label: { type: string }
+                reason: { type: ["string", "null"] }
+                choice:
+                  oneOf:
+                    - type: "null"
+                    - $ref: "#/components/schemas/RetrospectiveChoice"
+    RetrospectiveChoice:
+      type: object
+      required: [gameId, teamName, matchup, probability, cutoffAt, evidenceId, reviewedAt, publishedAt]
+      properties:
+        gameId: { type: string }
+        teamName: { type: string }
+        matchup: { type: string }
+        probability: { type: number }
+        cutoffAt: { type: string, format: date-time }
+        evidenceId: { type: string }
+        reviewedAt: { type: string, format: date-time }
+        publishedAt: { type: ["string", "null"], format: date-time }
+    RetrospectiveWeeklyReview:
+      type: object
+      required: [season, week, reason, candidate, officialExists, review]
+      properties:
+        season: { type: integer }
+        week: { type: integer }
+        reason: { type: ["string", "null"] }
+        officialExists: { type: boolean }
+        candidate:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [gameId, teamId, teamName, matchup, probability, cutoffAt, evidenceId]
+              properties:
+                gameId: { type: string }
+                teamId: { type: string }
+                teamName: { type: string }
+                matchup: { type: string }
+                probability: { type: number }
+                cutoffAt: { type: string, format: date-time }
+                evidenceId: { type: string }
+        review:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [status, reason, gameId, teamId, probability, cutoffAt, evidenceId, reviewedAt, publishedAt]
+              properties:
+                status: { type: string, enum: [unavailable, reviewed, published] }
+                reason: { type: ["string", "null"] }
+                gameId: { type: ["string", "null"] }
+                teamId: { type: ["string", "null"] }
+                probability: { type: ["number", "null"] }
+                cutoffAt: { type: ["string", "null"], format: date-time }
+                evidenceId: { type: ["string", "null"] }
+                reviewedAt: { type: string, format: date-time }
+                publishedAt: { type: ["string", "null"], format: date-time }
     ConsumerFirstLines:
       type: object
       description: Original quotes saved with the verified weekly selection, not current odds or betting advice.

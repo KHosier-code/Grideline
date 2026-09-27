@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ConsumerArchivedWeeklyPickPick } from './consumerArchivedWeeklyPickPick';
+import type { ConsumerArchivedWeeklyPickRetrospective } from './consumerArchivedWeeklyPickRetrospective';
 
 export interface ConsumerArchivedWeeklyPick {
   season: number;
@@ -13,4 +14,5 @@ export interface ConsumerArchivedWeeklyPick {
   pick: ConsumerArchivedWeeklyPickPick;
   /** @nullable */
   reason: string | null;
+  retrospective: ConsumerArchivedWeeklyPickRetrospective;
 }

@@ -95,6 +95,20 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
     assert.match(history, /Historic Winner/);
     assert.match(history, /2025 · Week 1/);
     assert.match(history, /No persisted official weekly selection/);
+    const retrospectiveHistory = archive({ seasons: [2026], season: 2026, weeks: [
+      { season: 2026, week: 1, pick: null, reason: 'No persisted official weekly selection is available for this week.',
+        retrospective: { status: 'unavailable', label: 'retrospective algorithm review',
+          reason: 'Inputs could not be verified', choice: null } },
+      { season: 2026, week: 2, pick: { gameId: 'official', teamName: 'Official Team', season: 2026, week: 2, probability: .8, observedAt: '2026-09-01T00:00:00Z' }, reason: null,
+        retrospective: { status: 'reviewed', label: 'retrospective algorithm review', reason: null,
+          choice: { gameId: 'reviewed', teamName: 'Review Team', matchup: 'AWY at HME',
+            probability: .7, cutoffAt: '2026-09-01T00:00:00Z', evidenceId: 'digest',
+            reviewedAt: '2026-09-30T00:00:00Z', publishedAt: null } } },
+    ] });
+    assert.match(retrospectiveHistory, /Inputs could not be verified/);
+    assert.match(retrospectiveHistory, /Review Team/);
+    assert.match(retrospectiveHistory, /Official Team/);
+    assert.match(retrospectiveHistory, /retrospective algorithm review/);
     assert.doesNotMatch(history, /Saved projection|saved-outlook/);
     assert.match(archive({ seasons: [], season: null, weeks: [] }), /No past weeks available/);
     assert.doesNotMatch(archive(undefined, 'loading'), /Historic Winner/);

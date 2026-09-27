@@ -51,6 +51,7 @@ import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { readInitialLineAudit, readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/initial-line-picks";
+import { inspectRetrospectiveWeek, recordRetrospectiveReview, retrospectiveScope, RetrospectiveReviewError } from "../lib/retrospective-weekly-reviews";
 import { GetInitialLineAuditResponse } from "@workspace/api-zod";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, readMatchupDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
@@ -1665,6 +1666,40 @@ router.get("/admin/initial-line-audit", requireAdmin, async (req, res): Promise<
   } catch (error) {
     req.log.error({ error }, "Initial-line audit read failed");
     res.status(503).json({ error: "First-line audit unavailable" });
+  }
+});
+
+router.get("/admin/retrospective-weekly-review", requireAdmin, async (req, res): Promise<void> => {
+  const season = Number(req.query.season), week = Number(req.query.week);
+  if (!retrospectiveScope(season, week)) {
+    res.status(400).json({ error: "Choose 2026 Week 1, 2, or 3." }); return;
+  }
+  try {
+    res.set("Cache-Control", "private, no-store");
+    res.json(await inspectRetrospectiveWeek(season, week));
+  } catch (error) {
+    req.log.error({ error }, "Retrospective review failed");
+    res.status(503).json({ error: "Retrospective evidence unavailable." });
+  }
+});
+
+router.post("/admin/retrospective-weekly-review", requireAdmin, async (req, res): Promise<void> => {
+  const { season, week, evidenceId, confirm } = req.body ?? {};
+  if (!retrospectiveScope(season, week) || confirm !== "I confirm this is retrospective, not an official first-line pick"
+    || (evidenceId !== null && (typeof evidenceId !== "string" || !/^[a-f0-9]{64}$/.test(evidenceId)))
+    || (week === 3 && evidenceId === null)) {
+    res.status(400).json({ error: "Explicit retrospective confirmation and matching evidence are required." }); return;
+  }
+  const reviewerId = getAuth(req).userId;
+  if (!reviewerId) { res.status(401).json({ error: "Sign in to review." }); return; }
+  try {
+    res.set("Cache-Control", "private, no-store");
+    res.status(201).json(await recordRetrospectiveReview(season, week, reviewerId, evidenceId, week === 3));
+  } catch (error) {
+    req.log.warn({ error }, "Retrospective review rejected");
+    res.status(error instanceof RetrospectiveReviewError ? 409 : 503).json({
+      error: error instanceof RetrospectiveReviewError ? error.message : "Review could not be recorded.",
+    });
   }
 });
 

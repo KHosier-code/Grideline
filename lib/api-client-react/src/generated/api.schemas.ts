@@ -982,6 +982,27 @@ export interface ConsumerPlayerUsageGames {
   games: ConsumerPlayerUsageGame[];
 }
 
+export type ConsumerArchivedWeeklyPickRetrospectiveStatus = typeof ConsumerArchivedWeeklyPickRetrospectiveStatus[keyof typeof ConsumerArchivedWeeklyPickRetrospectiveStatus];
+
+
+export const ConsumerArchivedWeeklyPickRetrospectiveStatus = {
+  reviewed: 'reviewed',
+  published: 'published',
+  unavailable: 'unavailable',
+} as const;
+
+export interface RetrospectiveChoice {
+  gameId: string;
+  teamName: string;
+  matchup: string;
+  probability: number;
+  cutoffAt: string;
+  evidenceId: string;
+  reviewedAt: string;
+  /** @nullable */
+  publishedAt: string | null;
+}
+
 export type ConsumerArchivedWeeklyPickPick = {
   gameId: string;
   teamName: string;
@@ -991,12 +1012,21 @@ export type ConsumerArchivedWeeklyPickPick = {
   observedAt: string;
 } | null;
 
+export type ConsumerArchivedWeeklyPickRetrospective = {
+  status: ConsumerArchivedWeeklyPickRetrospectiveStatus;
+  label: string;
+  /** @nullable */
+  reason: string | null;
+  choice: null | RetrospectiveChoice;
+} | null;
+
 export interface ConsumerArchivedWeeklyPick {
   season: number;
   week: number;
   pick: ConsumerArchivedWeeklyPickPick;
   /** @nullable */
   reason: string | null;
+  retrospective: ConsumerArchivedWeeklyPickRetrospective;
 }
 
 export interface ConsumerWeeklyPickArchive {
@@ -1004,6 +1034,54 @@ export interface ConsumerWeeklyPickArchive {
   /** @nullable */
   season: number | null;
   weeks: ConsumerArchivedWeeklyPick[];
+}
+
+export type RetrospectiveWeeklyReviewCandidate = {
+  gameId: string;
+  teamId: string;
+  teamName: string;
+  matchup: string;
+  probability: number;
+  cutoffAt: string;
+  evidenceId: string;
+} | null;
+
+export type RetrospectiveWeeklyReviewReviewStatus = typeof RetrospectiveWeeklyReviewReviewStatus[keyof typeof RetrospectiveWeeklyReviewReviewStatus];
+
+
+export const RetrospectiveWeeklyReviewReviewStatus = {
+  unavailable: 'unavailable',
+  reviewed: 'reviewed',
+  published: 'published',
+} as const;
+
+export type RetrospectiveWeeklyReviewReview = {
+  status: RetrospectiveWeeklyReviewReviewStatus;
+  /** @nullable */
+  reason: string | null;
+  /** @nullable */
+  gameId: string | null;
+  /** @nullable */
+  teamId: string | null;
+  /** @nullable */
+  probability: number | null;
+  /** @nullable */
+  cutoffAt: string | null;
+  /** @nullable */
+  evidenceId: string | null;
+  reviewedAt: string;
+  /** @nullable */
+  publishedAt: string | null;
+} | null;
+
+export interface RetrospectiveWeeklyReview {
+  season: number;
+  week: number;
+  /** @nullable */
+  reason: string | null;
+  officialExists: boolean;
+  candidate: RetrospectiveWeeklyReviewCandidate;
+  review: RetrospectiveWeeklyReviewReview;
 }
 
 export type ConsumerFirstLinesSportsbook = typeof ConsumerFirstLinesSportsbook[keyof typeof ConsumerFirstLinesSportsbook];
@@ -3684,6 +3762,48 @@ season: number;
  * @maximum 22
  */
 week: number;
+};
+
+export type GetRetrospectiveWeeklyReviewParams = {
+season: GetRetrospectiveWeeklyReviewSeason;
+/**
+ * @minimum 1
+ * @maximum 3
+ */
+week: number;
+};
+
+export type GetRetrospectiveWeeklyReviewSeason = typeof GetRetrospectiveWeeklyReviewSeason[keyof typeof GetRetrospectiveWeeklyReviewSeason];
+
+
+export const GetRetrospectiveWeeklyReviewSeason = {
+  NUMBER_2026: 2026,
+} as const;
+
+export type RecordRetrospectiveWeeklyReviewBodySeason = typeof RecordRetrospectiveWeeklyReviewBodySeason[keyof typeof RecordRetrospectiveWeeklyReviewBodySeason];
+
+
+export const RecordRetrospectiveWeeklyReviewBodySeason = {
+  NUMBER_2026: 2026,
+} as const;
+
+export type RecordRetrospectiveWeeklyReviewBodyConfirm = typeof RecordRetrospectiveWeeklyReviewBodyConfirm[keyof typeof RecordRetrospectiveWeeklyReviewBodyConfirm];
+
+
+export const RecordRetrospectiveWeeklyReviewBodyConfirm = {
+  'I_confirm_this_is_retrospective,_not_an_official_first-line_pick': 'I confirm this is retrospective, not an official first-line pick',
+} as const;
+
+export type RecordRetrospectiveWeeklyReviewBody = {
+  season: RecordRetrospectiveWeeklyReviewBodySeason;
+  /**
+     * @minimum 1
+     * @maximum 3
+     */
+  week: number;
+  /** @nullable */
+  evidenceId: string | null;
+  confirm: RecordRetrospectiveWeeklyReviewBodyConfirm;
 };
 
 export type ListGamesParams = {

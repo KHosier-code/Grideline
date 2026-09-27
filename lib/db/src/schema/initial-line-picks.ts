@@ -39,3 +39,24 @@ export const initialWeeklyPicksTable = pgTable("initial_weekly_picks", {
 }, (table) => [
   unique("initial_weekly_picks_season_week_unique").on(table.season, table.week),
 ]);
+
+/** Separate, append-only human review; never an official first-line selection. */
+export const retrospectiveWeeklyReviewsTable = pgTable("retrospective_weekly_reviews", {
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  status: text("status").notNull(),
+  reason: text("reason"),
+  gameId: text("game_id").references(() => initialLinePicksTable.gameId),
+  winnerTeamId: text("winner_team_id"),
+  winnerProbability: doublePrecision("winner_probability"),
+  cutoffAt: timestamp("cutoff_at", { withTimezone: true }),
+  evidenceId: text("evidence_id"),
+  reviewerId: text("reviewer_id").notNull(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+}, (table) => [
+  unique("retrospective_weekly_reviews_season_week_unique").on(table.season, table.week),
+  check("retrospective_weekly_reviews_scope_check", sql`${table.season} = 2026 and ${table.week} between 1 and 3`),
+  check("retrospective_weekly_reviews_state_check", sql`(${table.status} = 'unavailable' and ${table.reason} is not null and ${table.gameId} is null and ${table.winnerTeamId} is null and ${table.publishedAt} is null)
+    or (${table.status} in ('reviewed','published') and ${table.reason} is null and ${table.gameId} is not null and ${table.winnerTeamId} is not null and ${table.winnerProbability} > 0.5 and ${table.cutoffAt} is not null and ${table.evidenceId} is not null and ((${table.status} = 'published') = (${table.publishedAt} is not null)))`),
+]);

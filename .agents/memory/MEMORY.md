@@ -69,3 +69,4 @@
 - [Synthetic Home performance chronology](synthetic-home-performance-chronology.md) — keep fixture kickoff ahead of real time but pregame evidence cutoff behind it; otherwise the real component withholds charts.
 - [Team fixture verification lifetime](team-fixture-verification-lifetime.md) — fail closed on missing fixture evidence; short-lived in-process verification is intentional until durable provenance exists.
 - [Team Evidence URL cutoff](team-evidence-url-cutoff.md) — an omitted week tracks the latest verified evidence; rejected shared cutoffs should return to that moving default.
+- [Completion handoff integrity](completion-handoff-integrity.md) — when completion checks disagree with a clean local build, inspect the committed route diff before treating failures as environmental.

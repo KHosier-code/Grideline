@@ -1,0 +1,13 @@
+# 2026 Weeks 1–3: read-only development evidence audit
+
+Checked against the development database on 2026-09-27 UTC. No production records were modified or consulted. This is an evidence assessment, **not** a historical publication or a claim that Gridline had selected these teams before kickoff.
+
+| Week | Schedule | Saved first-line outcomes / weekly selections | Saved predictions with both vector and source evidence | Saved odds observations | Assessment |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 16 games; 2026-09-10 00:20 to 2026-09-15 00:15 UTC | 0 / 0 | 0 of 5 snapshots | 12 rows, captured 2026-09-14 02:16:57 UTC | No defensible weekly algorithm choice. Production promotions for all three model families only began on September 14; quotes and bare snapshots cannot reconstruct the opening cutoff. |
+| 2 | 16 games; 2026-09-18 00:15 to 2026-09-22 00:15 UTC | 0 / 0 | 0 of 80 snapshots | 168 rows, captured 2026-09-14 02:29:36 UTC | No defensible weekly algorithm choice. Even pregame snapshots with model version strings have no retained input vectors or source evidence, and quotes are not saved first-line decisions. |
+| 3 | 16 games; 2026-09-25 00:15 to 2026-09-29 00:15 UTC | 0 / 0 | 0 of 80 snapshots | 0 rows | No defensible weekly algorithm choice; the slate had not fully kicked off at audit time. Manual publication is blocked. |
+
+Two successful Odds API requests are saved beginning September 14; proximity of a quote timestamp to a request does not prove a request-bound first observation. No first-line outcome links a request, four same-book quotes, point-in-time input vector and promoted fitted models for any game in these slates.
+
+**Decision rule for future saved evidence:** Require a saved immutable locked outcome for *every* scheduled game in the week, a successful request at its original cutoff, complete matching saved quotes with no earlier odds, matching scheduled game/team identity, pre-kickoff feature sources and promoted fitted model artifacts that reproduce the winner. Rank qualifying games by descending winner probability, then ascending kickoff, then ascending game ID. The chosen game's original observed timestamp is its evidence cutoff. This is a retrospective review performed at the real review time, not a reconstruction of an original weekly first-line publication. Week 3 requires a separate, explicitly confirmed administrator action after the entire slate has kicked off; neither an archive read nor an admin preview inserts a choice.
