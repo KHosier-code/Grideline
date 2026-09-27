@@ -62,3 +62,4 @@
 - [Contrast testing surfaces](contrast-testing-surfaces.md) — resolve translucent text surfaces against opaque ancestors; gradient backgrounds need separate image-aware sampling.
 - [Performance fixture route boundaries](performance-fixture-boundaries.md) — SPA navigation inside a separately built fixture does not load the ordinary app until a full document reload.
 - [Development Admin browser identity](dev-admin-browser-identity.md) — Clerk test-user creation may require valid email and password even for ticket sign-in; keep release grants short-lived and dev-only.
+- [Recharts null-series assertions](recharts-null-series.md) — an all-null series may retain an SVG line node; assert plotted marks, not just line-element count.

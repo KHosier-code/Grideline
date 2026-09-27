@@ -12,6 +12,7 @@
     "test:home-browser": "node --test tests/home.browser.test.mjs",
     "test:teams-browser": "playwright test --config tests/team-evidence.config.ts",
     "test:usage-browser": "playwright test --config tests/player-usage.config.ts",
+    "test:supported-charts": "playwright test --config tests/supported-charts.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
