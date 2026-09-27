@@ -1308,13 +1308,16 @@
   .confidence-market-name { font-family: var(--app-font-serif); font-size: 14px; font-weight: 700; }
   .confidence-label { border-radius: 99px; padding: 4px 7px; font-family: var(--app-font-mono); font-size: 9px; font-weight: 700; text-transform: uppercase; }
   .confidence-score { color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; }
+  .confidence-calculation-age { grid-column: 1 / -1; color: hsl(var(--muted-foreground)); font-family: var(--app-font-mono); font-size: 10px; line-height: 1.4; }
+  .confidence-meaning { margin: 0; color: hsl(var(--muted-foreground)); font-size: 11px; line-height: 1.45; }
+  .market-confidence-detail .confidence-meaning { margin-top: 12px; }
   .confidence-chevron { width: 14px; height: 14px; color: hsl(var(--muted-foreground)); transition: transform .2s ease; }
   .market-confidence-card[open] .confidence-chevron { transform: rotate(180deg); }
   .confidence-low .confidence-label { background: hsl(0 72% 50% / .12); color: hsl(0 62% 38%); }
   .confidence-moderate .confidence-label { background: hsl(38 80% 48% / .14); color: hsl(34 72% 34%); }
   .confidence-strong .confidence-label, .confidence-very-strong .confidence-label { background: hsl(142 71% 45% / .13); color: hsl(142 71% 30%); }
   .market-confidence-detail { display: grid; gap: 12px; padding: 0 12px 12px; border-top: 1px solid hsl(var(--border)); }
-  .confidence-explanation { margin: 12px 0 0; color: hsl(var(--foreground)); font-size: 12px; line-height: 1.45; }
+  .confidence-explanation { margin: 0; color: hsl(var(--foreground)); font-size: 12px; line-height: 1.45; }
   .confidence-components { display: grid; gap: 7px; }
   .confidence-component { display: grid; gap: 3px; padding: 8px; border-radius: 7px; background: hsl(var(--secondary) / .55); }
   .confidence-component span { display: flex; justify-content: space-between; gap: 8px; font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }
@@ -1331,6 +1334,7 @@
   .market-confidence-compact .market-confidence-summary { display: flex; flex-wrap: wrap; padding: 7px 8px; }
   .market-confidence-compact .confidence-market-name { width: 100%; font-family: var(--app-font-mono); font-size: 9px; text-transform: uppercase; }
   .market-confidence-compact .confidence-score { margin-left: auto; }
+  .market-confidence-compact .confidence-calculation-age { width: 100%; }
   .market-confidence-compact .confidence-chevron { width: 12px; height: 12px; }
   .market-confidence-compact .market-confidence-detail { padding-inline: 8px; }
   .market-confidence-compact .confidence-explanation { font-size: 11px; }

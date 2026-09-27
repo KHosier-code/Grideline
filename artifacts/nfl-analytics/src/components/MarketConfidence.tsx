@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ChevronDown, CircleHelp } from 'lucide-react';
 
 export type ConfidenceMarket = 'spread' | 'moneyline' | 'total';
@@ -75,31 +76,46 @@ function formatHistorical(historical: MarketConfidence['evidence']['historical']
   return [historical.status, historical.bucket, sample].filter(Boolean).join(' · ') + interval;
 }
 
-function ConfidenceCard({ confidence, compact = false }: { confidence: MarketConfidence; compact?: boolean }) {
+// Quote freshness is measured at calculation time. It does not make a saved score live.
+function calculationAge(calculatedAt: string, now: number) {
+  const time = typeof calculatedAt === 'string' ? Date.parse(calculatedAt) : NaN;
+  if (!Number.isFinite(time) || time > now) return { text: 'Calculation time unavailable', date: null };
+  const minutes = Math.floor((now - time) / 60_000);
+  const age = minutes < 1 ? 'less than 1 min' : minutes < 60 ? `${minutes} min`
+    : minutes < 1440 ? `${Math.floor(minutes / 60)} hr` : `${Math.floor(minutes / 1440)} days`;
+  return { text: `Calculated ${age} ago · ${minutes >= 30 ? 'Older calculation; quotes may have changed' : 'Calculation under 30 min old'}`, date: new Date(time).toISOString() };
+}
+
+function ConfidenceCard({ confidence, compact = false, now }: { confidence: MarketConfidence; compact?: boolean; now: number }) {
   const evidence = confidence.evidence ?? {};
   const detailId = `confidence-detail-${confidence.market}-${compact ? 'compact' : 'full'}`;
+  const calculation = calculationAge(confidence.calculatedAt, now);
   return (
     <details className={`market-confidence-card confidence-${scoreLabel(confidence.label)}${compact ? ' is-compact' : ''}`}>
       <summary className="market-confidence-summary">
         <span className="confidence-market-name">{marketLabels[confidence.market]}</span>
         <span className="confidence-label">{confidence.label}</span>
-        <span className="confidence-score">{Math.round(confidence.score)}/100</span>
-        <span className="sr-only">Why this confidence?</span>
+        <span className="confidence-score">{Math.round(confidence.score)}/100 <span>evidence score</span></span>
+        <span className="sr-only">Why this evidence-quality score?</span>
         <ChevronDown aria-hidden="true" className="confidence-chevron" />
+        <span className="confidence-calculation-age">
+          {calculation.date ? <time dateTime={calculation.date} title={new Date(calculation.date).toLocaleString()}>{calculation.text}</time> : calculation.text}
+        </span>
       </summary>
       <div className="market-confidence-detail" id={detailId}>
+        <p className="confidence-meaning">This evidence-quality score is not the chance a team wins or a proven betting edge. Win probability comes separately from the moneyline model.</p>
         <p className="confidence-explanation">{confidence.explanation}</p>
         <div className="confidence-components" aria-label={`${marketLabels[confidence.market]} confidence components`}>
           {confidence.components.slice(0, 3).map((component) => (
             <div className="confidence-component" key={component.key}>
-              <span><strong>{component.label}</strong><b>{component.score === null ? 'Unavailable' : `${Math.round(component.score)}/100`}</b></span>
+              <span><strong>{component.key === 'marketEdge' ? 'Market difference evidence' : component.label}</strong><b>{component.score === null ? 'Unavailable' : `${Math.round(component.score)}/100`}</b></span>
               <small>{component.summary}</small>
             </div>
           ))}
         </div>
         {!compact && (
           <div className="confidence-evidence">
-            <span><b>Freshness</b>{evidence.marketFresh === undefined ? 'Unavailable' : evidence.marketFresh ? 'Current' : 'Stale or unavailable'}</span>
+            <span><b>Market quotes at calculation</b>{evidence.marketFresh === undefined ? 'Unavailable' : evidence.marketFresh ? 'Fresh then (not necessarily now)' : 'Stale or unavailable then'}</span>
             <span><b>Books</b>{evidence.bookCount === undefined ? 'Unavailable' : `${evidence.bookCount} · ${evidence.booksAgree ? 'DK/FD agree' : 'DK/FD disagreement'}${evidence.agreementTolerance ? ` (${evidence.agreementTolerance})` : ''}`}</span>
             <span><b>Historical context</b>{formatHistorical(evidence.historical)}</span>
           </div>
@@ -117,15 +133,20 @@ function ConfidenceCard({ confidence, compact = false }: { confidence: MarketCon
 
 export function MarketConfidenceSummary({ value, compact = false }: { value: unknown; compact?: boolean }) {
   const confidences = readMarketConfidence(value);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
   if (!confidences.length) return null;
   return (
     <section className={`market-confidence ${compact ? 'market-confidence-compact' : ''}`} data-testid="market-confidence">
       <div className="market-confidence-heading">
-        <span><CircleHelp aria-hidden="true" /> Confidence by market</span>
-        {!compact && <small>Evidence-based, not a certainty claim</small>}
+        <span><CircleHelp aria-hidden="true" /> Evidence quality by market</span>
       </div>
+      <p className="confidence-meaning">Scores measure evidence quality, not a team’s chance of winning or a proven betting edge. They include input quality, model evidence and absolute model–market difference.</p>
       <div className="market-confidence-grid">
-        {confidences.map((confidence) => <ConfidenceCard key={confidence.market} confidence={confidence} compact={compact} />)}
+        {confidences.map((confidence) => <ConfidenceCard key={confidence.market} confidence={confidence} compact={compact} now={now} />)}
       </div>
     </section>
   );

@@ -7,7 +7,7 @@ export function ConsumerProjectionEvidence({ game }: { game: ConsumerGameDetail 
   return <section className="premium-projection-section" data-section="gridline-projection" data-testid="premium-projection" aria-labelledby="projection-heading">
     <div className="consumer-section-heading">
       <div><p className="consumer-eyebrow">Saved pregame outlook</p><h2 id="projection-heading">Gridline projection</h2></div>
-      {prediction && <span className="premium-confidence-badge"><ShieldCheck className="h-4 w-4" /> {game.dataConfidence.label} confidence</span>}
+      {prediction && <span className="premium-confidence-badge"><ShieldCheck className="h-4 w-4" /> Input data: {game.dataConfidence.label}</span>}
     </div>
     {game.finalScore && <div className="premium-final-result" data-testid="final-result">
       <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
@@ -30,7 +30,7 @@ export function ConsumerProjectionEvidence({ game }: { game: ConsumerGameDetail 
           <div><small>{game.matchup.home.abbreviation} win probability</small><span>{metric(prediction.homeWinProbability, true)}</span></div>
         </div>
       </div>
-      <p className="consumer-note">The projected scores are calculated from the spread model’s home margin and the totals model’s total. Win probabilities come separately from the moneyline model; they need not imply the same favorite as the projected score.</p>
+      <p className="consumer-note">The projected scores are calculated from the spread model’s home margin and the totals model’s total. These win probabilities come separately from the moneyline model, not from the evidence-quality scores; they need not imply the same favorite as the projected score.</p>
     </> : <ConsumerMessage title="No eligible saved projection" detail={game.availability.prediction ?? 'No eligible saved prediction is available.'} />}
   </section>;
 }
