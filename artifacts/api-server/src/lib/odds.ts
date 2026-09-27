@@ -4,6 +4,9 @@ import {
   db,
   gamesTable,
   oddsApiRequestsTable,
+  oddsRequestResolutionsTable,
+  oddsSpendApprovalsTable,
+  schedulerJobsTable,
   oddsEventAuditsTable,
   sportsbookOddsTable,
   teamsTable,
@@ -821,7 +824,7 @@ async function updateRequest(
     creditsUsed: values.creditsUsed ?? null,
     creditsRemaining: values.creditsRemaining ?? null,
     errorMessage: values.errorMessage ?? null,
-    metadata: values.metadata,
+    metadata: sql`coalesce(${oddsApiRequestsTable.metadata}, '{}'::jsonb) || ${JSON.stringify(values.metadata ?? {})}::jsonb`,
   }).where(eq(oddsApiRequestsTable.id, requestId));
 }
 
@@ -834,16 +837,168 @@ type PaidRequestAdmission = {
   reason?: string;
 };
 
-async function admitPaidRequest(input: {
+export type OneTimeRiskApproval = {
+  blockedRequestId: number;
+  maxCredits: number;
+  verifiedRemaining: number;
+  verifiedAt: Date;
+  approvedBy: string;
+};
+
+const paidAdmissionLock = sql`select pg_advisory_xact_lock(hashtext('odds-api-paid-admission'))`;
+
+export function validateOddsReconciliation(input: {
+  providerOutcome: string; billedCredits: number; verifiedRemaining: number;
+  evidenceReference: string; evidenceCheckedAt: Date; approvedBy: string;
+}, requestedAt: Date, now = new Date()) {
+  if (!["completed", "failed"].includes(input.providerOutcome)
+    || !Number.isSafeInteger(input.billedCredits) || input.billedCredits < 0
+    || !Number.isSafeInteger(input.verifiedRemaining) || input.verifiedRemaining < 0
+    || !/^[A-Za-z0-9][A-Za-z0-9 _.:/-]{7,159}$/.test(input.evidenceReference)
+    || !input.approvedBy.trim()
+    || !Number.isFinite(input.evidenceCheckedAt.getTime())
+    || input.evidenceCheckedAt < requestedAt || input.evidenceCheckedAt > now) {
+    throw new Error("Provider outcome, billing, current remaining balance, dated evidence reference and operator are required.");
+  }
+}
+
+/**
+ * Only a signed-in administrator can invoke this via the admin route. This is
+ * an operator attestation of a provider dashboard/support receipt, not a paid
+ * probe and not a claim that the old response was ingested successfully.
+ */
+export async function reconcileOddsRequest(input: {
+  requestId: number; providerOutcome: "completed" | "failed"; billedCredits: number;
+  verifiedRemaining: number; evidenceReference: string; evidenceCheckedAt: Date;
+  approvedBy: string;
+}) {
+  if (!Number.isSafeInteger(input.requestId) || input.requestId <= 0) throw new Error("Invalid request ID.");
+  return db.transaction(async (tx) => {
+    await tx.execute(paidAdmissionLock);
+    const [latest] = await tx.select().from(oddsApiRequestsTable)
+      .where(sql`${oddsApiRequestsTable.status} <> 'skipped'`)
+      .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)).limit(1);
+    const [target] = await tx.select().from(oddsApiRequestsTable)
+      .where(eq(oddsApiRequestsTable.id, input.requestId)).limit(1);
+    const [riskResolution] = latest?.metadata?.riskOverrideForRequestId === input.requestId
+      ? await tx.select({ id: oddsRequestResolutionsTable.id }).from(oddsRequestResolutionsTable)
+        .where(eq(oddsRequestResolutionsTable.requestId, latest.id)).limit(1)
+      : [];
+    if (!target || !latest
+      || (latest.id !== target.id
+        && (latest.metadata?.riskOverrideForRequestId !== target.id
+          || (latest.status !== "success"
+            && !(latest.status === "failed" && (latest.creditsRemaining !== null || riskResolution)))))
+      || !["running", "admitted", "failed"].includes(target.status)
+      || target.creditsRemaining !== null) throw new Error("Only a current unresolved paid admission can be reconciled.");
+    validateOddsReconciliation(input, target.requestedAt);
+    const [saved] = await tx.insert(oddsRequestResolutionsTable).values(input)
+      .returning({ id: oddsRequestResolutionsTable.id });
+    return saved!.id;
+  });
+}
+
+export async function approveNextOddsSpend(input: {
+  requestId: number; intentKey: string; maxCredits: number;
+  approvedBy: string; approvalReference: string;
+}) {
+  if (!Number.isSafeInteger(input.requestId) || input.requestId <= 0
+    || !/^(odds-[a-z-]+):\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(input.intentKey)
+    || !Number.isSafeInteger(input.maxCredits) || input.maxCredits < ODDS_EXPECTED_REQUEST_COST
+    || !input.approvedBy.trim()
+    || !/^[A-Za-z0-9][A-Za-z0-9 _.:/-]{7,159}$/.test(input.approvalReference)) {
+    throw new Error("Exact future scheduled intent, finite credit budget, approval reference and operator are required.");
+  }
+  const scheduledFor = new Date(input.intentKey.slice(input.intentKey.indexOf(":") + 1));
+  if (scheduledFor <= new Date()) throw new Error("Only a future scheduled occurrence can be approved.");
+  return db.transaction(async (tx) => {
+    await tx.execute(paidAdmissionLock);
+    const [latest] = await tx.select({ id: oddsApiRequestsTable.id, status: oddsApiRequestsTable.status,
+      metadata: oddsApiRequestsTable.metadata, creditsRemaining: oddsApiRequestsTable.creditsRemaining }).from(oddsApiRequestsTable)
+      .where(sql`${oddsApiRequestsTable.status} <> 'skipped'`)
+      .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)).limit(1);
+    const [resolution] = await tx.select().from(oddsRequestResolutionsTable)
+      .where(eq(oddsRequestResolutionsTable.requestId, input.requestId)).limit(1);
+    const [newestResolution] = await tx.select({ id: oddsRequestResolutionsTable.id })
+      .from(oddsRequestResolutionsTable).orderBy(desc(oddsRequestResolutionsTable.id)).limit(1);
+    const [latestResolution] = latest
+      ? await tx.select({ id: oddsRequestResolutionsTable.id }).from(oddsRequestResolutionsTable)
+        .where(eq(oddsRequestResolutionsTable.requestId, latest.id)).limit(1)
+      : [];
+    const [pending] = await tx.select({ id: oddsApiRequestsTable.id }).from(oddsApiRequestsTable)
+      .where(sql`(${oddsApiRequestsTable.status} in ('admitted', 'running')
+        or (${oddsApiRequestsTable.status} = 'failed' and ${oddsApiRequestsTable.creditsRemaining} is null))
+        and not exists (select 1 from odds_request_resolutions r where r.request_id = ${oddsApiRequestsTable.id})`)
+      .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)).limit(1);
+    if (!latest || !resolution || newestResolution?.id !== resolution.id
+      || (pending && pending.id !== input.requestId)
+      || (latest.id !== input.requestId && latest.creditsRemaining === null && !latestResolution)) {
+      throw new Error("The latest paid admission must have terminal quota evidence before another budget is approved.");
+    }
+    if (!resolution || resolution.verifiedRemaining < input.maxCredits
+      || (latest.creditsRemaining !== null && latest.creditsRemaining < input.maxCredits))
+      throw new Error("Verified provider evidence must cover the approved budget.");
+    const jobKey = input.intentKey.slice(0, input.intentKey.indexOf(":"));
+    const [job] = await tx.select({ nextRunAt: schedulerJobsTable.nextRunAt })
+      .from(schedulerJobsTable)
+      .where(and(eq(schedulerJobsTable.jobKey, jobKey), eq(schedulerJobsTable.enabled, true),
+        eq(schedulerJobsTable.nextRunAt, scheduledFor))).limit(1);
+    if (!job) throw new Error("The approved intent must match an enabled future scheduled occurrence.");
+    const [saved] = await tx.insert(oddsSpendApprovalsTable).values({
+      resolutionId: resolution.id, intentKey: input.intentKey, maxCredits: input.maxCredits,
+      approvedBy: input.approvedBy, approvalReference: input.approvalReference,
+    }).returning({ id: oddsSpendApprovalsTable.id });
+    return saved!.id;
+  });
+}
+
+export async function getOddsSchedulingBalance(): Promise<number | null> {
+  const [latest] = await db.select().from(oddsApiRequestsTable)
+    .where(sql`${oddsApiRequestsTable.status} <> 'skipped'`)
+    .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)).limit(1);
+  if (!latest) return null;
+  if (typeof latest.metadata?.riskOverrideForRequestId === "number") {
+    const [origin] = await db.select({ id: oddsRequestResolutionsTable.id })
+      .from(oddsRequestResolutionsTable)
+      .where(eq(oddsRequestResolutionsTable.requestId, latest.metadata.riskOverrideForRequestId)).limit(1);
+    if (!origin) return null;
+  }
+  if (latest.status === "running" || latest.status === "admitted"
+    || (latest.status === "failed" && latest.creditsRemaining === null)) {
+    const [resolution] = await db.select({ verifiedRemaining: oddsRequestResolutionsTable.verifiedRemaining })
+      .from(oddsRequestResolutionsTable).where(eq(oddsRequestResolutionsTable.requestId, latest.id)).limit(1);
+    return resolution?.verifiedRemaining ?? null;
+  }
+  return latest.creditsRemaining;
+}
+
+/** The documented sports-list endpoint costs zero credits. Never use the paid
+ * odds endpoint to check a quota or infer the fate of an older request. */
+export async function getFreeOddsQuota(): Promise<{ remaining: number; checkedAt: Date }> {
+  const key = process.env.ODDS_API_KEY;
+  if (!key) throw new Error("Odds API key is unavailable.");
+  const response = await fetch(`https://api.the-odds-api.com/v4/sports/?apiKey=${encodeURIComponent(key)}`, {
+    signal: AbortSignal.timeout(requestTimeoutMs),
+  });
+  const remaining = response.headers.get("x-requests-remaining");
+  const last = response.headers.get("x-requests-last");
+  if (!response.ok || !remaining || !/^\d+$/.test(remaining) || last !== "0") {
+    throw new Error("A verified zero-cost provider quota response is required.");
+  }
+  return { remaining: Number(remaining), checkedAt: new Date() };
+}
+
+export async function admitPaidRequest(input: {
   intentKey: string;
   requestedAt: Date;
   metadata: Record<string, unknown>;
   expectedRequestCost: number;
+  riskApproval?: OneTimeRiskApproval;
 }): Promise<PaidRequestAdmission> {
   return db.transaction(async (tx) => {
     // One DB-wide admission lock serializes quota reads and intent inserts
     // across API processes. The intent row is durable before fetch() starts.
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('odds-api-paid-admission'))`);
+    await tx.execute(paidAdmissionLock);
     const [existing] = await tx
       .select({
         id: oddsApiRequestsTable.id,
@@ -879,46 +1034,99 @@ async function admitPaidRequest(input: {
       (latest.status === "admitted" ||
         latest.status === "running" ||
         (latest.status === "failed" && latest.creditsRemaining === null));
-    if (unresolvedPriorAdmission) {
+    // A one-time exception does not resolve the old row. Keep later automatic
+    // attempts blocked even if the exceptional request itself succeeds.
+    const [oldUnresolved] = await tx.select({ id: oddsApiRequestsTable.id })
+      .from(oddsApiRequestsTable)
+      .where(sql`(${oddsApiRequestsTable.status} in ('admitted', 'running')
+        or (${oddsApiRequestsTable.status} = 'failed' and ${oddsApiRequestsTable.creditsRemaining} is null))
+        and not exists (select 1 from odds_request_resolutions r where r.request_id = ${oddsApiRequestsTable.id})`)
+      .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)).limit(1);
+    const recoveryOriginId = typeof latest?.metadata?.riskOverrideForRequestId === "number"
+      ? latest.metadata.riskOverrideForRequestId : null;
+    // Once a stranded admission has required reconciliation, *every* later
+    // paid intent needs a new one-use approval. A successful approved request
+    // must not silently restore the old automatic cadence.
+    const [resolution] = await tx.select().from(oddsRequestResolutionsTable)
+      .orderBy(desc(oddsRequestResolutionsTable.id)).limit(1);
+    const [approval] = resolution
+      ? await tx.select().from(oddsSpendApprovalsTable)
+        .where(eq(oddsSpendApprovalsTable.intentKey, input.intentKey)).limit(1)
+      : [];
+    const approvedRecovery = Boolean(resolution && approval
+      && (!oldUnresolved || oldUnresolved.id === resolution.requestId)
+      && approval.resolutionId === resolution.id
+      && approval.consumedByRequestId === null
+      && approval.maxCredits >= input.expectedRequestCost
+      && resolution.verifiedRemaining >= approval.maxCredits
+      && input.metadata.jobKey
+      && input.metadata.scheduledFor
+      && input.intentKey === `${input.metadata.jobKey}:${input.metadata.scheduledFor}`
+      && new Date(String(input.metadata.scheduledFor)) <= input.requestedAt
+      && input.requestedAt.getTime() - new Date(String(input.metadata.scheduledFor)).getTime() < 30 * 60_000);
+    const risk = input.riskApproval;
+    const approvedOneTimeRisk = Boolean(risk && oldUnresolved?.id === risk.blockedRequestId
+      && latest?.id === risk.blockedRequestId
+      && input.intentKey.startsWith("operator-one-time:")
+      && Number.isSafeInteger(risk.maxCredits) && risk.maxCredits === input.expectedRequestCost
+      && Number.isSafeInteger(risk.verifiedRemaining) && risk.verifiedRemaining >= risk.maxCredits
+      && Number.isFinite(risk.verifiedAt.getTime())
+      && input.requestedAt.getTime() - risk.verifiedAt.getTime() >= 0
+      && input.requestedAt.getTime() - risk.verifiedAt.getTime() < 5 * 60_000
+      && risk.approvedBy.trim());
+    if ((oldUnresolved || resolution || recoveryOriginId) && !approvedRecovery && !approvedOneTimeRisk) {
       const reason = "A prior paid request has unresolved admission state; no second upstream request was started.";
       const [skipped] = await tx.insert(oddsApiRequestsTable).values({
         intentKey: input.intentKey,
         requestedAt: input.requestedAt,
         status: "skipped",
         errorMessage: reason,
-        metadata: { ...input.metadata, skipReason: reason, expectedRequestCost: input.expectedRequestCost, blockedByRequestId: latest.id },
+        metadata: { ...input.metadata, skipReason: reason, expectedRequestCost: input.expectedRequestCost, blockedByRequestId: oldUnresolved?.id ?? latest?.id },
       }).returning({ id: oddsApiRequestsTable.id });
-      return { requestId: skipped.id, admitted: false, skipped: true, creditsRemaining: latest.creditsRemaining, priorCumulative: null, reason };
+      return { requestId: skipped.id, admitted: false, skipped: true, creditsRemaining: latest?.creditsRemaining ?? null, priorCumulative: null, reason };
     }
+    const knownRemaining = approvedOneTimeRisk ? risk!.verifiedRemaining
+      : approvedRecovery ? Math.min(resolution!.verifiedRemaining, latest?.creditsRemaining ?? Infinity)
+        : latest?.creditsRemaining ?? null;
     if (
-      latest?.creditsRemaining !== null &&
-      latest?.creditsRemaining !== undefined &&
-      latest.creditsRemaining < input.expectedRequestCost
+      knownRemaining !== null &&
+      knownRemaining < input.expectedRequestCost
     ) {
-      const reason = `Insufficient Odds API credits (${latest.creditsRemaining} remaining; ${input.expectedRequestCost} required).`;
+      const reason = `Insufficient Odds API credits (${knownRemaining} remaining; ${input.expectedRequestCost} required).`;
       const [skipped] = await tx.insert(oddsApiRequestsTable).values({
         intentKey: input.intentKey,
         requestedAt: input.requestedAt,
         status: "skipped",
-        creditsRemaining: latest.creditsRemaining,
+        creditsRemaining: knownRemaining,
         errorMessage: reason,
         metadata: { ...input.metadata, skipReason: reason, expectedRequestCost: input.expectedRequestCost },
       }).returning({ id: oddsApiRequestsTable.id });
-      return { requestId: skipped.id, admitted: false, skipped: true, creditsRemaining: latest.creditsRemaining, priorCumulative: null, reason };
+      return { requestId: skipped.id, admitted: false, skipped: true, creditsRemaining: knownRemaining, priorCumulative: null, reason };
     }
     const [admitted] = await tx.insert(oddsApiRequestsTable).values({
       intentKey: input.intentKey,
       requestedAt: input.requestedAt,
       status: "admitted",
-      creditsRemaining: latest?.creditsRemaining ?? null,
-      metadata: { ...input.metadata, expectedRequestCost: input.expectedRequestCost, admission: "durable-before-upstream" },
+      creditsRemaining: knownRemaining,
+      metadata: { ...input.metadata, expectedRequestCost: input.expectedRequestCost, admission: "durable-before-upstream",
+        ...(approvedRecovery ? { resolutionId: resolution!.id, spendApprovalId: approval!.id } : {}),
+        ...(approvedOneTimeRisk ? {
+          riskOverrideForRequestId: risk!.blockedRequestId,
+          riskApprovedBy: risk!.approvedBy,
+          riskMaximumCredits: risk!.maxCredits,
+          riskVerifiedRemaining: risk!.verifiedRemaining,
+          riskVerifiedAt: risk!.verifiedAt.toISOString(),
+          riskAcknowledged: "possible duplicate charge; original request remains unresolved",
+        } : {}) },
     }).returning({ id: oddsApiRequestsTable.id });
+    if (approvedRecovery) await tx.update(oddsSpendApprovalsTable)
+      .set({ consumedByRequestId: admitted.id }).where(eq(oddsSpendApprovalsTable.id, approval!.id));
     return {
       requestId: admitted.id,
       admitted: true,
       skipped: false,
-      creditsRemaining: latest?.creditsRemaining ?? null,
-      priorCumulative: Number.isFinite(Number(latest?.metadata?.requestsUsedCumulative))
+      creditsRemaining: knownRemaining,
+      priorCumulative: approvedRecovery || approvedOneTimeRisk ? null : Number.isFinite(Number(latest?.metadata?.requestsUsedCumulative))
         ? Number(latest?.metadata?.requestsUsedCumulative)
         : null,
     };
@@ -986,6 +1194,8 @@ export type OddsCaptureOptions = {
   jobKey?: string;
   /** Stable key for a scheduled/manual intent when callers need replay safety. */
   intentKey?: string;
+  /** Authenticated one-time operator exception, always persisted before fetch. */
+  riskApproval?: OneTimeRiskApproval;
 };
 
 /**
@@ -1103,6 +1313,7 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
       jobKey: options.jobKey ?? null,
       scheduledFor: options.scheduledFor?.toISOString() ?? null,
     },
+    riskApproval: options.riskApproval,
   });
   if (!admission.admitted) {
     const skipReason = admission.reason ?? "This capture was not admitted for an upstream request.";
@@ -1469,7 +1680,10 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
 }
 
 export function captureOddsSnapshots(options: OddsCaptureOptions = {}): Promise<OddsCaptureResult> {
-  if (captureInFlight) return captureInFlight;
+  if (captureInFlight) {
+    if (options.riskApproval) return Promise.reject(new Error("Another odds capture is already in progress."));
+    return captureInFlight;
+  }
   captureInFlight = runOddsCapture(options).finally(() => {
     captureInFlight = null;
   });
@@ -1726,11 +1940,9 @@ export async function getOddsApiHealth(): Promise<OddsHealth> {
   const skippedRequests = Number(counts?.skippedRequests ?? 0);
   const requestsToday = Number(counts?.requestsToday ?? 0);
   const requestsThisMonth = Number(counts?.requestsThisMonth ?? 0);
-  const remaining =
-    latestRequest?.creditsRemaining ??
-    latestSuccess?.creditsRemaining ??
-    latestFailure?.creditsRemaining ??
-    null;
+  // A previous successful response is not a current balance while a newer
+  // paid request has no terminal quota evidence.
+  const remaining = await getOddsSchedulingBalance();
   const stale =
     !latestSuccess ||
     Date.now() - latestSuccess.requestedAt.getTime() > 6 * 60 * 60 * 1000;

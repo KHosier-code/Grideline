@@ -92,3 +92,41 @@ FROM initial_weekly_picks ORDER BY selected_at DESC LIMIT 20;
 ```
 
 **Decision: HOLD.** Old-worker termination, direct writable binding attestation, request 37 resolution, current quota, reviewed live queue/schema and operator approval are still missing.
+
+
+## Paid-request reconciliation path (implemented, not executed in production)
+
+Request 37 **remains unresolved**. No paid Odds API call was made, and no request-specific provider receipt, operator-attested production account balance, old-worker termination proof, writable production binding attestation or spending approval was supplied. The disposable rehearsal uses synthetic evidence only; it is not proof that request 37 was charged, failed upstream, or completed. The old sync-run's recovered `failed` status proves the process stopped, **not** what the provider billed. Do not use request 36's remaining quota as today's balance.
+
+On September 26 at approximately 23:44 UTC, after the initial assessment, a single **documented zero-credit** `GET /v4/sports/` lookup using the configured development key returned HTTP 200 with `x-requests-remaining: 377`, `x-requests-used: 123`, and `x-requests-last: 0`. No odds endpoint was called. This confirms only the counter for the account associated with that configured key at that time; it neither attests the published worker's key nor identifies the billing or terminal status of request 37. Even though the prior recorded remaining count was 380, the three-credit difference cannot be assigned to request 37 without account-side per-request evidence; other callers or reset windows could intervene. **Do not use this counter as resolution or spending approval.**
+
+The Odds API account owner should inspect the provider's usage/billing dashboard for the September 25 00:14:15 UTC request, or obtain a support receipt tied to that time and account. Record the provider's terminal outcome (`completed` or `failed`), billed credits (including zero if verified), **currently verified** remaining credits, time the account was checked, and a non-secret dashboard/support reference. A generic balance alone cannot establish the request's terminal state. Do not paste an API key, keyed URL, or private account data into a receipt reference. If the provider cannot identify this particular request, **leave it unresolved**; do not guess from the recovered sync-run or issue a paid status probe.
+
+Practical owner steps: sign in to [The Odds API dashboard](https://dash.the-odds-api.com/) and review monthly usage, then email [team@the-odds-api.com](mailto:team@the-odds-api.com) from the account email. Ask support to identify the request to `GET /v4/sports/americanfootball_nfl/odds` at **2026-09-25 00:14:15.942 UTC** (allow for clock differences), its final HTTP/provider outcome, credits charged, and the current balance; request a reference or written confirmation. Do **not** send an API key or keyed URL. The public dashboard documentation only promises monthly usage, not per-request terminal status, so support may be necessary.
+
+After stopping/attesting all old lock-unaware workers and any in-flight request, identifying the writable production database, verifying its reviewed schema (including `odds_request_resolutions`, `odds_spend_approvals` and immutable/single-use triggers), and checking the live queue, a signed-in administrator may submit `POST /api/admin/odds/reconcile` with JSON:
+
+```json
+{
+  "requestId": 37,
+  "providerOutcome": "failed",
+  "billedCredits": 0,
+  "verifiedRemaining": 0,
+  "evidenceReference": "provider-support-reference",
+  "evidenceCheckedAt": "2026-09-26T00:00:00.000Z",
+  "confirmation": "PROVIDER_RECEIPT_VERIFIED_AND_OLD_REQUEST_STOPPED"
+}
+```
+
+**Example values are not findings or approval.** Replace them only with verified evidence. The route takes the authenticated admin's identity from the session, rejects non-latest or already resolved admissions, writes a unique append-only reconciliation, and does **not** change the old request's `running` status, its original cutoff, any quotes, or initial-line picks. Even a provider-side `completed` receipt does not make it an ingested `success`.
+
+
+### Explicitly accepted duplicate-charge risk (not a resolution)
+
+The operator subsequently authorized **one** new paid NFL odds request despite the possibility the old one was billed. This does not establish request 37's outcome and does not remove the HOLD on automatic capture. The task branch adds `POST /api/admin/odds/one-time-risk-capture`, restricted to a signed-in admin who supplies the exact unresolved `requestId`, `maxCredits: 3` and confirmation `I_ACCEPT_A_POSSIBLE_DUPLICATE_CHARGE_FOR_ONE_ODDS_CALL`. It first reads the documented **zero-cost** sports-list quota with the same key as the attempted paid call, then requires at least three remaining credits. Under the admission lock it persists a distinct manual request **before** exactly one provider odds call, recording the admin, original unresolved request ID, current quota, three-credit budget and risk acknowledgment. A skipped admission or failed free check does not call the paid endpoint. The provider's actual charge is not technically capped at three credits; inspect its headers afterward.
+
+This path is **not yet released or executed**. Development migration `0047` was applied and both guards were verified enabled there, but production still has neither reconciliation table, and the task workspace is not the published worker/database. Do not issue a raw call from development to simulate a production capture, infer that the call occurred from passing tests, or start the worker. A reviewed merge, Publish schema diff and runtime database/worker identity check are still prerequisites. After Publish, the signed-in admin must deliberately invoke the one-time endpoint; the operator should verify the returned request ID, status, cost, quota and persisted production ledger before claiming the call occurred. A successful exceptional request still leaves old request 37 unresolved and blocks later automatic paid calls until it receives provider evidence and a separate scheduled budget approval. The manual request never changes the old quote cutoff or turns legacy quotes into initial picks.
+
+Reconciliation does **not** authorize another paid call. After separately deciding the exact next enabled, *future* `scheduler_jobs.next_run_at` occurrence and its finite credit budget, a signed-in administrator may submit `POST /api/admin/odds/approve-spend` with `requestId`, `intentKey` (exact `job_key:next_run_at` ISO time), `maxCredits` (at least the estimated three credits and no more than the verified balance), `approvalReference`, and confirmation `APPROVE_ONE_FUTURE_SCHEDULED_PAID_ODDS_REQUEST`. The receipt/reference and budget approval are separate durable records. A future call is admitted under the same database-wide paid-admission lock only when the exact intent, job key/time, unconsumed approval and verified remaining balance match. An unapproved intent is skipped without a provider call; its key cannot be replayed. An approval allows **one** request, not an automatic series or a guaranteed actual provider price cap. If actual usage exceeds the approved budget, stop the worker and investigate before any later approval.
+
+Do not activate a worker merely to exercise this flow. The older worker, deployment identity, queue, migrations and independent retention/feed startup conditions in the handoff above remain separate HOLD gates. Review the saved `resolutionId`, `spendApprovalId`, actual provider quota headers and audit/first-line decision after any eventually authorized capture. Existing Week 3/4 quotes cannot become initial through this resolution. A later genuinely first-observed slate can lock only with its own successful request-bound observation and cutoff-safe evidence. Until an operator supplies provider evidence and the explicit budget approval, production remains blocked.

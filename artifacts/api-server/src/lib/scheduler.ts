@@ -14,7 +14,6 @@ import {
   dataSyncRunsTable,
   db,
   gamesTable,
-  oddsApiRequestsTable,
   predictionSnapshotsTable,
   schedulerJobsTable,
 } from "@workspace/db";
@@ -27,6 +26,7 @@ import { rebuildPregameFeatures } from "./features";
 import { rebuildPregamePersonnelContextFeatures } from "./personnel-context";
 import {
   captureOddsSnapshots,
+  getOddsSchedulingBalance,
   oddsCaptureIntervalMinutes,
   oddsCaptureQuotaDecision,
   oddsCaptureRequestCount,
@@ -1136,16 +1136,13 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
             await recordSchedulerSkip(job.provider, job.jobKey, scheduledFor, skipReason);
             result = { status: "skipped", skipReason };
           } else {
-          const [latestRequest] = await db.select({ creditsRemaining: oddsApiRequestsTable.creditsRemaining })
-            .from(oddsApiRequestsTable)
-            .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id))
-            .limit(1);
+          const schedulingBalance = await getOddsSchedulingBalance();
           const hoursUntilKickoff = (nextGame.kickoffTime.getTime() - Date.now()) / 3_600_000;
           const requiredRequestCount = hoursUntilKickoff <= 6
             ? oddsCaptureRequestCount(hoursUntilKickoff)
             : 1;
           const quota = oddsCaptureQuotaDecision(
-            latestRequest?.creditsRemaining ?? null,
+            schedulingBalance,
             undefined,
             requiredRequestCount,
           );

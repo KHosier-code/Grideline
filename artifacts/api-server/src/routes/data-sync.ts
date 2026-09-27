@@ -11,9 +11,10 @@ import {
 } from "@workspace/api-zod";
 import { syncEspnDepthCharts, syncEspnInjuries } from "../lib/availability";
 import { datasetUrl, syncNflverseHistory } from "../lib/nflverse";
-import { captureOddsSnapshots, getOddsEventAudits } from "../lib/odds";
+import { ODDS_EXPECTED_REQUEST_COST, approveNextOddsSpend, captureOddsSnapshots, getFreeOddsQuota, getOddsEventAudits, reconcileOddsRequest } from "../lib/odds";
+import { randomUUID } from "node:crypto";
 import { syncEspnScheduleCoverage } from "../lib/schedule";
-import { requireAdmin } from "../middlewares/admin";
+import { getAdminAuthStatus, requireAdmin } from "../middlewares/admin";
 import { withFeedLock } from "../lib/feed-scheduler";
 import { getPlayerRecoveryReceiptCleanupHealth, listPlayerRecoveryReceipts, PLAYER_RECOVERY_RECEIPT_RETENTION_DAYS } from "../lib/player-recovery-receipts";
 
@@ -143,6 +144,91 @@ router.post("/odds/capture", requireAdmin, async (req, res): Promise<void> => {
       "Odds capture failed",
     );
     res.status(502).json({ error: "Odds capture failed." });
+  }
+});
+
+// This does not mark the earlier request resolved. It authorizes a single
+// separately logged attempt only when the administrator accepts duplicate
+// billing risk and a current zero-cost quota check confirms enough credits.
+router.post("/admin/odds/one-time-risk-capture", requireAdmin, async (req, res): Promise<void> => {
+  const body = req.body;
+  if (body?.confirmation !== "I_ACCEPT_A_POSSIBLE_DUPLICATE_CHARGE_FOR_ONE_ODDS_CALL"
+    || !Number.isSafeInteger(body.requestId) || body.requestId <= 0
+    || body.maxCredits !== ODDS_EXPECTED_REQUEST_COST) {
+    res.status(400).json({ error: "Confirm the blocked request and one three-credit call." });
+    return;
+  }
+  try {
+    const quota = await getFreeOddsQuota();
+    if (quota.remaining < body.maxCredits) {
+      res.status(409).json({ error: "Insufficient verified credits; no paid request was started." });
+      return;
+    }
+    const result = await captureOddsSnapshots({
+      intentKey: `operator-one-time:${randomUUID()}`,
+      riskApproval: {
+        blockedRequestId: body.requestId, maxCredits: body.maxCredits,
+        verifiedRemaining: quota.remaining, verifiedAt: quota.checkedAt,
+        approvedBy: getAdminAuthStatus(req).userId!,
+      },
+    });
+    req.log.info({ requestId: result.requestId, blockedRequestId: body.requestId,
+      status: result.status, creditsUsed: result.creditsUsed },
+    "One-time risk-accepted odds capture completed");
+    res.status(result.status === "failed" ? 502 : result.status === "skipped" ? 409 : 200)
+      .json(CaptureOddsResponse.parse(result));
+  } catch (error) {
+    req.log.error({ error: error instanceof Error ? error.message : "Odds capture failed" },
+      "One-time risk-accepted capture failed");
+    res.status(502).json({ error: "No confirmed capture; inspect the paid request ledger before retrying." });
+  }
+});
+
+// These operator-only attestations do not call the provider. The confirmation
+// requires a reviewed receipt and independent assurance the old worker stopped.
+router.post("/admin/odds/reconcile", requireAdmin, async (req, res): Promise<void> => {
+  const body = req.body;
+  if (body?.confirmation !== "PROVIDER_RECEIPT_VERIFIED_AND_OLD_REQUEST_STOPPED"
+    || !Number.isSafeInteger(body.requestId) || !Number.isSafeInteger(body.billedCredits)
+    || !Number.isSafeInteger(body.verifiedRemaining)
+    || !["completed", "failed"].includes(body.providerOutcome)
+    || typeof body.evidenceReference !== "string" || typeof body.evidenceCheckedAt !== "string") {
+    res.status(400).json({ error: "A verified provider receipt and stopped-request attestation are required." });
+    return;
+  }
+  try {
+    const id = await reconcileOddsRequest({
+      requestId: body.requestId, providerOutcome: body.providerOutcome,
+      billedCredits: body.billedCredits, verifiedRemaining: body.verifiedRemaining,
+      evidenceReference: body.evidenceReference, evidenceCheckedAt: new Date(body.evidenceCheckedAt),
+      approvedBy: getAdminAuthStatus(req).userId!,
+    });
+    req.log.info({ requestId: body.requestId, resolutionId: id }, "Odds request reconciled without provider contact");
+    res.status(201).json({ resolutionId: id, captureAuthorized: false });
+  } catch (error) {
+    req.log.warn({ error }, "Odds request reconciliation refused");
+    res.status(409).json({ error: "Reconciliation refused; check request state and evidence." });
+  }
+});
+
+router.post("/admin/odds/approve-spend", requireAdmin, async (req, res): Promise<void> => {
+  const body = req.body;
+  if (body?.confirmation !== "APPROVE_ONE_FUTURE_SCHEDULED_PAID_ODDS_REQUEST"
+    || !Number.isSafeInteger(body.requestId) || !Number.isSafeInteger(body.maxCredits)
+    || typeof body.intentKey !== "string" || typeof body.approvalReference !== "string") {
+    res.status(400).json({ error: "An exact future intent and explicit credit budget are required." });
+    return;
+  }
+  try {
+    const id = await approveNextOddsSpend({
+      requestId: body.requestId, intentKey: body.intentKey, maxCredits: body.maxCredits,
+      approvalReference: body.approvalReference, approvedBy: getAdminAuthStatus(req).userId!,
+    });
+    req.log.info({ requestId: body.requestId, approvalId: id }, "One future paid odds intent approved");
+    res.status(201).json({ approvalId: id, intentKey: body.intentKey, maxCredits: body.maxCredits });
+  } catch (error) {
+    req.log.warn({ error }, "Odds spend approval refused");
+    res.status(409).json({ error: "Approval refused; check resolution, budget and future intent." });
   }
 });
 

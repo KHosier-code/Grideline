@@ -1,4 +1,5 @@
 - [Sportsbook capture constraints](odds-history.md) — preserve price-only and A-B-A movement; keep live verification calls minimal.
+- [Paid odds reconciliation](paid-odds-reconciliation.md) — provider billing outcome never proves ingestion; resolve old admission separately from one-use future spend approval.
 - [NFLverse availability semantics](nflverse-availability.md) — validate requested-season rows; downloaded files can be valid but lack that season, and depth formats change by era.
 - [Pregame feature chronology](feature-engineering.md) — build from normalized historical rows, not only live schedule coverage; version coverage-rule changes.
 - [Persistent scheduler ownership](persistent-scheduler.md) — recurring refreshes belong to the durable worker, not the interactive API process; health must distinguish the two.

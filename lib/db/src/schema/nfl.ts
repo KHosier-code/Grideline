@@ -280,6 +280,21 @@ export const predictionsTable = pgTable("predictions", {
   minimumPlayableLine: doublePrecision("minimum_playable_line"),
 });
 
+/** Append-only operator reconciliation; never rewrites a request or a quote. */
+export const oddsRequestResolutionsTable = pgTable("odds_request_resolutions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  requestId: integer("request_id").notNull().unique().references(() => oddsApiRequestsTable.id),
+  providerOutcome: text("provider_outcome").notNull(),
+  billedCredits: integer("billed_credits").notNull(),
+  verifiedRemaining: integer("verified_remaining").notNull(),
+  evidenceReference: text("evidence_reference").notNull(),
+  evidenceCheckedAt: timestamp("evidence_checked_at", { withTimezone: true }).notNull(),
+  approvedBy: text("approved_by").notNull(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check("odds_resolution_outcome_check", sql`${table.providerOutcome} in ('completed', 'failed')`),
+  check("odds_resolution_billing_check", sql`${table.billedCredits} >= 0 and ${table.verifiedRemaining} >= 0`),
+]);
 export const predictionResultsTable = pgTable("prediction_results", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   predictionId: integer("prediction_id").notNull(),
@@ -1141,3 +1156,17 @@ export type InsertTeam = z.infer<typeof insertTeamSchema>;
 export type InsertGame = z.infer<typeof insertGameSchema>;
 export type Team = typeof teamsTable.$inferSelect;
 export type Game = typeof gamesTable.$inferSelect;
+
+/** Exact, one-use approval for a future scheduled occurrence. */
+export const oddsSpendApprovalsTable = pgTable("odds_spend_approvals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  resolutionId: integer("resolution_id").notNull().references(() => oddsRequestResolutionsTable.id),
+  intentKey: text("intent_key").notNull().unique(),
+  maxCredits: integer("max_credits").notNull(),
+  approvedBy: text("approved_by").notNull(),
+  approvalReference: text("approval_reference").notNull(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }).notNull().defaultNow(),
+  consumedByRequestId: integer("consumed_by_request_id").unique().references(() => oddsApiRequestsTable.id),
+}, (table) => [
+  check("odds_spend_approval_budget_check", sql`${table.maxCredits} > 0`),
+]);
