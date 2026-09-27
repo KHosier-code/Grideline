@@ -5,6 +5,7 @@ import {
   predictionSnapshotsTable, retrospectiveWeeklyReviewsTable, sportsbookOddsTable, teamsTable,
 } from "@workspace/db";
 import { rankInitialPicks, verifySavedPick } from "./initial-line-picks";
+import { assertRetrospectiveReviewReady, retrospectiveReviewReadinessQuery, type RetrospectiveReviewReadiness } from "./retrospective-review-readiness";
 
 export const retrospectiveScope = (season: number, week: number) =>
   season === 2026 && Number.isInteger(week) && week >= 1 && week <= 3;
@@ -106,8 +107,14 @@ export async function recordRetrospectiveReview(season: number, week: number, re
     throw new RetrospectiveReviewError("Only Week 3 can be manually published.");
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`retrospective:${season}:${week}`}))`);
+    // DISABLE TRIGGER takes a SHARE ROW EXCLUSIVE lock. Hold the conflicting
+    // lock through the readiness check and INSERT, not just an ACCESS SHARE
+    // lock from SELECT (which does not prevent trigger DDL).
+    await tx.execute(sql`LOCK TABLE public.retrospective_weekly_reviews IN SHARE ROW EXCLUSIVE MODE`);
     const [existing] = await tx.select().from(retrospectiveWeeklyReviewsTable)
       .where(and(eq(retrospectiveWeeklyReviewsTable.season, season), eq(retrospectiveWeeklyReviewsTable.week, week))).limit(1);
+    const readiness = await tx.execute(retrospectiveReviewReadinessQuery);
+    assertRetrospectiveReviewReady(readiness.rows as RetrospectiveReviewReadiness[]);
     if (existing) throw new RetrospectiveReviewError("This week already has an immutable retrospective review.");
     const report = await inspectRetrospectiveWeek(season, week);
     if (report.candidate ? report.candidate.evidenceId !== evidenceId : publish || evidenceId !== null)

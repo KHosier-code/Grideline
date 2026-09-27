@@ -14,3 +14,9 @@ Release readiness must revalidate the complete approved payload from the persist
 **Why:** A conflicting but internally valid artifact could otherwise occupy an approved model version and pass generic integrity checks when the custom database trigger is unavailable.
 
 **How to apply:** Keep imports append-only and idempotent, reject conflicts, expose the database-trigger limitation honestly, and require exact artifact ID/checksum/schema verification again before shadow readiness or manual promotion review.
+
+For optional, operator-initiated append-only reviews, a missing custom production trigger should block the review write in its own transaction rather than take down unrelated public API routes. This is a release gate, not a replacement for database-level immutability against direct SQL access.
+
+**Why:** Managed Publish preserved a retrospective review table and its constraints but omitted both its rejection trigger and the trigger function; startup-wide enforcement would make unrelated services unavailable.
+
+**How to apply:** Check the live connection's catalog at the review write boundary while holding a table lock that conflicts with trigger-disabling DDL through the insert; an ordinary SELECT lock is insufficient. Explicitly report missing protection and seek a platform-supported database immutability path before claiming physical immutability.

@@ -52,6 +52,7 @@ import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { readInitialLineAudit, readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/initial-line-picks";
 import { inspectRetrospectiveWeek, recordRetrospectiveReview, retrospectiveScope, RetrospectiveReviewError } from "../lib/retrospective-weekly-reviews";
+import { RetrospectiveReviewReadinessError } from "../lib/retrospective-review-readiness";
 import { GetInitialLineAuditResponse } from "@workspace/api-zod";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, readMatchupDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
@@ -1698,7 +1699,8 @@ router.post("/admin/retrospective-weekly-review", requireAdmin, async (req, res)
   } catch (error) {
     req.log.warn({ error }, "Retrospective review rejected");
     res.status(error instanceof RetrospectiveReviewError ? 409 : 503).json({
-      error: error instanceof RetrospectiveReviewError ? error.message : "Review could not be recorded.",
+      error: error instanceof RetrospectiveReviewError || error instanceof RetrospectiveReviewReadinessError
+        ? error.message : "Review could not be recorded.",
     });
   }
 });

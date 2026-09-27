@@ -62,6 +62,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/odds.fixtures.test.ts"),
       path.resolve(artifactDir, "src/lib/odds-reconciliation.test.ts"),
       path.resolve(artifactDir, "src/lib/initial-line-picks.test.ts"),
+      path.resolve(artifactDir, "src/lib/retrospective-review-readiness.test.ts"),
       path.resolve(artifactDir, "src/lib/canonical-evaluation.test.ts"),
       path.resolve(artifactDir, "src/lib/scheduler.test.ts"),
       path.resolve(artifactDir, "src/lib/worker-heartbeat.test.ts"),
