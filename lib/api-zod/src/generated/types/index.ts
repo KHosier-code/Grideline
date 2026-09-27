@@ -98,6 +98,7 @@ export * from './consumerGradedAggregate';
 export * from './consumerGradedCharts';
 export * from './consumerGradedChartsStatus';
 export * from './consumerGradedPoint';
+export * from './consumerInitialMarkets';
 export * from './consumerInjuryPlayer';
 export * from './consumerInjuryPlayerSourceLabel';
 export * from './consumerInvalidRequestResponse';

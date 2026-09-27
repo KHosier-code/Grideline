@@ -13,6 +13,7 @@ import type { ConsumerGameGameState } from './consumerGameGameState';
 import type { ConsumerGameMarket } from './consumerGameMarket';
 import type { ConsumerGameMatchup } from './consumerGameMatchup';
 import type { ConsumerGamePrediction } from './consumerGamePrediction';
+import type { ConsumerInitialMarkets } from './consumerInitialMarkets';
 import type { ConsumerMarketBoard } from './consumerMarketBoard';
 import type { ConsumerRecommendation } from './consumerRecommendation';
 
@@ -32,6 +33,7 @@ export interface ConsumerGame {
   /** @nullable */
   prediction: ConsumerGamePrediction;
   market: ConsumerGameMarket;
+  initialMarkets: ConsumerInitialMarkets;
   marketBoard: ConsumerMarketBoard;
   recommendation: ConsumerRecommendation;
   dataConfidence: ConsumerGameDataConfidence;

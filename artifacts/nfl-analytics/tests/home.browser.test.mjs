@@ -303,13 +303,13 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
         await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] > summary").focus()');
         await cdp.key('Enter');
         await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-sources]").open'), 'source disclosure opens by Enter');
-        await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .consumer-source-health") !== null'), 'source content mounts on open');
+        await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .premium-analysis-section") !== null'), 'weather and analysis mount on open');
         await cdp.key(' ');
         await until(() => cdp.evaluate('!document.querySelector("[data-testid=disclosure-sources]").open'), 'source disclosure closes by Space');
-        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .consumer-source-health") !== null'), true, 'loaded source content remains mounted after collapse');
+        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .premium-analysis-section") !== null'), true, 'loaded analysis remains mounted after collapse');
         await cdp.key('Enter');
         await until(() => cdp.evaluate('document.querySelector("[data-testid=disclosure-sources]").open'), 'source disclosure reopens');
-        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .consumer-source-health") !== null'), true);
+        assert.equal(await cdp.evaluate('document.querySelector("[data-testid=disclosure-sources] .premium-analysis-section") !== null'), true);
         detail = {
           ...detail,
           matchupBoard: {

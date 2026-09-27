@@ -168,7 +168,7 @@ try {
            // Inspect the original detail before the navigation check below.
            // The disclosures intentionally defer their content; opening them
            // after cold-load measurement must still avoid both chart bundles.
-           await page.getByTestId('disclosure-market').locator('summary').click();
+           await page.getByTestId('game-initial-markets').waitFor();
            await page.getByTestId('disclosure-matchups').locator('summary').click();
            await page.locator('[data-section="line-movement"] .movement-empty').waitFor();
            await page.locator('[data-section="pregame-team-comparison"] [role="status"]').waitFor();

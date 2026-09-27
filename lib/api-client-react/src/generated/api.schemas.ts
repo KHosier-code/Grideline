@@ -545,6 +545,17 @@ export interface ConsumerGameMarket {
   evidence: ConsumerMarketEvidence;
 }
 
+export interface ConsumerInitialMarkets {
+  /**
+     * Time of the verified first request; never a later quote.
+     * @nullable
+     */
+  capturedAt: string | null;
+  moneyline: ConsumerMarketQuote | null;
+  spread: ConsumerMarketQuote | null;
+  total: ConsumerMarketQuote | null;
+}
+
 export type ConsumerMarketComparisonMarket = typeof ConsumerMarketComparisonMarket[keyof typeof ConsumerMarketComparisonMarket];
 
 
@@ -877,6 +888,7 @@ export interface ConsumerGame {
   /** @nullable */
   prediction: ConsumerGamePrediction;
   market: ConsumerGameMarket;
+  initialMarkets: ConsumerInitialMarkets;
   marketBoard: ConsumerMarketBoard;
   recommendation: ConsumerRecommendation;
   dataConfidence: ConsumerGameDataConfidence;

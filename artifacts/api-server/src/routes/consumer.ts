@@ -21,6 +21,7 @@ import {
   oddsApiRequestsTable,
   oddsEventAuditsTable,
   savedGamesTable,
+  initialLinePicksTable,
 } from "@workspace/db";
 import {
   gameSpecificSnapshot,
@@ -51,6 +52,7 @@ import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { readInitialLineAudit, readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/initial-line-picks";
+import { selectFirstRequestMarkets } from "../lib/consumer-opening-markets";
 import { inspectRetrospectiveWeek, recordRetrospectiveReview, retrospectiveScope, RetrospectiveReviewError } from "../lib/retrospective-weekly-reviews";
 import { RetrospectiveReviewReadinessError } from "../lib/retrospective-review-readiness";
 import { GetInitialLineAuditResponse } from "@workspace/api-zod";
@@ -1330,7 +1332,7 @@ export async function consumerGames(
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
   const recordSeason = filters.season ?? games[0]?.season;
   const recordWeek = filters.week ?? games[0]?.week;
-  const [teams, snapshots, marketRows, modelRuns, snapshotHistory, marketAudits, completeMarketAudits] = await Promise.all([
+  const [teams, snapshots, marketRows, modelRuns, snapshotHistory, marketAudits, completeMarketAudits, firstDecisions] = await Promise.all([
     teamIds.length ? db.select().from(teamsTable).where(inArray(teamsTable.teamId, teamIds)) : [],
     getLatestValidPredictionSnapshots(games.map((game) => game.gameId), {
       preKickoffOnly: true,
@@ -1346,13 +1348,14 @@ export async function consumerGames(
       point: sportsbookOddsTable.point,
       price: sportsbookOddsTable.price,
       capturedAt: sportsbookOddsTable.capturedAt,
+      sourceTimestamp: sportsbookOddsTable.sourceTimestamp,
     }).from(sportsbookOddsTable)
       .where(and(
         inArray(sportsbookOddsTable.gameId, games.map((game) => game.gameId)),
         inArray(sportsbookOddsTable.sportsbook, ["DraftKings", "FanDuel"]),
         inArray(sportsbookOddsTable.market, ["spread", "total", "moneyline"]),
       ))
-      .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id)) : []) as Promise<Array<MovementRow & { gameId: string }>>,
+      .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id)) : []) as Promise<Array<MovementRow & { gameId: string; sourceTimestamp: Date | null }>>,
     db.select().from(modelTrainingRunsTable),
     games.length ? db.select().from(predictionSnapshotsTable)
       .where(and(inArray(predictionSnapshotsTable.gameId, games.map((game) => game.gameId)), lte(predictionSnapshotsTable.predictionTimestamp, asOf)))
@@ -1389,6 +1392,10 @@ export async function consumerGames(
         lte(oddsEventAuditsTable.auditedAt, asOf),
       ))
       .orderBy(oddsEventAuditsTable.matchedGridlineGameId, desc(oddsEventAuditsTable.auditedAt), desc(oddsEventAuditsTable.id)) : [],
+    games.length ? db.select().from(initialLinePicksTable)
+      .where(and(inArray(initialLinePicksTable.gameId, games.map((game) => game.gameId)),
+        eq(initialLinePicksTable.status, "locked"),
+        lte(initialLinePicksTable.observedAt, asOf))) : [],
   ]);
   // Only final games without an active-model selection can recover their
   // already-frozen official prediction. Current-model selections always win.
@@ -1432,6 +1439,7 @@ export async function consumerGames(
   const lastCompleteAuditByGame = new Map(
     completeMarketAudits.flatMap((audit) => audit.gameId ? [[audit.gameId, audit.auditedAt] as const] : []),
   );
+  const firstDecisionByGame = new Map(firstDecisions.map((row) => [row.gameId, row]));
   let persistedConfidenceResults = 0;
   if (persistConfidence) await persistConfidenceMethodology();
   const results = await Promise.all(games.map(async (game) => {
@@ -1604,6 +1612,11 @@ export async function consumerGames(
       },
       finalScore: consumerFinalScore(game, asOf),
       prediction: consumerProjection(snapshot),
+      initialMarkets: selectFirstRequestMarkets(
+        firstDecisionByGame.get(game.gameId), marketRows.filter((row) => row.gameId === game.gameId),
+        home?.abbreviation ?? "", away?.abbreviation ?? "",
+        snapshot?.homeWinProbability ?? null, snapshot?.projectedTotal ?? null,
+      ),
       market,
       marketBoard,
       recommendation,

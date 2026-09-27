@@ -1405,6 +1405,30 @@ export const GetConsumerDashboardResponse = zod.object({
   "message": zod.string().nullable()
 })
 }),
+  "initialMarkets": zod.object({
+  "capturedAt": zod.coerce.date().nullable().describe('Time of the verified first request; never a later quote.'),
+  "moneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "spread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "total": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()])
+}),
   "marketBoard": zod.object({
   "status": zod.enum(['available', 'partial', 'stale', 'absent']),
   "staleAfterMinutes": zod.number().int(),
@@ -1684,6 +1708,30 @@ export const ListConsumerGamesResponse = zod.object({
   "message": zod.string().nullable()
 })
 }),
+  "initialMarkets": zod.object({
+  "capturedAt": zod.coerce.date().nullable().describe('Time of the verified first request; never a later quote.'),
+  "moneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "spread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "total": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()])
+}),
   "marketBoard": zod.object({
   "status": zod.enum(['available', 'partial', 'stale', 'absent']),
   "staleAfterMinutes": zod.number().int(),
@@ -1934,6 +1982,30 @@ export const GetConsumerGameResponse = zod.object({
   "capturedAt": zod.coerce.date().nullable(),
   "message": zod.string().nullable()
 })
+}),
+  "initialMarkets": zod.object({
+  "capturedAt": zod.coerce.date().nullable().describe('Time of the verified first request; never a later quote.'),
+  "moneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "spread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "total": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()])
 }),
   "marketBoard": zod.object({
   "status": zod.enum(['available', 'partial', 'stale', 'absent']),
@@ -2456,6 +2528,30 @@ export const ListSavedGamesResponseItem = zod.object({
   "capturedAt": zod.coerce.date().nullable(),
   "message": zod.string().nullable()
 })
+}),
+  "initialMarkets": zod.object({
+  "capturedAt": zod.coerce.date().nullable().describe('Time of the verified first request; never a later quote.'),
+  "moneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "spread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "total": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()])
 }),
   "marketBoard": zod.object({
   "status": zod.enum(['available', 'partial', 'stale', 'absent']),

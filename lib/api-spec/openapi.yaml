@@ -1643,6 +1643,14 @@ components:
         moneyline: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         total: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         evidence: { $ref: "#/components/schemas/ConsumerMarketEvidence" }
+    ConsumerInitialMarkets:
+      type: object
+      required: [capturedAt, moneyline, spread, total]
+      properties:
+        capturedAt: { type: ["string", "null"], format: date-time, description: Time of the verified first request; never a later quote. }
+        moneyline: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        spread: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        total: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
     ConsumerMarketComparison:
       type: object
       required: [market, label, state, modelValue, marketValue, difference, differenceUnit, selectedQuote, currentQuotes, firstObserved, current, modelTimestamp, marketTimestamp, observationAgeMinutes, freshnessLabel]
@@ -1754,7 +1762,7 @@ components:
         results: { type: array, items: { type: object, additionalProperties: true } }
     ConsumerGame:
       type: object
-      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, market, marketBoard, recommendation, dataConfidence, confidence, availability]
+      required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, initialMarkets, market, marketBoard, recommendation, dataConfidence, confidence, availability]
       properties:
         gameId: { type: string }
         season: { type: integer }
@@ -1789,6 +1797,7 @@ components:
             homeWinProbability: { type: ["number", "null"] }
             awayWinProbability: { type: ["number", "null"] }
         market: { $ref: "#/components/schemas/ConsumerGameMarket" }
+        initialMarkets: { $ref: "#/components/schemas/ConsumerInitialMarkets" }
         marketBoard: { $ref: "#/components/schemas/ConsumerMarketBoard" }
         recommendation: { $ref: "#/components/schemas/ConsumerRecommendation" }
         dataConfidence:

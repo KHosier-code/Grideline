@@ -3,13 +3,10 @@ import { ChevronLeft, CloudRain, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useSearch, useParams, Link } from 'wouter';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
-import { LineMovementExperience } from '../../components/LineMovementExperience';
 import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
 import { ConsumerPregameComparisonChart } from '../../components/ConsumerPregameComparisonChart';
-import { ConsumerMarketEvidence } from '../../components/ConsumerMarketEvidence';
-import { ConsumerProjectionEvidence } from '../../components/ConsumerProjectionEvidence';
+import { ConsumerOpeningSummary } from '../../components/ConsumerOpeningSummary';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
-import { ConsumerSourceHealth } from '../../components/ConsumerSourceHealth';
 import { DeferredDetailDisclosure } from '../../components/DeferredDetailDisclosure';
 import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
 import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
@@ -19,7 +16,6 @@ import { useEffect } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
 import { TeamMark } from '../../components/VerifiedImage';
 import { supportedMatchupSummary } from '../../lib/consumer-matchups';
-import { eligibleMarketComparisons } from '../../lib/consumer-presentation';
 
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
@@ -51,7 +47,6 @@ export default function ConsumerGameDetail() {
     typeof weather.precipitationProbability === 'number' ? `${weather.precipitationProbability.toFixed(0)}% precipitation` : null,
   ].filter(Boolean) : [];
   const insights = supportedMatchupSummary(game.matchupBoard);
-  const eligibleCount = eligibleMarketComparisons(game, beforeKickoff).length;
 
   return <div className="consumer-page consumer-detail">
     <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
@@ -88,14 +83,7 @@ export default function ConsumerGameDetail() {
         </div>
       </aside>
     )}
-    <ConsumerProjectionEvidence game={game} />
-    <section className="detail-primary" aria-label="Market eligibility">
-      <h2>Market comparisons</h2>
-      <p className="consumer-note">{beforeKickoff
-        ? eligibleCount ? `${eligibleCount} current ${eligibleCount === 1 ? 'market comparison is' : 'market comparisons are'} eligible. Only fresh, complete markets are compared.`
-          : `No current market comparison is eligible. ${game.recommendation.reason ?? 'Fresh, complete market evidence is unavailable.'}`
-        : 'No current market comparison is eligible after kickoff. Recorded lines are historical, not verified closing lines.'}</p>
-    </section>
+    <ConsumerOpeningSummary game={game} />
     <section className="matchup-biggest detail-insights" data-section="matchup-insights" aria-labelledby="game-insights-title">
       <h2 id="game-insights-title">Supported matchup insights</h2>
       <p>Descriptive pregame evidence through {new Date(game.matchupBoard.sourceCutoff).toLocaleString()}; not a new prediction.</p>
@@ -103,10 +91,6 @@ export default function ConsumerGameDetail() {
         : <p>No sufficiently supported matchup advantage is available.</p>}
     </section>
     <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
-    <DeferredDetailDisclosure key={`${game.gameId}-market`} testId="disclosure-market" title="Market evidence and recorded line history" status={beforeKickoff ? `${eligibleCount} eligible now` : 'Historical only'}>
-      <ConsumerMarketEvidence game={game} beforeKickoff={beforeKickoff} />
-      <LineMovementExperience movement={game.movement} beforeKickoff={beforeKickoff} />
-    </DeferredDetailDisclosure>
     <DeferredDetailDisclosure key={`${game.gameId}-matchups`} testId="disclosure-matchups" title="Detailed matchup evidence" status={`${game.matchupBoard.completeness.supportedCategories}/${game.matchupBoard.completeness.totalCategories} categories supported`}>
       <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
       <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
@@ -117,9 +101,8 @@ export default function ConsumerGameDetail() {
       <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
       <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
     </DeferredDetailDisclosure>
-    <DeferredDetailDisclosure key={`${game.gameId}-sources`} testId="disclosure-sources" title="Source status, weather and analysis" status={`Feeds ${game.sourceHealth.status}`}>
+    <DeferredDetailDisclosure key={`${game.gameId}-sources`} testId="disclosure-sources" title="Weather and analysis" status="Matchup context">
       <div className="premium-weather" data-testid="game-weather"><CloudRain className="h-4 w-4" aria-hidden="true" /><span>{weatherParts.length > 0 ? weatherParts.join(' · ') : game.analysis.availability.weather ?? 'Weather unavailable'}</span></div>
-      <ConsumerSourceHealth health={game.sourceHealth} />
       <section className="premium-analysis-section" data-section="projection-explanation" data-testid="premium-analysis" aria-labelledby="projection-explanation-heading">
       <div className="consumer-section-heading">
         <div>

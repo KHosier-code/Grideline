@@ -7,7 +7,7 @@ import { Router } from 'wouter';
 import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 
-test('both Home sessions use the same persisted pick, and signed-in Home keeps its schedule and feed', async () => {
+test('both Home sessions use the same persisted pick, and signed-in Home keeps its schedule without operational feed status', async () => {
   const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
   try {
     const { default: ConsumerHome, ConsumerHomeContent } = await vite.ssrLoadModule('/src/pages/consumer/ConsumerHome.tsx');
@@ -41,8 +41,7 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
       createElement(Router, { ssrPath: '/' }, createElement(ConsumerHome)))));
     assert.match(html, /weekly-intro/);
     assert.match(html, /Upcoming schedule/);
-    assert.match(html, /Persisted feed status/);
-    assert.match(html, /consumer-source-health/);
+    assert.doesNotMatch(html, /Persisted feed status|consumer-source-health/);
     assert.match(html, /No upcoming games are available/);
     assert.match(html, /<h2>Pick of the week<\/h2>/);
     assert.match(html, /data-testid="weekly-pick-team">Verified Team/);
@@ -75,7 +74,7 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
 
     const loading = signedIn(undefined, 'loading');
     assert.match(loading, /Loading this week’s pick/);
-    assert.match(loading, /Loading the persisted schedule and feed status/);
+    assert.match(loading, /Loading the weekly games/);
     assert.doesNotMatch(loading, /weekly-pick-team|No upcoming games are available/);
     assert.match(visitor(undefined, 'loading'), /Loading this week’s pick/);
     assert.doesNotMatch(visitor(dashboard, 'loading'), /saved first-line quotes/);
