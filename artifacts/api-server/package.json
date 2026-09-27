@@ -19,6 +19,7 @@
     "test:player-position": "pnpm run build && node --test ./dist/lib/player-position-matchup.test.mjs ./dist/lib/player-position-evaluation.test.mjs ./dist/lib/availability-roster.test.mjs && bash ../../scripts/test-availability-roster-replay.sh",
     "test:player-position-archive": "pnpm run build && node --test ./dist/lib/player-position-source-archive.test.mjs",
     "test:initial-line-picks": "pnpm run build && NODE_ENV=development node --test ./dist/lib/initial-line-picks.test.mjs ./dist/lib/retrospective-review-readiness.test.mjs",
+    "test:retrospective-publication": "pnpm run build && bash ../../scripts/test-retrospective-publication.sh",
     "test:player-position-performance": "pnpm run build && bash ../../scripts/test-player-position-performance.sh",
     "test:player-position-performance:real": "pnpm run build && GRIDLINE_PLAYER_POSITION_REAL_SEASON=1 node --test ./dist/lib/player-position-matchup-performance.test.mjs",
     "player-projections:readiness:dev": "export NODE_ENV=development && pnpm run build && node --enable-source-maps ./dist/player-forecast-readiness-dev-cli.mjs",
