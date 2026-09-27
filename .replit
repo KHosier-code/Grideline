@@ -111,6 +111,10 @@ args = "home-browser"
 task = "workflow.run"
 args = "theme-browser"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "player-position-performance"
+
 [[workflows.workflow]]
 name = "prediction-safety"
 author = "agent"
@@ -162,6 +166,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm test:theme"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "player-position-performance"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run test:player-position-performance"
 
 [workflows.workflow.metadata]
 isValidation = true
