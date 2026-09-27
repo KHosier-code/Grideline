@@ -49,6 +49,8 @@ test("same holdout cohort produces paired ablation and both calibration series, 
   assert.equal(wr.pairedDefenseCalibration.reduce((sum: number, b: { n: number }) => sum + b.n, 0),
     wr.defenseCoveredN);
   assert.equal(wr.enabledLive, false);
+  assert.equal(wr.releaseReadiness.currentRosterAndGameStatusVerified, false);
+  assert.equal(wr.releaseReadiness.publicationChronologyVerified, false);
   assert.equal(report.missing.archivedPregameReleaseMissing > 0, true);
 });
 

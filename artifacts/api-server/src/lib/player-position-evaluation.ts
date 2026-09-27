@@ -254,7 +254,20 @@ export function evaluatePlayerPositionMatchups(inputs: DefenseInputs[], trainSea
            defenseCalibration: calibrationFor(asOfWeight === null ? [] : asOfTest, r => estimate(r, asOfWeight ?? 0)),
          },
          enabledLive: false,
-          reason: "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts.",
+          releaseReadiness: {
+            archivedPregameTrainingN: asOfTrain.length, archivedPairedHoldoutN: asOfTest.length,
+            publicationChronologyVerified: false,
+            currentRosterAndGameStatusVerified: false,
+            calibratedHoldoutImprovementVerified: false,
+            // Publisher-attested examples can enter research, but sufficient
+            // full-cohort coverage and per-player availability are not approved.
+            blockers: [
+              "Sufficient publisher-verified pregame training and holdout coverage has not been approved.",
+              "Complete same-cohort defensive coverage and calibrated holdout improvement have not been approved.",
+              "Current team, game roster and affirmative injury clearance have not been verified at the forecast cutoff.",
+            ],
+          },
+          reason: "Research only: publisher chronology coverage, paired defensive improvement, calibration and current player eligibility are independent release blockers.",
       }];
     })));
   return { version: EVALUATION_VERSION, trainSeason, holdoutSeason,

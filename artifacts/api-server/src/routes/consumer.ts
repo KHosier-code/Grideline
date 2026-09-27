@@ -53,6 +53,7 @@ import { readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/init
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, readMatchupDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { attachQualifiedScoringTdProbability, buildPlayerPositionMatchup } from "../lib/player-position-matchup";
+import { qualifyPlayerEligibility, readPlayerEligibilityEvidence } from "../lib/availability-roster";
 import { readDevelopmentPlayerTdForecastReadiness } from "../lib/player-td-forecast-readiness";
 import { GetConsumerPlayerPositionMatchupResponse } from "@workspace/api-zod";
 import { GetConsumerScheduleSelectionResponse, GetConsumerWeeklyPicksResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
@@ -2252,6 +2253,22 @@ router.get("/consumer/player-position-matchup", async (req, res): Promise<void> 
     if (!result) {
       res.status(400).json({ error: "Matchup identities could not be verified.", code: "invalid_request" });
       return;
+    }
+    if (result.selected) {
+      try {
+        const evidence = await readPlayerEligibilityEvidence(
+          result.selected.playerId, result.selected.team, result.selected.opponent,
+          game.gameId, now, game.kickoffTime);
+        const status = qualifyPlayerEligibility(evidence);
+        // Eligibility only refines the withheld reason; it never populates a
+        // projection without independent model and holdout approval.
+        for (const [metric, projection] of Object.entries(result.projections)) {
+          if (metric !== "scoringTdProbability")
+            projection.reason = `No independently approved point-in-time model, defensive coverage and calibrated holdout improvement. ${status.reason}`;
+        }
+      } catch (error) {
+        req.log.warn({ error }, "Player eligibility read failed; count forecasts withheld");
+      }
     }
     if (result.selected && process.env.NODE_ENV === "development" && !process.env.REPLIT_DEPLOYMENT) {
       try {

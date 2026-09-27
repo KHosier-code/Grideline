@@ -50,6 +50,7 @@ test("TE individual yards never equal the position allowance; zero is observed, 
   assert.equal(data.metrics.receivingYards.defense?.perGame, 25);
   assert.equal(data.score.value !== null, true);
   assert.equal(data.projections.receivingYards.value, null);
+  assert.match(data.projections.receivingYards.reason, /identity is missing/);
   input.stats.find(r => r.playerId === "te-a" && r.week === 2)!.receivingYards = null;
   const missing = selected(input, upcoming);
   assert.equal(missing.metrics.receivingYards.player.coveredGames, 3);

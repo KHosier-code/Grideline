@@ -16,3 +16,9 @@ GitHub's nflverse release tags expose the **current** uploaded asset's digest, I
 **Why:** Mutable release assets and local observation timestamps answer different chronology questions; substituting either for version-specific publication evidence would create false pregame backtests.
 
 **How to apply:** For targets/yards evaluations, require both PBP and weekly player-stat versions to have independently matched publisher evidence and a pre-kickoff local snapshot; retain reconstructed football-time comparisons only as explicitly non-scored diagnostics.
+
+A complete team roster is not a game-specific active roster, and an injury-only feed cannot affirmatively clear omitted players. Require separate, recent, cutoff-safe positive evidence for both game participation and injury clearance rather than treating absence from an injury report or historical stat participation as proof.
+
+**Why:** Both feeds describe different populations; combining them as if they asserted the same player's game eligibility can silently turn missing data into a live count.
+
+**How to apply:** Keep selected-player count forecasts unavailable when either independent positive observation is absent, even if a same-cohort historical evaluation later passes.

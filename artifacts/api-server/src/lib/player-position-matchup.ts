@@ -1,5 +1,6 @@
 import { buildDefenseVsPosition, METRICS, METRIC_LABELS, type DefenseInputs, type Position, type Window } from "./defense-vs-position";
 import { buildUsageTeamMappings } from "../routes/consumer";
+import { qualifyPlayerEligibility, type PlayerEligibilityEvidence } from "./availability-roster";
 
 export const MATCHUP_SCORE_VERSION = "position-context-descriptive-v1";
 export function attachQualifiedScoringTdProbability<T extends ReturnType<typeof buildPlayerPositionMatchup>>(
@@ -32,7 +33,8 @@ type Game = DefenseInputs["games"][number];
 
 /** The history is grouped by verified schedule game, then by GSIS player and
  * offense. No absent stat line is converted to a zero or a roster assertion. */
-export function buildPlayerPositionMatchup(input: DefenseInputs, game: Game, now: Date, position: Position, window: Exclude<Window, "last2Weeks">, selectedId?: string) {
+export function buildPlayerPositionMatchup(input: DefenseInputs, game: Game, now: Date, position: Position, window: Exclude<Window, "last2Weeks">, selectedId?: string,
+  eligibilityEvidence?: PlayerEligibilityEvidence) {
   if (!game.kickoffTime || game.kickoffTime <= now || game.week < 1 || game.week > 18
     || !/scheduled|pregame/i.test(game.gameStatus)) {
     return null;
@@ -80,6 +82,12 @@ export function buildPlayerPositionMatchup(input: DefenseInputs, game: Game, now
       appearances: appearances.length, key };
   }).sort((a, b) => b.appearances - a.appearances || a.playerId.localeCompare(b.playerId)).slice(0, 80);
   const selected = candidates.find((p) => p.key === selectedId);
+  const eligibility = selected && qualifyPlayerEligibility({
+    playerId: selected.playerId, team: selected.team, opponent: selected.opponent,
+    gameId: game.gameId, asOf: now, kickoff: cutoff,
+    identity: null, roster: null, gameRoster: null, injury: null,
+    ...eligibilityEvidence,
+  });
   const history = selected ? histories.get(selected.key)! : [];
   const teamGames = selected ? schedules.filter((row) =>
     maps.canonical(row.homeTeamId) === selected.team || maps.canonical(row.awayTeamId) === selected.team) : [];
@@ -143,7 +151,7 @@ export function buildPlayerPositionMatchup(input: DefenseInputs, game: Game, now
         recentAverage: metricData[metric]?.player?.perGame ?? null, leaguePositionBaseline: null,
         reason: metric === "scoringTdProbability"
           ? "The separate weekly scoring-TD forecast is not qualified for this player and game."
-          : "No independently approved, point-in-time pregame model and availability evidence for this statistic." },
+          : `No independently approved point-in-time model, defensive coverage and calibrated holdout improvement. ${eligibility?.reason ?? "Current roster, game roster and injury eligibility have not been verified."}` },
     ])),
     note: "Player averages divide by verified appearances; defensive position allowances divide by covered defensive team-games. Missing player rows are not zeroes. Historical imports are mutable and do not establish source publication before old kickoffs. This does not confirm active, healthy or starting status.",
   };
