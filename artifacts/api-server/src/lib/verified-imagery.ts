@@ -380,7 +380,7 @@ export function validPersistedImageRows(
     && Array.isArray(rows) && rows.length > 0 && rows.length === receipt.rowCount
     && rows.every(row => row !== null && typeof row === "object" && !Array.isArray(row)
       && fields.every(field => typeof row[field] === "string"))
-    && hashRows(rows as Record<string, string>[]) === receipt.canonicalRowsHash;
+    && hashRows(rows as Record<string, string>[], fields) === receipt.canonicalRowsHash;
 }
 
 async function loadImageRows<T extends string>(label: ImageLabel, url: string, fields: readonly T[]) {
@@ -414,7 +414,7 @@ async function storeImageRows(label: ImageLabel, file: ImageFile, fields: readon
     )).orderBy(desc(identitySourceImportsTable.id)).limit(1) : [];
     const [created] = await tx.insert(identitySourceImportsTable).values({
       sourceNamespace: namespace, sourceUrl: file.url, sourceContentHash: file.sha256,
-      parserVersion: IMAGE_PARSER_VERSION, canonicalRowsHash: hashRows(rows),
+      parserVersion: IMAGE_PARSER_VERSION, canonicalRowsHash: hashRows(rows, fields),
       sourceHeaders: [...fields], rowCount: rows.length, importedAt: new Date(file.fetchedAt),
       provenance: { fetchedAt: file.fetchedAt, dataset: label, season: label === "roster" ? 2026 : null },
     }).onConflictDoNothing().returning({ id: identitySourceImportsTable.id });
@@ -423,7 +423,7 @@ async function storeImageRows(label: ImageLabel, file: ImageFile, fields: readon
       eq(identitySourceImportsTable.sourceContentHash, file.sha256),
       eq(identitySourceImportsTable.parserVersion, IMAGE_PARSER_VERSION),
     )).limit(1))[0];
-    if (existing && (existing.canonicalRowsHash !== hashRows(rows) || existing.sourceUrl !== file.url))
+    if (existing && (existing.canonicalRowsHash !== hashRows(rows, fields) || existing.sourceUrl !== file.url))
       throw new Error("Imagery source receipt mismatch");
     const id = created?.id ?? existing?.id;
     if (!id) throw new Error("Imagery source receipt unavailable");
@@ -439,4 +439,8 @@ async function storeImageRows(label: ImageLabel, file: ImageFile, fields: readon
   if (alert) logger.warn(alert, "New unapproved player headshot hosts in roster release");
 }
 
-const hashRows = (rows: Record<string, string>[]) => createHash("sha256").update(JSON.stringify(rows)).digest("hex");
+// JSONB does not preserve object-key order. Hash in the declared CSV field order
+// so a receipt made from parsed rows still verifies after a database round trip.
+const hashRows = (rows: Record<string, string>[], fields: readonly string[]) =>
+  createHash("sha256").update(JSON.stringify(rows.map(row =>
+    Object.fromEntries(fields.map(field => [field, row[field]]))))).digest("hex");

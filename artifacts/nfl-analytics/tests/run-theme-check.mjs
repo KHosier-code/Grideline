@@ -129,9 +129,14 @@ async function main() {
         credentials: 'include',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      return response.ok ? (await response.json()).isAdmin === true : false;
+      const body = response.ok ? await response.json() : null;
+      return { authorized: body?.isAdmin === true, authenticated: body?.authenticated === true,
+        httpStatus: response.status, tokenPresent: Boolean(token) };
     });
-    if (!status) throw new Error('Development Clerk session is not authorized by the real Admin gate. Check that the API development workflow is running.');
+    if (!status.authorized) {
+      failureCode = ` (HTTP ${status.httpStatus}; authenticated: ${status.authenticated}; token present: ${status.tokenPresent})`;
+      throw new Error('Development Clerk session is not authorized by the real Admin gate. Restart the API development workflow if its build predates the temporary grant.');
+    }
     await context.storageState({ path: statePath });
     await browser.close();
     browser = undefined;

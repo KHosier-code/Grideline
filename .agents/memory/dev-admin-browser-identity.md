@@ -8,3 +8,5 @@ When provisioning a temporary Clerk user for browser checks, satisfy the develop
 **Why:** Clerk's user-creation policy is independent of the chosen browser sign-in strategy. Reusing a human Admin session or granting a persistent test account hides authorization failures and leaves credential material behind.
 
 **How to apply:** Keep any temporary Admin allowlist scoped to the development process and test Clerk keys, with a short expiration and exact user identity. Never turn a browser test grant into a production permission or a shared session fixture. If creation policy changes, inspect only sanitized error codes, never the API error body or token.
+
+When an Admin check has a valid authenticated Clerk session but the temporary grant is not recognized, restart the development API workflow before changing grant logic. A running process can predate a newly merged grant implementation even when the source tree has the right code; rebuilding test bundles does not replace that process. Preserve only booleans and HTTP status in test failure diagnostics, never the temporary user's identity or token.
