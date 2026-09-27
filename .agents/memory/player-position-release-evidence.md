@@ -22,3 +22,9 @@ A complete team roster is not a game-specific active roster, and an injury-only 
 **Why:** Both feeds describe different populations; combining them as if they asserted the same player's game eligibility can silently turn missing data into a live count.
 
 **How to apply:** Keep selected-player count forecasts unavailable when either independent positive observation is absent, even if a same-cohort historical evaluation later passes.
+
+An article's original publication timestamp does not timestamp every later edit. A positive availability sentence first seen in a mutable article after kickoff cannot be made pregame by the article's earlier `datePublished` value.
+
+**Why:** Publisher pages can change without a per-sentence revision history; a later fetch only proves what the page says at that fetch.
+
+**How to apply:** Preserve actual fetched bytes and their observation time before kickoff, in addition to publication metadata; refuse retrospective pregame eligibility if the page was first captured later.

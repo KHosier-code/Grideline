@@ -29,6 +29,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/player-stats-dev-cli.ts"),
       path.resolve(artifactDir, "src/player-forecast-readiness-dev-cli.ts"),
       path.resolve(artifactDir, "src/espn-roster-dev-cli.ts"),
+      path.resolve(artifactDir, "src/availability-capture-cli.ts"),
       path.resolve(artifactDir, "src/market-baseline-cli.ts"),
       path.resolve(artifactDir, "src/personnel-comparison-cli.ts"),
       path.resolve(artifactDir, "src/sportsdataio-depth-cli.ts"),

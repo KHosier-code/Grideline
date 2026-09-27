@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { assertDevelopmentRosterCaptureTarget, parseEspnTeamRoster } from "./availability";
 import { qualifyPlayerEligibility, type PlayerEligibilityEvidence } from "./availability-roster";
+import { verifyPublishedAvailability, type AvailabilityCapture } from "./availability-source";
 
 test("parses position-grouped ESPN roster identities without inferring missing players", () => {
   assert.deepEqual(parseEspnTeamRoster({ athletes: [
@@ -31,11 +32,13 @@ const asOf = new Date("2026-09-26T12:00:00Z");
 const observedAt = new Date("2026-09-26T11:00:00Z");
 const base = (): PlayerEligibilityEvidence => ({
   playerId: "00-01", team: "PIT", opponent: "CIN", gameId: "game",
-  asOf, kickoff: new Date("2026-09-27T18:00:00Z"),
+  asOf, kickoff: new Date("2026-09-26T18:00:00Z"),
   identity: { gsisId: "00-01", providerId: "123", observedAt },
   roster: { providerId: "123", team: "PIT", status: "active", observedAt, complete: true },
-  gameRoster: { providerId: "123", team: "PIT", gameId: "game", status: "active", observedAt, complete: true },
-  injury: { providerId: "123", team: "PIT", status: "cleared", observedAt, publicationAt: observedAt, complete: true },
+  gameRoster: { providerId: "123", team: "PIT", gameId: "game", status: "active", observedAt,
+    publicationAt: observedAt, sourceUrl: "https://www.nfl.com/news/active", sourceHash: "abc", complete: true },
+  injury: { providerId: "123", team: "PIT", status: "cleared", observedAt, publicationAt: observedAt,
+    sourceUrl: "https://www.nfl.com/news/cleared", sourceHash: "def", complete: true },
 });
 
 test("only independently affirmative current evidence can qualify a player", () => {
@@ -47,6 +50,9 @@ test("only independently affirmative current evidence can qualify a player", () 
   assert.equal(qualifyPlayerEligibility({ ...base(), roster: { ...base().roster!, team: "CIN" } }).eligible, false);
   assert.equal(qualifyPlayerEligibility({ ...base(), gameRoster: { ...base().gameRoster!, gameId: "other" } }).eligible, false);
   assert.equal(qualifyPlayerEligibility({ ...base(), injury: { ...base().injury!, status: "questionable" } }).eligible, false);
+  assert.equal(qualifyPlayerEligibility({ ...base(), injuryConflict: true }).eligible, false);
+  assert.equal(qualifyPlayerEligibility({ ...base(), injury: { ...base().injury!, sourceUrl: base().gameRoster!.sourceUrl } }).eligible, false);
+  assert.equal(qualifyPlayerEligibility({ ...base(), injury: { ...base().injury!, sourceHash: base().gameRoster!.sourceHash } }).eligible, false);
   assert.equal(qualifyPlayerEligibility({ ...base(), roster: { ...base().roster!, status: "active - injured reserve" } }).eligible, false);
 });
 
@@ -60,5 +66,33 @@ test("stale and future observations or publications cannot qualify a player", ()
     assert.equal(qualifyPlayerEligibility({ ...base(), injury: { ...base().injury!, publicationAt: at } }).eligible, false);
   }
   assert.equal(qualifyPlayerEligibility({ ...base(), injury: { ...base().injury!, publicationAt: null } }).eligible, false);
+  assert.equal(qualifyPlayerEligibility({ ...base(), gameRoster: { ...base().gameRoster!, publicationAt: future } }).eligible, false);
   assert.equal(qualifyPlayerEligibility({ ...base(), asOf: new Date("2026-09-28T00:00:00Z") }).eligible, false);
+});
+
+const capture: AvailabilityCapture = {
+  kind: "game-roster", sourceUrl: "https://www.nfl.com/news/gameday-active",
+  gameId: "game", team: "PIT", playerId: "00-01", playerName: "Example QB",
+  gameExcerpt: "Pittsburgh Steelers vs Cincinnati Bengals",
+  playerExcerpt: "Example QB is active for today's game",
+};
+const html = `<html><meta property="article:published_time" content="2026-09-26T10:00:00Z">
+  <article>Pittsburgh Steelers vs Cincinnati Bengals. Example QB is active for today's game.</article></html>`;
+const context = { home: "Pittsburgh Steelers", away: "Cincinnati Bengals",
+  kickoff: new Date("2026-09-27T10:00:00Z"), providerId: "123" };
+test("archives only explicit publisher-dated, game-bound affirmative material", () => {
+  const row = verifyPublishedAvailability(capture, html, observedAt, context);
+  assert.equal(row.publisher, "NFL");
+  assert.equal(row.sourceBody, html);
+  assert.equal(row.providerId, "123");
+  assert.equal(row.assertion, "active");
+  for (const altered of [
+    { ...capture, playerExcerpt: "Example QB is questionable" },
+    { ...capture, gameExcerpt: "Pittsburgh Steelers" },
+    { ...capture, sourceUrl: "https://www.nfl.com/injuries/league/2026/reg3" },
+    { ...capture, sourceUrl: "https://site.api.espn.com/news/gameday-active" },
+  ]) assert.throws(() => verifyPublishedAvailability(altered, html, observedAt, context));
+  assert.throws(() => verifyPublishedAvailability(capture, html.replace(/<meta[^>]*>/, ""), observedAt, context));
+  assert.throws(() => verifyPublishedAvailability(capture, html, context.kickoff, context));
+  assert.throws(() => verifyPublishedAvailability(capture, html, new Date("2026-09-30"), context));
 });
