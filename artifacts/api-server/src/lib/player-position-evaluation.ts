@@ -1,8 +1,8 @@
 import { buildUsageTeamMappings } from "../routes/consumer";
 import { completePositionGame, type DefenseInputs, type Position } from "./defense-vs-position";
-import type { PositionRelease } from "./player-position-releases";
+import { publisherEvidenceBeforeKickoff, type PositionRelease } from "./player-position-releases";
 
-export const EVALUATION_VERSION = "player-position-forward-research-v2";
+export const EVALUATION_VERSION = "player-position-forward-research-v3";
 const METRICS: Record<Position, string[]> = {
   QB: ["attempts", "passingYards"], RB: ["carries", "rushingYards", "targets", "receivingYards"],
   WR: ["targets", "receivingYards"], TE: ["targets", "receivingYards"],
@@ -26,7 +26,8 @@ function archivedExamples(truth: DefenseInputs[], releases: PositionRelease[], s
       || game.week < 1 || game.week > 18 || !game.kickoffTime) continue;
     const home = maps.canonical(game.homeTeamId), away = maps.canonical(game.awayTeamId);
     if (!home || !away || home === away) continue;
-    const release = releases.filter(r => r.input.games.length && r.capturedAt < game.kickoffTime!
+     const release = releases.filter(r => r.input.games.length && r.capturedAt < game.kickoffTime!
+       && publisherEvidenceBeforeKickoff(r, game.season, game.kickoffTime!)
       && JSON.stringify(r.input.teams) === JSON.stringify(input.teams)
       && ["pbp", "player_stats"].every(dataset => r.input.sources.some(s =>
         s.dataset === dataset && s.season === game.season && s.status === "success"
@@ -115,8 +116,10 @@ export function evaluatePlayerPositionMatchups(inputs: DefenseInputs[], trainSea
   releases: PositionRelease[] = []) {
   const teams = inputs[0]?.teams ?? [];
   const maps = buildUsageTeamMappings(teams);
-  const examples: Example[] = [];
   const archived = archivedExamples(inputs, releases, [trainSeason, holdoutSeason]);
+   // Only immutable, publisher-verified pregame snapshots enter scored cohorts.
+   // The loop below audits reconstruction gaps; it never scores its later rows.
+   const examples = archived;
   const missing = { unreconciledRows: 0, partialDefensiveGames: 0, insufficientPlayerHistory: 0,
     archivedPregameReleaseMissing: 0 };
   for (const input of inputs) {
@@ -165,13 +168,10 @@ export function evaluatePlayerPositionMatchups(inputs: DefenseInputs[], trainSea
           if (values.length < 3 || baseline.length < 20) { missing.insufficientPlayerHistory++; continue; }
           const defensive = defense.get(`${item.opponent}:${item.position}:${metric}`) ?? [];
           if (defensive.length < 3) missing.partialDefensiveGames++;
-          if (!releases.some(release => release.input.games.some(g => g.gameId === item.game.gameId)
-            && release.capturedAt < item.game.kickoffTime!)) missing.archivedPregameReleaseMissing++;
-          examples.push({ season: item.game.season, week: item.game.week, position: item.position, metric, actual,
-            player: values.reduce((a, b) => a + b, 0) / values.length,
-            league: baseline.reduce((a, b) => a + b, 0) / baseline.length,
-            defense: defensive.length >= 3 ? defensive.reduce((a, b) => a + b, 0) / defensive.length : null,
-            coveredDefenseGames: defensive.length });
+           if (!releases.some(release => release.input.games.some(g => g.gameId === item.game.gameId)
+             && release.capturedAt < item.game.kickoffTime!
+             && publisherEvidenceBeforeKickoff(release, item.game.season, item.game.kickoffTime!)))
+             missing.archivedPregameReleaseMissing++;
         }
       }
       const gamePosition = new Map<string, { gameId: string; opponent: string; position: Position; metric: string; values: number[] }>();
@@ -253,14 +253,15 @@ export function evaluatePlayerPositionMatchups(inputs: DefenseInputs[], trainSea
            playerOnlyCalibration: calibrationFor(asOfTest, r => r.player),
            defenseCalibration: calibrationFor(asOfWeight === null ? [] : asOfTest, r => estimate(r, asOfWeight ?? 0)),
          },
-        enabledLive: false,
-         reason: "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified.",
+         enabledLive: false,
+          reason: "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts.",
       }];
     })));
   return { version: EVALUATION_VERSION, trainSeason, holdoutSeason,
     split: trainSeason === holdoutSeason ? "Training weeks 1–9; forward holdout weeks 10–18" : "Prior season training; next season holdout",
-    method: "Prior five player appearances on the same team; previous position-game opponent allowances shrink toward zero adjustment as n/(n+5), capped at 25%; coefficient chosen by training MAE. Holdout and ablation use identical eligible rows.",
-     provenance: "Reconstructed game-time chronology only. A later archived capture cannot certify earlier kickoffs; these errors do not qualify an as-of forecast.",
-     archivedReleases: releases.map(r => ({ fingerprint: r.fingerprint, capturedAt: r.capturedAt.toISOString() })),
+     method: "Publisher-verified pregame archives only; prior five player appearances on the same team. Position-game opponent allowances shrink toward zero adjustment as n/(n+5), capped at 25%; coefficient chosen by training MAE. Holdout and ablation use identical eligible rows.",
+      provenance: "Scored games require exact SHA-256 matched GitHub release assets for both weekly player stats and PBP, last updated strictly before kickoff, and an immutable local capture before kickoff. Missing or replaced versions are excluded.",
+      archivedReleases: releases.map(r => ({ fingerprint: r.fingerprint, capturedAt: r.capturedAt.toISOString(),
+        publisherEvidence: r.publisherEvidence })),
     missing, metrics };
 }

@@ -1,0 +1,1 @@
+ALTER TABLE nflverse_source_files ADD COLUMN IF NOT EXISTS source_sha256 text;

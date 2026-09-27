@@ -1,4 +1,5 @@
 import { createReadStream } from "node:fs";
+import { createHash } from "node:crypto";
 import { capturePlayerPositionRelease } from "./player-position-releases";
 import { mkdir, rename, stat, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
@@ -237,10 +238,11 @@ async function acquireDataset(dataset: NflverseDataset, season: number, options?
   const filePath = join(cacheDirectory, basename(new URL(url).pathname));
   await db
     .insert(nflverseSourceFilesTable)
-    .values({ dataset, season, sourceUrl: url, localPath: filePath, status: "downloading" })
+    .values({ dataset, season, sourceUrl: url, localPath: filePath, status: "downloading", sourceSha256: null })
     .onConflictDoUpdate({
       target: [nflverseSourceFilesTable.dataset, nflverseSourceFilesTable.season],
-      set: { sourceUrl: url, localPath: filePath, status: "downloading", startedAt: new Date(), errorMessage: null },
+      set: { sourceUrl: url, localPath: filePath, status: "downloading", startedAt: new Date(), errorMessage: null,
+        sourceSha256: null },
     });
   try {
     let fileStats = await stat(filePath).catch(() => null);
@@ -252,9 +254,12 @@ async function acquireDataset(dataset: NflverseDataset, season: number, options?
       await rename(temporaryPath, filePath);
       fileStats = await stat(filePath);
     }
+    const hash = createHash("sha256");
+    for await (const chunk of createReadStream(filePath)) hash.update(chunk);
+    const sourceSha256 = hash.digest("hex");
     await db
       .update(nflverseSourceFilesTable)
-      .set({ status: "downloaded", fileSizeBytes: fileStats.size })
+      .set({ status: "downloaded", fileSizeBytes: fileStats.size, sourceSha256 })
       .where(and(eq(nflverseSourceFilesTable.dataset, dataset), eq(nflverseSourceFilesTable.season, season)));
     return { url, filePath };
   } catch (error) {

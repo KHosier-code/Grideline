@@ -1,10 +1,10 @@
 {
-  "version": "player-position-forward-research-v2",
+  "version": "player-position-forward-research-v3",
   "trainSeason": 2025,
   "holdoutSeason": 2025,
   "split": "Training weeks 1–9; forward holdout weeks 10–18",
-  "method": "Prior five player appearances on the same team; previous position-game opponent allowances shrink toward zero adjustment as n/(n+5), capped at 25%; coefficient chosen by training MAE. Holdout and ablation use identical eligible rows.",
-  "provenance": "Reconstructed game-time chronology only. A later archived capture cannot certify earlier kickoffs; these errors do not qualify an as-of forecast.",
+  "method": "Publisher-verified pregame archives only; prior five player appearances on the same team. Position-game opponent allowances shrink toward zero adjustment as n/(n+5), capped at 25%; coefficient chosen by training MAE. Holdout and ablation use identical eligible rows.",
+  "provenance": "Scored games require exact SHA-256 matched GitHub release assets for both weekly player stats and PBP, last updated strictly before kickoff, and an immutable local capture before kickoff. Missing or replaced versions are excluded.",
   "archivedReleases": [],
   "missing": {
     "unreconciledRows": 378,
@@ -14,22 +14,22 @@
   },
   "metrics": {
     "QB:attempts": {
-      "trainingN": 144,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 262,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 262,
-        "mae": 8.577353689567426,
-        "rmse": 11.33091857974891,
-        "bias": 0.8562340966921121
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 262,
-        "mae": 9.087509642589799,
-        "rmse": 11.626350133873666,
-        "bias": -1.310231015841016
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -46,21 +46,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 87,
-          "meanEstimate": 20.722030651340994,
-          "meanActual": 25.022988505747126
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 87,
-          "meanEstimate": 30.272413793103446,
-          "meanActual": 27.39080459770115
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 88,
-          "meanEstimate": 35.78200757575759,
-          "meanActual": 31.829545454545453
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -161,25 +161,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "QB:passingYards": {
-      "trainingN": 144,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 262,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 262,
-        "mae": 73.01100508905853,
-        "rmse": 93.04842921391672,
-        "bias": 6.812277353689578
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 262,
-        "mae": 77.5456119581232,
-        "rmse": 95.97136319846425,
-        "bias": -10.532037365457903
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -196,21 +196,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 87,
-          "meanEstimate": 133.4588122605364,
-          "meanActual": 158.42528735632183
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 87,
-          "meanEstimate": 213.07183908045982,
-          "meanActual": 205.35632183908046
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 88,
-          "meanEstimate": 266.98465909090913,
-          "meanActual": 229.64772727272728
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -311,25 +311,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "RB:carries": {
-      "trainingN": 379,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 677,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 677,
-        "mae": 3.467479074347617,
-        "rmse": 4.971744840453441,
-        "bias": -0.2604382077794189
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 677,
-        "mae": 6.140676200685175,
-        "rmse": 7.364142379800683,
-        "bias": -0.8761273634758109
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -346,21 +346,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 225,
-          "meanEstimate": 1.2501481481481467,
-          "meanActual": 1.8666666666666667
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 226,
-          "meanEstimate": 7.226032448377587,
-          "meanActual": 8.070796460176991
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 226,
-          "meanEstimate": 15.576622418879063,
-          "meanActual": 14.898230088495575
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -461,25 +461,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "RB:rushingYards": {
-      "trainingN": 379,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 677,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 677,
-        "mae": 19.522058099458416,
-        "rmse": 29.886476876374395,
-        "bias": -0.577351058591826
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 677,
-        "mae": 29.631486061918416,
-        "rmse": 38.121033243544055,
-        "bias": -3.7005466746016333
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -496,21 +496,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 225,
-          "meanEstimate": 4.27288888888889,
-          "meanActual": 7.297777777777778
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 226,
-          "meanEstimate": 30.282522123893795,
-          "meanActual": 35.61946902654867
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 226,
-          "meanEstimate": 71.20744837758116,
-          "meanActual": 64.58849557522124
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -611,25 +611,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "RB:targets": {
-      "trainingN": 379,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 677,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 677,
-        "mae": 1.242885278188084,
-        "rmse": 1.7415579123082638,
-        "bias": -0.004037419990152639
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 677,
-        "mae": 1.6383029487895975,
-        "rmse": 2.1550348144467972,
-        "bias": -0.06047504621071705
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -646,21 +646,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 225,
-          "meanEstimate": 0.37755555555555537,
-          "meanActual": 0.5822222222222222
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 226,
-          "meanEstimate": 1.6286135693215333,
-          "meanActual": 1.8141592920353982
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 226,
-          "meanEstimate": 3.8683628318584082,
-          "meanActual": 3.4911504424778763
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -761,25 +761,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "RB:receivingYards": {
-      "trainingN": 379,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 677,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 677,
-        "mae": 10.354308222550475,
-        "rmse": 15.759780334312632,
-        "bias": -0.07282127031019196
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 677,
-        "mae": 12.205795125618662,
-        "rmse": 16.98485705122747,
-        "bias": -0.8942412025484695
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -796,21 +796,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 225,
-          "meanEstimate": 1.148814814814815,
-          "meanActual": 3.7777777777777777
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 226,
-          "meanEstimate": 8.620353982300887,
-          "meanActual": 11.31858407079646
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 226,
-          "meanEstimate": 25.385029498525068,
-          "meanActual": 20.287610619469028
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -911,25 +911,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "WR:targets": {
-      "trainingN": 604,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 1063,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 1063,
-        "mae": 1.8816400125431185,
-        "rmse": 2.5610747648364027,
-        "bias": 0.15062715584822825
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 1063,
-        "mae": 2.7902651539958527,
-        "rmse": 3.45458794024831,
-        "bias": 0.0018382946856190657
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -946,21 +946,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 354,
-          "meanEstimate": 1.0041431261770246,
-          "meanActual": 1.3898305084745763
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 354,
-          "meanEstimate": 3.575282485875706,
-          "meanActual": 3.5819209039548023
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 355,
-          "meanEstimate": 7.515492957746489,
-          "meanActual": 6.673239436619719
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -1061,25 +1061,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "WR:receivingYards": {
-      "trainingN": 604,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 1063,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 1063,
-        "mae": 21.490733772342463,
-        "rmse": 30.026671060342842,
-        "bias": 1.3599717779868277
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 1063,
-        "mae": 26.9599195369128,
-        "rmse": 35.23802765942531,
-        "bias": -0.08599260400265274
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -1096,21 +1096,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 354,
-          "meanEstimate": 6.288888888888888,
-          "meanActual": 10.211864406779661
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 354,
-          "meanEstimate": 26.3108757062147,
-          "meanActual": 27.437853107344633
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 355,
-          "meanEstimate": 62.77276995305168,
-          "meanActual": 53.66478873239436
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -1211,25 +1211,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "TE:targets": {
-      "trainingN": 283,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 557,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 557,
-        "mae": 1.4663674446439259,
-        "rmse": 2.0384619568222337,
-        "bias": -0.08988629563135847
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 557,
-        "mae": 2.12145937849343,
-        "rmse": 2.764459949317979,
-        "bias": -0.2419148723663852
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -1246,21 +1246,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 185,
-          "meanEstimate": 1.0010810810810824,
-          "meanActual": 1.4108108108108108
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 186,
-          "meanEstimate": 2.8407706093189984,
-          "meanActual": 3.086021505376344
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 186,
-          "meanEstimate": 5.910483870967746,
-          "meanActual": 5.526881720430108
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -1361,25 +1361,25 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     },
     "TE:receivingYards": {
-      "trainingN": 283,
+      "trainingN": 0,
       "defenseTrainingN": 0,
-      "holdoutN": 557,
+      "holdoutN": 0,
       "defenseCoveredN": 0,
       "fittedWeight": null,
       "playerOnly": {
-        "n": 557,
-        "mae": 15.854847396768392,
-        "rmse": 22.284238925937736,
-        "bias": 0.13677438659485247
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "leaguePosition": {
-        "n": 557,
-        "mae": 19.346352049263196,
-        "rmse": 25.986384532541422,
-        "bias": -1.5805797010642373
+        "n": 0,
+        "mae": null,
+        "rmse": null,
+        "bias": null
       },
       "pairedPlayerOnly": {
         "n": 0,
@@ -1396,21 +1396,21 @@
       "playerOnlyCalibration": [
         {
           "bucket": 1,
-          "n": 185,
-          "meanEstimate": 5.6854954954954975,
-          "meanActual": 9.881081081081081
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 2,
-          "n": 186,
-          "meanEstimate": 20.32150537634408,
-          "meanActual": 22.440860215053764
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         },
         {
           "bucket": 3,
-          "n": 186,
-          "meanEstimate": 47.115949820788536,
-          "meanActual": 40.413978494623656
+          "n": 0,
+          "meanEstimate": null,
+          "meanActual": null
         }
       ],
       "pairedPlayerOnlyCalibration": [
@@ -1511,7 +1511,7 @@
         ]
       },
       "enabledLive": false,
-      "reason": "Research-only reconstructed evidence: archived pregame feature releases, complete defensive coverage, and current roster/injury eligibility have not all been verified."
+      "reason": "Research only: publisher-verified pregame evidence, complete defensive coverage, and current roster/injury eligibility are required for live forecasts."
     }
   }
 }

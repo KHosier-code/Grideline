@@ -10,3 +10,9 @@ Keep position-level opponent allowances descriptive until a paired forward holdo
 **How to apply:** For any future live targets/yards/count release, require a saved as-of source version, reconciled team and player identities, current roster/injury eligibility, and same-cohort forward errors, calibration and defense-feature ablation. Use the research report for the specific dataset's limitations, not as permission to publish a forecast.
 
 An append-only local capture proves when the application observed a feed revision, **not** when the publisher first made it available. Never label a post-kickoff local capture as pregame evidence or infer publisher chronology from a mutable row's import timestamp. Keep the independent archived-as-of evaluation separate from reconstructed football-time research.
+
+GitHub's nflverse release tags expose the **current** uploaded asset's digest, ID, and creation/update timestamps, not a complete history of replaced asset bytes. An exact digest match plus an update before kickoff can corroborate a locally saved version, but a current asset cannot retroactively certify a different older file. Missing publisher metadata must remain ineligible, even when the local archive is intact.
+
+**Why:** Mutable release assets and local observation timestamps answer different chronology questions; substituting either for version-specific publication evidence would create false pregame backtests.
+
+**How to apply:** For targets/yards evaluations, require both PBP and weekly player-stat versions to have independently matched publisher evidence and a pre-kickoff local snapshot; retain reconstructed football-time comparisons only as explicitly non-scored diagnostics.

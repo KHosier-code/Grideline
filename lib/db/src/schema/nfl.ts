@@ -843,6 +843,7 @@ export const nflverseSourceFilesTable = pgTable("nflverse_source_files", {
   localPath: text("local_path"),
   status: text("status").notNull(),
   fileSizeBytes: integer("file_size_bytes"),
+  sourceSha256: text("source_sha256"),
   rowsProcessed: integer("rows_processed").notNull().default(0),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),

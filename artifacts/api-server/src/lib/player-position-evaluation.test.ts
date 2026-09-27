@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { evaluatePlayerPositionMatchups } from "./player-position-evaluation";
 import { completePositionGame, type DefenseInputs } from "./defense-vs-position";
+import { publisherEvidenceBeforeKickoff, verifyPlayerPositionPublisherAsset } from "./player-position-releases";
 
 function fixture(): DefenseInputs {
   const games = Array.from({ length: 12 }, (_, n) => ({
@@ -40,8 +41,8 @@ function fixture(): DefenseInputs {
 test("same holdout cohort produces paired ablation and both calibration series, never live forecasts", () => {
   const report = evaluatePlayerPositionMatchups([fixture()], 2025, 2025);
   const wr = report.metrics["WR:targets"] as any;
-  assert.ok(wr.defenseTrainingN > 0);
-  assert.ok(wr.defenseCoveredN > 0);
+  assert.equal(wr.defenseTrainingN, 0);
+  assert.equal(wr.defenseCoveredN, 0);
   assert.equal(wr.pairedPlayerOnly.n, wr.pairedDefenseContext.n);
   assert.equal(wr.pairedPlayerOnlyCalibration.reduce((sum: number, b: { n: number }) => sum + b.n, 0),
     wr.defenseCoveredN);
@@ -67,6 +68,18 @@ test("a missing PBP identity or null participant removes defensive coverage, not
 
 test("archived holdout uses only pregame versions and does not substitute a later capture", () => {
   const truth = fixture();
+  const evidence = (dataset: "pbp" | "player_stats") => {
+    const tag = dataset === "pbp" ? "pbp" : "stats_player";
+    const name = dataset === "pbp" ? "play_by_play_2025.csv.gz" : "stats_player_week_2025.csv.gz";
+    const url = `https://github.com/nflverse/nflverse-data/releases/download/${tag}/${name}`;
+    const asset = { id: dataset === "pbp" ? 10 : 11, name, browser_download_url: url,
+      url: `https://api.github.com/repos/nflverse/nflverse-data/releases/assets/${dataset === "pbp" ? 10 : 11}`,
+      digest: `sha256:${"a".repeat(64)}`, size: 123,
+      created_at: "2025-08-30T00:00:00Z", updated_at: "2025-08-31T00:00:00Z" };
+    return { url, asset, proof: verifyPlayerPositionPublisherAsset({ tag_name: tag, assets: [asset] },
+      dataset, 2025, url, "a".repeat(64), 123, new Date("2025-09-01T00:00:00Z"))! };
+  };
+  const proofs = [evidence("pbp"), evidence("player_stats")];
   const release = (beforeWeek: number) => ({
     capturedAt: new Date(Date.UTC(2025, 8, beforeWeek - 1, 19)),
     fingerprint: `release-${beforeWeek}`,
@@ -78,8 +91,11 @@ test("archived holdout uses only pregame versions and does not substitute a late
       })),
       rzTeams: truth.rzTeams.filter(r => r.week < beforeWeek),
       rzPlayers: truth.rzPlayers.filter(r => r.week < beforeWeek),
-      sources: truth.sources.map(s => ({ ...s, completedAt: new Date("2025-09-01T00:00:00Z") })),
+      sources: truth.sources.map(s => ({ ...s, completedAt: new Date("2025-09-01T00:00:00Z"),
+        sourceUrl: proofs.find(p => p.proof.dataset === s.dataset)!.url,
+        sourceSha256: "a".repeat(64), fileSizeBytes: 123 })),
     },
+    publisherEvidence: proofs.map(p => p.proof),
   });
   const releases = [release(9), release(10), release(11), release(12)];
   const report = evaluatePlayerPositionMatchups([truth], 2025, 2025, releases);
@@ -93,4 +109,14 @@ test("archived holdout uses only pregame versions and does not substitute a late
   const late = evaluatePlayerPositionMatchups([truth], 2025, 2025,
     [{ ...release(9), capturedAt: new Date("2026-01-01T00:00:00Z") }]);
   assert.equal((late.metrics["WR:targets"] as any).archivedAsOf.pairedHoldoutN, 0);
+  const changed = release(11);
+  changed.publisherEvidence = changed.publisherEvidence.filter(p => p.dataset !== "pbp");
+  assert.equal(publisherEvidenceBeforeKickoff(changed, 2025, truth.games[10]!.kickoffTime!), false);
+  assert.equal((evaluatePlayerPositionMatchups([truth], 2025, 2025, [changed])
+    .metrics["WR:targets"] as any).archivedAsOf.pairedHoldoutN, 0);
+  assert.equal(verifyPlayerPositionPublisherAsset({ tag_name: "pbp", assets: [proofs[0]!.asset] },
+    "pbp", 2025, proofs[0]!.url, "b".repeat(64), 123, new Date("2025-09-01T00:00:00Z")), null);
+  assert.equal(verifyPlayerPositionPublisherAsset({ tag_name: "pbp", assets: [
+    { ...proofs[0]!.asset, updated_at: "2025-09-12T00:00:00Z" },
+  ] }, "pbp", 2025, proofs[0]!.url, "a".repeat(64), 123, new Date("2025-09-01T00:00:00Z")), null);
 });
