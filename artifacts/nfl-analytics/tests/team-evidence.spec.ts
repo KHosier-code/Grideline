@@ -50,9 +50,7 @@ function fixture(season: number, throughWeek: number, window: string, codes: str
     coverage: {
       weeks: weeks.filter(item => item.week <= throughWeek),
       partialReasons: weeks.filter(item => item.week <= throughWeek && (!item.allFinal || item.statGames < item.finalGames))
-        .map(item => item.missingMatchups.length
-          ? `Week ${item.week} is missing 1 provider schedule matchup(s): ${item.missingMatchups.join(', ')}.`
-          : `Week ${item.week} has incomplete evidence.`),
+        .map(item => `Week ${item.week} has incomplete evidence.`),
     },
     teams,
   };
@@ -258,4 +256,88 @@ test('missing provider matchups keep Team Evidence at the last contiguous week, 
   await expect(page.getByTestId('text-teams-source')).toContainText('Not available');
   expect(requests).toEqual([18]);
   expect(failures).toEqual([]);
+});
+
+test('a shared Team Evidence link restores filters and comparison after reload and history navigation', async ({ page }) => {
+  await page.route('**/api/consumer/team-analytics?**', route => {
+    const url = new URL(route.request().url());
+    return route.fulfill({ json: fixture(
+      Number(url.searchParams.get('season')), Number(url.searchParams.get('throughWeek')),
+      url.searchParams.get('window') ?? 'season', url.searchParams.get('teams'), 3,
+    ) });
+  });
+  await page.goto(`/tests/team-evidence.html?season=${defaultSeason}&week=1&window=last5&teams=BBB&metric=defenseEpa&ref=friend`);
+  await expect(page.getByTestId('select-teams-week')).toHaveValue('1');
+  await expect(page.getByTestId('select-teams-window')).toHaveValue('last5');
+  await expect(page.getByTestId('select-teams-metric')).toHaveValue('defenseEpa');
+  await expect(page.getByTestId('button-remove-team-BBB')).toBeVisible();
+  await expect(page.getByTestId('button-remove-team-AAA')).toHaveCount(0);
+  await expect(page.getByTestId('text-teams-source')).toContainText(`Fixture ${defaultSeason} W1`);
+  await expect(page.locator('.ct-trend-chart')).toHaveAttribute('aria-label', /BBB Fixture Club/);
+
+  await page.getByTestId('select-teams-week').selectOption('2');
+  await page.getByTestId('select-teams-window').selectOption('last3');
+  await page.getByTestId('select-add-team').selectOption('AAA');
+  await page.getByTestId('select-teams-metric').selectOption('offenseSuccessRate');
+  await expect.poll(() => new URL(page.url()).searchParams.get('teams')).toBe('BBB,AAA');
+  const shared = new URL(page.url());
+  expect(shared.searchParams.get('week')).toBe('2');
+  expect(shared.searchParams.get('window')).toBe('last3');
+  expect(shared.searchParams.get('metric')).toBe('offenseSuccessRate');
+  expect(shared.searchParams.get('ref')).toBe('friend');
+  await page.reload();
+  await expect(page.getByTestId('select-teams-week')).toHaveValue('2');
+  await expect(page.getByTestId('select-teams-window')).toHaveValue('last3');
+  await expect(page.getByTestId('select-teams-metric')).toHaveValue('offenseSuccessRate');
+  await expect(page.getByTestId('button-remove-team-BBB')).toBeVisible();
+  await expect(page.getByTestId('button-remove-team-AAA')).toBeVisible();
+  await expect(page.getByTestId('text-teams-source')).toContainText(`Fixture ${defaultSeason} W2`);
+
+  await page.evaluate(season => {
+    history.pushState(null, '', `?season=${season}&week=1&window=last8&teams=AAA&metric=defenseEpa`);
+    dispatchEvent(new PopStateEvent('popstate'));
+  }, defaultSeason);
+  await expect(page.getByTestId('select-teams-week')).toHaveValue('1');
+  await expect(page.getByTestId('select-teams-window')).toHaveValue('last8');
+  await expect(page.getByTestId('button-remove-team-BBB')).toHaveCount(0);
+  await expect(page.getByTestId('button-remove-team-AAA')).toBeVisible();
+  await expect(page.getByTestId('text-teams-source')).toContainText(`Fixture ${defaultSeason} W1`);
+});
+
+test('unverified and malformed shared cutoffs fall back to latest verified evidence', async ({ page }) => {
+  let phase = 3;
+  await page.route('**/api/consumer/team-analytics?**', route => {
+    const url = new URL(route.request().url());
+    return route.fulfill({ json: fixture(
+      Number(url.searchParams.get('season')), Number(url.searchParams.get('throughWeek')),
+      url.searchParams.get('window') ?? 'season', url.searchParams.get('teams'), phase,
+    ) });
+  });
+  await page.goto(`/tests/team-evidence.html?season=${defaultSeason}&week=3&window=last5&teams=AAA,NOPE&metric=defenseEpa`);
+  await expect(page.getByTestId('select-teams-week')).toHaveValue('3');
+  await expect(page.getByTestId('text-teams-source')).toContainText(`Fixture ${defaultSeason} W3`);
+  await expect(page.getByTestId('row-team-AAA')).toHaveCount(1);
+  await expect(page.getByTestId('button-remove-team-AAA')).toBeVisible();
+  await expect(page.getByTestId('button-remove-team-NOPE')).toHaveCount(0);
+  await expect.poll(() => new URL(page.url()).searchParams.get('teams')).toBe('AAA');
+
+  phase = 2;
+  await page.reload();
+  await expect(page.getByTestId('select-teams-week')).toHaveValue('2');
+  await expect(page.getByTestId('text-teams-source')).toContainText(`Fixture ${defaultSeason} W2`);
+  await expect(page.getByTestId('row-team-AAA')).toContainText('+0.200');
+  await expect.poll(() => new URL(page.url()).searchParams.has('week')).toBe(false);
+  await expect(page.getByTestId('button-remove-team-AAA')).toBeVisible();
+  await expect(page.getByTestId('select-teams-window')).toHaveValue('last5');
+
+  await page.goto('/tests/team-evidence.html?season=bogus&week=99&window=wrong&teams=NOPE&metric=wrong');
+  await expect(page.getByTestId('select-teams-week')).toHaveValue('2');
+  await expect(page.getByTestId('text-teams-source')).toContainText(`Fixture ${defaultSeason} W2`);
+  await expect(page.getByTestId('row-team-AAA')).toHaveCount(1);
+  await expect(page.getByTestId('select-teams-season')).toHaveValue(String(defaultSeason));
+  await expect(page.getByTestId('select-teams-window')).toHaveValue('season');
+  await expect(page.getByTestId('select-teams-metric')).toHaveValue('offenseEpa');
+  await expect(page.getByTestId('button-remove-team-NOPE')).toHaveCount(0);
+  await expect.poll(() => new URL(page.url()).searchParams.has('week')).toBe(false);
+  expect(new URL(page.url()).searchParams.get('season')).toBe(String(defaultSeason));
 });
