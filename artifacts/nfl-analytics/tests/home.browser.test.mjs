@@ -192,6 +192,21 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
           await cdp.evaluate('document.querySelector(".consumer-account .theme-toggle").click()');
           await until(() => cdp.evaluate('document.documentElement.classList.contains("dark")') .then(isDark => (isDark ? 'dark' : 'light') === theme), `switch to ${theme}`);
         }
+        await until(() => cdp.evaluate('document.body.innerText.includes("No supported two-team values are available")'), 'Home shows missing comparison evidence');
+        assert.deepEqual(await cdp.evaluate(`performance.getEntriesByType('resource').filter(entry => /ConsumerPregameComparisonChart|PregameComparisonPlot|ConsumerTeamTrendChart/.test(entry.name)).map(entry => entry.name)`),
+          [], 'Home must not download chart modules without supported comparison or trend values');
+        if (width === 1280 && theme === 'dark') {
+          const unavailableDetail = detail;
+          detail = { ...detail, matchupBoard: { ...detail.matchupBoard, status: 'partial',
+            assessments: [{ category: 'passing', edge: 'home', confidence: 'medium', coverage: 'Two final games',
+              metrics: [{ label: 'Blended pass EPA / dropback', homeValue: 0.2, awayValue: 0.1, unit: 'score' }] }] } };
+          await cdp.send('Page.navigate', { url: `${origin}/tests/home.html` });
+          await until(() => cdp.evaluate('document.querySelector("[data-section=pregame-team-comparison]") !== null'), 'supported Home comparison loads');
+          await until(() => cdp.evaluate(`performance.getEntriesByType('resource').some(entry => /PregameComparisonPlot/.test(entry.name))`), 'supported comparison plot loads');
+          detail = unavailableDetail;
+          await cdp.send('Page.navigate', { url: `${origin}/tests/home.html` });
+          await until(() => cdp.evaluate('document.querySelectorAll(".weekly-card-toggle").length === 2'), 'Home resets to unavailable comparison');
+        }
         assert.equal(await cdp.evaluate('document.querySelectorAll(".weekly-evidence").length'), 0);
         // A preceding keyboard input puts Chromium in keyboard modality; focusing
         // the actual button then checks the computed :focus-visible outline.

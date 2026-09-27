@@ -5,11 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Route, Router, Switch } from 'wouter';
 import { ClerkProvider } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
+import { lazy, Suspense } from 'react';
 import { ThemeProvider, useTheme } from '../src/lib/theme';
 import ConsumerHome from '../src/pages/consumer/ConsumerHome';
-import ConsumerGameDetail from '../src/pages/consumer/ConsumerGameDetail';
 import ConsumerGames from '../src/pages/consumer/ConsumerGames';
 import '../src/index.css';
+
+const ConsumerGameDetail = lazy(() => import('../src/pages/consumer/ConsumerGameDetail'));
 
 function Harness() {
   const { theme, toggle } = useTheme();
@@ -22,7 +24,7 @@ function Harness() {
     <Switch>
       <Route path="/tests/home.html" component={ConsumerHome} />
       <Route path="/games" component={ConsumerGames} />
-      <Route path="/games/:gameId" component={ConsumerGameDetail} />
+      <Route path="/games/:gameId">{() => <Suspense fallback={null}><ConsumerGameDetail /></Suspense>}</Route>
       <Route path="/games" component={ConsumerGames} />
     </Switch>
   </main>;

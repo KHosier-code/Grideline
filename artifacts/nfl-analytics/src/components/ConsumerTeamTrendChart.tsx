@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import type { ConsumerTeamAnalyticsTeam } from '@workspace/api-client-react';
 import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
+import { validTrendValue } from './team-trend-values';
 
 export type TeamTrendMetric = 'offenseEpa' | 'defenseEpa' | 'offenseSuccessRate' | 'defenseSuccessRate';
 export const teamTrendMetrics: { value: TeamTrendMetric; label: string; unit: string }[] = [
@@ -11,7 +12,7 @@ export const teamTrendMetrics: { value: TeamTrendMetric; label: string; unit: st
   { value: 'defenseSuccessRate', label: 'Defense success rate allowed', unit: 'Success rate allowed' },
 ];
 const colors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];
-export const validTrendValue = (value: number | null | undefined): value is number => typeof value === 'number' && Number.isFinite(value);
+export { validTrendValue } from './team-trend-values';
 export const trendValueLabel = (value: number | null | undefined, metric: TeamTrendMetric) =>
   !validTrendValue(value) ? 'Unavailable' : metric.includes('SuccessRate') ? `${(value * 100).toFixed(1)}%` : `${value > 0 ? '+' : ''}${value.toFixed(3)}`;
 

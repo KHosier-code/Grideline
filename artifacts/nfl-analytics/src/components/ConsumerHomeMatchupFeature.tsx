@@ -5,14 +5,20 @@ import {
   useGetConsumerTeamAnalytics,
   type ConsumerGame,
 } from '@workspace/api-client-react';
+import { lazy, Suspense } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'wouter';
-import { ConsumerPregameComparisonChart } from './ConsumerPregameComparisonChart';
-import { ConsumerTeamTrendChart, validTrendValue } from './ConsumerTeamTrendChart';
+import { validTrendValue } from './team-trend-values';
+import { comparisonSpecs, hasSupportedComparison } from './pregame-comparison-evidence';
 import { latestCompletePriorWeek, pregameTrendTeams } from '../lib/home-chart-evidence';
 import { formatKickoff } from '../pages/consumer/consumer-ui';
 import '../pages/consumer/ConsumerTeams.css';
 import '../pages/consumer/ConsumerHomeFeature.css';
+
+const ConsumerPregameComparisonChart = lazy(() =>
+  import('./ConsumerPregameComparisonChart').then(({ ConsumerPregameComparisonChart }) => ({ default: ConsumerPregameComparisonChart })));
+const ConsumerTeamTrendChart = lazy(() =>
+  import('./ConsumerTeamTrendChart').then(({ ConsumerTeamTrendChart }) => ({ default: ConsumerTeamTrendChart })));
 
 function FeatureState({ title, description, retry }: { title: string; description: string; retry?: () => void }) {
   return <div className="ch-trend-state" role={retry ? 'alert' : 'status'}>
@@ -48,6 +54,7 @@ export function ConsumerHomeMatchupFeature({ game, now }: { game: ConsumerGame; 
     && (detail.data?.gameState === 'pregame' || detail.data?.gameState === 'scheduled');
   const cutoff = detail.data?.matchupBoard.sourceCutoff ? new Date(detail.data.matchupBoard.sourceCutoff).getTime() : NaN;
   const safeBoard = isUpcoming && samePregame && Number.isFinite(cutoff) && cutoff <= now && cutoff < detailKickoff;
+  const supportedBoard = safeBoard && detail.data && hasSupportedComparison(detail.data.matchupBoard);
   const trendTeams = pregameTrendTeams(trends.data?.teams ?? [], codes, throughWeek, kickoff);
   const observedPoints = trendTeams.reduce((sum, team) => sum + team.observations.filter(item => validTrendValue(item.offenseEpa)).length, 0);
   const covered = coverageWeeks.filter(item => item.week <= throughWeek && item.statGames > 0);
@@ -72,7 +79,15 @@ export function ConsumerHomeMatchupFeature({ game, now }: { game: ConsumerGame; 
     <div className="ch-feature-grid">
       {detail.isLoading ? <div className="ch-trend-skeleton" aria-label="Loading pregame comparison" /> :
         detail.isError ? <FeatureState title="Pregame comparison unavailable" description="The game's pregame evidence could not be loaded." retry={() => { void detail.refetch(); }} /> :
-        safeBoard && detail.data ? <ConsumerPregameComparisonChart board={detail.data.matchupBoard} away={detail.data.matchup.away} home={detail.data.matchup.home} /> :
+        supportedBoard && detail.data ? <Suspense fallback={<div className="ch-trend-skeleton" aria-label="Loading pregame comparison" />}>
+          <ConsumerPregameComparisonChart board={detail.data.matchupBoard} away={detail.data.matchup.away} home={detail.data.matchup.home} />
+        </Suspense> :
+        safeBoard && detail.data ? <div>
+          <FeatureState title="Pregame comparison unavailable" description="No supported two-team values are available for these pregame metrics yet." />
+          <details className="detail-zero-coverage"><summary>{comparisonSpecs.length} pregame comparison metrics unavailable · view coverage</summary>
+            <ul>{comparisonSpecs.map(spec => <li key={spec.category}>{spec.label}: {detail.data!.matchupBoard.assessments.find(item => item.category === spec.category)?.coverage ?? 'Verified evidence unavailable'}</li>)}</ul>
+          </details>
+        </div> :
           <FeatureState title="Pregame comparison withheld" description="A verified, pre-kickoff matchup board is not available for this scheduled game." />}
       <div className="ch-trends">
         <div><p className="consumer-eyebrow">02 / HISTORICAL FORM</p><h3>What the final games show</h3>
@@ -84,7 +99,9 @@ export function ConsumerHomeMatchupFeature({ game, now }: { game: ConsumerGame; 
           trends.isLoading ? <div className="ch-trend-skeleton" aria-label="Loading team trends" /> :
           trends.isError ? <FeatureState title="Team trends unavailable" description="We couldn't load the final-game observations for these teams." retry={() => { void trends.refetch(); }} /> :
           !observedPoints ? <FeatureState title="No supported team observations" description="No valid offensive EPA observations are available for these teams in the completed-week window." /> :
-          <ConsumerTeamTrendChart teams={trendTeams} selected={codes} throughWeek={throughWeek} metric="offenseEpa" compact />}
+          <Suspense fallback={<div className="ch-trend-skeleton" aria-label="Loading team trends" />}>
+            <ConsumerTeamTrendChart teams={trendTeams} selected={codes} throughWeek={throughWeek} metric="offenseEpa" compact />
+          </Suspense>}
         {throughWeek > 0 && discovery.data && <div className="ch-feature-meta" data-testid="text-home-trend-provenance">
           <span>{game.season} · Season to date · W1–W{throughWeek} (prior final weeks)</span>
           {trendTeams.map(team => <span key={team.teamId}>{team.abbreviation}: {team.observations.filter(item => validTrendValue(item.offenseEpa)).length} valid games · {team.offenseSamples} source samples</span>)}

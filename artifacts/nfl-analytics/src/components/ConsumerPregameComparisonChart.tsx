@@ -1,14 +1,8 @@
 import type { ConsumerMatchupAssessment, ConsumerMatchupBoard, ConsumerMatchupMetric, ConsumerTeam } from '@workspace/api-client-react';
 import { lazy, Suspense, useState } from 'react';
+import { comparisonSpecs, supportedComparisonMetric } from './pregame-comparison-evidence';
 
 const PregameComparisonPlot = lazy(() => import('./PregameComparisonPlot'));
-
-const comparisonSpecs = [
-  { category: 'passing', label: 'Passing', metricLabel: 'Blended pass EPA / dropback' },
-  { category: 'rushing', label: 'Rushing', metricLabel: 'Blended rush EPA / carry' },
-  { category: 'red_zone', label: 'Offensive red zone', metricLabel: 'Offensive red-zone rate' },
-  { category: 'pace_tendency', label: 'Pace', metricLabel: 'Seconds per play' },
-] as const;
 
 type ComparisonRow = {
   category: string;
@@ -16,17 +10,6 @@ type ComparisonRow = {
   assessment: ConsumerMatchupAssessment | undefined;
   metric: ConsumerMatchupMetric | undefined;
 };
-
-function supported(metric: ConsumerMatchupMetric | undefined, assessment: ConsumerMatchupAssessment | undefined) {
-  return Boolean(
-    metric
-    && typeof metric.homeValue === 'number' && Number.isFinite(metric.homeValue)
-    && typeof metric.awayValue === 'number' && Number.isFinite(metric.awayValue)
-    && assessment
-    && assessment.edge !== 'insufficient'
-    && assessment.confidence !== 'unavailable',
-  );
-}
 
 function metricUnit(metric: ConsumerMatchupMetric) {
   if (metric.label === 'Blended pass EPA / dropback') return 'EPA/dropback';
@@ -57,7 +40,7 @@ export function ConsumerPregameComparisonChart({ board, away, home }: {
       metric: assessment?.metrics.find((item) => item.label === spec.metricLabel),
     };
   });
-  const plotted = rows.filter((row) => supported(row.metric, row.assessment));
+  const plotted = rows.filter((row) => supportedComparisonMetric(row.metric, row.assessment));
   const selected = plotted.find((row) => row.category === selectedCategory) ?? plotted[0];
   const selectedMetric = selected?.metric;
   const cutoff = new Date(board.sourceCutoff);
@@ -99,7 +82,7 @@ export function ConsumerPregameComparisonChart({ board, away, home }: {
 
     <ul className="m-0 grid list-none gap-2 p-0 sm:grid-cols-2" aria-label="Accessible list of supported pregame comparison values">
       {plotted.map(({ category, label, assessment, metric }) => {
-        const isSupported = supported(metric, assessment);
+        const isSupported = supportedComparisonMetric(metric, assessment);
         return <li key={category} className="min-w-0 rounded-lg border border-border/70 px-3 py-2">
           <div className="flex items-baseline justify-between gap-2">
             <strong className="text-sm">{label}</strong>
@@ -114,7 +97,7 @@ export function ConsumerPregameComparisonChart({ board, away, home }: {
       })}
     </ul>
     {rows.length > plotted.length && <details className="detail-zero-coverage"><summary>{rows.length - plotted.length} pregame comparison metrics unavailable · view coverage</summary>
-      <ul>{rows.filter(row => !supported(row.metric, row.assessment)).map(row => <li key={row.category}>{row.label}: {row.assessment?.coverage ?? 'Verified evidence unavailable'}</li>)}</ul>
+      <ul>{rows.filter(row => !supportedComparisonMetric(row.metric, row.assessment)).map(row => <li key={row.category}>{row.label}: {row.assessment?.coverage ?? 'Verified evidence unavailable'}</li>)}</ul>
     </details>}
 
     <footer className="text-[11px] leading-relaxed text-muted-foreground">
