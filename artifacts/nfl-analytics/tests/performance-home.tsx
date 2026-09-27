@@ -36,7 +36,7 @@ function AccountShellFixture() {
   const openPanel = () => setPanel(true);
   return <ConsumerShellView
     account={account}
-    accountControl={<button type="button" aria-label="Fixture account control" onClick={openPanel}>Account</button>}
+    accountControl={<button type="button" data-performance-account-standin="fixture-only" aria-label="Fixture account control" onClick={openPanel}>Account</button>}
     onManageAccount={openPanel}
     themeToggle={<button type="button" className="theme-toggle" onClick={() => setDark(!dark)} aria-label="Fixture theme toggle">{dark ? 'Light mode' : 'Dark mode'}</button>}
   >
