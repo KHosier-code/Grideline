@@ -943,6 +943,42 @@ export interface ConsumerWeeklyPickArchive {
   weeks: ConsumerArchivedWeeklyPick[];
 }
 
+export type ConsumerFirstLinesSportsbook = typeof ConsumerFirstLinesSportsbook[keyof typeof ConsumerFirstLinesSportsbook];
+
+
+export const ConsumerFirstLinesSportsbook = {
+  DraftKings: 'DraftKings',
+  FanDuel: 'FanDuel',
+} as const;
+
+export type ConsumerFirstLinesQuotesItemMarket = typeof ConsumerFirstLinesQuotesItemMarket[keyof typeof ConsumerFirstLinesQuotesItemMarket];
+
+
+export const ConsumerFirstLinesQuotesItemMarket = {
+  moneyline: 'moneyline',
+  spread: 'spread',
+} as const;
+
+export type ConsumerFirstLinesQuotesItem = {
+  market: ConsumerFirstLinesQuotesItemMarket;
+  selection: string;
+  /** @nullable */
+  point: number | null;
+  price: number;
+};
+
+/**
+ * Original quotes saved with the verified weekly selection, not current odds or betting advice.
+ */
+export interface ConsumerFirstLines {
+  sportsbook: ConsumerFirstLinesSportsbook;
+  /**
+     * @minItems 4
+     * @maxItems 4
+     */
+  quotes: ConsumerFirstLinesQuotesItem[];
+}
+
 export type ConsumerDashboardStatus = typeof ConsumerDashboardStatus[keyof typeof ConsumerDashboardStatus];
 
 
@@ -958,6 +994,7 @@ export type ConsumerDashboardInitialWeeklyPickPick = {
   week: number;
   probability: number;
   observedAt: string;
+  firstLines?: ConsumerFirstLines;
 } | null;
 
 export type ConsumerDashboardInitialWeeklyPick = {

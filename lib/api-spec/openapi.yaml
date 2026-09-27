@@ -1781,6 +1781,24 @@ components:
                 probability: { type: number }
                 observedAt: { type: string, format: date-time }
         reason: { type: ["string", "null"] }
+    ConsumerFirstLines:
+      type: object
+      description: Original quotes saved with the verified weekly selection, not current odds or betting advice.
+      required: [sportsbook, quotes]
+      properties:
+        sportsbook: { type: string, enum: [DraftKings, FanDuel] }
+        quotes:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: object
+            required: [market, selection, point, price]
+            properties:
+              market: { type: string, enum: [moneyline, spread] }
+              selection: { type: string }
+              point: { type: ["number", "null"] }
+              price: { type: integer }
     ConsumerDashboard:
       type: object
       required: [status, games, note, sourceHealth, initialWeeklyPick]
@@ -1802,6 +1820,8 @@ components:
                     week: { type: integer }
                     probability: { type: number }
                     observedAt: { type: string, format: date-time }
+                    firstLines:
+                      $ref: "#/components/schemas/ConsumerFirstLines"
             reason: { type: ["string", "null"] }
         games:
           type: array

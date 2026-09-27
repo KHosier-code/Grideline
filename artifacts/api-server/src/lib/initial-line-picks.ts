@@ -196,6 +196,15 @@ export async function verifySavedPick(row: typeof initialLinePicksTable.$inferSe
   });
 }
 
+/** Return only the four quotes bound to the immutable selection, never live odds history. */
+export function publicFirstLines(row: typeof initialLinePicksTable.$inferSelect) {
+  if (!row.sportsbook || !row.quotes) return undefined;
+  return {
+    sportsbook: row.sportsbook,
+    quotes: row.quotes.map(({ market, selection, point, price }) => ({ market, selection, point, price })),
+  };
+}
+
 export async function readInitialWeeklyPick(now = new Date()) {
   const schedule = await db.select({
     gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week,
@@ -215,7 +224,8 @@ export async function readInitialWeeklyPick(now = new Date()) {
     const [team] = await db.select({ name: teamsTable.teamName }).from(teamsTable)
       .where(eq(teamsTable.teamId, row.winnerTeamId!)).limit(1);
     return team ? { pick: { gameId: row.gameId, teamName: team.name, season, week,
-      probability: row.winnerProbability!, observedAt: row.observedAt.toISOString() }, reason: null }
+      probability: row.winnerProbability!, observedAt: row.observedAt.toISOString(),
+      firstLines: publicFirstLines(row) }, reason: null }
       : { pick: null, reason: "The saved winner's team identity is unavailable." };
   }
   const games = upcoming;

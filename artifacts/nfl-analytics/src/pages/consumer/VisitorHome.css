@@ -4,6 +4,14 @@
 .visitor-pick strong { display: block; overflow-wrap: anywhere; font-size: clamp(26px, 5vw, 42px); line-height: 1.2; }
 .visitor-pick > p:not(.consumer-eyebrow) { margin: 12px 0 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.5; }
 .visitor-pick-history { display: inline-block; margin-top: 18px; color: hsl(var(--primary)); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.visitor-first-lines { margin-top: 16px; padding: 12px 14px; border: 1px solid hsl(var(--border)); border-radius: 10px; font-size: 13px; }
+.visitor-first-lines summary { cursor: pointer; font-weight: 600; }
+.visitor-first-lines summary:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 3px; }
+.visitor-first-lines p { margin: 10px 0; color: hsl(var(--muted-foreground)); line-height: 1.5; }
+.visitor-first-lines-scroll { overflow-x: auto; }
+.visitor-first-lines table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
+.visitor-first-lines th, .visitor-first-lines td { padding: 7px 10px 7px 0; white-space: nowrap; border-bottom: 1px solid hsl(var(--border)); }
+.visitor-first-lines thead th { color: hsl(var(--muted-foreground)); font-weight: 600; }
 .pick-archive { max-width: 850px; }
 .pick-archive-season { display: inline-flex; align-items: center; gap: 12px; margin: 20px 0; font-weight: 600; }
 .pick-archive-season select { color: hsl(var(--foreground)); background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 8px 12px; }

@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerFirstLines } from './consumerFirstLines';
 
 export type ConsumerDashboardInitialWeeklyPickPick = {
   gameId: string;
@@ -13,4 +14,5 @@ export type ConsumerDashboardInitialWeeklyPickPick = {
   week: number;
   probability: number;
   observedAt: Date;
+  firstLines?: ConsumerFirstLines;
 } | null;

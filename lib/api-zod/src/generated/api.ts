@@ -1173,6 +1173,9 @@ export const UpdateSettingsResponse = zod.object({
  * Returns consumer-safe, persisted data only. It never starts data synchronization or model computation.
  * @summary Read the persisted consumer game dashboard
  */
+export const getConsumerDashboardResponseInitialWeeklyPickPickTwoFirstLinesQuotesMin = 4;
+export const getConsumerDashboardResponseInitialWeeklyPickPickTwoFirstLinesQuotesMax = 4;
+
 export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin = 3;
 export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax = 3;
 
@@ -1190,7 +1193,16 @@ export const GetConsumerDashboardResponse = zod.object({
   "season": zod.number().int(),
   "week": zod.number().int(),
   "probability": zod.number(),
-  "observedAt": zod.coerce.date()
+  "observedAt": zod.coerce.date(),
+  "firstLines": zod.object({
+  "sportsbook": zod.enum(['DraftKings', 'FanDuel']),
+  "quotes": zod.array(zod.object({
+  "market": zod.enum(['moneyline', 'spread']),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number().int()
+})).min(getConsumerDashboardResponseInitialWeeklyPickPickTwoFirstLinesQuotesMin).max(getConsumerDashboardResponseInitialWeeklyPickPickTwoFirstLinesQuotesMax)
+}).optional().describe('Original quotes saved with the verified weekly selection, not current odds or betting advice.')
 })]),
   "reason": zod.string().nullable()
 }),

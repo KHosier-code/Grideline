@@ -20,7 +20,13 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
       lastSuccessAt: null, sourceTimestamp: null, staleAfterMinutes: 60, message: null };
     const dashboard = {
       status: 'unavailable', games: [], note: '',
-      initialWeeklyPick: { pick: { gameId: 'first-line', teamName: 'Verified Team', season: 2026, week: 3, probability: 0.7, observedAt: '2026-09-25T12:00:00Z' }, reason: null },
+      initialWeeklyPick: { pick: { gameId: 'first-line', teamName: 'Verified Team', season: 2026, week: 3, probability: 0.7, observedAt: '2026-09-25T12:00:00Z',
+        firstLines: { sportsbook: 'DraftKings', quotes: [
+          { market: 'moneyline', selection: 'HOM', point: null, price: -135 },
+          { market: 'moneyline', selection: 'AWY', point: null, price: 115 },
+          { market: 'spread', selection: 'HOM', point: -2.5, price: -110 },
+          { market: 'spread', selection: 'AWY', point: 2.5, price: -110 },
+        ] } }, reason: null },
       sourceHealth: { status: 'healthy', sources: {
         schedule: source, odds: source, injuries: source, players: source,
       } },
@@ -41,7 +47,15 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
     assert.match(html, /<h2>Pick of the week<\/h2>/);
     assert.match(html, /data-testid="weekly-pick-team">Verified Team/);
     assert.match(html, /Winner locked from Gridline’s first verified lines for week 3/);
+    assert.match(html, /See saved first-line quotes/);
+    assert.match(html, /DraftKings.*not current odds or betting advice/);
+    assert.match(html, /HOM<\/th><td>-135<\/td><td>-2.5 \(-110\)/);
+    assert.match(html, /AWY<\/th><td>\+115<\/td><td>\+2.5 \(-110\)/);
     assert.match(visitor(dashboard), /<h1>Pick of the week<\/h1>/);
+    assert.match(visitor({ initialWeeklyPick: { pick: {
+      ...dashboard.initialWeeklyPick.pick,
+      firstLines: { ...dashboard.initialWeeklyPick.pick.firstLines, sportsbook: 'FanDuel' },
+    }, reason: null } }), /First observed.*FanDuel/);
     assert.match(visitor(dashboard), /href="\/weekly-picks"/);
     assert.match(html, /href="\/weekly-picks"/);
     assert.equal(html.match(/<section class="visitor-pick"[^>]*>.*?<\/section>/)?.[0]
@@ -55,17 +69,22 @@ test('both Home sessions use the same persisted pick, and signed-in Home keeps i
     assert.match(noPickHtml, /No upcoming games are available/);
     assert.doesNotMatch(noPickHtml, /weekly-pick-team|Winner locked/);
     assert.match(visitor(noPick), /Waiting for first verified lines/);
+    assert.doesNotMatch(visitor(noPick), /saved first-line quotes/);
+    assert.doesNotMatch(visitor({ initialWeeklyPick: { pick: {
+      ...dashboard.initialWeeklyPick.pick, firstLines: undefined }, reason: null } }), /saved first-line quotes/);
 
     const loading = signedIn(undefined, 'loading');
     assert.match(loading, /Loading this week’s pick/);
     assert.match(loading, /Loading the persisted schedule and feed status/);
     assert.doesNotMatch(loading, /weekly-pick-team|No upcoming games are available/);
     assert.match(visitor(undefined, 'loading'), /Loading this week’s pick/);
+    assert.doesNotMatch(visitor(dashboard, 'loading'), /saved first-line quotes/);
     const error = signedIn(dashboard, 'error');
     assert.match(error, /Pick unavailable right now/);
     assert.match(error, /Weekly view unavailable/);
     assert.doesNotMatch(error, /weekly-pick-team|Verified Team|No upcoming games are available/);
     assert.match(visitor(dashboard, 'error'), /Pick unavailable right now/);
+    assert.doesNotMatch(visitor(dashboard, 'error'), /saved first-line quotes/);
     const archive = (data, state = 'ready') => render(createElement(WeeklyPickArchiveContent,
       { archive: data, state, onSeasonChange: () => {} }));
     const history = archive({ seasons: [2026, 2025], season: 2025, weeks: [

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { and, eq, gt, inArray } from "drizzle-orm";
 import { db, gamesTable, initialLinePicksTable, oddsApiRequestsTable, pregameTeamFeaturesTable, sportsbookOddsTable, teamsTable } from "@workspace/db";
-import { captureInitialLineOutcome, completeInitialQuotes, nextInitialSlate, rankInitialPicks, verifySavedPick, type InitialQuote } from "./initial-line-picks";
+import { captureInitialLineOutcome, completeInitialQuotes, nextInitialSlate, publicFirstLines, rankInitialPicks, verifySavedPick, type InitialQuote } from "./initial-line-picks";
 import { inferInitialLineGame } from "./live-predictions";
 
 const home = "HME", away = "AWY";
@@ -129,12 +129,21 @@ test("development full first-line pick binds original models, quotes and inputs 
   const [saved] = await db.select().from(initialLinePicksTable).where(eq(initialLinePicksTable.gameId, gameId));
   assert.equal(saved?.status, "locked");
   assert.equal(saved?.quotes?.length, 4);
+  assert.deepEqual(publicFirstLines(saved!), {
+    sportsbook: "DraftKings",
+    quotes: quotes.map(({ market, selection, point, price }) => ({ market, selection, point, price })),
+  });
   assert.equal(Object.keys(saved?.models ?? {}).length, 3);
   assert.ok(saved?.inputVector?.length);
   assert.equal(await verifySavedPick(saved!), true);
   assert.equal(await verifySavedPick({ ...saved!, prediction: { ...saved!.prediction!, homeWinProbability: 0.99 } }), false);
   assert.equal(await verifySavedPick({ ...saved!, models: { ...saved!.models!, moneyline: { ...saved!.models!.moneyline!, checksum: "wrong" } } }), false);
   assert.equal(await captureInitialLineOutcome({ gameId, requestId: request!.id, requestedAt, observedAt, quotes }), false);
+  assert.equal(await captureInitialLineOutcome({ gameId, requestId: request!.id,
+    requestedAt, observedAt: new Date(observedAt.getTime() + 10_000),
+    quotes: quotes.map((item) => ({ ...item, price: 150 })) }), false);
+  const [unchangedPick] = await db.select().from(initialLinePicksTable).where(eq(initialLinePicksTable.gameId, gameId));
+  assert.deepEqual(publicFirstLines(unchangedPick!), publicFirstLines(saved!));
   assert.equal(await captureInitialLineOutcome({ gameId: missingId, requestId: request!.id, requestedAt, observedAt, quotes }), true);
   const [missing] = await db.select().from(initialLinePicksTable).where(eq(initialLinePicksTable.gameId, missingId));
   assert.equal(missing?.status, "missing_input");
