@@ -152,3 +152,66 @@ test('Team Evidence keeps cutoff, plots, trends, ledger and coverage aligned acr
   await expect(page.getByTestId('text-teams-source')).toContainText('Not available');
   expect(failures).toEqual([]);
 });
+
+test('Team Evidence retries failed discovery, chart and trend requests for the current season and cutoff', async ({ page }) => {
+  const failed = new Set<'discovery' | 'chart' | 'trend'>();
+  const attempts = { discovery: 0, chart: 0, trend: 0 };
+  const failures: string[] = [];
+  page.on('pageerror', error => failures.push(error.message));
+  await page.route('**/api/consumer/team-analytics?**', async route => {
+    const url = new URL(route.request().url());
+    const season = Number(url.searchParams.get('season'));
+    const week = Number(url.searchParams.get('throughWeek'));
+    const codes = url.searchParams.get('teams');
+    const window = url.searchParams.get('window') ?? 'season';
+    const kind = season === defaultSeason && week === 18 && codes === null ? 'discovery'
+      : season === defaultSeason && week === 1 && codes === null && window === 'season' ? 'chart'
+      : season === defaultSeason && week === 1 && codes !== null && window === 'last3' ? 'trend'
+      : null;
+    if (kind) {
+      attempts[kind]++;
+      if (!failed.has(kind)) {
+        failed.add(kind);
+        await route.fulfill({ status: 503, json: { error: `Fixture ${kind} failure` } });
+        return;
+      }
+    }
+    await route.fulfill({ json: fixture(season, week, window, codes, 3) });
+  });
+
+  await page.goto('/tests/team-evidence.html');
+  await expect(page.getByTestId('select-teams-season')).toHaveValue(String(defaultSeason));
+  await expect(page.getByTestId('select-teams-week')).toBeDisabled();
+  await expect(page.getByTestId('text-teams-source')).toContainText('Not available');
+  await expect(page.getByRole('alert').filter({ hasText: 'Team evidence is unavailable' })).toBeVisible();
+  await expect(page.getByTestId('button-retry-teams')).toBeVisible();
+  await page.getByTestId('button-retry-teams').click();
+  await aligned(page, 3);
+  await expect(page.getByTestId('select-teams-season')).toHaveValue(String(defaultSeason));
+
+  await page.getByTestId('select-teams-week').selectOption('1');
+  await expect(page.getByRole('alert').filter({ hasText: 'Team evidence is unavailable' })).toBeVisible();
+  await expect(page.getByTestId('button-retry-teams')).toBeVisible();
+  await expect(page.getByTestId('text-teams-source')).toContainText('Not available');
+  await expect(page.getByTestId('text-plotted-teams')).toHaveText('0 / 0 teams plotted');
+  await expect(page.getByTestId('row-team-AAA')).toHaveCount(0);
+  await expect(page.locator('.ct-trend-chart')).toHaveCount(0);
+  await page.getByTestId('button-retry-teams').click();
+  await aligned(page, 1);
+  await expect(page.getByTestId('select-teams-season')).toHaveValue(String(defaultSeason));
+
+  await page.getByTestId('select-teams-window').selectOption('last3');
+  await expect(page.getByRole('alert').filter({ hasText: 'Game history is unavailable' })).toBeVisible();
+  await expect(page.getByTestId('button-retry-trends')).toBeVisible();
+  await expect(page.locator('.ct-trend-chart')).toHaveCount(0);
+  await expect(page.getByTestId('select-teams-season')).toHaveValue(String(defaultSeason));
+  await expect(page.getByTestId('select-teams-week')).toHaveValue('1');
+  await expect(page.getByTestId('text-teams-source')).toContainText(`Fixture ${defaultSeason} W1`);
+  await expect(page.getByTestId('row-team-AAA')).toContainText('+0.100');
+  await page.getByTestId('button-retry-trends').click();
+  await aligned(page, 1);
+  await expect(page.getByTestId('select-teams-season')).toHaveValue(String(defaultSeason));
+  await expect(page.getByTestId('select-teams-window')).toHaveValue('last3');
+  expect(attempts).toEqual({ discovery: 2, chart: 2, trend: 2 });
+  expect(failures).toEqual([]);
+});
