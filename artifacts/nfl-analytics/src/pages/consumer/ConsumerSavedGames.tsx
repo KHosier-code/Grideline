@@ -1,4 +1,6 @@
 import { getListSavedGamesQueryKey, useListSavedGames } from '@workspace/api-client-react';
+import type { ConsumerGame } from '@workspace/api-client-react';
+import type { ReactNode } from 'react';
 import { useAuth } from '@clerk/react';
 import { ArrowRight, Bookmark, LockKeyhole, RefreshCw, WifiOff } from 'lucide-react';
 import { Link } from 'wouter';
@@ -14,10 +16,22 @@ export default function ConsumerSavedGames() {
     refetchOnWindowFocus: true,
   } });
 
-  const loading = !isLoaded || (Boolean(userId) && query.isLoading);
+  return <ConsumerSavedGamesView isLoaded={isLoaded} userId={userId ?? null} games={query.data ?? []}
+    isLoading={query.isLoading} isError={query.isError} onRetry={() => void query.refetch()} />;
+}
+
+export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isError, onRetry, renderSaveControl }: {
+  isLoaded: boolean;
+  userId: string | null;
+  games: ConsumerGame[];
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  renderSaveControl?: (gameId: string) => ReactNode;
+}) {
+  const loading = !isLoaded || (Boolean(userId) && isLoading);
   const signedOut = isLoaded && !userId;
-  const games = query.data ?? [];
-  const hasError = Boolean(userId && query.isError);
+  const hasError = Boolean(userId && isError);
   const count = loading || signedOut || hasError ? null : String(games.length).padStart(2, '0');
 
   return (
@@ -74,7 +88,7 @@ export default function ConsumerSavedGames() {
               <p className="sv-overline">Connection interrupted</p>
               <h3>We couldn’t load your list.</h3>
               <p>Your saved games have not been changed. Try again to get the latest view of your matchups.</p>
-              <button type="button" className="sv-retry" onClick={() => void query.refetch()} data-testid="button-retry-saved-games">
+               <button type="button" className="sv-retry" onClick={onRetry} data-testid="button-retry-saved-games">
                 <RefreshCw size={16} aria-hidden="true" /> Try again
               </button>
             </div>
@@ -93,7 +107,7 @@ export default function ConsumerSavedGames() {
           </div>
         ) : (
           <div className="sv-grid" data-testid="list-saved-games">
-            {games.map((game) => <div key={game.gameId} data-testid={`card-saved-game-${game.gameId}`}><ConsumerGameCard game={game} /></div>)}
+            {games.map((game) => <div key={game.gameId} data-testid={`card-saved-game-${game.gameId}`}><ConsumerGameCard game={game} renderSaveControl={renderSaveControl} /></div>)}
           </div>
         )}
       </section>

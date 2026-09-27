@@ -1,4 +1,5 @@
 import type { ConsumerGame, ConsumerMarketQuote } from '@workspace/api-client-react';
+import type { ReactNode } from 'react';
 import { getListSavedGameIdsQueryKey, getListSavedGamesQueryKey, useListSavedGameIds, useSaveConsumerGame, useRemoveSavedConsumerGame } from '@workspace/api-client-react';
 import { useAuth } from '@clerk/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -57,19 +58,27 @@ export function SaveGameButton({ gameId }: { gameId: string }) {
   };
   const save = useSaveConsumerGame({ mutation: { onSuccess: refresh } });
   const remove = useRemoveSavedConsumerGame({ mutation: { onSuccess: refresh } });
-  if (!isSignedIn) return <Link href="/sign-in" className="save-game-button" aria-label="Sign in to save this game"><Bookmark size={15} aria-hidden="true" /> Sign in to save</Link>;
   const saved = ids.data?.includes(gameId) ?? false;
   const pending = save.isPending || remove.isPending;
+  return <SaveGameControl isSignedIn={Boolean(isSignedIn)} saved={saved} pending={pending} loading={ids.isLoading} unavailable={ids.isError}
+    error={ids.isError ? 'Saved games unavailable. Reload to retry.' : save.isError || remove.isError ? 'Could not update saved games. Try again.' : null}
+    onToggle={() => saved ? remove.mutate({ gameId }) : save.mutate({ gameId })} />;
+}
+
+export function SaveGameControl({ isSignedIn, saved, pending = false, loading = false, unavailable = false, error = null, onToggle }: {
+  isSignedIn: boolean; saved: boolean; pending?: boolean; loading?: boolean; unavailable?: boolean; error?: string | null; onToggle: () => void;
+}) {
+  if (!isSignedIn) return <Link href="/sign-in" className="save-game-button" aria-label="Sign in to save this game"><Bookmark size={15} aria-hidden="true" /> Sign in to save</Link>;
   return <span className="save-game-control">
-    <button type="button" className="save-game-button" aria-pressed={saved} disabled={pending || ids.isLoading || ids.isError}
-      onClick={() => saved ? remove.mutate({ gameId }) : save.mutate({ gameId })}>
+    <button type="button" className="save-game-button" aria-pressed={saved} disabled={pending || loading || unavailable}
+      onClick={onToggle}>
       <Bookmark size={15} fill={saved ? 'currentColor' : 'none'} aria-hidden="true" /> {pending ? 'Updating…' : saved ? 'Remove saved game' : 'Save game'}
     </button>
-    {(ids.isError || save.isError || remove.isError) && <small role="alert">{ids.isError ? 'Saved games unavailable. Reload to retry.' : 'Could not update saved games. Try again.'}</small>}
+    {error && <small role="alert">{error}</small>}
   </span>;
 }
 
-export function ConsumerGameCard({ game, compact = false, href = `/games/${game.gameId}` }: { game: ConsumerGame; compact?: boolean; href?: string }) {
+export function ConsumerGameCard({ game, compact = false, href = `/games/${game.gameId}`, renderSaveControl }: { game: ConsumerGame; compact?: boolean; href?: string; renderSaveControl?: (gameId: string) => ReactNode }) {
   const final = game.finalScore;
   const prediction = game.prediction;
   const spread = game.marketBoard.comparisons.find((comparison) => comparison.market === 'spread');
@@ -89,7 +98,7 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
       </div>}
       <div className="consumer-game-card-foot"><span>{game.dataConfidence.reason ?? `${game.dataConfidence.label} data confidence`}</span><ChevronRight className="h-4 w-4" /></div>
     </Link>
-    <div className="consumer-game-card-save"><SaveGameButton gameId={game.gameId} /></div>
+    <div className="consumer-game-card-save">{renderSaveControl ? renderSaveControl(game.gameId) : <SaveGameButton gameId={game.gameId} />}</div>
     </div>
   );
 }

@@ -168,3 +168,54 @@ test('consumer palette and route hierarchy remain readable across themes and wid
     }
   }
 });
+
+test('signed-in Saved Games component states keep real cards and controls legible without a live account', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const theme of ['dark', 'light'] as const) {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 850 });
+      await page.addInitScript(value => localStorage.setItem('gridline-theme', value), theme);
+      for (const state of ['populated', 'empty', 'loading', 'error'] as const) {
+        await page.goto(`/tests/saved-games.html?state=${state}`);
+        await expectTheme(page, theme);
+        await expect(page.getByRole('heading', { level: 1, name: 'Saved games.' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Browse games' })).toHaveAttribute('href', '/games');
+        if (state === 'populated') {
+          const list = page.getByTestId('list-saved-games');
+          await expect(list).toBeVisible();
+          await expect(list.locator('.consumer-game-card')).toHaveCount(2);
+          const first = page.getByTestId('card-saved-game-fixture-baltimore-buffalo');
+          await expect(first.getByText('Baltimore Ravens')).toBeVisible();
+          await expect(first.getByText('Buffalo Bills')).toBeVisible();
+          await expect(first.getByText('Projection', { exact: true })).toBeVisible();
+          await expect(first.getByText('Market spread', { exact: true })).toBeVisible();
+          await expect(first.getByText('Fixture Book')).toBeVisible();
+          await expect(first.getByRole('button', { name: 'Remove saved game' })).toHaveAttribute('aria-pressed', 'true');
+          await expect(page.getByTestId('card-saved-game-fixture-detroit-green-bay').getByText('Final')).toBeVisible();
+          await expect(first.locator('.consumer-game-card-link')).toHaveAttribute('href', '/games/fixture-baltimore-buffalo');
+        } else if (state === 'empty') {
+          await expect(page.getByTestId('status-saved-games-empty')).toBeVisible();
+          await expect(page.getByTestId('link-explore-empty-saved-games')).toHaveAttribute('href', '/games');
+        } else if (state === 'loading') {
+          await expect(page.getByRole('status', { name: 'Loading saved games' })).toBeVisible();
+          await expect(page.locator('.sv-body')).toHaveAttribute('aria-busy', 'true');
+        } else {
+          await expect(page.getByTestId('status-saved-games-error')).toBeVisible();
+          await expect(page.getByTestId('button-retry-saved-games')).toBeVisible();
+        }
+        await expectNoHorizontalOverflow(page);
+        await page.screenshot({ path: testInfo.outputPath(`gridline-${theme}-saved-games-${state}-${width}.png`), fullPage: true });
+        if (state === 'populated') {
+          const control = page.getByTestId('card-saved-game-fixture-baltimore-buffalo').getByRole('button', { name: 'Remove saved game' });
+          await control.click();
+          await expect(page.getByTestId('card-saved-game-fixture-baltimore-buffalo').getByRole('button', { name: 'Save game' })).toHaveAttribute('aria-pressed', 'false');
+        }
+        if (state === 'error') {
+          await page.getByTestId('button-retry-saved-games').click();
+          await expect(page.getByTestId('list-saved-games')).toBeVisible();
+        }
+      }
+    }
+  }
+});
