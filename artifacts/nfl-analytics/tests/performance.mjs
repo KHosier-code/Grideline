@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { readdir, stat, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fixtureExpected, fixtureVersion, homePerformanceResponse } from './home-performance-api.mjs';
+import { isSparseGameDetail } from './performance-sparse-evidence.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const base = process.env.BASE_PATH ?? '/';
@@ -57,17 +58,12 @@ try {
           const dashboardResponse = await fetch('http://localhost:80/api/consumer/dashboard');
           if (!dashboardResponse.ok) throw new Error(`Consumer API unavailable (${dashboardResponse.status}); start the API workflow before measuring.`);
           const dashboard = await dashboardResponse.json();
-          const comparisonLabels = new Set(['Blended pass EPA / dropback', 'Blended rush EPA / carry', 'Offensive red-zone rate', 'Seconds per play']);
           for (const candidate of dashboard.games ?? []) {
             if (!candidate.gameId || candidate.prediction) continue;
             const detailResponse = await fetch(`http://localhost:80/api/consumer/games/${encodeURIComponent(candidate.gameId)}`);
             if (!detailResponse.ok) throw new Error(`Game Detail unavailable (${detailResponse.status}).`);
             const detail = await detailResponse.json();
-            const chartableComparison = detail.matchupBoard?.assessments?.some(assessment =>
-              assessment.edge !== 'insufficient' && assessment.confidence !== 'unavailable'
-              && assessment.metrics.some(metric => comparisonLabels.has(metric.label)
-                && Number.isFinite(metric.homeValue) && Number.isFinite(metric.awayValue)));
-            if (!detail.prediction && !chartableComparison && !detail.movement?.streams?.some(stream => stream.observations.length > 0)) {
+             if (isSparseGameDetail(detail)) {
               sparseGameId = candidate.gameId;
               break;
             }
@@ -151,9 +147,6 @@ try {
             jsRequests: scripts.length,
             jsTransferKiB: Math.round(scripts.reduce((sum, e) => sum + e.transferSize, 0) / 1024),
             assets: scripts.map(e => new URL(e.name).pathname.split('/').pop()),
-            chartLoaded: Boolean(document.querySelector('[data-section="pregame-team-comparison"] .recharts-wrapper, [data-section="line-movement"] .recharts-wrapper')),
-            comparisonUnavailable: Boolean(document.querySelector('[data-section="pregame-team-comparison"] [role="status"]')),
-            movementUnavailable: Boolean(document.querySelector('[data-section="line-movement"] .movement-empty')),
           };
         });
         let accountActionMs = null;
@@ -171,6 +164,30 @@ try {
           // saved-games route, where private data remains inaccessible.
         }
         if (unexpectedRequests.length) throw new Error(`Unexpected fixture API requests: ${unexpectedRequests.join(', ')}`);
+         if (route === `/games/${encodeURIComponent(sparseGameId)}`) {
+           // Inspect the original detail before the navigation check below.
+           // The disclosures intentionally defer their content; opening them
+           // after cold-load measurement must still avoid both chart bundles.
+           await page.getByTestId('disclosure-market').locator('summary').click();
+           await page.getByTestId('disclosure-matchups').locator('summary').click();
+           await page.locator('[data-section="line-movement"] .movement-empty').waitFor();
+           await page.locator('[data-section="pregame-team-comparison"] [role="status"]').waitFor();
+           const sparseEvidence = await page.evaluate(() => {
+             const assets = performance.getEntriesByType('resource')
+               .filter(e => new URL(e.name).pathname.endsWith('.js'))
+               .map(e => new URL(e.name).pathname.split('/').pop());
+             return {
+               chartLoaded: Boolean(document.querySelector('[data-section="pregame-team-comparison"] .recharts-wrapper, [data-section="line-movement"] .recharts-wrapper')),
+               comparisonUnavailable: Boolean(document.querySelector('[data-section="pregame-team-comparison"] [role="status"]')),
+               movementUnavailable: Boolean(document.querySelector('[data-section="line-movement"] .movement-empty')),
+               chartAssets: assets.filter(asset => /^(generateCategoricalChart|PregameComparisonPlot|LineMovementPlot|LineChart)-/.test(asset)),
+             };
+           });
+           if (sparseEvidence.chartLoaded || !sparseEvidence.comparisonUnavailable
+             || !sparseEvidence.movementUnavailable || sparseEvidence.chartAssets.length) {
+             throw new Error(`Sparse Game Detail rendered chart evidence unexpectedly: ${JSON.stringify(sparseEvidence)}`);
+           }
+         }
         if (settings.isMobile && route !== '/games') await page.getByRole('button', { name: 'Open navigation' }).click();
         const link = route === '/games'
           ? page.getByRole('link', { name: /^Open .* details$/ }).first()
@@ -190,12 +207,6 @@ try {
           await page.reload({ waitUntil: 'domcontentloaded' });
           await page.getByTestId('status-saved-games-signed-out').waitFor({ timeout: 12_000 });
           if (await page.getByTestId('list-saved-games').count()) throw new Error('Account fixture exposed private saved games.');
-        }
-        if (route === `/games/${encodeURIComponent(sparseGameId)}` && (
-          data.chartLoaded || !data.comparisonUnavailable || !data.movementUnavailable
-          || data.assets.some(asset => /^(generateCategoricalChart|PregameComparisonPlot|LineMovementPlot|LineChart)-/.test(asset))
-        )) {
-          throw new Error('Sparse Game Detail must show both unavailable states without downloading chart code or rendering a chart.');
         }
         results.push({ profile, route, scenario: isAccountFixture ? 'unauthenticated-account-shell-visual-fixture' : isHomeFixture ? 'signed-in-weekly-home-component-fixture' : 'anonymous-production-route', httpStatus: response?.status(), routeReadyMs, interactionMs, accountActionMs, ...data });
         await context.close();
