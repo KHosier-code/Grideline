@@ -1,5 +1,6 @@
 playwright-report/
 test-results/
+test-results-usage/
 *clerk-state*.json
 artifacts/nfl-analytics/tests/.auth/
 gridline-theme-admin-grant.json
