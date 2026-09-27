@@ -23,6 +23,17 @@ test('missing schedule or unmatched team-stat coverage leaves form unavailable',
   assert.equal(latestCompletePriorWeek([{ ...full[0]!, allFinal: false }, full[1]!], 2), 0);
 });
 
+test('provider matchup gaps stop the team cutoff even when persisted games are final and stat-covered', () => {
+  const verified = full.map(week => ({
+    ...week, expectedGames: 16, missingMatchups: [], fixtureVerified: true,
+  }));
+  const gap = { ...verified[1]!, expectedGames: 17, missingMatchups: ['BBB at AAA (absent)'] };
+  assert.equal(teamEvidenceWeek([verified[0]!, gap, { ...verified[1]!, week: 3 }], null), 1);
+  assert.equal(teamEvidenceWeek([verified[0]!, gap, { ...verified[1]!, week: 3 }], 3), 1);
+  assert.equal(teamEvidenceWeek([{ ...gap, week: 1 }, verified[1]!], null), 0);
+  assert.equal(teamEvidenceWeek([{ ...gap, week: 1 }, verified[1]!], 2), 0);
+});
+
 test('team selection stays on a verified cutoff, follows new weeks by default, and resets on season change', () => {
   assert.equal(teamEvidenceWeek([], null), 0);
   assert.equal(teamEvidenceWeek([{ ...full[0]!, finalGames: 1, statGames: 1, allFinal: false }], null), 0);

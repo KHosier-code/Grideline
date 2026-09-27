@@ -6,7 +6,9 @@ export function latestCompletePriorWeek(weeks: ConsumerTeamAnalyticsCoverageWeek
   let complete = 0;
   for (let week = 1; week <= priorWeek; week += 1) {
     const coverage = byWeek.get(week);
-    if (!coverage || !coverage.allFinal || coverage.scheduledGames <= 0
+    if (!coverage || !coverage.allFinal || !coverage.fixtureVerified
+      || coverage.missingMatchups.length > 0 || coverage.expectedGames !== coverage.scheduledGames
+      || coverage.scheduledGames <= 0
       || coverage.finalGames !== coverage.scheduledGames || coverage.statGames !== coverage.finalGames) break;
     complete = week;
   }

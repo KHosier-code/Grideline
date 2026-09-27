@@ -13,7 +13,7 @@ const covered = (week: number): Week => ({
   finalGames: 2, statGames: 2, allFinal: true,
 });
 
-function fixture(season: number, throughWeek: number, window: string, codes: string | null, phase: number) {
+function fixture(season: number, throughWeek: number, window: string, codes: string | null, phase: number, gapWeek: number | null = null) {
   const weeks = season === defaultSeason ? [
     covered(1), covered(2),
     phase === 1
@@ -22,7 +22,13 @@ function fixture(season: number, throughWeek: number, window: string, codes: str
         ? { ...covered(3), statGames: 1 }
         : covered(3),
   ] : [];
-  const availableWeek = phase === 3 ? 3 : 2;
+  if (season === defaultSeason && gapWeek !== null) {
+    weeks[gapWeek - 1] = {
+      ...covered(gapWeek), expectedGames: 3, missingMatchups: ['DDD at CCC (missing-game)'],
+      allFinal: false,
+    };
+  }
+  const availableWeek = gapWeek !== null ? gapWeek - 1 : phase === 3 ? 3 : 2;
   const active = season === defaultSeason && throughWeek <= availableWeek;
   const selected = codes ? codes.split(',') : ['AAA', 'BBB'];
   const teams = active ? selected.map((code, index) => ({
@@ -44,7 +50,9 @@ function fixture(season: number, throughWeek: number, window: string, codes: str
     coverage: {
       weeks: weeks.filter(item => item.week <= throughWeek),
       partialReasons: weeks.filter(item => item.week <= throughWeek && (!item.allFinal || item.statGames < item.finalGames))
-        .map(item => `Week ${item.week} has incomplete evidence.`),
+        .map(item => item.missingMatchups.length
+          ? `Week ${item.week} is missing 1 provider schedule matchup(s): ${item.missingMatchups.join(', ')}.`
+          : `Week ${item.week} has incomplete evidence.`),
     },
     teams,
   };
@@ -213,5 +221,41 @@ test('Team Evidence retries failed discovery, chart and trend requests for the c
   await expect(page.getByTestId('select-teams-season')).toHaveValue(String(defaultSeason));
   await expect(page.getByTestId('select-teams-window')).toHaveValue('last3');
   expect(attempts).toEqual({ discovery: 2, chart: 2, trend: 2 });
+  expect(failures).toEqual([]);
+});
+
+test('missing provider matchups keep Team Evidence at the last contiguous week, including no week one', async ({ page }) => {
+  let gapWeek = 2;
+  const requests: number[] = [];
+  const failures: string[] = [];
+  page.on('pageerror', error => failures.push(error.message));
+  await page.route('**/api/consumer/team-analytics?**', async route => {
+    const url = new URL(route.request().url());
+    const season = Number(url.searchParams.get('season'));
+    const week = Number(url.searchParams.get('throughWeek'));
+    requests.push(week);
+    await route.fulfill({ json: fixture(season, week, url.searchParams.get('window') ?? 'season',
+      url.searchParams.get('teams'), 3, gapWeek) });
+  });
+  await page.goto('/tests/team-evidence.html');
+  await expect(page.getByTestId('select-teams-season')).toHaveValue(String(defaultSeason));
+  await aligned(page, 1);
+  await expect(page.getByTestId('status-teams-coverage')).toContainText('Week 2 is missing 1 provider matchup(s): DDD at CCC (missing-game). Charts cannot advance.');
+  await expect(page.getByTestId('select-teams-week').locator('option')).toHaveCount(1);
+  await expect(page.getByTestId('status-coverage-week-2')).toHaveCount(0);
+  expect(requests.every(week => week === 18 || week === 1)).toBe(true);
+
+  gapWeek = 1;
+  requests.length = 0;
+  await page.reload();
+  await expect(page.getByTestId('select-teams-week')).toBeDisabled();
+  await expect(page.getByTestId('select-teams-week')).toHaveValue('0');
+  await expect(page.getByTestId('status-teams-coverage')).toContainText('Week 1 is missing 1 provider matchup(s): DDD at CCC (missing-game). Charts cannot advance.');
+  await expect(page.getByTestId('status-teams-unavailable')).toContainText('no fully final, statistically covered week');
+  await expect(page.getByTestId('text-plotted-teams')).toHaveText('0 / 0 teams plotted');
+  await expect(page.getByTestId('row-team-AAA')).toHaveCount(0);
+  await expect(page.locator('.ct-trend-chart')).toHaveCount(0);
+  await expect(page.getByTestId('text-teams-source')).toContainText('Not available');
+  expect(requests).toEqual([18]);
   expect(failures).toEqual([]);
 });

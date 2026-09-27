@@ -5,7 +5,6 @@ import { buildConsumerTeamAnalytics, type TeamAnalyticsWindow } from "../lib/con
 import { teamFixtureVerifier } from "../lib/team-fixture-verification";
 import { consumerVerifiedImages } from "../lib/verified-imagery";
 
-const router: IRouter = Router();
 const validWindows = new Set<TeamAnalyticsWindow>(["season", "last3", "last5", "last8"]);
 
 function queryValue(value: unknown): string | null {
@@ -20,7 +19,11 @@ function safeErrorMessage(error: unknown) {
     .slice(0, 500);
 }
 
-router.get("/consumer/team-analytics", async (req, res): Promise<void> => {
+export function createConsumerTeamAnalyticsRouter(
+  verifier: Pick<typeof teamFixtureVerifier, "getWeeks"> = teamFixtureVerifier,
+): IRouter {
+  const router: IRouter = Router();
+  router.get("/consumer/team-analytics", async (req, res): Promise<void> => {
   const now = new Date();
   const seasonText = queryValue(req.query.season);
   const throughWeekText = queryValue(req.query.throughWeek);
@@ -113,7 +116,7 @@ router.get("/consumer/team-analytics", async (req, res): Promise<void> => {
     // Provider coverage is independent of persisted games. The bounded verifier
     // returns unknown for any week without a recent successful fixture.
     const fixtureStarted = performance.now();
-    const fixtureWeeks = await teamFixtureVerifier.getWeeks(season, throughWeek);
+    const fixtureWeeks = await verifier.getWeeks(season, throughWeek);
     req.log.info({
       season, throughWeek, verifiedWeeks: fixtureWeeks.filter((entry) => entry.games !== null).length,
       durationMs: Math.round(performance.now() - fixtureStarted),
@@ -135,6 +138,8 @@ router.get("/consumer/team-analytics", async (req, res): Promise<void> => {
     }, "Consumer team analytics read failed");
     res.status(503).json({ error: "Team analytics data is unavailable", code: "consumer_data_unavailable" });
   }
-});
+  });
+  return router;
+}
 
-export default router;
+export default createConsumerTeamAnalyticsRouter();
