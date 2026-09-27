@@ -3,12 +3,14 @@ import { createReadStream } from "node:fs";
 import { and, asc, eq, lte } from "drizzle-orm";
 import { db, playerPositionSourceReleasesTable } from "@workspace/db";
 import { readDefenseInputs, type DefenseInputs } from "./defense-vs-position";
+import { archivePlayerPositionSource, verifyArchivedSource, type SourceArchive } from "./player-position-source-archive";
 
 export type PositionRelease = {
   capturedAt: Date;
   fingerprint: string;
   input: DefenseInputs;
   publisherEvidence: PublisherEvidence[];
+  archivedSources?: SourceArchive[];
 };
 export type PublisherEvidence = {
   dataset: "player_stats" | "pbp";
@@ -104,20 +106,35 @@ async function publisherEvidence(input: DefenseInputs, season: number, capturedA
 /** A capture is an observed, immutable local release, NOT a historical
  * publisher timestamp. Never backdate it to a source-file completion time. */
 export async function capturePlayerPositionRelease(season: number): Promise<boolean> {
-  const capturedAt = new Date();
-  const input = await readDefenseInputs(season, capturedAt);
+  const observedAt = new Date();
+  const input = await readDefenseInputs(season, observedAt);
   if (!["player_stats", "pbp"].every(dataset => input.sources.some(source =>
     source.season === season && source.dataset === dataset && source.status === "success"
-    && source.completedAt && source.completedAt <= capturedAt))) return false;
+    && source.completedAt && source.completedAt <= observedAt))) return false;
   // A source row imported while the snapshot was being read cannot be
   // certified by this capture.
-  if (input.stats.some(row => row.sourceUpdatedAt > capturedAt)
-    || input.rzTeams.some(row => row.ingestedAt > capturedAt)
-    || input.rzPlayers.some(row => row.ingestedAt > capturedAt)) return false;
+  if (input.stats.some(row => row.sourceUpdatedAt > observedAt)
+    || input.rzTeams.some(row => row.ingestedAt > observedAt)
+    || input.rzPlayers.some(row => row.ingestedAt > observedAt)) return false;
+  const evidence = await publisherEvidence(input, season, observedAt);
+  const archivedSources: SourceArchive[] = [];
+  for (const dataset of ["player_stats", "pbp"] as const) {
+    const source = input.sources.find(s => s.season === season && s.dataset === dataset)!;
+    if (!source.localPath || !source.sourceSha256 || !source.fileSizeBytes) {
+      throw new Error(`Cannot archive ${dataset} ${season} without compressed source receipt`);
+    }
+    archivedSources.push(await archivePlayerPositionSource({
+      dataset, season, sourceUrl: source.sourceUrl, localPath: source.localPath,
+      sha256: source.sourceSha256, size: source.fileSizeBytes,
+    }));
+  }
+  // Archival itself can cross kickoff. The recorded capture must never precede
+  // the durable bytes becoming available.
+  const capturedAt = new Date();
   const payload = {
     games: input.games, stats: input.stats, rzTeams: input.rzTeams, rzPlayers: input.rzPlayers,
     teams: input.teams, sources: input.sources,
-    publisherEvidence: await publisherEvidence(input, season, capturedAt),
+    publisherEvidence: evidence, archivedSources,
   };
   const fingerprint = digest(payload);
   await db.insert(playerPositionSourceReleasesTable)
@@ -137,9 +154,11 @@ export async function readPlayerPositionReleases(season: number, cutoff: Date): 
     }
     const p = row.payload as unknown as DefenseInputs;
     const evidence = (row.payload as { publisherEvidence?: PublisherEvidence[] }).publisherEvidence;
+    const archives = (row.payload as { archivedSources?: SourceArchive[] }).archivedSources;
     return {
       capturedAt: row.capturedAt, fingerprint: row.fingerprint,
       publisherEvidence: Array.isArray(evidence) ? evidence : [],
+      archivedSources: Array.isArray(archives) ? archives : [],
       input: {
         ...p,
         games: p.games.map(g => ({ ...g, kickoffTime: g.kickoffTime ? new Date(g.kickoffTime) : null })),
@@ -152,3 +171,37 @@ export async function readPlayerPositionReleases(season: number, cutoff: Date): 
     };
   });
 }
+
+/** Independent audit lookup: the immutable release fingerprint binds the
+ * source reference and publisher asset evidence to the retrieved bytes. */
+export async function retrievePlayerPositionSource(
+  season: number, fingerprint: string, dataset: SourceArchive["dataset"], outputPath?: string,
+): Promise<{ archive: SourceArchive; publisherEvidence: PublisherEvidence | null }> {
+  if (!validFingerprint(fingerprint)) throw new Error("Invalid player-position release fingerprint");
+  const [release] = await db.select().from(playerPositionSourceReleasesTable)
+    .where(and(eq(playerPositionSourceReleasesTable.season, season),
+      eq(playerPositionSourceReleasesTable.fingerprint, fingerprint)));
+  if (!release || digest(release.payload) !== fingerprint) {
+    throw new Error("Player-position release missing or fingerprint mismatch");
+  }
+  const payload = release.payload as {
+    archivedSources?: SourceArchive[]; sources?: DefenseInputs["sources"];
+    publisherEvidence?: PublisherEvidence[];
+  };
+  const references = payload.archivedSources?.filter(a => a.dataset === dataset && a.season === season) ?? [];
+  const evidence = payload.publisherEvidence?.filter(e => e.dataset === dataset && e.season === season) ?? [];
+  const source = payload.sources?.find(s => s.dataset === dataset && s.season === season);
+  const archive = references[0];
+  if (references.length !== 1 || !archive || !source
+    || source.sourceSha256 !== archive.sha256 || source.sourceUrl !== archive.sourceUrl
+    || source.fileSizeBytes !== archive.size
+    || evidence.length > 1
+    || evidence.some(e => e.sha256 !== archive.sha256 || e.sourceUrl !== archive.sourceUrl
+      || e.size !== archive.size)) {
+    throw new Error("Archived source does not match its immutable release receipt");
+  }
+  await verifyArchivedSource(archive, outputPath);
+  return { archive, publisherEvidence: evidence[0] ?? null };
+}
+
+const validFingerprint = (value: string) => /^[a-f0-9]{64}$/.test(value);

@@ -15,7 +15,9 @@
     "player-projections:baseline:dev": "export NODE_ENV=development && pnpm exec esbuild src/player-projections-cli.ts --bundle --platform=node --format=cjs --external:*.node --external:pg-native --outfile=dist/player-projections-cli.cjs && node --enable-source-maps ./dist/player-projections-cli.cjs",
     "player-projections:independent:dev": "export NODE_ENV=development && pnpm exec esbuild src/player-projections-independent-cli.ts --bundle --platform=node --format=cjs --external:*.node --external:pg-native --outfile=dist/player-projections-independent-cli.cjs && node --enable-source-maps ./dist/player-projections-independent-cli.cjs",
     "player-position:evaluate:dev": "export NODE_ENV=development && pnpm run build && node --enable-source-maps ./dist/player-position-evaluation-cli.mjs",
+    "player-position:source:audit": "node --enable-source-maps ./dist/player-position-source-audit-cli.mjs",
     "test:player-position": "pnpm run build && node --test ./dist/lib/player-position-matchup.test.mjs ./dist/lib/player-position-evaluation.test.mjs ./dist/lib/availability-roster.test.mjs",
+    "test:player-position-archive": "pnpm run build && node --test ./dist/lib/player-position-source-archive.test.mjs",
     "test:initial-line-picks": "pnpm run build && NODE_ENV=development node --test ./dist/lib/initial-line-picks.test.mjs",
     "test:player-position-performance": "pnpm run build && bash ../../scripts/test-player-position-performance.sh",
     "test:player-position-performance:real": "pnpm run build && GRIDLINE_PLAYER_POSITION_REAL_SEASON=1 node --test ./dist/lib/player-position-matchup-performance.test.mjs",
@@ -42,6 +44,7 @@
   "dependencies": {
     "@clerk/express": "^2.1.67",
     "@clerk/shared": "^4.31.1",
+    "@google-cloud/storage": "^8.2.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "cookie-parser": "^1.4.7",

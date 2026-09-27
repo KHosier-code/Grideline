@@ -1,7 +1,8 @@
 import { createReadStream } from "node:fs";
 import { createHash } from "node:crypto";
 import { capturePlayerPositionRelease } from "./player-position-releases";
-import { mkdir, rename, stat, writeFile } from "node:fs/promises";
+import { archivePlayerPositionSource, replaceCachedSource } from "./player-position-source-archive";
+import { mkdir, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
@@ -13,6 +14,7 @@ import {
   historicalDepthChartTable,
   nflversePlayerIdentitiesTable,
   nflverseSourceFilesTable,
+  playerPositionSourceVersionsTable,
   playerGameStatsTable,
   playersTable,
   redZonePlayerGameFactsTable,
@@ -245,18 +247,33 @@ async function acquireDataset(dataset: NflverseDataset, season: number, options?
         sourceSha256: null },
     });
   try {
+    const preserveSource = async (size: number, sha256: string) => {
+      if (dataset !== "pbp" && dataset !== "player_stats") return;
+      const archive = await archivePlayerPositionSource({
+        dataset, season, sourceUrl: url, localPath: filePath, sha256, size,
+      });
+      await db.insert(playerPositionSourceVersionsTable).values({
+        ...archive, firstObservedAt: new Date(),
+      }).onConflictDoNothing();
+    };
     let fileStats = await stat(filePath).catch(() => null);
     if (!fileStats || fileStats.size === 0 || shouldRefreshNflverseSource(options)) {
       const response = await fetchWithRetry(url);
       const bytes = Buffer.from(await response.arrayBuffer());
-      const temporaryPath = `${filePath}.${process.pid}.tmp`;
-      await writeFile(temporaryPath, bytes);
-      await rename(temporaryPath, filePath);
+      await replaceCachedSource(filePath, bytes, async () => {
+        if (dataset !== "pbp" && dataset !== "player_stats") return;
+        const priorHash = createHash("sha256");
+        for await (const chunk of createReadStream(filePath)) priorHash.update(chunk);
+        await preserveSource((await stat(filePath)).size, priorHash.digest("hex"));
+      });
       fileStats = await stat(filePath);
     }
     const hash = createHash("sha256");
     for await (const chunk of createReadStream(filePath)) hash.update(chunk);
     const sourceSha256 = hash.digest("hex");
+    // Also record the newly downloaded (or reused) compressed version. These
+    // observation times never imply the bytes were available before kickoff.
+    await preserveSource(fileStats.size, sourceSha256);
     await db
       .update(nflverseSourceFilesTable)
       .set({ status: "downloaded", fileSizeBytes: fileStats.size, sourceSha256 })

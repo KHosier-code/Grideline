@@ -880,6 +880,21 @@ export const playerPositionSourceReleasesTable = pgTable("player_position_source
   index("player_position_source_release_time_idx").on(table.season, table.capturedAt),
 ]);
 
+/** Content-addressed compressed source bytes, recorded as they are acquired.
+ * The release payload later binds these bytes to publisher asset evidence. */
+export const playerPositionSourceVersionsTable = pgTable("player_position_source_versions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  dataset: text("dataset").notNull(),
+  season: integer("season").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  sha256: text("sha256").notNull(),
+  size: integer("size").notNull(),
+  objectKey: text("object_key").notNull(),
+  generation: text("generation").notNull(),
+  firstObservedAt: timestamp("first_observed_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  unique("player_position_source_version_unique").on(table.dataset, table.season, table.sha256),
+]);
 export const teamGameStatsTable = pgTable("team_game_stats", {
   season: integer("season").notNull(),
   week: integer("week").notNull(),
