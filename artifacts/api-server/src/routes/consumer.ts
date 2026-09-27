@@ -1,6 +1,8 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lt, lte, or, sql } from "drizzle-orm";
 import { getAuth } from "@clerk/express";
 import { Router, type IRouter, type NextFunction, type Request, type Response } from "express";
+import { requireAdmin } from "../middlewares/admin";
+import { GetScheduleStatusHealthResponse } from "@workspace/api-zod";
 import {
   db,
   gamesTable,
@@ -1672,22 +1674,60 @@ export function consumerScheduleSummaryQuery(now: Date) {
       .groupBy(gamesTable.season, gamesTable.week);
 }
 
-export function unfamiliarGameStatusesQuery() {
-  const status = sql`lower(btrim(regexp_replace(${gamesTable.gameStatus}, '[_-]+', ' ', 'g')))`;
+function unfamiliarGameStatusCondition() {
+  const status = sql`regexp_replace(lower(btrim(${gamesTable.gameStatus})), '[_-]+', ' ', 'g')`;
   const known = sql`(${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.scheduled}
     or ${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.terminal}
     or ${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.live})`;
+  return sql`not coalesce(${known}, false)`;
+}
+export function unfamiliarGameStatusesQuery() {
   return db.select({
     season: sql<number>`max(${gamesTable.season})`.as("season"),
-    week: sql<number>`max(${gamesTable.week})`.as("week"),
+    week: sql<number>`(array_agg(${gamesTable.week} order by ${gamesTable.season} desc, ${gamesTable.week} desc))[1]`.as("week"),
     gameStatus: gamesTable.gameStatus,
+    statusCount: sql<string>`count(*)`.as("status_count"),
     total: sql<string>`sum(count(*)) over()`.as("total"),
   }).from(gamesTable)
-    .where(sql`not coalesce(${known}, false)`)
+    .where(unfamiliarGameStatusCondition())
     .groupBy(gamesTable.gameStatus)
-    .orderBy(sql`max(${gamesTable.season}) desc`)
+    .orderBy(sql`max(${gamesTable.season}) desc`, sql`max(${gamesTable.week}) desc`)
     .limit(5);
 }
+
+export function unfamiliarGameStatusSlatesQuery() {
+  return db.select({
+    season: gamesTable.season,
+    week: gamesTable.week,
+    count: sql<string>`count(*)`.as("count"),
+  }).from(gamesTable)
+    .where(unfamiliarGameStatusCondition())
+    .groupBy(gamesTable.season, gamesTable.week)
+    .orderBy(desc(gamesTable.season), desc(gamesTable.week))
+    .limit(8);
+}
+
+router.get("/admin/schedule-status-health", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    const [examples, slates] = await Promise.all([unfamiliarGameStatusesQuery(), unfamiliarGameStatusSlatesQuery()]);
+    res.set("Cache-Control", "private, no-store");
+    res.json(GetScheduleStatusHealthResponse.parse({
+      unknownCount: examples.length ? Number(examples[0].total) : 0,
+      examples: examples.map((row) => ({
+        status: sanitizeGameStatus(row.gameStatus),
+        count: Number(row.statusCount),
+        season: row.season,
+        week: row.week,
+      })),
+      recentSlates: slates.map((row) => ({ season: row.season, week: row.week, count: Number(row.count) })),
+      supportedCategories: ["scheduled", "live", "terminal"],
+      guidance: "Review the provider's status vocabulary and affected games before changing Games selector eligibility. Unknown values still use the existing kickoff-based consumer fallback.",
+    }));
+  } catch (error) {
+    req.log.error({ error }, "Admin schedule status health read failed");
+    res.status(503).json({ error: "Schedule status audit unavailable" });
+  }
+});
 
 router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
   try {
@@ -2810,6 +2850,9 @@ export default router;
 
 let lastUnfamiliarStatusWarning = 0;
 
+function sanitizeGameStatus(value: string | null) {
+  return (value ?? "").slice(0, 48).replace(/[^a-zA-Z0-9 _-]/g, "?") || "(empty)";
+}
 export function unfamiliarStatusWarning(rows: Array<{ season: number; week: number; gameStatus: string | null; total: string }>) {
   if (!rows.length) return null;
   return {
@@ -2818,7 +2861,7 @@ export function unfamiliarStatusWarning(rows: Array<{ season: number; week: numb
       season: row.season,
       week: row.week,
       // Provider values are untrusted: no raw payload or unbounded string enters logs.
-      status: (row.gameStatus ?? "").slice(0, 48).replace(/[^a-zA-Z0-9 _-]/g, "?") || "(empty)",
+      status: sanitizeGameStatus(row.gameStatus),
       classification: gameStatusVocabulary(row.gameStatus),
     })),
     action: "Review persisted schedule status vocabulary and Games selector eligibility before changing the consumer fallback.",

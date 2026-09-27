@@ -250,6 +250,21 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/DataHealth"
+  /admin/schedule-status-health:
+    get:
+      operationId: getScheduleStatusHealth
+      tags: [health]
+      summary: Review unfamiliar persisted schedule statuses
+      responses:
+        "200":
+          description: Bounded status examples and recently affected slates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleStatusHealth"
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
+        "503": { description: Schedule status audit unavailable }
   /admin/sleeper-identity-report:
     get:
       operationId: getSleeperIdentityReport
@@ -1205,6 +1220,36 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    ScheduleStatusHealth:
+      type: object
+      required: [unknownCount, examples, recentSlates, supportedCategories, guidance]
+      properties:
+        unknownCount: { type: integer }
+        examples:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            required: [status, count, season, week]
+            properties:
+              status: { type: string, maxLength: 48 }
+              count: { type: integer }
+              season: { type: integer }
+              week: { type: integer }
+        recentSlates:
+          type: array
+          maxItems: 8
+          items:
+            type: object
+            required: [season, week, count]
+            properties:
+              season: { type: integer }
+              week: { type: integer }
+              count: { type: integer }
+        supportedCategories:
+          type: array
+          items: { type: string, enum: [scheduled, live, terminal] }
+        guidance: { type: string }
     VerifiedImageryIssue:
       type: object
       required: [id, reason]

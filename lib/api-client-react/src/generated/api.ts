@@ -85,6 +85,7 @@ import type {
   PregameFeatureRow,
   ReviewImageryCandidate201,
   ReviewImageryCandidateBody,
+  ScheduleStatusHealth,
   ScheduleSyncRequest,
   ScheduleSyncResult,
   SleeperIdentityReport,
@@ -1081,6 +1082,83 @@ export function useGetDataHealth<TData = Awaited<ReturnType<typeof getDataHealth
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetDataHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetScheduleStatusHealthUrl = () => {
+
+
+
+
+  return `/api/admin/schedule-status-health`
+}
+
+/**
+ * @summary Review unfamiliar persisted schedule statuses
+ */
+export const getScheduleStatusHealth = async ( options?: Parameters<typeof customFetch>[1]): Promise<ScheduleStatusHealth> => {
+
+  return customFetch<ScheduleStatusHealth>(getGetScheduleStatusHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScheduleStatusHealthQueryKey = () => {
+    return [
+    `/api/admin/schedule-status-health`
+    ] as const;
+    }
+
+
+export const getGetScheduleStatusHealthQueryOptions = <TData = Awaited<ReturnType<typeof getScheduleStatusHealth>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScheduleStatusHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScheduleStatusHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScheduleStatusHealth>>> = ({ signal }) => getScheduleStatusHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScheduleStatusHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScheduleStatusHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getScheduleStatusHealth>>>
+export type GetScheduleStatusHealthQueryError = ErrorType<void>
+
+
+/**
+ * @summary Review unfamiliar persisted schedule statuses
+ */
+
+export function useGetScheduleStatusHealth<TData = Awaited<ReturnType<typeof getScheduleStatusHealth>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScheduleStatusHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScheduleStatusHealthQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

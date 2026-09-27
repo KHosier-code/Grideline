@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 import { pool } from "@workspace/db";
-import { consumerScheduleSummaryQuery, unfamiliarGameStatusesQuery, unfamiliarStatusWarning } from "./consumer";
+import { consumerScheduleSummaryQuery, unfamiliarGameStatusesQuery, unfamiliarGameStatusSlatesQuery, unfamiliarStatusWarning } from "./consumer";
 import { selectConsumerSlate, selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { gameStatusVocabulary, interpretNflGameState } from "../lib/game-state";
 
@@ -77,12 +77,18 @@ test("persisted unfamiliar statuses produce bounded operator evidence without ch
     await client.query("INSERT INTO games (season, week, kickoff_time, game_status) VALUES (2209, 2, $1, NULL)", [kickoff]);
     const compiled = unfamiliarGameStatusesQuery().toSQL();
     const { rows: rawRows } = await client.query<{
-      season: number; week: number; game_status: string | null; total: string;
+      season: number; week: number; game_status: string | null; total: string; status_count: string;
     }>(compiled.sql, compiled.params);
     const rows = rawRows.map(({ game_status, ...row }) => ({ ...row, gameStatus: game_status }));
     assert.equal(rows.length, 5);
     assert.equal(Number(rows[0].total), 11);
+    assert.ok(rows.every((row) => Number(row.status_count) >= 1));
     assert.ok(rows.every((row) => gameStatusVocabulary(row.gameStatus) === "unknown"));
+    const slateSql = unfamiliarGameStatusSlatesQuery().toSQL();
+    const { rows: slates } = await client.query<{ season: number; week: number; count: string }>(slateSql.sql, slateSql.params);
+    assert.equal(slates.length, 8);
+    assert.deepEqual(slates[0], { season: 2209, week: 2, count: "1" });
+    assert.ok(slates.every((slate) => slate.week === 2));
     const warning = unfamiliarStatusWarning(rows);
     assert.equal(warning?.count, 11);
     assert.equal(warning?.examples.length, 5);

@@ -39,6 +39,7 @@ import {
 import {
   getGetDashboardSummaryQueryKey,
   getGetDataHealthQueryKey,
+  getGetScheduleStatusHealthQueryKey,
   getGetGameQueryKey,
   getGetOddsHistoryQueryKey,
   getGetPersonnelContextForGameQueryKey,
@@ -50,6 +51,7 @@ import {
   type ScheduledDataHealthRun,
   useGetDashboardSummary,
   useGetDataHealth,
+  useGetScheduleStatusHealth,
   useGetGame,
   useGetPersonnelContextForGame,
   useGetPersonnelContextCoverage,
@@ -788,6 +790,9 @@ function ReadinessTile({ icon: Icon, title, detail }: { icon: IconType; title: s
 
 function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string; title: string; detail: string; eyebrow: string; preferred?: string }) {
   const health = useGetDataHealth({ query: { queryKey: getGetDataHealthQueryKey(), staleTime: 30000, refetchInterval: 60000 } });
+  const scheduleStatuses = useGetScheduleStatusHealth({
+    query: { queryKey: getGetScheduleStatusHealthQueryKey(), enabled: kind === 'data-health', staleTime: 30000, refetchInterval: kind === 'data-health' ? 60000 : false },
+  });
   const focused = useMemo(() => preferred ? health.data?.filter((item) => `${item.provider} ${item.label}`.toLowerCase().includes(preferred)) : health.data, [health.data, preferred]);
   const databaseCapacity = health.data?.find((item) => item.provider === 'database-capacity');
   const readinessStatus = focused?.some((item) => item.status === 'stale')
@@ -801,8 +806,25 @@ function HealthPage({ kind, title, detail, eyebrow, preferred }: { kind: string;
   }, {});
   return (
     <>
-      <PageHeader eyebrow={eyebrow} title={title} detail={detail} actions={<button type="button" className="button button-subtle" onClick={() => health.refetch()} data-testid={`button-refresh-${kind}`}><RefreshCw className={cx('h-4 w-4', health.isFetching && 'animate-spin')} /> Refresh</button>} />
+      <PageHeader eyebrow={eyebrow} title={title} detail={detail} actions={<button type="button" className="button button-subtle" onClick={() => { void health.refetch(); if (kind === 'data-health') void scheduleStatuses.refetch(); }} data-testid={`button-refresh-${kind}`}><RefreshCw className={cx('h-4 w-4', (health.isFetching || scheduleStatuses.isFetching) && 'animate-spin')} /> Refresh</button>} />
       {kind === 'data-health' && <><DatabaseCapacityNotice item={databaseCapacity} /><AdminPlayerStatsImport /></>}
+      {kind === 'data-health' && <Panel eyebrow="Schedule audit" title="Unfamiliar game statuses" className="mb-5" action={scheduleStatuses.data && <span className="section-meta">{scheduleStatuses.data.unknownCount} affected games</span>}>
+        {scheduleStatuses.isLoading ? <Skeleton className="h-24" /> : scheduleStatuses.isError || !scheduleStatuses.data
+          ? <ErrorPanel message="The schedule status audit could not be loaded. Try refreshing." />
+          : <div className="space-y-4 text-sm">
+              <p className="text-muted-foreground">Supported categories: <strong className="text-ink">{scheduleStatuses.data.supportedCategories.join(' · ')}</strong>. Unfamiliar values are separate from these categories.</p>
+              {scheduleStatuses.data.unknownCount === 0
+                ? <p className="text-ink">No unfamiliar statuses in the persisted schedule.</p>
+                : <>
+                    <p className="font-semibold text-ink"><AlertTriangle className="mr-2 inline h-4 w-4 text-amber-500" />{scheduleStatuses.data.unknownCount} game{scheduleStatuses.data.unknownCount === 1 ? '' : 's'} need status review</p>
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <div><h3 className="mb-2 font-semibold text-ink">Status examples (up to 5)</h3><ul className="space-y-2">{scheduleStatuses.data.examples.map((example, index) => <li key={index} className="rounded-md border p-3"><code className="break-all text-ink">{example.status}</code><span className="ml-2 text-muted-foreground">Unknown · {example.count} game{example.count === 1 ? '' : 's'} · latest {example.season} W{example.week}</span></li>)}</ul></div>
+                      <div><h3 className="mb-2 font-semibold text-ink">Recent affected slates (up to 8)</h3><ul className="space-y-2">{scheduleStatuses.data.recentSlates.map((slate) => <li key={`${slate.season}-${slate.week}`} className="rounded-md border p-3 text-ink">{slate.season} · Week {slate.week}<span className="ml-2 text-muted-foreground">{slate.count} affected game{slate.count === 1 ? '' : 's'}</span></li>)}</ul></div>
+                    </div>
+                  </>}
+              <p className="text-muted-foreground">{scheduleStatuses.data.guidance}</p>
+            </div>}
+      </Panel>}
       <div className="readiness-header">
         <div className="readiness-header-icon"><Database className="h-5 w-5" /></div>
         <div>
