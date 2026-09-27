@@ -1,43 +1,33 @@
-export const NFL_GAME_STATES = ["scheduled", "pregame", "live", "final", "postponed", "cancelled"] as const;
+export const NFL_GAME_STATES = ["scheduled", "pregame", "live", "final", "postponed", "cancelled", "unavailable"] as const;
 export type NflGameState = (typeof NFL_GAME_STATES)[number];
-
-// These are fragments of the normalized provider status, except for exact matches.
-// Keep the priority below: terminal statuses take precedence over live markers.
-export const NFL_STATUS_VOCABULARY = {
-  postponed: { includes: ["postpon"], exact: [] },
-  cancelled: { includes: ["cancel"], exact: [] },
-  final: { includes: ["final", "completed"], exact: ["closed"] },
-  live: { includes: ["progress", "halftime", "in progress", "end of", "quarter"], exact: [] },
-} as const;
 
 function normalizedStatus(status: string | null | undefined) {
   return (status ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
 }
 
 export const SUPPORTED_GAME_STATUS_PATTERNS = {
-  scheduled: "^(status )?(scheduled|pre game|unknown)$",
+  scheduled: "^(status )?(scheduled|pre game)$",
   terminal: "^(status )?(postponed|canceled|cancelled|final|completed)( in progress)?$|^closed$",
   live: "^(status )?(in progress|halftime|end of (period|quarter)|([a-z0-9]+ )?quarter)$",
+  unavailable: "^(status )?(unknown|delayed|suspended|unavailable)$",
 } as const;
-
-function matchesStatus(status: string, rule: { includes: readonly string[]; exact: readonly string[] }) {
-  return rule.includes.some((fragment) => status.includes(fragment))
-    || rule.exact.some((value) => status === value);
-}
 
 export function interpretNflGameState(
   game: { gameStatus: string | null | undefined; kickoffTime?: Date | null },
   now = new Date(),
 ): NflGameState {
   const status = normalizedStatus(game.gameStatus);
-  if (matchesStatus(status, NFL_STATUS_VOCABULARY.postponed)) return "postponed";
-  if (matchesStatus(status, NFL_STATUS_VOCABULARY.cancelled)) return "cancelled";
-  if (matchesStatus(status, NFL_STATUS_VOCABULARY.final)) return "final";
-  if (matchesStatus(status, NFL_STATUS_VOCABULARY.live)) return "live";
-  if (game.kickoffTime && game.kickoffTime.getTime() <= now.getTime()) return "live";
-  if (status.includes("scheduled") || status.includes("pre game") || status === "status unknown") {
-    return game.kickoffTime ? "pregame" : "scheduled";
+  if (gameStatusVocabulary(status) === "terminal") {
+    if (/^(status )?postponed( in progress)?$/.test(status)) return "postponed";
+    if (/^(status )?cancell?ed( in progress)?$/.test(status)) return "cancelled";
+    return "final";
   }
+  if (gameStatusVocabulary(status) === "live") return "live";
+  // Only an affirmative scheduled status can infer kickoff from the clock.
+  // Missing/new provider vocabulary (including delay or suspension) is not
+  // evidence that the game is still scheduled or has begun.
+  if (gameStatusVocabulary(status) !== "scheduled") return "unavailable";
+  if (game.kickoffTime && game.kickoffTime.getTime() <= now.getTime()) return "live";
   return game.kickoffTime ? "pregame" : "scheduled";
 }
 

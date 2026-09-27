@@ -170,7 +170,6 @@ export const appendConfidenceEvidenceQuerySeasonMax = 2100;
 export const appendConfidenceEvidenceQueryWeekMax = 25;
 
 
-
 export const AppendConfidenceEvidenceQueryParams = zod.object({
   "season": zod.coerce.number().int().min(appendConfidenceEvidenceQuerySeasonMin).max(appendConfidenceEvidenceQuerySeasonMax).optional(),
   "week": zod.coerce.number().int().min(1).max(appendConfidenceEvidenceQueryWeekMax).optional()
@@ -233,7 +232,6 @@ export const GetDashboardSummaryResponse = zod.object({
  * @summary Capture a privacy-safe Player Usage Lab interaction
  */
 export const captureUsageAnalyticsEventBodyValueMax = 32;
-
 
 
 export const CaptureUsageAnalyticsEventBody = zod.object({
@@ -342,7 +340,6 @@ export const getScheduleStatusHealthResponseExamplesItemStatusMax = 48;
 export const getScheduleStatusHealthResponseExamplesMax = 5;
 
 export const getScheduleStatusHealthResponseRecentSlatesMax = 8;
-
 
 
 export const GetScheduleStatusHealthResponse = zod.object({
@@ -473,7 +470,6 @@ export const GetSleeperIdentityReportResponse = zod.object({
 export const listGamesQuerySeasonMin = 2020;
 
 export const listGamesQueryWeekMax = 22;
-
 
 
 export const ListGamesQueryParams = zod.object({
@@ -650,7 +646,6 @@ export const listOddsAuditsQueryLimitDefault = 200;
 export const listOddsAuditsQueryLimitMax = 1000;
 
 
-
 export const ListOddsAuditsQueryParams = zod.object({
   "requestId": zod.coerce.number().int().min(1).optional(),
   "outcome": zod.enum(['matched_saved', 'matched_post_kickoff_skipped', 'unmatched']).optional(),
@@ -693,14 +688,12 @@ export const listPlayerRecoveryReceiptsQueryLimitDefault = 50;
 export const listPlayerRecoveryReceiptsQueryLimitMax = 100;
 
 
-
 export const ListPlayerRecoveryReceiptsQueryParams = zod.object({
   "receiptId": zod.coerce.string().uuid().optional(),
   "limit": zod.coerce.number().int().min(1).max(listPlayerRecoveryReceiptsQueryLimitMax).default(listPlayerRecoveryReceiptsQueryLimitDefault)
 })
 
 export const listPlayerRecoveryReceiptsResponseReceiptsItemAttemptsItemInsertedMin = 0;
-
 
 
 export const ListPlayerRecoveryReceiptsResponse = zod.object({
@@ -758,7 +751,6 @@ export const GetPlayerRecoveryReceiptCleanupHealthResponse = zod.object({
 export const syncScheduleBodySeasonMin = 2020;
 
 export const syncScheduleBodyCurrentWeekMax = 22;
-
 
 
 export const SyncScheduleBody = zod.object({
@@ -948,7 +940,6 @@ export const listPersonnelContextAuditQueryLimitDefault = 200;
 export const listPersonnelContextAuditQueryLimitMax = 1000;
 
 
-
 export const ListPersonnelContextAuditQueryParams = zod.object({
   "gameId": zod.coerce.string().optional(),
   "teamId": zod.coerce.string().optional(),
@@ -1119,7 +1110,6 @@ export const getSettingsResponseMinimumConfidenceMax = 100;
 export const getSettingsResponseUnitSizeMin = 0.1;
 
 
-
 export const GetSettingsResponse = zod.object({
   "sportsbooks": zod.array(zod.enum(['DraftKings', 'FanDuel'])),
   "minimumEdge": zod.number().min(getSettingsResponseMinimumEdgeMin),
@@ -1141,7 +1131,6 @@ export const updateSettingsBodyMinimumConfidenceMax = 100;
 export const updateSettingsBodyUnitSizeMin = 0.1;
 
 
-
 export const UpdateSettingsBody = zod.object({
   "sportsbooks": zod.array(zod.enum(['DraftKings', 'FanDuel'])).optional(),
   "minimumEdge": zod.number().min(updateSettingsBodyMinimumEdgeMin).optional(),
@@ -1156,7 +1145,6 @@ export const updateSettingsResponseMinimumConfidenceMin = 0;
 export const updateSettingsResponseMinimumConfidenceMax = 100;
 
 export const updateSettingsResponseUnitSizeMin = 0.1;
-
 
 
 export const UpdateSettingsResponse = zod.object({
@@ -1181,7 +1169,6 @@ export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax = 3;
 
 export const getConsumerDashboardResponseGamesItemConfidenceMarketsMin = 3;
 export const getConsumerDashboardResponseGamesItemConfidenceMarketsMax = 3;
-
 
 
 export const GetConsumerDashboardResponse = zod.object({
@@ -1212,7 +1199,7 @@ export const GetConsumerDashboardResponse = zod.object({
   "week": zod.number().int(),
   "kickoffTime": zod.coerce.date().nullable(),
   "gameStatus": zod.string(),
-  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled']),
+  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled', 'unavailable']),
   "venue": zod.string().nullable(),
   "matchup": zod.object({
   "home": zod.object({
@@ -1403,7 +1390,6 @@ export const GetConsumerDashboardResponse = zod.object({
 export const getConsumerWeeklyPicksQuerySeasonMin = 2020;
 
 
-
 export const GetConsumerWeeklyPicksQueryParams = zod.object({
   "season": zod.coerce.number().int().min(getConsumerWeeklyPicksQuerySeasonMin).optional()
 })
@@ -1448,7 +1434,6 @@ export const listConsumerGamesQuerySeasonMin = 2020;
 export const listConsumerGamesQueryWeekMax = 22;
 
 
-
 export const ListConsumerGamesQueryParams = zod.object({
   "season": zod.coerce.number().int().min(listConsumerGamesQuerySeasonMin).optional(),
   "week": zod.coerce.number().int().min(1).max(listConsumerGamesQueryWeekMax).optional()
@@ -1459,7 +1444,6 @@ export const listConsumerGamesResponseGamesItemMarketBoardComparisonsMax = 3;
 
 export const listConsumerGamesResponseGamesItemConfidenceMarketsMin = 3;
 export const listConsumerGamesResponseGamesItemConfidenceMarketsMax = 3;
-
 
 
 export const ListConsumerGamesResponse = zod.object({
@@ -1476,7 +1460,7 @@ export const ListConsumerGamesResponse = zod.object({
   "week": zod.number().int(),
   "kickoffTime": zod.coerce.date().nullable(),
   "gameStatus": zod.string(),
-  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled']),
+  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled', 'unavailable']),
   "venue": zod.string().nullable(),
   "matchup": zod.object({
   "home": zod.object({
@@ -1720,14 +1704,13 @@ export const getConsumerGameResponseTwoMatchupBoardAssessmentsMin = 10;
 export const getConsumerGameResponseTwoMatchupBoardAssessmentsMax = 10;
 
 
-
 export const GetConsumerGameResponse = zod.object({
   "gameId": zod.string(),
   "season": zod.number().int(),
   "week": zod.number().int(),
   "kickoffTime": zod.coerce.date().nullable(),
   "gameStatus": zod.string(),
-  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled']),
+  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled', 'unavailable']),
   "venue": zod.string().nullable(),
   "matchup": zod.object({
   "home": zod.object({
@@ -2242,14 +2225,13 @@ export const listSavedGamesResponseConfidenceMarketsMin = 3;
 export const listSavedGamesResponseConfidenceMarketsMax = 3;
 
 
-
 export const ListSavedGamesResponseItem = zod.object({
   "gameId": zod.string(),
   "season": zod.number().int(),
   "week": zod.number().int(),
   "kickoffTime": zod.coerce.date().nullable(),
   "gameStatus": zod.string(),
-  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled']),
+  "gameState": zod.enum(['scheduled', 'pregame', 'live', 'final', 'postponed', 'cancelled', 'unavailable']),
   "venue": zod.string().nullable(),
   "matchup": zod.object({
   "home": zod.object({
@@ -2593,7 +2575,6 @@ export const getConsumerGradedChartsQuerySeasonMin = 2000;
 export const getConsumerGradedChartsQuerySeasonMax = 2100;
 
 
-
 export const GetConsumerGradedChartsQueryParams = zod.object({
   "season": zod.coerce.number().int().min(getConsumerGradedChartsQuerySeasonMin).max(getConsumerGradedChartsQuerySeasonMax).optional()
 })
@@ -2717,7 +2698,6 @@ export const getConsumerUpcomingPlayerProjectionsResponseEligibilityReasonsMinOn
 export const getConsumerUpcomingPlayerProjectionsResponseForecastsItemPriorAppearancesMin = 0;
 
 
-
 export const GetConsumerUpcomingPlayerProjectionsResponse = zod.object({
   "status": zod.enum(['unavailable', 'development_forecasts']),
   "message": zod.string(),
@@ -2781,7 +2761,6 @@ export const getConsumerPlayerTdForecastsResponseForecastsItemRecentCarriesMin =
 export const getConsumerPlayerTdForecastsResponseForecastsItemRedZoneOpportunitiesMin = 0;
 
 
-
 export const GetConsumerPlayerTdForecastsResponse = zod.object({
   "status": zod.enum(['unavailable', 'forecasts']),
   "message": zod.string(),
@@ -2832,7 +2811,6 @@ export const getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityUnce
 export const getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityExcludedMin = 0;
 
 export const getConsumerUpcomingPlayerProjectionReadinessResponseEligibilityReasonsMinOne = 0;
-
 
 
 export const GetConsumerUpcomingPlayerProjectionReadinessResponse = zod.object({
@@ -2922,7 +2900,6 @@ export const getConsumerPlayerPositionMatchupQueryGameMax = 128;
 
 export const getConsumerPlayerPositionMatchupQueryWindowDefault = `last5`;
 export const getConsumerPlayerPositionMatchupQueryPlayerMax = 128;
-
 
 
 export const GetConsumerPlayerPositionMatchupQueryParams = zod.object({
@@ -3114,7 +3091,6 @@ export const getConsumerRedZoneOpportunitiesResponseCoverageCompletedGamesMin = 
 export const getConsumerRedZoneOpportunitiesResponseCoverageGamesWithPbpMin = 0;
 
 
-
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesPlayedMin = 0;
 
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemOffenseSnapsMin = 0;
@@ -3127,7 +3103,6 @@ export const getConsumerRedZoneOpportunitiesResponsePlayersItemSnapGamesMin = 0;
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageRequestedGamesMin = 0;
 
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemSourceCoverageIncludedGamesMin = 0;
-
 
 
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemGamesItemOffenseSnapsMin = 0;
@@ -3170,7 +3145,6 @@ export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemTargetSh
 
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMin = 0;
 export const getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMax = 1;
-
 
 
 export const GetConsumerRedZoneOpportunitiesResponse = zod.object({

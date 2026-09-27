@@ -7,7 +7,7 @@ import { selectConsumerSlate, selectConsumerSlateSummaries } from "../lib/consum
 import { gameStatusVocabulary, interpretNflGameState } from "../lib/game-state";
 
 type ScheduleRow = {
-  season: number; week: number; first: Date; last: Date; live: boolean; upcoming: boolean;
+  season: number; week: number; first: Date; last: Date; live: boolean; upcoming: boolean; pastEligible: boolean;
 };
 
 type ConnectCallback = Exclude<Parameters<typeof pool.connect>[0], undefined>;
@@ -20,8 +20,8 @@ async function databaseSummaries(client: PoolClient, now: Date) {
 }
 
 // Each status occupies its own slate so bool_or cannot hide a mistaken classification.
-// Include every terminal/live marker recognized by interpretNflGameState, alongside
-// the provider's scheduled/unknown forms and normalization/precedence cases.
+// Include terminal/live markers, recognized scheduled and unavailable forms,
+// plus unrecognized values that must never make a slate eligible.
 const statusCases = [
   { status: "STATUS_POSTPONED", state: "postponed" },
   { status: "Postponed", state: "postponed" },
@@ -33,7 +33,7 @@ const statusCases = [
   { status: "STATUS_COMPLETED", state: "final" },
   { status: "closed", state: "final" },
   { status: "  CLOSED  ", state: "final" },
-  { status: "unclosed", state: "pregame" },
+  { status: "unclosed", state: "unavailable" },
   { status: "STATUS_IN_PROGRESS", state: "live" },
   { status: "in-progress", state: "live" },
   { status: "STATUS_HALFTIME", state: "live" },
@@ -41,15 +41,20 @@ const statusCases = [
   { status: "SECOND_QUARTER", state: "live" },
   { status: "STATUS_SCHEDULED", state: "pregame" },
   { status: "Pre-Game", state: "pregame" },
-  { status: "STATUS_UNKNOWN", state: "pregame" },
-  { status: "unrecognized provider status", state: "pregame" },
+  { status: "STATUS_UNKNOWN", state: "unavailable" },
+  { status: "STATUS_DELAYED", state: "unavailable" },
+  { status: "STATUS_SUSPENDED", state: "unavailable" },
+  { status: "STATUS_UNAVAILABLE", state: "unavailable" },
+  { status: "unrecognized provider status", state: "unavailable" },
+  { status: "NOT_FINAL", state: "unavailable" },
+  { status: "PRE_SCHEDULED", state: "unavailable" },
   { status: "  STATUS_FINAL_IN_PROGRESS  ", state: "final" },
   { status: "STATUS_POSTPONED_IN_PROGRESS", state: "postponed" },
   { status: "STATUS_CANCELLED_IN_PROGRESS", state: "cancelled" },
   { status: "STATUS_COMPLETED_IN_PROGRESS", state: "final" },
 ] as const;
 
-test("persisted unfamiliar statuses produce bounded operator evidence without changing the selector fallback", async () => {
+test("persisted unfamiliar statuses produce bounded operator evidence and cannot select a slate", async () => {
   const client = await pool.connect();
   const kickoff = new Date("2026-09-20T20:00:00Z");
   try {
@@ -63,9 +68,10 @@ test("persisted unfamiliar statuses produce bounded operator evidence without ch
         [2100 + index, kickoff, status],
       );
       assert.equal(gameStatusVocabulary(status),
-        ["unrecognized provider status", "unclosed"].includes(status) ? "unknown"
+        ["unrecognized provider status", "unclosed", "NOT_FINAL", "PRE_SCHEDULED"].includes(status) ? "unknown"
           : state === "pregame" ? "scheduled"
-            : ["final", "postponed", "cancelled"].includes(state) ? "terminal" : "live");
+            : state === "unavailable" ? "unavailable"
+              : ["final", "postponed", "cancelled"].includes(state) ? "terminal" : "live");
     }
     const malicious = "NEW<script>status</script>" + "x".repeat(500);
     for (let i = 0; i < 8; i++) {
@@ -81,7 +87,7 @@ test("persisted unfamiliar statuses produce bounded operator evidence without ch
     }>(compiled.sql, compiled.params);
     const rows = rawRows.map(({ game_status, ...row }) => ({ ...row, gameStatus: game_status }));
     assert.equal(rows.length, 5);
-    assert.equal(Number(rows[0].total), 11);
+    assert.equal(Number(rows[0].total), 13);
     assert.ok(rows.every((row) => Number(row.status_count) >= 1));
     assert.ok(rows.every((row) => gameStatusVocabulary(row.gameStatus) === "unknown"));
     const slateSql = unfamiliarGameStatusSlatesQuery().toSQL();
@@ -90,15 +96,19 @@ test("persisted unfamiliar statuses produce bounded operator evidence without ch
     assert.deepEqual(slates[0], { season: 2209, week: 2, count: "1" });
     assert.ok(slates.every((slate) => slate.week === 2));
     const warning = unfamiliarStatusWarning(rows);
-    assert.equal(warning?.count, 11);
+    assert.equal(warning?.count, 13);
     assert.equal(warning?.examples.length, 5);
     assert.ok(warning?.examples.every((example) => example.status.length <= 48 && !/[<>]/.test(example.status)));
     assert.ok(warning?.examples.some((example) => example.status.startsWith("NEW?script?status")), JSON.stringify(warning));
     assert.equal(unfamiliarStatusWarning([]), null);
-    assert.equal(interpretNflGameState({ gameStatus: malicious, kickoffTime: kickoff }, new Date(kickoff.getTime() - 1)), "pregame");
+    assert.equal(interpretNflGameState({ gameStatus: malicious, kickoffTime: kickoff }, new Date(kickoff.getTime() - 1)), "unavailable");
     assert.deepEqual(
       selectConsumerSlate([{ season: 2200, week: 2, kickoffTime: kickoff, gameStatus: malicious }], new Date(kickoff.getTime() - 1)),
-      { selection: { season: 2200, week: 2 }, reason: "upcoming" },
+      { selection: null, reason: "no_schedule" },
+    );
+    assert.deepEqual(
+      selectConsumerSlate([{ season: 2200, week: 2, kickoffTime: kickoff, gameStatus: malicious }], new Date(kickoff.getTime() + 9 * 60 * 60_000)),
+      { selection: null, reason: "no_schedule" },
     );
   } finally {
     await client.query("DROP TABLE IF EXISTS pg_temp.games");
@@ -133,23 +143,73 @@ test("database schedule eligibility matches every supported provider status at k
       for (const [index, { status, state }] of statusCases.entries()) {
         const actual = summaries.find((row) => row.season === 2100 + index);
         assert.ok(actual, `${label}: ${status} missing from SQL`);
-        const terminal = ["final", "postponed", "cancelled"].includes(state);
         const expectedState = state === "pregame" && now >= kickoff ? "live" : state;
         assert.equal(interpretNflGameState({ gameStatus: status, kickoffTime: kickoff }, now),
           expectedState, `${label}: canonical state for ${status}`);
         assert.deepEqual(
-          { live: actual.live, upcoming: actual.upcoming },
-          { live: !terminal && now >= kickoff && now <= cutoff,
-            upcoming: state === "pregame" && now < kickoff },
+          { live: actual.live, upcoming: actual.upcoming, pastEligible: actual.pastEligible },
+          { live: ["pregame", "live"].includes(state) && now >= kickoff && now <= cutoff,
+            upcoming: state === "pregame" && now < kickoff,
+            pastEligible: ["pregame", "live", "final"].includes(state) && now >= kickoff },
           `${label}: SQL eligibility for ${status}`,
         );
         assert.deepEqual(
-          selectConsumerSlateSummaries([actual]),
+          selectConsumerSlateSummaries([actual], now),
           selectConsumerSlate([{ season: 2100 + index, week: 1, kickoffTime: kickoff, gameStatus: status }], now),
           `${label}: selector parity for ${status}`,
         );
       }
     }
+  } finally {
+    await client.query("DROP TABLE IF EXISTS pg_temp.games");
+    client.release();
+  }
+});
+
+test("missing provider status is unavailable before and after kickoff in SQL and memory", async () => {
+  const client = await pool.connect();
+  const kickoff = new Date("2026-09-20T20:00:00.000Z");
+  try {
+    await client.query(`CREATE TEMP TABLE games (
+      season integer NOT NULL, week integer NOT NULL,
+      kickoff_time timestamptz, game_status text
+    )`);
+    await client.query("INSERT INTO games (season, week, kickoff_time, game_status) VALUES (2026, 1, $1, NULL)", [kickoff]);
+    for (const now of [new Date(kickoff.getTime() - 1), kickoff, new Date(kickoff.getTime() + 9 * 60 * 60_000)]) {
+      const [summary] = await databaseSummaries(client, now);
+      assert.deepEqual({ live: summary.live, upcoming: summary.upcoming, pastEligible: summary.pastEligible },
+        { live: false, upcoming: false, pastEligible: false });
+      assert.equal(interpretNflGameState({ gameStatus: null, kickoffTime: kickoff }, now), "unavailable");
+      assert.deepEqual(selectConsumerSlateSummaries([summary], now),
+        selectConsumerSlate([{ season: 2026, week: 1, kickoffTime: kickoff, gameStatus: "" }], now));
+      assert.deepEqual(selectConsumerSlateSummaries([summary], now), { selection: null, reason: "no_schedule" });
+    }
+  } finally {
+    await client.query("DROP TABLE IF EXISTS pg_temp.games");
+    client.release();
+  }
+});
+
+test("future unavailable slates cannot override the latest completed slate", async () => {
+  const client = await pool.connect();
+  const now = new Date("2026-09-20T20:00:00.000Z");
+  const games = [
+    { season: 2026, week: 1, kickoffTime: new Date(now.getTime() - 86_400_000), gameStatus: "STATUS_FINAL" },
+    { season: 2026, week: 2, kickoffTime: new Date(now.getTime() + 86_400_000), gameStatus: "STATUS_DELAYED" },
+    { season: 2026, week: 3, kickoffTime: new Date(now.getTime() + 2 * 86_400_000), gameStatus: "STATUS_NEW" },
+  ];
+  try {
+    await client.query(`CREATE TEMP TABLE games (
+      season integer NOT NULL, week integer NOT NULL,
+      kickoff_time timestamptz, game_status text
+    )`);
+    for (const game of games) {
+      await client.query("INSERT INTO games (season, week, kickoff_time, game_status) VALUES ($1, $2, $3, $4)",
+        [game.season, game.week, game.kickoffTime, game.gameStatus]);
+    }
+    const expected = { selection: { season: 2026, week: 1 }, reason: "past" };
+    assert.deepEqual(selectConsumerSlate(games, now), expected);
+    assert.deepEqual(selectConsumerSlateSummaries(await databaseSummaries(client, now), now), expected);
   } finally {
     await client.query("DROP TABLE IF EXISTS pg_temp.games");
     client.release();
@@ -185,12 +245,12 @@ test("mixed-status slates choose live, upcoming, then past across kickoff and ex
       ["just before next kickoff", at(60_000 - 1), { selection: { season: 2026, week: 1 }, reason: "live" }],
       ["at next kickoff", at(60_000), { selection: { season: 2026, week: 2 }, reason: "live" }],
       ["at eight hours after first kickoff", at(8 * 60 * 60_000), { selection: { season: 2026, week: 2 }, reason: "live" }],
-      ["at eight hours after last kickoff", at(8 * 60 * 60_000 + 2 * 60_000), { selection: { season: 2026, week: 2 }, reason: "live" }],
+      ["at eight hours after last kickoff", at(8 * 60 * 60_000 + 2 * 60_000), { selection: { season: 2026, week: 3 }, reason: "upcoming" }],
       ["just after eight hours after last kickoff", at(8 * 60 * 60_000 + 2 * 60_000 + 1), { selection: { season: 2026, week: 3 }, reason: "upcoming" }],
       ["after all kickoffs", at(20 * 60 * 60_000), { selection: { season: 2026, week: 3 }, reason: "past" }],
     ] as const) {
       const summaries = await databaseSummaries(client, now);
-      assert.deepEqual(selectConsumerSlateSummaries(summaries), expected, `${label}: database choice`);
+      assert.deepEqual(selectConsumerSlateSummaries(summaries, now), expected, `${label}: database choice`);
       assert.deepEqual(selectConsumerSlate(games, now), expected, `${label}: canonical choice`);
       assert.equal(summaries.find((row) => row.week === 1)?.first.getTime(), at(-60_000).getTime(),
         `${label}: a final game still sets the first kickoff`);
@@ -250,12 +310,12 @@ test("schedule selection aggregates a century of games without transferring game
       const compiled = consumerScheduleSummaryQuery(now).toSQL();
       const started = performance.now();
       const { rows } = await client.query<{
-        season: number; week: number; first: Date; last: Date; live: boolean; upcoming: boolean;
+        season: number; week: number; first: Date; last: Date; live: boolean; upcoming: boolean; pastEligible: boolean;
       }>(compiled.sql, compiled.params);
       const elapsed = performance.now() - started;
       assert.equal(rows.length, 2_200);
       assert.ok(elapsed < 3_000, `35,200-game aggregate took ${elapsed.toFixed(0)}ms`);
-      assert.deepEqual(selectConsumerSlateSummaries(rows), selectConsumerSlate(history.map((row) => ({
+      assert.deepEqual(selectConsumerSlateSummaries(rows, now), selectConsumerSlate(history.map((row) => ({
         season: row.season, week: row.week, kickoffTime: row.kickoff_time, gameStatus: row.game_status,
       })), now));
     }

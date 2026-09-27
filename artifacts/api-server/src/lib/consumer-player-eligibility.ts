@@ -1,3 +1,5 @@
+import type { NflGameState } from "./game-state";
+
 function normalizedStatus(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase().replace(/[_-]+/g, " ");
 }
@@ -20,15 +22,14 @@ function statusMeaning(value: string) {
 }
 
 export function classifyPlayerEligibility(input: {
-  gameState: "scheduled" | "pregame" | "live" | "final" | "postponed" | "cancelled";
+  gameState: NflGameState;
   injuryStatus?: string | null;
   rosterStatus?: string | null;
   statusAsOf?: Date | null;
   now?: Date;
   maxAgeMs?: number;
 }): { status: "eligible" | "ineligible" | "unknown"; reason: string | null } {
-  if (input.gameState === "live" || input.gameState === "final"
-    || input.gameState === "postponed" || input.gameState === "cancelled") {
+  if (!["scheduled", "pregame"].includes(input.gameState)) {
     return { status: "ineligible", reason: `Game is ${input.gameState}.` };
   }
 

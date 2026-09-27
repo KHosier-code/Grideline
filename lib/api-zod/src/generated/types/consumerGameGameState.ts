@@ -16,4 +16,5 @@ export const ConsumerGameGameState = {
   final: 'final',
   postponed: 'postponed',
   cancelled: 'cancelled',
+  unavailable: 'unavailable',
 } as const;

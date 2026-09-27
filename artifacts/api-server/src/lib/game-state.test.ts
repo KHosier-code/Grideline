@@ -24,6 +24,11 @@ test("normalizes provider statuses and never treats scheduled 0-0 as a result", 
   assert.equal(interpretNflGameState({ ...scheduled, gameStatus: "STATUS_IN_PROGRESS" }, now), "live");
   assert.equal(interpretNflGameState({ ...scheduled, gameStatus: "STATUS_POSTPONED" }, now), "postponed");
   assert.equal(interpretNflGameState({ ...scheduled, gameStatus: "STATUS_CANCELED" }, now), "cancelled");
+  for (const status of ["STATUS_UNKNOWN", "STATUS_DELAYED", "STATUS_SUSPENDED", "STATUS_UNAVAILABLE", "PRE_SCHEDULED", "NOT_FINAL", null]) {
+    assert.equal(interpretNflGameState({ ...scheduled, gameStatus: status }, now), "unavailable");
+    assert.equal(interpretNflGameState({ ...scheduled, gameStatus: status }, scheduled.kickoffTime), "unavailable");
+    assert.equal(interpretNflGameState({ gameStatus: status, kickoffTime: null }, now), "unavailable");
+  }
 });
 
 test("authoritative records require final regular-season status and valid integer scores", () => {

@@ -45,7 +45,7 @@ import retained2025Baseline from "../../../../reports/gridline-2025-market-basel
 import { persistConfidenceMethodology, persistConfidenceResults } from "../lib/confidence-persistence";
 import { getCurrentGamePersonnel } from "../lib/current-personnel";
 import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
-import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, gameStatusVocabulary, interpretNflGameState, NFL_STATUS_VOCABULARY, SUPPORTED_GAME_STATUS_PATTERNS, verifyTeamRecords } from "../lib/game-state";
+import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, gameStatusVocabulary, interpretNflGameState, SUPPORTED_GAME_STATUS_PATTERNS, verifyTeamRecords } from "../lib/game-state";
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
@@ -1646,20 +1646,11 @@ router.get("/consumer/weekly-picks", async (req, res): Promise<void> => {
 });
 
 export function consumerScheduleSummaryQuery(now: Date) {
-    // Match interpretNflGameState: terminal states win over in-progress states,
-    // and a non-terminal game past kickoff is live regardless of its status.
-    const status = sql`lower(btrim(regexp_replace(${gamesTable.gameStatus}, '[_-]+', ' ', 'g')))`;
-    const matches = (rules: ReadonlyArray<{ includes: readonly string[]; exact: readonly string[] }>) =>
-      sql`(${sql.join(rules.flatMap((rule) => [
-        ...rule.includes.map((fragment) => sql`strpos(${status}, ${fragment}) > 0`),
-        ...rule.exact.map((value) => sql`${status} = ${value}`),
-      ]), sql` or `)})`;
-    const terminal = matches([
-      NFL_STATUS_VOCABULARY.postponed,
-      NFL_STATUS_VOCABULARY.cancelled,
-      NFL_STATUS_VOCABULARY.final,
-    ]);
-    const explicitlyLive = matches([NFL_STATUS_VOCABULARY.live]);
+    // Only recognized scheduled statuses may infer live from kickoff.
+    const status = sql`coalesce(lower(btrim(regexp_replace(${gamesTable.gameStatus}, '[_-]+', ' ', 'g'))), '')`;
+    const explicitlyLive = sql`(${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.live})`;
+    const scheduled = sql`(${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.scheduled})`;
+    const final = sql`(${status} ~ ${"^(status )?(final|completed)( in progress)?$|^closed$"})`;
     return db.select({
       season: gamesTable.season,
       week: gamesTable.week,
@@ -1667,9 +1658,11 @@ export function consumerScheduleSummaryQuery(now: Date) {
       last: sql<string>`max(${gamesTable.kickoffTime})`.as("last"),
       live: sql<boolean>`bool_or(${gamesTable.kickoffTime} <= ${now}
         and ${gamesTable.kickoffTime} >= ${new Date(now.getTime() - 8 * 60 * 60_000)}
-        and not ${terminal})`.as("live"),
+        and (${explicitlyLive} or ${scheduled}))`.as("live"),
       upcoming: sql<boolean>`bool_or(${gamesTable.kickoffTime} > ${now}
-        and not ${terminal} and not ${explicitlyLive})`.as("upcoming"),
+        and ${scheduled})`.as("upcoming"),
+      pastEligible: sql<boolean>`bool_or(${gamesTable.kickoffTime} <= ${now}
+        and (${scheduled} or ${explicitlyLive} or ${final}))`.as("pastEligible"),
     }).from(gamesTable)
       .where(isNotNull(gamesTable.kickoffTime))
       .groupBy(gamesTable.season, gamesTable.week);
@@ -1679,7 +1672,8 @@ function unfamiliarGameStatusCondition() {
   const status = sql`regexp_replace(lower(btrim(${gamesTable.gameStatus})), '[_-]+', ' ', 'g')`;
   const known = sql`(${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.scheduled}
     or ${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.terminal}
-    or ${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.live})`;
+    or ${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.live}
+    or ${status} ~ ${SUPPORTED_GAME_STATUS_PATTERNS.unavailable})`;
   return sql`not coalesce(${known}, false)`;
 }
 export function unfamiliarGameStatusesQuery() {
@@ -1722,7 +1716,7 @@ router.get("/admin/schedule-status-health", requireAdmin, async (req, res): Prom
       })),
       recentSlates: slates.map((row) => ({ season: row.season, week: row.week, count: Number(row.count) })),
       supportedCategories: ["scheduled", "live", "terminal"],
-      guidance: "Review the provider's status vocabulary and affected games before changing Games selector eligibility. Unknown values still use the existing kickoff-based consumer fallback.",
+      guidance: "Review unfamiliar provider statuses and affected games before changing Games selector eligibility. Unfamiliar, delayed, suspended and unavailable games cannot select a slate.",
     }));
   } catch (error) {
     req.log.error({ error }, "Admin schedule status health read failed");
@@ -1732,7 +1726,8 @@ router.get("/admin/schedule-status-health", requireAdmin, async (req, res): Prom
 
 router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
   try {
-    const schedule = await consumerScheduleSummaryQuery(new Date());
+    const now = new Date();
+    const schedule = await consumerScheduleSummaryQuery(now);
     try {
       const warning = unfamiliarStatusWarning(await unfamiliarGameStatusesQuery());
       if (warning && Date.now() - lastUnfamiliarStatusWarning >= 5 * 60_000) {
@@ -1748,7 +1743,7 @@ router.get("/consumer/schedule-selection", async (req, res): Promise<void> => {
       ...slate,
       first: new Date(slate.first),
       last: new Date(slate.last),
-    })))));
+    })), now)));
   } catch (error) {
     req.log.error({ error }, "Consumer schedule selection read failed");
     res.status(503).json({ error: "Schedule evidence unavailable", code: "consumer_data_unavailable" });
