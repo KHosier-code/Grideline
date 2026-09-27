@@ -49,7 +49,8 @@ import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalSco
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
-import { readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/initial-line-picks";
+import { readInitialLineAudit, readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/initial-line-picks";
+import { GetInitialLineAuditResponse } from "@workspace/api-zod";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, readMatchupDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { attachQualifiedScoringTdProbability, buildPlayerPositionMatchup } from "../lib/player-position-matchup";
@@ -1642,6 +1643,23 @@ router.get("/consumer/weekly-picks", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Consumer weekly pick archive read failed");
     res.status(503).json({ error: "Pick history unavailable", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/admin/initial-line-audit", requireAdmin, async (req, res): Promise<void> => {
+  const season = req.query.season;
+  const week = req.query.week;
+  if (typeof season !== "string" || !/^\d{4}$/.test(season) || Number(season) < 2020
+    || typeof week !== "string" || !/^\d{1,2}$/.test(week) || Number(week) < 1 || Number(week) > 22) {
+    res.status(400).json({ error: "Choose a valid season and week." });
+    return;
+  }
+  try {
+    res.set("Cache-Control", "private, no-store");
+    res.json(GetInitialLineAuditResponse.parse(await readInitialLineAudit(Number(season), Number(week))));
+  } catch (error) {
+    req.log.error({ error }, "Initial-line audit read failed");
+    res.status(503).json({ error: "First-line audit unavailable" });
   }
 });
 

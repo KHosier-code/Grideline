@@ -48,6 +48,52 @@ export function nextInitialSlate<T extends { season: number; week: number; kicko
   return first ? upcoming.filter((game) => game.season === first.season && game.week === first.week) : [];
 }
 
+/** Read only persisted first-observation outcomes; absent rows stay absent. */
+export async function readInitialLineAudit(season: number, week: number) {
+  const [games, outcomes, selections] = await Promise.all([
+    db.select().from(gamesTable).where(and(eq(gamesTable.season, season), eq(gamesTable.week, week)))
+      .orderBy(asc(gamesTable.kickoffTime), asc(gamesTable.gameId)),
+    db.select().from(initialLinePicksTable)
+      .where(and(eq(initialLinePicksTable.season, season), eq(initialLinePicksTable.week, week))),
+    db.select().from(initialWeeklyPicksTable)
+      .where(and(eq(initialWeeklyPicksTable.season, season), eq(initialWeeklyPicksTable.week, week))).limit(1),
+  ]);
+  const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId])
+    .concat(outcomes.map((row) => row.winnerTeamId).filter((id): id is string => id !== null)))];
+  const teams = teamIds.length ? await db.select({ id: teamsTable.teamId, name: teamsTable.teamName, abbreviation: teamsTable.abbreviation })
+    .from(teamsTable).where(inArray(teamsTable.teamId, teamIds)) : [];
+  const names = new Map(teams.map((team) => [team.id, team]));
+  const byGame = new Map(outcomes.map((row) => [row.gameId, row]));
+  const requestIds = outcomes.map((row) => row.requestId);
+  const requests = requestIds.length ? await db.select({ id: oddsApiRequestsTable.id, status: oddsApiRequestsTable.status })
+    .from(oddsApiRequestsTable).where(inArray(oddsApiRequestsTable.id, requestIds)) : [];
+  const requestStatus = new Map(requests.map((request) => [request.id, request.status]));
+  const selection = selections[0];
+  return {
+    season, week,
+    selection: selection ? { gameId: selection.gameId, selectedAt: selection.selectedAt.toISOString() } : null,
+    games: games.map((game) => {
+      const row = byGame.get(game.gameId);
+      return {
+        gameId: game.gameId,
+        homeTeam: names.get(game.homeTeamId)?.abbreviation ?? game.homeTeamId,
+        awayTeam: names.get(game.awayTeamId)?.abbreviation ?? game.awayTeamId,
+        kickoffTime: game.kickoffTime?.toISOString() ?? null,
+        status: row?.status ?? "awaiting_first_observation",
+        reason: row?.reason ?? "No request-bound first-line outcome has been recorded for this scheduled game.",
+        firstRequest: row ? {
+          id: row.requestId, status: requestStatus.get(row.requestId) ?? "unavailable",
+          requestedAt: row.requestedAt.toISOString(), observedAt: row.observedAt.toISOString(),
+        } : null,
+        winner: row?.winnerTeamId ? names.get(row.winnerTeamId)?.name ?? row.winnerTeamId : null,
+        winnerProbability: row?.winnerProbability ?? null,
+        sportsbook: row?.sportsbook ?? null,
+        quotes: row?.quotes ?? null,
+        selected: selection?.gameId === game.gameId,
+      };
+    }),
+  };
+}
 export async function captureInitialLineOutcome(input: {
   gameId: string; requestId: number; requestedAt: Date; observedAt: Date; quotes: InitialQuote[];
 }) {

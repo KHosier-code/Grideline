@@ -265,6 +265,31 @@ paths:
         "401": { description: Authentication required }
         "403": { description: Administrator access required }
         "503": { description: Schedule status audit unavailable }
+  /admin/initial-line-audit:
+    get:
+      operationId: getInitialLineAudit
+      tags: [nfl]
+      summary: Inspect persisted first-observation outcomes for a scheduled slate
+      parameters:
+        - name: season
+          in: query
+          required: true
+          schema: { type: integer, minimum: 2020 }
+        - name: week
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 22 }
+      responses:
+        "200":
+          description: Read-only request-bound first-line evidence and saved weekly selection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InitialLineAudit"
+        "400": { description: Invalid slate }
+        "401": { description: Authentication required }
+        "403": { description: Administrator access required }
+        "503": { description: First-line audit unavailable }
   /admin/sleeper-identity-report:
     get:
       operationId: getSleeperIdentityReport
@@ -1220,6 +1245,62 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    InitialLineAudit:
+      type: object
+      required: [season, week, selection, games]
+      properties:
+        season: { type: integer }
+        week: { type: integer }
+        selection:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [gameId, selectedAt]
+              properties:
+                gameId: { type: string }
+                selectedAt: { type: string, format: date-time }
+        games:
+          type: array
+          items: { $ref: "#/components/schemas/InitialLineAuditGame" }
+    InitialLineAuditGame:
+      type: object
+      required: [gameId, homeTeam, awayTeam, kickoffTime, status, reason, firstRequest, winner, winnerProbability, sportsbook, quotes, selected]
+      properties:
+        gameId: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        kickoffTime: { type: ["string", "null"], format: date-time }
+        status: { type: string, enum: [awaiting_first_observation, locked, no_line, incomplete_market, missing_input, invalid_model, legacy_unattributed] }
+        reason: { type: ["string", "null"] }
+        firstRequest:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [id, status, requestedAt, observedAt]
+              properties:
+                id: { type: integer }
+                status: { type: string }
+                requestedAt: { type: string, format: date-time }
+                observedAt: { type: string, format: date-time }
+        winner: { type: ["string", "null"] }
+        winnerProbability: { type: ["number", "null"] }
+        sportsbook: { type: ["string", "null"] }
+        quotes:
+          oneOf:
+            - type: "null"
+            - type: array
+              minItems: 4
+              maxItems: 4
+              items:
+                type: object
+                required: [market, selection, point, price, sourceTimestamp]
+                properties:
+                  market: { type: string }
+                  selection: { type: string }
+                  point: { type: ["number", "null"] }
+                  price: { type: integer }
+                  sourceTimestamp: { type: ["string", "null"], format: date-time }
+        selected: { type: boolean }
     ScheduleStatusHealth:
       type: object
       required: [unknownCount, examples, recentSlates, supportedCategories, guidance]

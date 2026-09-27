@@ -5,6 +5,68 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+export type InitialLineAuditSelection = {
+  gameId: string;
+  selectedAt: string;
+} | null;
+
+export type InitialLineAuditGameStatus = typeof InitialLineAuditGameStatus[keyof typeof InitialLineAuditGameStatus];
+
+
+export const InitialLineAuditGameStatus = {
+  awaiting_first_observation: 'awaiting_first_observation',
+  locked: 'locked',
+  no_line: 'no_line',
+  incomplete_market: 'incomplete_market',
+  missing_input: 'missing_input',
+  invalid_model: 'invalid_model',
+  legacy_unattributed: 'legacy_unattributed',
+} as const;
+
+export type InitialLineAuditGameFirstRequest = {
+  id: number;
+  status: string;
+  requestedAt: string;
+  observedAt: string;
+} | null;
+
+export type InitialLineAuditGameQuotes = null | ({
+  market: string;
+  selection: string;
+  /** @nullable */
+  point: number | null;
+  price: number;
+  /** @nullable */
+  sourceTimestamp: string | null;
+})[];
+
+export interface InitialLineAuditGame {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  /** @nullable */
+  kickoffTime: string | null;
+  status: InitialLineAuditGameStatus;
+  /** @nullable */
+  reason: string | null;
+  firstRequest: InitialLineAuditGameFirstRequest;
+  /** @nullable */
+  winner: string | null;
+  /** @nullable */
+  winnerProbability: number | null;
+  /** @nullable */
+  sportsbook: string | null;
+  quotes: InitialLineAuditGameQuotes;
+  selected: boolean;
+}
+
+export interface InitialLineAudit {
+  season: number;
+  week: number;
+  selection: InitialLineAuditSelection;
+  games: InitialLineAuditGame[];
+}
+
 export type ScheduleStatusHealthExamplesItem = {
   /** @maxLength 48 */
   status: string;
@@ -3568,6 +3630,18 @@ export const GetUsageAnalyticsSummaryPeriod = {
   '14d': '14d',
   '30d': '30d',
 } as const;
+
+export type GetInitialLineAuditParams = {
+/**
+ * @minimum 2020
+ */
+season: number;
+/**
+ * @minimum 1
+ * @maximum 22
+ */
+week: number;
+};
 
 export type ListGamesParams = {
 /**

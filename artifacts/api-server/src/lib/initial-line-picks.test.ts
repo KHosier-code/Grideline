@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { eq, gt, inArray } from "drizzle-orm";
-import { captureInitialLineOutcome, completeInitialQuotes, nextInitialSlate, publicFirstLines, rankInitialPicks, readInitialWeeklyPickArchive, verifySavedPick, type InitialQuote } from "./initial-line-picks";
+import { captureInitialLineOutcome, completeInitialQuotes, nextInitialSlate, publicFirstLines, rankInitialPicks, readInitialLineAudit, readInitialWeeklyPickArchive, verifySavedPick, type InitialQuote } from "./initial-line-picks";
 import { inferInitialLineGame } from "./live-predictions";
 import { db, gamesTable, initialLinePicksTable, initialWeeklyPicksTable, oddsApiRequestsTable, pregameTeamFeaturesTable, sportsbookOddsTable, teamsTable } from "@workspace/db";
 
@@ -79,6 +79,12 @@ test("development first-pull outcomes are terminal across retries and concurrent
   assert.equal(saved?.status, "no_line");
   assert.equal(saved?.cutoffAt.toISOString(), observedAt.toISOString());
   assert.equal(saved?.winnerTeamId, null);
+  const audit = await readInitialLineAudit(2026, 1);
+  const entry = audit.games.find((game) => game.gameId === gameId);
+  assert.equal(entry?.status, "no_line");
+  assert.equal(entry?.firstRequest?.id, request!.id);
+  assert.equal(entry?.firstRequest?.requestedAt, requestedAt.toISOString());
+  assert.equal(entry?.quotes, null);
   // A later complete market cannot be presented as the initial observation.
   assert.equal(await captureInitialLineOutcome({ ...first, observedAt: new Date("2026-09-26T15:00:00Z"), quotes: full }), false);
   const [stillSaved] = await db.select().from(initialLinePicksTable).where(eq(initialLinePicksTable.gameId, gameId));
@@ -153,6 +159,11 @@ test("development full first-line pick binds original models, quotes and inputs 
   assert.equal(await captureInitialLineOutcome({ gameId: missingId, requestId: request!.id, requestedAt, observedAt, quotes }), false);
   const [unchanged] = await db.select().from(initialLinePicksTable).where(eq(initialLinePicksTable.gameId, missingId));
   assert.equal(unchanged?.status, "missing_input");
+  const audit = await readInitialLineAudit(source.season, source.week);
+  assert.deepEqual(audit.games.find((game) => game.gameId === gameId)?.quotes, saved?.quotes);
+  assert.equal(audit.games.find((game) => game.gameId === gameId)?.sportsbook, "DraftKings");
+  assert.equal(audit.games.find((game) => game.gameId === missingId)?.status, "missing_input");
+  assert.match(audit.games.find((game) => game.gameId === missingId)?.reason ?? "", /input/i);
 });
 
 test("historical archive returns only a verified saved winner, never a substitute for missing or invalid evidence", async (t) => {
