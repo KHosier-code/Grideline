@@ -9,4 +9,5 @@ Database-backed route tests that issue HTTP requests outside a single database t
 
 **How to apply:** Check database mutation policies before choosing fixture tables; use isolated identifiers and cleanup for mutable tables. Do not disable immutability triggers just to clean up a test. Keep unavoidable immutable test evidence small, use a dedicated test namespace for imports, and confirm latest-real-import selection is unchanged.
 
+
 For a test that must exercise the real persistence path in the provider namespace, prefer a disposable PostgreSQL schema with cloned receipt/payload tables and read-only views of any other needed tables. Start a fresh test process with that schema in its connection `search_path`, and drop the schema afterward. This keeps the real append-only namespace untouched, including when an assertion fails. A plain development-mode check does not isolate writes, and a transaction on one client cannot encompass application code that uses a pool or commits its own transactions.

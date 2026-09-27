@@ -2262,7 +2262,7 @@ router.get("/consumer/defense-vs-position", async (req, res): Promise<void> => {
   }
 });
 
-router.get("/consumer/player-position-matchup", async (req, res): Promise<void> => {
+export const playerPositionMatchupHandler = (clock: () => Date = () => new Date()) => async (req: Request, res: Response): Promise<void> => {
   const gameId = typeof req.query.game === "string" ? req.query.game : "";
   const playerId = typeof req.query.player === "string" ? req.query.player : undefined;
   const position = req.query.position;
@@ -2275,7 +2275,7 @@ router.get("/consumer/player-position-matchup", async (req, res): Promise<void> 
   }
   try {
     const [game] = await db.select().from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1);
-    const now = new Date();
+    const now = clock();
     if (!game || !game.kickoffTime || game.kickoffTime <= now || game.week < 1 || game.week > 18
       || !/scheduled|pregame/i.test(game.gameStatus)) {
       res.status(400).json({ error: "A verified upcoming regular-season game is required.", code: "invalid_request" });
@@ -2316,7 +2316,8 @@ router.get("/consumer/player-position-matchup", async (req, res): Promise<void> 
     req.log.error({ error }, "Player-position matchup read failed");
     res.status(503).json({ error: "Player-position matchup unavailable", code: "consumer_data_unavailable" });
   }
-});
+};
+router.get("/consumer/player-position-matchup", playerPositionMatchupHandler());
 
 router.get("/consumer/red-zone-opportunities", redZoneFeatureGate, async (req, res): Promise<void> => {
   const rawSeason = typeof req.query.season === "string" ? Number(req.query.season) : undefined;
