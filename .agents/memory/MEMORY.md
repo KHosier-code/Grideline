@@ -65,3 +65,4 @@
 - [Development Admin browser identity](dev-admin-browser-identity.md) — Clerk test-user creation may require valid email and password even for ticket sign-in; keep release grants short-lived and dev-only.
 - [Recharts null-series assertions](recharts-null-series.md) — an all-null series may retain an SVG line node; assert plotted marks, not just line-element count.
 - [Synthetic Home performance chronology](synthetic-home-performance-chronology.md) — keep fixture kickoff ahead of real time but pregame evidence cutoff behind it; otherwise the real component withholds charts.
+- [Team fixture verification lifetime](team-fixture-verification-lifetime.md) — fail closed on missing fixture evidence; short-lived in-process verification is intentional until durable provenance exists.

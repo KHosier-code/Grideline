@@ -2,7 +2,7 @@ import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { db, gamesTable, teamGameStatsTable, teamsTable } from "@workspace/db";
 import { buildConsumerTeamAnalytics, type TeamAnalyticsWindow } from "../lib/consumer-team-analytics";
-import { fetchSchedule } from "../lib/espn";
+import { teamFixtureVerifier } from "../lib/team-fixture-verification";
 import { consumerVerifiedImages } from "../lib/verified-imagery";
 
 const router: IRouter = Router();
@@ -110,26 +110,14 @@ router.get("/consumer/team-analytics", async (req, res): Promise<void> => {
     const verifiedTeams = canonicalTeams.map(team => ({
       ...team, logoUrl: imagery?.teams.logos.get(team.teamId) ?? null,
     }));
-    // Read the provider independently of persisted games. A failed or empty fixture
-    // is unknown coverage, never proof that the persisted week is complete.
-    const fixtureWeeks = await Promise.all(Array.from({ length: throughWeek }, async (_, index) => {
-      const week = index + 1;
-      try {
-        const fixture = await fetchSchedule(season, week);
-        return {
-          week,
-          games: fixture.length ? fixture.map((game) => ({
-            gameId: game.gameId,
-            homeTeamId: game.homeTeam.teamId,
-            awayTeamId: game.awayTeam.teamId,
-          })) : null,
-        };
-      } catch (error) {
-        req.log.warn({ season, week, errorName: error instanceof Error ? error.name : "UnknownError" },
-          "Team analytics schedule fixture unavailable");
-        return { week, games: null };
-      }
-    }));
+    // Provider coverage is independent of persisted games. The bounded verifier
+    // returns unknown for any week without a recent successful fixture.
+    const fixtureStarted = performance.now();
+    const fixtureWeeks = await teamFixtureVerifier.getWeeks(season, throughWeek);
+    req.log.info({
+      season, throughWeek, verifiedWeeks: fixtureWeeks.filter((entry) => entry.games !== null).length,
+      durationMs: Math.round(performance.now() - fixtureStarted),
+    }, "Team analytics fixture verification");
     res.json(buildConsumerTeamAnalytics(games, stats, verifiedTeams, {
       season,
       throughWeek,

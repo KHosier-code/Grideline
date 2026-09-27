@@ -106,10 +106,10 @@ function parseGame(eventValue: unknown, season: number, requestedWeek: number): 
   };
 }
 
-async function fetchEspn(path: string): Promise<EspnResponse> {
+async function fetchEspn(path: string, timeoutMs = 12_000): Promise<EspnResponse> {
   const response = await fetch(`${espnBaseUrl}${path}`, {
     headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(12_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) {
     throw new Error(`ESPN returned HTTP ${response.status}`);
@@ -120,14 +120,14 @@ async function fetchEspn(path: string): Promise<EspnResponse> {
   return (await response.json()) as EspnResponse;
 }
 
-export async function fetchSchedule(season: number, week: number): Promise<EspnGame[]> {
+export async function fetchSchedule(season: number, week: number, timeoutMs = 12_000): Promise<EspnGame[]> {
   const cacheKey = `schedule:${season}:${week}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.value as EspnGame[];
 
   const seasonType = week > 18 ? 3 : 2;
   const sourceWeek = week > 18 ? week - 18 : week;
-  const data = await fetchEspn(`/scoreboard?limit=1000&dates=${season}&seasontype=${seasonType}&week=${sourceWeek}`);
+  const data = await fetchEspn(`/scoreboard?limit=1000&dates=${season}&seasontype=${seasonType}&week=${sourceWeek}`, timeoutMs);
   const games = (data.events ?? [])
     .map((event) => {
       const game = parseGame(event, season, week);

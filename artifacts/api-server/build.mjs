@@ -80,6 +80,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/routes/game-alerts.test.ts"),
       path.resolve(artifactDir, "src/lib/consumer-matchups.test.ts"),
       path.resolve(artifactDir, "src/lib/consumer-team-analytics.test.ts"),
+      path.resolve(artifactDir, "src/lib/team-fixture-verification.test.ts"),
       path.resolve(artifactDir, "src/lib/verified-imagery.test.ts"),
       path.resolve(artifactDir, "src/lib/verified-imagery-db.test.ts"),
       path.resolve(artifactDir, "src/lib/consumer-graded-charts.test.ts"),
