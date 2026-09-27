@@ -2469,10 +2469,46 @@ export const RemoveSavedConsumerGameResponse = zod.void()
 /**
  * @summary Read consumer-safe persisted performance
  */
+export const getConsumerPerformanceQuerySeasonMin = 1900;
+export const getConsumerPerformanceQuerySeasonMax = 2200;
+
+export const getConsumerPerformanceQueryWeekMax = 22;
+
+
+
+export const GetConsumerPerformanceQueryParams = zod.object({
+  "season": zod.coerce.number().int().min(getConsumerPerformanceQuerySeasonMin).max(getConsumerPerformanceQuerySeasonMax).optional(),
+  "week": zod.coerce.number().int().min(1).max(getConsumerPerformanceQueryWeekMax).optional()
+})
+
 export const GetConsumerPerformanceResponse = zod.object({
   "status": zod.enum(['available', 'unavailable']),
   "officialPredictions": zod.number().int(),
   "gradedPredictions": zod.number().int(),
+  "coverage": zod.object({
+  "asOf": zod.coerce.date(),
+  "season": zod.number().int().nullable(),
+  "week": zod.number().int().nullable(),
+  "seasons": zod.array(zod.number().int()),
+  "weeks": zod.array(zod.number().int()),
+  "scheduled": zod.number().int().nullable(),
+  "eligible": zod.number().int().nullable(),
+  "picked": zod.number().int().nullable(),
+  "abstained": zod.number().int().nullable(),
+  "pickCoverage": zod.number().nullable(),
+  "abstentionRate": zod.number().nullable(),
+  "states": zod.object({
+  "pending": zod.number().int(),
+  "unobserved": zod.number().int(),
+  "missing_inputs": zod.number().int(),
+  "missing_markets": zod.number().int(),
+  "missed_cutoff": zod.number().int(),
+  "cancelled": zod.number().int(),
+  "nonfinal": zod.number().int(),
+  "frozen": zod.number().int(),
+  "graded": zod.number().int()
+}).nullable()
+}).nullable(),
   "byFamily": zod.object({
   "spread": zod.object({
   "predictions": zod.number().int(),

@@ -54,6 +54,7 @@ import type {
   Game,
   GetConsumerDefenseVsPositionParams,
   GetConsumerGradedChartsParams,
+  GetConsumerPerformanceParams,
   GetConsumerPlayerPositionMatchupParams,
   GetConsumerPlayerUsageParams,
   GetConsumerRedZoneOpportunitiesParams,
@@ -3882,20 +3883,27 @@ export const useRemoveSavedConsumerGame = <TError = ErrorType<ConsumerInvalidReq
       return useMutation(getRemoveSavedConsumerGameMutationOptions(options));
     }
 
-export const getGetConsumerPerformanceUrl = () => {
+export const getGetConsumerPerformanceUrl = (params?: GetConsumerPerformanceParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/consumer/performance`
+  return stringifiedParams.length > 0 ? `/api/consumer/performance?${stringifiedParams}` : `/api/consumer/performance`
 }
 
 /**
  * @summary Read consumer-safe persisted performance
  */
-export const getConsumerPerformance = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPerformance> => {
+export const getConsumerPerformance = async (params?: GetConsumerPerformanceParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPerformance> => {
 
-  return customFetch<ConsumerPerformance>(getGetConsumerPerformanceUrl(),
+  return customFetch<ConsumerPerformance>(getGetConsumerPerformanceUrl(params),
   {
     ...options,
     method: 'GET'
@@ -3908,23 +3916,23 @@ export const getConsumerPerformance = async ( options?: Parameters<typeof custom
 
 
 
-export const getGetConsumerPerformanceQueryKey = () => {
+export const getGetConsumerPerformanceQueryKey = (params?: GetConsumerPerformanceParams,) => {
     return [
-    `/api/consumer/performance`
+    `/api/consumer/performance`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetConsumerPerformanceQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPerformance>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetConsumerPerformanceQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPerformance>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerPerformanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPerformanceQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPerformanceQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPerformance>>> = ({ signal }) => getConsumerPerformance({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPerformance>>> = ({ signal }) => getConsumerPerformance(params, { signal, ...requestOptions });
 
 
 
@@ -3942,11 +3950,11 @@ export type GetConsumerPerformanceQueryError = ErrorType<ConsumerDataUnavailable
  */
 
 export function useGetConsumerPerformance<TData = Awaited<ReturnType<typeof getConsumerPerformance>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetConsumerPerformanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetConsumerPerformanceQueryOptions(options)
+  const queryOptions = getGetConsumerPerformanceQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

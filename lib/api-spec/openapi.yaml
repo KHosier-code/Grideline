@@ -923,6 +923,13 @@ paths:
       operationId: getConsumerPerformance
       tags: [nfl]
       summary: Read consumer-safe persisted performance
+      parameters:
+        - in: query
+          name: season
+          schema: { type: integer, minimum: 1900, maximum: 2200 }
+        - in: query
+          name: week
+          schema: { type: integer, minimum: 1, maximum: 22 }
       responses:
         "200":
           description: Consumer performance
@@ -2261,11 +2268,12 @@ components:
         avgClv: { type: ["number", "null"] }
     ConsumerPerformance:
       type: object
-      required: [status, officialPredictions, gradedPredictions, byFamily, breakdowns, window, note]
+      required: [status, officialPredictions, gradedPredictions, coverage, byFamily, breakdowns, window, note]
       properties:
         status: { type: string, enum: [available, unavailable] }
         officialPredictions: { type: integer }
         gradedPredictions: { type: integer }
+        coverage: { $ref: "#/components/schemas/ConsumerOfficialCoverage" }
         byFamily:
           type: object
           required: [spread, moneyline, totals]
@@ -2288,6 +2296,34 @@ components:
             maximumOfficialPredictions: { type: integer, const: 5000 }
             truncated: { type: boolean }
         note: { type: string }
+    ConsumerOfficialCoverage:
+      type: ["object", "null"]
+      required: [asOf, season, week, seasons, weeks, scheduled, eligible, picked, abstained, pickCoverage, abstentionRate, states]
+      properties:
+        asOf: { type: string, format: date-time }
+        season: { type: ["integer", "null"] }
+        week: { type: ["integer", "null"] }
+        seasons: { type: array, items: { type: integer } }
+        weeks: { type: array, items: { type: integer } }
+        scheduled: { type: ["integer", "null"] }
+        eligible: { type: ["integer", "null"] }
+        picked: { type: ["integer", "null"] }
+        abstained: { type: ["integer", "null"] }
+        pickCoverage: { type: ["number", "null"] }
+        abstentionRate: { type: ["number", "null"] }
+        states:
+          type: ["object", "null"]
+          required: [pending, unobserved, missing_inputs, missing_markets, missed_cutoff, cancelled, nonfinal, frozen, graded]
+          properties:
+            pending: { type: integer }
+            unobserved: { type: integer }
+            missing_inputs: { type: integer }
+            missing_markets: { type: integer }
+            missed_cutoff: { type: integer }
+            cancelled: { type: integer }
+            nonfinal: { type: integer }
+            frozen: { type: integer }
+            graded: { type: integer }
     ConsumerTrends:
       type: object
       required: [status, byWeek, byConfidence, byEdge, window, note]

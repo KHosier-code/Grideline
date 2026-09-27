@@ -29,6 +29,7 @@ import {
   getSnapshotIneligibilityReasons,
   snapshotUnavailableMessages,
   getPredictionPerformance,
+  getOfficialPickCoverage,
 } from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
 import { buildConsumerMatchupBoard } from "../lib/consumer-matchups";
@@ -1255,7 +1256,10 @@ export function applyCurrentPersonnelToConsumerContext(
   };
 }
 
-export function serializePerformance(performance: Awaited<ReturnType<typeof getPredictionPerformance>>) {
+export function serializePerformance(
+  performance: Awaited<ReturnType<typeof getPredictionPerformance>>,
+  coverage: Awaited<ReturnType<typeof getOfficialPickCoverage>> | null = null,
+) {
   const metric = (value: unknown) => safeNumber(value);
   const family = (value: Record<string, unknown>) => ({
     predictions: typeof value.predictions === "number" ? value.predictions : 0,
@@ -1278,6 +1282,7 @@ export function serializePerformance(performance: Awaited<ReturnType<typeof getP
     status: performance.status === "measured" ? "available" as const : "unavailable" as const,
     officialPredictions: performance.officialPredictions,
     gradedPredictions: performance.gradedPredictions,
+    coverage,
     byFamily: {
       spread: family(performance.byFamily.spread),
       moneyline: family(performance.byFamily.moneyline),
@@ -2182,8 +2187,24 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
 router.get("/consumer/games/:gameId", consumerGameDetailHandler());
 
 router.get("/consumer/performance", async (req, res): Promise<void> => {
+  const parse = (value: unknown) => {
+    if (value === undefined) return undefined;
+    if (typeof value !== "string" || !/^\d{1,4}$/.test(value)) return null;
+    return Number(value);
+  };
+  const season = parse(req.query.season);
+  const week = parse(req.query.week);
+  if (season === null || week === null || (season !== undefined && (season < 1900 || season > 2200))
+    || (week !== undefined && (week < 1 || week > 22))) {
+    res.status(400).json({ error: "Invalid season or week" });
+    return;
+  }
   try {
-    res.json(serializePerformance(await getPredictionPerformance(MAX_CONSUMER_PERFORMANCE_ROWS)));
+    const [performance, coverage] = await Promise.all([
+      getPredictionPerformance(MAX_CONSUMER_PERFORMANCE_ROWS),
+      getOfficialPickCoverage({ season, week }),
+    ]);
+    res.json(serializePerformance(performance, coverage));
   } catch (error) {
     req.log.error({ error }, "Consumer performance read failed");
     res.status(503).json({ error: "Performance data is being refreshed", code: "consumer_data_unavailable" });

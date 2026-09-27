@@ -1672,10 +1672,53 @@ export type ConsumerPerformanceWindow = {
   truncated: boolean;
 };
 
+/**
+ * @nullable
+ */
+export type ConsumerOfficialCoverageStates = {
+  pending: number;
+  unobserved: number;
+  missing_inputs: number;
+  missing_markets: number;
+  missed_cutoff: number;
+  cancelled: number;
+  nonfinal: number;
+  frozen: number;
+  graded: number;
+} | null;
+
+/**
+ * @nullable
+ */
+export type ConsumerOfficialCoverage = {
+  asOf: string;
+  /** @nullable */
+  season: number | null;
+  /** @nullable */
+  week: number | null;
+  seasons: number[];
+  weeks: number[];
+  /** @nullable */
+  scheduled: number | null;
+  /** @nullable */
+  eligible: number | null;
+  /** @nullable */
+  picked: number | null;
+  /** @nullable */
+  abstained: number | null;
+  /** @nullable */
+  pickCoverage: number | null;
+  /** @nullable */
+  abstentionRate: number | null;
+  /** @nullable */
+  states: ConsumerOfficialCoverageStates;
+} | null;
+
 export interface ConsumerPerformance {
   status: ConsumerPerformanceStatus;
   officialPredictions: number;
   gradedPredictions: number;
+  coverage: ConsumerOfficialCoverage | null;
   byFamily: ConsumerPerformanceByFamily;
   breakdowns: ConsumerPerformanceBreakdowns;
   window: ConsumerPerformanceWindow;
@@ -3728,6 +3771,19 @@ season?: number;
 export type ListConsumerGamesParams = {
 /**
  * @minimum 2020
+ */
+season?: number;
+/**
+ * @minimum 1
+ * @maximum 22
+ */
+week?: number;
+};
+
+export type GetConsumerPerformanceParams = {
+/**
+ * @minimum 1900
+ * @maximum 2200
  */
 season?: number;
 /**

@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerOfficialCoverage } from './consumerOfficialCoverage';
 import type { ConsumerPerformanceBreakdowns } from './consumerPerformanceBreakdowns';
 import type { ConsumerPerformanceByFamily } from './consumerPerformanceByFamily';
 import type { ConsumerPerformanceStatus } from './consumerPerformanceStatus';
@@ -14,6 +15,7 @@ export interface ConsumerPerformance {
   status: ConsumerPerformanceStatus;
   officialPredictions: number;
   gradedPredictions: number;
+  coverage: ConsumerOfficialCoverage | null;
   byFamily: ConsumerPerformanceByFamily;
   breakdowns: ConsumerPerformanceBreakdowns;
   window: ConsumerPerformanceWindow;

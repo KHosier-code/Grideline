@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  classifyOfficialCoverageGame,
   comparisonData,
   evaluateProductionInputEligibility,
   filterEligiblePredictionRows,
@@ -62,6 +63,27 @@ function completeSnapshot(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+test("official coverage separates cutoffs, missing evidence, frozen picks and grades", () => {
+  const kickoffTime = new Date("2026-09-20T17:00:00Z");
+  const now = new Date("2026-09-21T17:00:00Z");
+  const game = { gameStatus: "Final", kickoffTime, finalHomeScore: 21, finalAwayScore: 17 };
+  const snapshot = (overrides: Record<string, unknown> = {}) => ({
+    ...completeSnapshot(), id: 1, officialFinalPrediction: false, ...overrides,
+  }) as unknown as Parameters<typeof classifyOfficialCoverageGame>[1][number];
+  const state = (rows: ReturnType<typeof snapshot>[], markets = false, grades = new Set<number>()) =>
+    classifyOfficialCoverageGame(game, rows, grades, markets, now);
+  assert.equal(state([]), "unobserved");
+  assert.equal(state([snapshot({ inputMissingFeatureCount: 1 })]), "missing_inputs");
+  assert.equal(state([snapshot({ predictionTimestamp: new Date("2026-09-20T16:45:00Z") })]), "missed_cutoff");
+  assert.equal(state([snapshot()]), "missing_markets");
+  assert.equal(state([snapshot()], true), "unobserved"); // no recorded freeze, despite ready evidence
+  assert.equal(state([snapshot({ officialFinalPrediction: true })]), "frozen");
+  assert.equal(state([snapshot({ officialFinalPrediction: true })], true, new Set([1])), "graded");
+  assert.equal(classifyOfficialCoverageGame({ ...game, gameStatus: "Cancelled" }, [], new Set(), false, now), "cancelled");
+  assert.equal(classifyOfficialCoverageGame({ ...game, gameStatus: "In Progress" }, [], new Set(), false, now), "nonfinal");
+  assert.equal(classifyOfficialCoverageGame(game, [], new Set(), false, new Date("2026-09-20T16:00:00Z")), "pending");
+});
 
 test("rejects NaN and Infinity model outputs", () => {
   const failures = validatePredictionOutputs({

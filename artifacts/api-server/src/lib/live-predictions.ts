@@ -1354,6 +1354,111 @@ export function matchesPredictionPerformanceWindow(
   );
 }
 
+export type OfficialCoverageState =
+  | "pending" | "unobserved" | "missing_inputs" | "missing_markets"
+  | "missed_cutoff" | "cancelled" | "nonfinal" | "frozen" | "graded";
+
+export function classifyOfficialCoverageGame(
+  game: { gameStatus: string; kickoffTime: Date | null; finalHomeScore: number | null; finalAwayScore: number | null },
+  snapshots: Array<typeof predictionSnapshotsTable.$inferSelect>,
+  gradedIds: Set<number>,
+  marketReady: boolean,
+  asOf: Date,
+): OfficialCoverageState {
+  const state = interpretNflGameState(game, asOf);
+  if (state === "cancelled" || state === "postponed" || !game.kickoffTime) return "cancelled";
+  const official = snapshots.find((row) => row.officialFinalPrediction && isEligiblePredictionSnapshot(row));
+  if (official && gradedIds.has(official.id) && state === "final"
+    && game.finalHomeScore !== null && game.finalAwayScore !== null) return "graded";
+  if (official) return "frozen";
+  const cutoff = new Date(game.kickoffTime.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000);
+  if (asOf < cutoff) return "pending";
+  if (state !== "final" && game.kickoffTime <= asOf) return "nonfinal";
+  if (!snapshots.length) return "unobserved";
+  const eligible = snapshots.filter(isEligiblePredictionSnapshot);
+  if (!eligible.length) return "missing_inputs";
+  if (!eligible.some((row) => row.predictionTimestamp <= cutoff
+    && row.predictionTimestamp < game.kickoffTime!)) return "missed_cutoff";
+  return marketReady ? "unobserved" : "missing_markets";
+}
+
+export async function getOfficialPickCoverage(
+  requested: { season?: number; week?: number } = {},
+  asOf = new Date(),
+) {
+  const schedule = await db.select({
+    gameId: gamesTable.gameId, season: gamesTable.season, week: gamesTable.week,
+    homeTeamId: gamesTable.homeTeamId,
+    kickoffTime: gamesTable.kickoffTime, gameStatus: gamesTable.gameStatus,
+    finalHomeScore: gamesTable.finalHomeScore, finalAwayScore: gamesTable.finalAwayScore,
+  }).from(gamesTable).orderBy(asc(gamesTable.kickoffTime));
+  const dated = schedule.filter((game) => game.kickoffTime && game.week >= 1);
+  const seasons = [...new Set(dated.map((game) => game.season))].sort((a, b) => b - a);
+  const nearby = dated.filter((game) => game.kickoffTime! <= new Date(asOf.getTime() + 7 * 86400_000));
+  const season = requested.season && seasons.includes(requested.season)
+    ? requested.season : (nearby.at(-1)?.season ?? dated.at(-1)?.season ?? null);
+  const seasonGames = dated.filter((game) => game.season === season);
+  const weeks = [...new Set(seasonGames.map((game) => game.week))].sort((a, b) => a - b);
+  const upcoming = seasonGames.find((game) => game.kickoffTime! >= asOf);
+  const week = requested.week && weeks.includes(requested.week)
+    ? requested.week : (upcoming?.week ?? seasonGames.at(-1)?.week ?? null);
+  const games = seasonGames.filter((game) => game.week === week);
+  if (season === null || week === null || !games.length) return {
+    asOf: asOf.toISOString(), season: null, week: null, seasons, weeks: [],
+    scheduled: null, eligible: null, picked: null, abstained: null,
+    pickCoverage: null, abstentionRate: null,
+    states: null,
+  };
+  const ids = games.map((game) => game.gameId);
+  const snapshots = await db.select().from(predictionSnapshotsTable)
+    .where(inArray(predictionSnapshotsTable.gameId, ids));
+  const gradeIds = snapshots.length
+    ? await db.select({ predictionId: predictionGradesTable.predictionId })
+      .from(predictionGradesTable)
+      .where(inArray(predictionGradesTable.predictionId, snapshots.map((row) => row.id)))
+    : [];
+  const graded = new Set(gradeIds.map((row) => row.predictionId));
+  const homeTeams = new Map((await db.select().from(teamsTable)
+    .where(inArray(teamsTable.teamId, [...new Set(games.map((game) => game.homeTeamId))])))
+    .map((team) => [team.teamId, team]));
+  const byGame = new Map<string, typeof snapshots>();
+  for (const row of snapshots) byGame.set(row.gameId, [...(byGame.get(row.gameId) ?? []), row]);
+  const counts: Record<OfficialCoverageState, number> = {
+    pending: 0, unobserved: 0, missing_inputs: 0, missing_markets: 0,
+    missed_cutoff: 0, cancelled: 0, nonfinal: 0, frozen: 0, graded: 0,
+  };
+  for (const game of games) {
+    const rows = byGame.get(game.gameId) ?? [];
+    const cutoff = new Date(game.kickoffTime!.getTime() - CANONICAL_EVALUATION_CUTOFF_MINUTES * 60_000);
+    const needsMarket = cutoff <= asOf && rows.some((row) =>
+      !row.officialFinalPrediction && isEligiblePredictionSnapshot(row)
+      && row.predictionTimestamp <= cutoff && row.predictionTimestamp < game.kickoffTime!);
+    // This is a read of the six persisted book/market quotes, never a provider fetch.
+    const home = homeTeams.get(game.homeTeamId);
+    const market = needsMarket && home
+      ? await marketData(game.gameId, cutoff, {
+        teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation,
+      })
+      : {};
+    const state = classifyOfficialCoverageGame(game, rows, graded,
+      needsMarket && hasCompleteCanonicalMarketEvidence(market, cutoff), asOf);
+    counts[state] += 1;
+  }
+  // A slate with no persisted prediction attempt cannot prove an operational
+  // abstention rate. Do not turn missing tracking history into a 0% pick rate.
+  const eligible = games.length - counts.pending - counts.cancelled;
+  const picked = counts.frozen + counts.graded;
+  const abstained = counts.missing_inputs + counts.missing_markets + counts.missed_cutoff;
+  const supported = eligible > 0 && counts.unobserved === 0 && counts.nonfinal === 0;
+  return {
+    asOf: asOf.toISOString(), season, week, seasons, weeks,
+    scheduled: games.length, eligible, picked, abstained,
+    pickCoverage: supported ? picked / eligible : null,
+    abstentionRate: supported ? abstained / eligible : null,
+    states: counts,
+  };
+}
+
 export async function getPredictionPerformance(
   windowOrMax?: { season: number; week: number } | number,
 ) {

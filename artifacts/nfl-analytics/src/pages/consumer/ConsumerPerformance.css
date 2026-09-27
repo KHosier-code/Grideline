@@ -1,3 +1,62 @@
+.consumer-coverage {
+  display: grid;
+  gap: 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card));
+  padding: 20px;
+}
+
+.consumer-coverage-total, .consumer-coverage .consumer-note {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.consumer-coverage-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.consumer-coverage-values > div {
+  display: grid;
+  gap: 5px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.consumer-coverage-values small, .consumer-coverage-values span {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+}
+
+.consumer-coverage-values strong {
+  font-family: var(--app-font-serif);
+  font-size: 28px;
+}
+
+.consumer-coverage-states {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.consumer-coverage-states > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.consumer-coverage-states dd { margin: 0; font-weight: 700; }
+
 .consumer-graded-charts {
   display: grid;
   gap: 18px;
@@ -197,6 +256,7 @@
 }
 
 @media (max-width: 760px) {
+  .consumer-coverage-values { grid-template-columns: 1fr; }
   .consumer-chart-heading {
     align-items: stretch;
     flex-direction: column;
