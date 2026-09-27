@@ -6,6 +6,7 @@ import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { readdir, stat, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { fixtureExpected, fixtureVersion, homePerformanceResponse } from './home-performance-api.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const base = process.env.BASE_PATH ?? '/';
@@ -15,6 +16,10 @@ const origin = `http://127.0.0.1:${port}`;
 const routes = process.env.PERF_ACCOUNT_ONLY === '1'
   ? ['/tests/performance-home.html?shell=account']
   : ['/', '/tests/performance-home.html', '/tests/performance-home.html?shell=account', '/games', '/games/perf-not-a-real-game', '/performance'];
+const apiMode = process.env.PERF_API === 'fixture' ? 'fixture' : 'live';
+if (process.env.PERF_API && !['fixture', 'live'].includes(process.env.PERF_API)) throw new Error('PERF_API must be fixture or live');
+if (apiMode === 'fixture' && process.env.PERF_ACCOUNT_ONLY === '1') throw new Error('PERF_API=fixture cannot be combined with PERF_ACCOUNT_ONLY=1');
+if (apiMode === 'fixture') routes.splice(0, routes.length, '/tests/performance-home.html');
 let sparseGameId = null;
 const profiles = {
   mobile: { viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 2, cpu: 4, latency: 150, throughput: 200 * 1024 },
@@ -74,8 +79,18 @@ try {
         const isHomeFixture = route === '/tests/performance-home.html';
         const isAccountFixture = route === '/tests/performance-home.html?shell=account';
         const context = await browser.newContext({ viewport: settings.viewport, isMobile: settings.isMobile, deviceScaleFactor: settings.deviceScaleFactor });
+         const unexpectedRequests = [];
+         if (apiMode === 'fixture') await context.route('**/api/**', async route => {
+           const body = homePerformanceResponse(route.request().url());
+           if (!body || route.request().method() !== 'GET') {
+             unexpectedRequests.push(`${route.request().method()} ${route.request().url()}`);
+             await route.abort();
+             return;
+           }
+           await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+         });
         const page = await context.newPage();
-        await page.route('**/api/**', async route => {
+         if (apiMode === 'live') await page.route('**/api/**', async route => {
           const request = route.request();
           const path = new URL(request.url()).pathname + new URL(request.url()).search;
           try {
@@ -102,6 +117,20 @@ try {
         if (isHomeFixture || isAccountFixture) {
           await page.locator('main .weekly-home h1').waitFor({ timeout: 12_000 });
           if (await page.locator('main .consumer-state').count()) throw new Error(`${profile}: Home fixture remained in a loading or error state`);
+          if (apiMode === 'fixture') {
+            try {
+              await page.locator('[data-section="pregame-team-comparison"] .recharts-wrapper').waitFor({ timeout: 12_000 });
+              await page.locator('.ct-trend-chart .recharts-wrapper').waitFor({ timeout: 12_000 });
+            } catch (error) {
+              throw new Error(`Fixture chart readiness failed: ${await page.locator('main').innerText()} | unexpected API: ${unexpectedRequests.join(', ')}`, { cause: error });
+            }
+            const heading = await page.locator('main .weekly-home h1').textContent();
+            const cards = await page.locator('.weekly-card').count();
+            if (unexpectedRequests.length || heading !== fixtureExpected.heading || cards !== fixtureExpected.cards
+              || await page.locator('.ch-trend-state, .ch-trend-skeleton').count()) {
+              throw new Error(`Fixture Home did not render expected slate and both charts: ${heading}, ${cards} cards; unexpected API: ${unexpectedRequests.join(', ')}`);
+            }
+          }
         } else {
           await page.locator('main h1, main .consumer-state h2, main .consumer-state p').first().waitFor({ timeout: 12_000 }).catch(() => {});
         }
@@ -141,6 +170,7 @@ try {
           // No mock login is installed: this link must reach the real anonymous
           // saved-games route, where private data remains inaccessible.
         }
+        if (unexpectedRequests.length) throw new Error(`Unexpected fixture API requests: ${unexpectedRequests.join(', ')}`);
         if (settings.isMobile && route !== '/games') await page.getByRole('button', { name: 'Open navigation' }).click();
         const link = route === '/games'
           ? page.getByRole('link', { name: /^Open .* details$/ }).first()
@@ -179,7 +209,7 @@ try {
       await boundary.close();
     }
     const assets = await Promise.all((await readdir(resolve(root, 'dist/public/assets'))).filter(x => x.endsWith('.js')).map(async name => ({ name, kib: Math.round((await stat(resolve(root, 'dist/public/assets', name))).size / 1024) })));
-    const report = { basePath: base, budgets, profiles, results, largestJsAssets: assets.sort((a, b) => b.kib - a.kib).slice(0, 12) };
+     const report = { apiMode, fixtureVersion: apiMode === 'fixture' ? fixtureVersion : null, basePath: base, budgets, profiles, results, largestJsAssets: assets.sort((a, b) => b.kib - a.kib).slice(0, 12) };
     if (process.env.PERF_OUTPUT) await writeFile(process.env.PERF_OUTPUT, JSON.stringify(report, null, 2) + '\n');
     console.log(JSON.stringify(report, null, 2));
     if (process.env.PERF_ENFORCE === '1') {

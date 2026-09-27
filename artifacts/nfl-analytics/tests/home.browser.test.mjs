@@ -7,6 +7,22 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fixtureExpected, homePerformanceResponse } from './home-performance-api.mjs';
+
+test('weekly Home performance fixture keeps its slate and chart requests deterministic', () => {
+  const dashboard = homePerformanceResponse('http://fixture/api/consumer/dashboard');
+  assert.equal(dashboard.games.length, fixtureExpected.cards);
+  assert.equal(dashboard.games[0].gameId, fixtureExpected.gameId);
+  assert.equal(dashboard.games[0].season + ' · Week ' + dashboard.games[0].week, fixtureExpected.heading);
+  const detail = homePerformanceResponse(`http://fixture/api/consumer/games/${fixtureExpected.gameId}`);
+  assert.equal(detail.matchupBoard.assessments[0].metrics[0].label, 'Blended pass EPA / dropback');
+  const discovery = homePerformanceResponse('http://fixture/api/consumer/team-analytics?season=2099&throughWeek=2&window=season');
+  const trends = homePerformanceResponse('http://fixture/api/consumer/team-analytics?season=2099&throughWeek=2&window=season&teams=BUF%2CMIA');
+  assert.deepEqual(discovery.coverage.weeks.map(item => item.statGames), [16, 16]);
+  assert.equal(trends.teams.length, 2);
+  assert.equal(homePerformanceResponse('http://fixture/api/consumer/games'), null);
+  assert.equal(homePerformanceResponse('http://fixture/api/consumer/team-analytics?season=2099&throughWeek=3&window=season'), null);
+});
 
 const origin = process.env.HOME_BROWSER_URL
   ?? (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:80');
