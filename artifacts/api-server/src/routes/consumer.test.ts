@@ -443,7 +443,7 @@ test("Game Detail Seattle cards retain sparse usage and fill missing roles witho
   assert.deepEqual(rankRecentKeyPlayers([], "SEA"), []);
 });
 
-test("database-backed Game Detail selects both teams' skill players and enforces pregame eligibility", async (t) => {
+test("database-backed Game Detail and player usage retain alternate finals but exclude elapsed non-finals", async (t) => {
   const prefix = `detail-fixture-${randomUUID()}`;
   // Unique source abbreviations and IDs prevent existing seasons or concurrent tests
   // from contributing player history to either team's selection.
@@ -451,6 +451,8 @@ test("database-backed Game Detail selects both teams' skill players and enforces
   const home = { id: `${prefix}-home`, code: `H${randomUUID().slice(0, 10).toUpperCase()}` };
   const previousId = `${prefix}-previous`;
   const finalId = `${prefix}-final`;
+  const liveId = `${prefix}-live`;
+  const scheduledId = `${prefix}-scheduled`;
   const upcomingId = `${prefix}-upcoming`;
   const now = Date.now();
   const daysAgo = (days: number) => new Date(now - days * 86_400_000);
@@ -487,6 +489,7 @@ test("database-backed Game Detail selects both teams' skill players and enforces
       },
     });
   }));
+  app.use(consumerRouter);
   const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const address = server.address();
@@ -494,10 +497,10 @@ test("database-backed Game Detail selects both teams' skill players and enforces
   t.after(async () => {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     await db.delete(injuriesTable).where(like(injuriesTable.sourceHash, `${prefix}%`));
-    await db.delete(snapCountsTable).where(inArray(snapCountsTable.gameId, [previousId, finalId]));
+    await db.delete(snapCountsTable).where(inArray(snapCountsTable.gameId, [previousId, finalId, liveId, scheduledId]));
     await db.delete(playerGameStatsTable).where(inArray(playerGameStatsTable.teamId, [away.code, home.code]));
     await db.delete(playersTable).where(like(playersTable.playerId, `${prefix}%`));
-    await db.delete(gamesTable).where(inArray(gamesTable.gameId, [previousId, finalId, upcomingId]));
+    await db.delete(gamesTable).where(inArray(gamesTable.gameId, [previousId, finalId, liveId, scheduledId, upcomingId]));
     await db.delete(teamsTable).where(inArray(teamsTable.teamId, [away.id, home.id]));
   });
 
@@ -507,10 +510,14 @@ test("database-backed Game Detail selects both teams' skill players and enforces
   ]);
   await db.insert(gamesTable).values([
     { gameId: previousId, season: 2026, week: 1, gameDate: daysAgo(4), kickoffTime: daysAgo(4),
-      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_FINAL", finalHomeScore: 20, finalAwayScore: 17 },
-    { gameId: finalId, season: 2026, week: 2, gameDate: daysAgo(2), kickoffTime: daysAgo(2),
-      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_FINAL", finalHomeScore: 24, finalAwayScore: 21 },
-    { gameId: upcomingId, season: 2026, week: 3, gameDate: tomorrow, kickoffTime: tomorrow,
+      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_COMPLETED", finalHomeScore: 20, finalAwayScore: 17 },
+    { gameId: finalId, season: 2026, week: 2, gameDate: daysAgo(3), kickoffTime: daysAgo(3),
+      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "closed", finalHomeScore: 24, finalAwayScore: 21 },
+    { gameId: liveId, season: 2026, week: 3, gameDate: daysAgo(2), kickoffTime: daysAgo(2),
+      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_IN_PROGRESS" },
+    { gameId: scheduledId, season: 2026, week: 4, gameDate: daysAgo(1), kickoffTime: daysAgo(1),
+      homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_SCHEDULED" },
+    { gameId: upcomingId, season: 2026, week: 5, gameDate: tomorrow, kickoffTime: tomorrow,
       homeTeamId: home.id, awayTeamId: away.id, gameStatus: "STATUS_SCHEDULED" },
   ]);
   await db.insert(playersTable).values(players.map(({ name, team, position }) => ({
@@ -541,15 +548,15 @@ test("database-backed Game Detail selects both teams' skill players and enforces
   });
   assert.deepEqual(await latestRealImport(), realImportBefore,
     "a route fixture must not replace the latest real nflverse import");
-  await db.insert(playerGameStatsTable).values([1, 2].flatMap((week) => players.map((player) => ({
+  await db.insert(playerGameStatsTable).values([1, 2, 3, 4].flatMap((week) => players.map((player) => ({
     playerId: playerId(player.name), playerName: player.name, position: player.position,
     teamId: player.team.code, opponentTeamId: player.team === away ? home.code : away.code,
     season: 2026, seasonType: "REG", week, targets: player.targets,
     carries: player.carries, receptions: player.targets, receivingYards: player.targets * 10,
     rushingYards: player.carries * 4,
   }))));
-  await db.insert(snapCountsTable).values([1, 2].flatMap((week) => players.map((player) => ({
-    gameId: week === 1 ? previousId : finalId,
+  await db.insert(snapCountsTable).values([1, 2, 3, 4].flatMap((week) => players.map((player) => ({
+    gameId: [previousId, finalId, liveId, scheduledId][week - 1]!,
     playerId: player.name === "away-wr" ? receiverSnapId : playerId(player.name),
     playerName: player.name, position: player.position, season: 2026, week,
     teamId: player.team.code, opponentTeamId: player.team === away ? home.code : away.code,
@@ -579,6 +586,18 @@ test("database-backed Game Detail selects both teams' skill players and enforces
   assert.equal(upcoming.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.targets, 18);
   assert.equal(upcoming.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.snapShare, .8);
   assert.equal(upcoming.keyPlayers.find(({ name }) => name === "home-rb")?.recentUsage.carries, 34);
+  const usageResponse = await fetch(`http://127.0.0.1:${address.port}/consumer/player-usage?game=${encodeURIComponent(upcomingId)}&team=${away.code}&position=WR&window=last5`);
+  const usageBody = await usageResponse.json();
+  assert.equal(usageResponse.status, 200, JSON.stringify(usageBody).slice(0, 300));
+  const usage = GetConsumerPlayerUsageResponse.parse(usageBody);
+  const receiver = usage.players.find((player) => player.playerId === playerId("away-wr"));
+  assert.ok(receiver, "both alternate-final games must produce usage for the receiver");
+  assert.deepEqual(receiver.games.map(({ gameId }) => gameId), [previousId, finalId]);
+  assert.equal(receiver.aggregate.targets.value, 18);
+  assert.equal(receiver.sourceCoverage.requestedGames, 2,
+    "elapsed in-progress and scheduled games must not count toward the eligible window");
+  assert.equal(upcoming.keyPlayers.find(({ name }) => name === "away-wr")?.recentUsage.targets,
+    receiver.aggregate.targets.value, "Game Detail and player usage must agree on final-game history");
   const completed = await getDetail(finalId);
   assert.equal(completed.gameState, "final");
   assert.deepEqual(completed.keyPlayers.map(({ name }) => name),
