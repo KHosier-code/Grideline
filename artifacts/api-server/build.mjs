@@ -13,10 +13,19 @@ const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
-  const revision = execFileSync("git", ["rev-parse", "--short=12", "HEAD"], {
-    cwd: artifactDir,
-    encoding: "utf8",
-  }).trim();
+  // Hosts such as Railway may build without a .git directory but expose the commit.
+  const hostCommit = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.SOURCE_COMMIT;
+  let revision = hostCommit?.slice(0, 12);
+  if (!revision) {
+    try {
+      revision = execFileSync("git", ["rev-parse", "--short=12", "HEAD"], {
+        cwd: artifactDir,
+        encoding: "utf8",
+      }).trim();
+    } catch {
+      revision = "unknown";
+    }
+  }
   const buildId = `${revision}-${new Date().toISOString()}`;
   await rm(distDir, { recursive: true, force: true });
 
