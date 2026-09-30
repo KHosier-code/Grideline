@@ -388,3 +388,22 @@
 .gl-td .gl-scored { font-size: 12px; font-weight: 700; }
 .gl-td .gl-scored.yes { color: hsl(var(--status-good)); }
 .gl-td .gl-scored.no { color: hsl(var(--muted-foreground)); }
+
+/* Home: top TD cards and the game lines board */
+.gl-td-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.gl-td-card { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 14px; color: inherit; text-decoration: none; }
+.gl-td-card:hover { border-color: hsl(var(--muted-foreground)); }
+.gl-td-card-odds { display: grid; justify-items: end; }
+.gl-td-card-odds small { color: hsl(var(--muted-foreground)); font-size: 12px; font-variant-numeric: tabular-nums; }
+.gl-board-head.gl-lines-row, .gl-board-row.gl-lines-row { grid-template-columns: 84px minmax(260px, 2fr) repeat(2, minmax(0, 1fr)) 20px; }
+.gl-qb { display: block; margin-top: 1px; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 400; }
+.gl-qb .gl-flag { margin-left: 6px; }
+.gl-qb-note { color: hsl(var(--muted-foreground)); }
+.gl-team .name { white-space: normal; }
+@media (max-width: 900px) {
+  .gl-td-grid { grid-template-columns: 1fr; }
+  .gl-board-row.gl-lines-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 460px) {
+  .gl-board-row.gl-lines-row { grid-template-columns: 1fr; }
+}

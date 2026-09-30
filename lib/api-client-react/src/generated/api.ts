@@ -33,6 +33,7 @@ import type {
   ConsumerGameAlerts,
   ConsumerGameDetail,
   ConsumerGameNotFoundResponse,
+  ConsumerGameProjections,
   ConsumerGames,
   ConsumerGradedCharts,
   ConsumerInvalidRequestResponse,
@@ -55,6 +56,7 @@ import type {
   DataHealth,
   Game,
   GetConsumerDefenseVsPositionParams,
+  GetConsumerGameProjectionsParams,
   GetConsumerGradedChartsParams,
   GetConsumerPerformanceParams,
   GetConsumerPlayerPositionMatchupParams,
@@ -5356,6 +5358,91 @@ export function useGetConsumerTouchdowns<TData = Awaited<ReturnType<typeof getCo
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerTouchdownsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerGameProjectionsUrl = (params?: GetConsumerGameProjectionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/game-projections?${stringifiedParams}` : `/api/consumer/game-projections`
+}
+
+/**
+ * For each game, the latest projection from the QB-adjusted rating model published before kickoff, plus the straight-up winner record for games that are final. Projections, not picks against the spread.
+ * @summary Read QB-adjusted game projections for a season
+ */
+export const getConsumerGameProjections = async (params?: GetConsumerGameProjectionsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerGameProjections> => {
+
+  return customFetch<ConsumerGameProjections>(getGetConsumerGameProjectionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerGameProjectionsQueryKey = (params?: GetConsumerGameProjectionsParams,) => {
+    return [
+    `/api/consumer/game-projections`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerGameProjectionsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerGameProjections>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerGameProjectionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGameProjections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerGameProjectionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerGameProjections>>> = ({ signal }) => getConsumerGameProjections(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerGameProjections>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerGameProjectionsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerGameProjections>>>
+export type GetConsumerGameProjectionsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read QB-adjusted game projections for a season
+ */
+
+export function useGetConsumerGameProjections<TData = Awaited<ReturnType<typeof getConsumerGameProjections>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerGameProjectionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGameProjections>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerGameProjectionsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

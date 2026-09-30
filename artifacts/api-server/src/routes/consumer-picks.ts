@@ -3,8 +3,9 @@ import { Router, type IRouter } from "express";
 import { asc, desc, eq } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
-  db, gamesTable, predictionSnapshotsTable, touchdownPickResultsTable, touchdownPickRunsTable,
+  db, gameProjectionRunsTable, gamesTable, predictionSnapshotsTable, touchdownPickResultsTable, touchdownPickRunsTable,
 } from "@workspace/db";
+import { projectionsBeforeKickoff, winnerRecord } from "../lib/game-projections";
 import { isEligiblePredictionSnapshot } from "../lib/live-predictions";
 import { addResult, emptyRecordLine, gradePicks, picksForProjection } from "../lib/pick-grading";
 import { boardForWeek, fairAmericanOdds, topTenRecord } from "../lib/touchdown-board";
@@ -198,17 +199,22 @@ function tokenMatches(header: string | undefined, expected: string) {
   return provided.length > 0 && timingSafeEqual(digest(provided), digest(expected));
 }
 
-/** Called by the scheduled GitHub workflow that runs research/td-model. */
-router.post("/touchdowns/ingest", async (req, res): Promise<void> => {
-  const expected = process.env.TD_PICKS_INGEST_TOKEN;
+/** Shared secret for the scheduled GitHub workflow (research/td-model and research/game-model). */
+function authorizeIngest(req: import("express").Request, res: import("express").Response) {
+  const expected = process.env.GRIDLINE_INGEST_TOKEN ?? process.env.TD_PICKS_INGEST_TOKEN;
   if (!expected || expected.length < 24) {
-    res.status(503).json({ error: "Touchdown ingest is not configured" });
-    return;
+    res.status(503).json({ error: "Ingest is not configured" });
+    return false;
   }
   if (!tokenMatches(req.get("authorization"), expected)) {
     res.status(401).json({ error: "Unauthorized" });
-    return;
+    return false;
   }
+  return true;
+}
+
+router.post("/touchdowns/ingest", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
   const parsed = ingestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid touchdown picks payload", issues: parsed.error.issues.slice(0, 10) });
@@ -232,6 +238,100 @@ router.post("/touchdowns/ingest", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Touchdown ingest failed");
     res.status(500).json({ error: "Touchdown ingest failed" });
+  }
+});
+
+const qbSchema = zod.object({
+  name: zod.string().max(80).nullable(), value: zod.number().finite().nullable(),
+  listed: zod.boolean(), newStarter: zod.boolean(),
+});
+const gameIngestSchema = zod.object({
+  season: zod.number().int().min(2000).max(2200),
+  week: zod.number().int().min(1).max(22),
+  generatedAt: zod.string().datetime({ offset: true }),
+  modelVersion: zod.string().min(1).max(120),
+  evaluation: zod.record(zod.string(), zod.union([zod.number(), zod.string(), zod.null()])),
+  games: zod.array(zod.object({
+    gameId: zod.string().min(1).max(40),
+    nflverseGameId: zod.string().min(1).max(40),
+    homeTeam: zod.string().min(2).max(4),
+    awayTeam: zod.string().min(2).max(4),
+    kickoff: zod.string().datetime({ offset: true }).nullable(),
+    projectedMargin: zod.number().min(-60).max(60),
+    projectedTotal: zod.number().min(0).max(120),
+    homeWinProbability: zod.number().min(0).max(1),
+    homeQb: qbSchema,
+    awayQb: qbSchema,
+    factors: zod.object({
+      qbEdge: factorSchema, teamEdge: factorSchema, passEdge: factorSchema, rushEdge: factorSchema,
+      restDiff: factorSchema, neutralSite: zod.boolean(),
+    }),
+  })).max(32),
+});
+
+router.post("/games/projections/ingest", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const parsed = gameIngestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid game projections payload", issues: parsed.error.issues.slice(0, 10) });
+    return;
+  }
+  const body = parsed.data;
+  try {
+    await db.insert(gameProjectionRunsTable).values({
+      season: body.season, week: body.week, generatedAt: new Date(body.generatedAt),
+      modelVersion: body.modelVersion, evaluation: body.evaluation, games: body.games,
+    }).onConflictDoNothing();
+    res.status(201).json({ stored: body.games.length });
+  } catch (error) {
+    req.log.error({ error }, "Game projection ingest failed");
+    res.status(500).json({ error: "Game projection ingest failed" });
+  }
+});
+
+router.get("/consumer/game-projections", async (req, res): Promise<void> => {
+  const season = parseInteger(req.query.season, 1990, 2200);
+  if (season === null) {
+    res.status(400).json({ error: "Invalid season" });
+    return;
+  }
+  try {
+    const [latest] = await db.select({ season: gameProjectionRunsTable.season }).from(gameProjectionRunsTable)
+      .orderBy(desc(gameProjectionRunsTable.generatedAt)).limit(1);
+    const selectedSeason = season ?? latest?.season;
+    if (selectedSeason === undefined) {
+      res.json({ status: "unavailable", season: null, modelVersion: null, generatedAt: null, evaluation: {}, games: [],
+        record: { wins: 0, losses: 0, pushes: 0 }, weeks: [] });
+      return;
+    }
+    const runs = await db.select().from(gameProjectionRunsTable)
+      .where(eq(gameProjectionRunsTable.season, selectedSeason)).orderBy(asc(gameProjectionRunsTable.generatedAt));
+    const projections = projectionsBeforeKickoff(runs);
+    const ids = [...projections.keys()];
+    const finals = new Map<string, { home: number; away: number; week: number }>();
+    if (ids.length) {
+      const rows = await db.select().from(gamesTable).where(eq(gamesTable.season, selectedSeason));
+      for (const row of rows) {
+        if (ids.includes(row.gameId) && isFinal(row.gameStatus) && row.finalHomeScore !== null && row.finalAwayScore !== null) {
+          finals.set(row.gameId, { home: row.finalHomeScore, away: row.finalAwayScore, week: row.week });
+        }
+      }
+    }
+    const record = winnerRecord(projections.values(), finals);
+    const newest = runs.at(-1);
+    res.json({
+      status: runs.length ? "available" : "unavailable",
+      season: selectedSeason,
+      modelVersion: newest?.modelVersion ?? null,
+      generatedAt: newest?.generatedAt.toISOString() ?? null,
+      evaluation: newest?.evaluation ?? {},
+      games: [...projections.values()].map(({ generatedAt, ...game }) => ({ ...game, projectedAt: generatedAt.toISOString() })),
+      record: record.total,
+      weeks: [...record.weeks.entries()].sort(([a], [b]) => a - b).map(([week, line]) => ({ week, ...line })),
+    });
+  } catch (error) {
+    req.log.error({ error }, "Consumer game projections read failed");
+    res.status(503).json({ error: "Game projections are being refreshed", code: "consumer_data_unavailable" });
   }
 });
 

@@ -5,10 +5,96 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+export interface ConsumerProjectionQb {
+  /** @nullable */
+  name: string | null;
+  /**
+     * Recency-weighted EPA per dropback, shrunk toward backup level
+     * @nullable
+     */
+  value: number | null;
+  /** True when the schedule lists this QB as the starter; false when inferred from recent starts */
+  listed: boolean;
+  /** Not the team's usual starter over its last four games */
+  newStarter: boolean;
+}
+
+export type ConsumerGameProjectionFactors = {
+  /** @nullable */
+  qbEdge: number | null;
+  /** @nullable */
+  teamEdge: number | null;
+  /** @nullable */
+  passEdge: number | null;
+  /** @nullable */
+  rushEdge: number | null;
+  /** @nullable */
+  restDiff: number | null;
+  neutralSite: boolean;
+};
+
+export interface ConsumerGameProjection {
+  gameId: string;
+  nflverseGameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  /** @nullable */
+  kickoff: string | null;
+  /** Home minus away */
+  projectedMargin: number;
+  projectedTotal: number;
+  homeWinProbability: number;
+  homeQb: ConsumerProjectionQb;
+  awayQb: ConsumerProjectionQb;
+  factors: ConsumerGameProjectionFactors;
+  projectedAt: string;
+}
+
+export type ConsumerGameProjectionsStatus = typeof ConsumerGameProjectionsStatus[keyof typeof ConsumerGameProjectionsStatus];
+
+
+export const ConsumerGameProjectionsStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerGameProjectionsEvaluation = {
+  marginMissRating?: number;
+  marginMissLine?: number;
+  winnersModel?: number;
+  winnersFavorite?: number;
+  atsRating?: number;
+  totalMissRating?: number;
+  totalMissLine?: number;
+  testedOn?: string;
+  [key: string]: unknown;
+ };
+
+export type ConsumerGameProjectionsWeeksItem = {
+  week: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+};
+
 export interface ConsumerRecordLine {
   wins: number;
   losses: number;
   pushes: number;
+}
+
+export interface ConsumerGameProjections {
+  status: ConsumerGameProjectionsStatus;
+  /** @nullable */
+  season: number | null;
+  /** @nullable */
+  modelVersion: string | null;
+  /** @nullable */
+  generatedAt: string | null;
+  evaluation: ConsumerGameProjectionsEvaluation;
+  games: ConsumerGameProjection[];
+  record: ConsumerRecordLine;
+  weeks: ConsumerGameProjectionsWeeksItem[];
 }
 
 export interface ConsumerRecordWeek {
@@ -4221,4 +4307,8 @@ season?: number;
 export type GetConsumerTouchdownsParams = {
 season?: number;
 week?: number;
+};
+
+export type GetConsumerGameProjectionsParams = {
+season?: number;
 };

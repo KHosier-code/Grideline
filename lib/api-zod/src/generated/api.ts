@@ -3663,3 +3663,71 @@ export const GetConsumerTouchdownsResponse = zod.object({
   "topTenHits": zod.number().int()
 })
 })
+
+
+/**
+ * For each game, the latest projection from the QB-adjusted rating model published before kickoff, plus the straight-up winner record for games that are final. Projections, not picks against the spread.
+ * @summary Read QB-adjusted game projections for a season
+ */
+export const GetConsumerGameProjectionsQueryParams = zod.object({
+  "season": zod.coerce.number().int().optional()
+})
+
+export const GetConsumerGameProjectionsResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "season": zod.number().int().nullable(),
+  "modelVersion": zod.string().nullable(),
+  "generatedAt": zod.coerce.date().nullable(),
+  "evaluation": zod.object({
+  "marginMissRating": zod.number().optional(),
+  "marginMissLine": zod.number().optional(),
+  "winnersModel": zod.number().optional(),
+  "winnersFavorite": zod.number().optional(),
+  "atsRating": zod.number().optional(),
+  "totalMissRating": zod.number().optional(),
+  "totalMissLine": zod.number().optional(),
+  "testedOn": zod.string().optional()
+}),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "nflverseGameId": zod.string(),
+  "homeTeam": zod.string(),
+  "awayTeam": zod.string(),
+  "kickoff": zod.coerce.date().nullable(),
+  "projectedMargin": zod.number().describe('Home minus away'),
+  "projectedTotal": zod.number(),
+  "homeWinProbability": zod.number(),
+  "homeQb": zod.object({
+  "name": zod.string().nullable(),
+  "value": zod.number().nullable().describe('Recency-weighted EPA per dropback, shrunk toward backup level'),
+  "listed": zod.boolean().describe('True when the schedule lists this QB as the starter; false when inferred from recent starts'),
+  "newStarter": zod.boolean().describe('Not the team\'s usual starter over its last four games')
+}),
+  "awayQb": zod.object({
+  "name": zod.string().nullable(),
+  "value": zod.number().nullable().describe('Recency-weighted EPA per dropback, shrunk toward backup level'),
+  "listed": zod.boolean().describe('True when the schedule lists this QB as the starter; false when inferred from recent starts'),
+  "newStarter": zod.boolean().describe('Not the team\'s usual starter over its last four games')
+}),
+  "factors": zod.object({
+  "qbEdge": zod.number().nullable(),
+  "teamEdge": zod.number().nullable(),
+  "passEdge": zod.number().nullable(),
+  "rushEdge": zod.number().nullable(),
+  "restDiff": zod.number().nullable(),
+  "neutralSite": zod.boolean()
+}),
+  "projectedAt": zod.coerce.date()
+})),
+  "record": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "weeks": zod.array(zod.object({
+  "week": zod.number().int(),
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}))
+})

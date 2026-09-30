@@ -2,8 +2,8 @@
 
 Usage: publish.py <dataset.parquet> <data dir> <metrics.json>
 Environment:
-  TD_PICKS_INGEST_URL    e.g. https://gridelineanalytics.com/api/touchdowns/ingest
-  TD_PICKS_INGEST_TOKEN  shared secret (same value as the site's secret)
+  GRIDLINE_INGEST_URL    site origin, e.g. https://gridelineanalytics.com
+  GRIDLINE_INGEST_TOKEN  shared secret (same value as the site's secret)
 Without both variables the payload is written to td_payload.json and not sent.
 """
 import json
@@ -118,11 +118,12 @@ print(f"{season} week {week}: {len(picks)} players ranked, {len(results)} result
 for pick in picks[:10]:
     print(f"  {pick['probability']:.1%}  {pick['name']} ({pick['position']}, {pick['team']} vs {pick['opponent']})")
 
-url, token = os.environ.get("TD_PICKS_INGEST_URL"), os.environ.get("TD_PICKS_INGEST_TOKEN")
-if not url or not token:
+origin, token = os.environ.get("GRIDLINE_INGEST_URL"), os.environ.get("GRIDLINE_INGEST_TOKEN")
+if not origin or not token:
     json.dump(payload, open("td_payload.json", "w"), indent=1)
-    print("TD_PICKS_INGEST_URL/TOKEN not set: wrote td_payload.json instead of sending.")
+    print("GRIDLINE_INGEST_URL/TOKEN not set: wrote td_payload.json instead of sending.")
     sys.exit(0)
+url = f"{origin.rstrip('/')}/api/touchdowns/ingest"
 request = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST", headers={
     "Content-Type": "application/json", "Authorization": f"Bearer {token}", "User-Agent": "gridline-td-model"})
 with urllib.request.urlopen(request, timeout=60) as response:

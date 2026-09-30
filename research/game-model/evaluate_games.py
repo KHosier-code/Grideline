@@ -90,6 +90,9 @@ for season in [2021, 2022, 2023, 2024, 2025, 2026]:
         "mae_line": round(float(np.mean(np.abs(test.spread_line - test.margin))), 2),
         "winners_model": round(float(model_winners), 3), "winners_favorite": round(float(favorite_winners), 3),
         "ats_rating": record(r_ats),
+        "total_miss_rating": round(float(np.mean(np.abs(tot_rating.predict(tot_test[TOTAL]) - tot_test.total))), 2),
+        "total_miss_line": round(float(np.mean(np.abs(tot_test.total_line - tot_test.total))), 2),
+        "total_spread_rating": round(float(np.std(tot_rating.predict(tot_test[TOTAL]))), 2),
     }
     for threshold in (0, 1, 2, 3):
         result = ats(m_test, test, threshold * 0.25)  # market-aware edges are small by design
@@ -110,4 +113,17 @@ for threshold, parts in pooled["market"].items():
 for threshold, parts in pooled["totals"].items():
     print(f"  Market-aware O/U, edge > {threshold * 0.25:g} pts:", record(np.concatenate(parts)))
 if len(sys.argv) > 2:
-    json.dump(summary, open(sys.argv[2], "w"), indent=1, default=str)
+    full = [row for row in summary if row["games"] >= 200]
+    rating_ats = record(np.concatenate(pooled["rating"]))
+    weight = sum(row["games"] for row in full)
+    json.dump({
+        "marginMissRating": round(sum(row["mae_rating"] * row["games"] for row in full) / weight, 2),
+        "marginMissLine": round(sum(row["mae_line"] * row["games"] for row in full) / weight, 2),
+        "winnersModel": round(sum(row["winners_model"] * row["games"] for row in full) / weight, 3),
+        "winnersFavorite": round(sum(row["winners_favorite"] * row["games"] for row in full) / weight, 3),
+        "atsRating": round(rating_ats[3], 3),
+        "totalMissRating": round(sum(row["total_miss_rating"] * row["games"] for row in full) / weight, 2),
+        "totalMissLine": round(sum(row["total_miss_line"] * row["games"] for row in full) / weight, 2),
+        "testedOn": f"{min(r['season'] for r in full)}-{max(r['season'] for r in full)} seasons, each predicted by a model trained only on earlier seasons",
+        "seasons": summary,
+    }, open(sys.argv[2], "w"), indent=1, default=str)

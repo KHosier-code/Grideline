@@ -1,0 +1,49 @@
+name: Weekly picks
+
+# Runs Gridline's two models on fresh nflverse data and sends the results to
+# the site: anytime-TD picks (research/td-model) and QB-adjusted game
+# projections (research/game-model). Times are UTC (ET + 4 during the season).
+on:
+  schedule:
+    - cron: "0 14 * * 2"   # Tue 10:00 ET  - first look after Monday night
+    - cron: "0 15 * * 4"   # Thu 11:00 ET  - before Thursday night
+    - cron: "0 22 * * 5"   # Fri 18:00 ET  - after the final injury report
+    - cron: "0 15 * * 6"   # Sat 11:00 ET
+    - cron: "30 14 * * 0"  # Sun 10:30 ET  - before the 1:00 games
+  workflow_dispatch: {}
+
+concurrency:
+  group: weekly-picks
+  cancel-in-progress: false
+
+env:
+  GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+  GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: research/td-model/requirements.txt
+      - run: pip install -r research/td-model/requirements.txt
+      - name: Download nflverse data
+        working-directory: research/td-model
+        run: ./fetch_data.sh
+      - name: Touchdown picks
+        working-directory: research/td-model
+        run: |
+          python build_dataset.py data td_dataset.parquet
+          python evaluate.py td_dataset.parquet metrics.json
+          python publish.py td_dataset.parquet data metrics.json
+      - name: Game projections
+        working-directory: research/game-model
+        run: |
+          python build_games.py ../td-model/data games.parquet
+          python evaluate_games.py games.parquet metrics.json
+          python publish_games.py games.parquet metrics.json

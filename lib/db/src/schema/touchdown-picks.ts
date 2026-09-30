@@ -58,3 +58,34 @@ export const touchdownPickResultsTable = pgTable("touchdown_pick_results", {
 }, (table) => [
   unique("touchdown_pick_results_player_week_unique").on(table.season, table.week, table.playerId),
 ]);
+
+export type GameProjectionQb = { name: string | null; value: number | null; listed: boolean; newStarter: boolean };
+export type GameProjectionRow = {
+  gameId: string;
+  nflverseGameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  kickoff: string | null;
+  projectedMargin: number;
+  projectedTotal: number;
+  homeWinProbability: number;
+  homeQb: GameProjectionQb;
+  awayQb: GameProjectionQb;
+  factors: { qbEdge: number | null; teamEdge: number | null; passEdge: number | null; rushEdge: number | null; restDiff: number | null; neutralSite: boolean };
+};
+
+/** One row per run of the QB-adjusted game model (research/game-model). */
+export const gameProjectionRunsTable = pgTable("game_projection_runs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  generatedAt: timestamp("generated_at", { withTimezone: true }).notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  modelVersion: text("model_version").notNull(),
+  evaluation: jsonb("evaluation").$type<Record<string, unknown>>().notNull().default({}),
+  games: jsonb("games").$type<GameProjectionRow[]>().notNull(),
+}, (table) => [
+  unique("game_projection_runs_week_generated_unique").on(table.season, table.week, table.generatedAt),
+  index("game_projection_runs_week_idx").on(table.season, table.week, table.generatedAt),
+  check("game_projection_runs_week_check", sql`${table.week} between 1 and 22`),
+]);

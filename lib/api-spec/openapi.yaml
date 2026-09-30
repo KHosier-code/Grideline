@@ -1325,6 +1325,27 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerTouchdowns" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/game-projections:
+    get:
+      operationId: getConsumerGameProjections
+      tags: [nfl]
+      summary: Read QB-adjusted game projections for a season
+      description: >
+        For each game, the latest projection from the QB-adjusted rating model
+        published before kickoff, plus the straight-up winner record for games
+        that are final. Projections, not picks against the spread.
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Projections or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerGameProjections" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -1343,6 +1364,71 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    ConsumerProjectionQb:
+      type: object
+      required: [name, value, listed, newStarter]
+      properties:
+        name: { type: ["string", "null"] }
+        value: { type: ["number", "null"], description: "Recency-weighted EPA per dropback, shrunk toward backup level" }
+        listed: { type: boolean, description: "True when the schedule lists this QB as the starter; false when inferred from recent starts" }
+        newStarter: { type: boolean, description: "Not the team's usual starter over its last four games" }
+    ConsumerGameProjection:
+      type: object
+      required: [gameId, nflverseGameId, homeTeam, awayTeam, kickoff, projectedMargin, projectedTotal, homeWinProbability, homeQb, awayQb, factors, projectedAt]
+      properties:
+        gameId: { type: string }
+        nflverseGameId: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        kickoff: { type: ["string", "null"], format: date-time }
+        projectedMargin: { type: number, description: "Home minus away" }
+        projectedTotal: { type: number }
+        homeWinProbability: { type: number }
+        homeQb: { $ref: "#/components/schemas/ConsumerProjectionQb" }
+        awayQb: { $ref: "#/components/schemas/ConsumerProjectionQb" }
+        factors:
+          type: object
+          required: [qbEdge, teamEdge, passEdge, rushEdge, restDiff, neutralSite]
+          properties:
+            qbEdge: { type: ["number", "null"] }
+            teamEdge: { type: ["number", "null"] }
+            passEdge: { type: ["number", "null"] }
+            rushEdge: { type: ["number", "null"] }
+            restDiff: { type: ["number", "null"] }
+            neutralSite: { type: boolean }
+        projectedAt: { type: string, format: date-time }
+    ConsumerGameProjections:
+      type: object
+      required: [status, season, modelVersion, generatedAt, evaluation, games, record, weeks]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"] }
+        modelVersion: { type: ["string", "null"] }
+        generatedAt: { type: ["string", "null"], format: date-time }
+        evaluation:
+          type: object
+          additionalProperties: true
+          properties:
+            marginMissRating: { type: number }
+            marginMissLine: { type: number }
+            winnersModel: { type: number }
+            winnersFavorite: { type: number }
+            atsRating: { type: number }
+            totalMissRating: { type: number }
+            totalMissLine: { type: number }
+            testedOn: { type: string }
+        games: { type: array, items: { $ref: "#/components/schemas/ConsumerGameProjection" } }
+        record: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        weeks:
+          type: array
+          items:
+            type: object
+            required: [week, wins, losses, pushes]
+            properties:
+              week: { type: integer }
+              wins: { type: integer }
+              losses: { type: integer }
+              pushes: { type: integer }
     ConsumerRecordLine:
       type: object
       required: [wins, losses, pushes]

@@ -112,7 +112,7 @@ def qb_features(qb_id, team, kickoff, season):
         value = (weighted_epa + QB_REPLACEMENT_EPA * QB_PRIOR_DROPBACKS) / (weighted_db + QB_PRIOR_DROPBACKS)
         dropbacks = float(hist.dropbacks.sum())
         cpoe = decayed_mean(hist.cpoe.values.astype(float), w)
-    return {"qb_value": value, "qb_dropbacks": dropbacks, "qb_cpoe": cpoe,
+    return {"qb_value": value, "qb_dropbacks": dropbacks, "qb_cpoe": cpoe, "qb_id": qb_id,
             "qb_new": int(usual_id is not None and qb_id is not None and qb_id != usual_id)}
 
 
@@ -126,6 +126,7 @@ for g in games.itertuples():
            "dome": int(g.roof in ("dome", "closed")), "wind": g.wind if pd.notna(g.wind) else 0.0,
            "temp": g.temp if pd.notna(g.temp) else 65.0, "home_qb_name": g.home_qb_name, "away_qb_name": g.away_qb_name}
     for side, team, qb in (("home", g.home_team, g.home_qb_id), ("away", g.away_team, g.away_qb_id)):
+        row[f"{side}_qb_listed"] = int(isinstance(qb, str) and bool(qb))
         for key, value in team_features(team, g.kickoff, g.season).items():
             row[f"{side}_{key}"] = value
         for key, value in qb_features(qb, team, g.kickoff, g.season).items():
@@ -133,6 +134,12 @@ for g in games.itertuples():
     rows.append(row)
 
 df = pd.DataFrame(rows)
+# QB names by ID from every schedule row that listed a starter.
+names = pd.concat([games[["home_qb_id", "home_qb_name"]].set_axis(["id", "name"], axis=1),
+                   games[["away_qb_id", "away_qb_name"]].set_axis(["id", "name"], axis=1)]).dropna()
+qb_names = names.drop_duplicates("id", keep="last").set_index("id").name
+for side in ("home", "away"):
+    df[f"{side}_qb_name"] = df[f"{side}_qb_id"].map(qb_names).fillna(df[f"{side}_qb_name"])
 df["margin"] = df.home_score - df.away_score
 df["total"] = df.home_score + df.away_score
 # Matchup differences (home minus away). Defensive numbers are EPA/success
