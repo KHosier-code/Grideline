@@ -1369,10 +1369,12 @@ test("generated contracts accept representative list, dashboard, detail, and una
     },
     finalScore: null,
     prediction: null,
+    initialMarkets: { capturedAt: null, moneyline: null, spread: null, total: null },
     market: {
       spread: null,
       moneyline: null,
       total: null,
+      awayMoneyline: null,
       evidence: { available: false, capturedAt: null, message: "Sportsbook line updating" },
     },
     marketBoard: {
@@ -1538,10 +1540,13 @@ test("consumer market board keeps neutral language and 320px responsive controls
   const component = readFileSync(path.join(webRoot, "pages/consumer/ConsumerGames.tsx"), "utf8");
   const comparison = readFileSync(path.join(webRoot, "components/ConsumerMarketComparison.tsx"), "utf8");
   const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
+  const board = readFileSync(path.join(webRoot, "components/GameBoard.tsx"), "utf8");
   assert.match(comparison, /Model difference/);
-  assert.match(component, /Not eligible:.*evidence only, not current comparisons/);
-  assert.match(component, /aria-expanded/);
-  assert.doesNotMatch(component, /\bbet\b|\bpick\b|\bedge\b|expected return/i);
+  // The Games page shows projections next to the sportsbook line through the shared board, never a bet.
+  assert.match(component, /<GameBoard/);
+  assert.match(board, /Gridline <b>/);
+  assert.match(board, /Vegas <b>/);
+  for (const source of [component, board]) assert.doesNotMatch(source, /\bbet\b|\bedge\b|expected return|\block\b/i);
   assert.match(css, /@media \(max-width: 420px\)/);
   assert.match(css, /\.btn-icon \{[^}]*width: 44px;[^}]*height: 44px/);
 });
