@@ -3691,7 +3691,21 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "atsRating": zod.number().optional(),
   "totalMissRating": zod.number().optional(),
   "totalMissLine": zod.number().optional(),
-  "testedOn": zod.string().optional()
+  "testedOn": zod.string().optional(),
+  "seasons": zod.array(zod.object({
+  "season": zod.number().int().optional(),
+  "games": zod.number().int().optional(),
+  "mae_rating": zod.number().optional(),
+  "mae_market_aware": zod.number().optional(),
+  "mae_line": zod.number().optional(),
+  "winners_model": zod.number().optional(),
+  "winners_favorite": zod.number().optional(),
+  "ats_wins": zod.number().int().optional(),
+  "ats_losses": zod.number().int().optional(),
+  "ats_pushes": zod.number().int().optional(),
+  "total_miss_rating": zod.number().optional(),
+  "total_miss_line": zod.number().optional()
+})).optional()
 }),
   "games": zod.array(zod.object({
   "gameId": zod.string(),

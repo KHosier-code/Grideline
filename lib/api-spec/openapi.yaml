@@ -1470,6 +1470,24 @@ components:
             totalMissRating: { type: number }
             totalMissLine: { type: number }
             testedOn: { type: string }
+            seasons:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+                properties:
+                  season: { type: integer }
+                  games: { type: integer }
+                  mae_rating: { type: number }
+                  mae_market_aware: { type: number }
+                  mae_line: { type: number }
+                  winners_model: { type: number }
+                  winners_favorite: { type: number }
+                  ats_wins: { type: integer }
+                  ats_losses: { type: integer }
+                  ats_pushes: { type: integer }
+                  total_miss_rating: { type: number }
+                  total_miss_line: { type: number }
         games: { type: array, items: { $ref: "#/components/schemas/ConsumerGameProjection" } }
         record: { $ref: "#/components/schemas/ConsumerRecordLine" }
         weeks:

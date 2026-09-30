@@ -12,7 +12,7 @@ const pages: Record<string, [string, string]> = {
   '/usage': ['NFL Player Usage: Targets, Carries and Snaps | Gridline', 'Target share, carry share and red-zone usage for every NFL skill player.'],
   '/defense-vs-position': ['NFL Defense vs Position | Gridline', 'Fantasy points and touchdowns each NFL defense allows to quarterbacks, running backs, receivers and tight ends.'],
   '/methodology': ['How Gridline Makes Its Picks | Gridline', 'What goes into Gridline\'s game projections and touchdown picks, how they are tested, and how picks are graded.'],
-  '/performance': ['Gridline Pick Record | Gridline', 'Gridline\'s graded touchdown pick and game winner record, week by week.'],
+  '/performance': ['NFL Model Performance | Gridline', 'How Gridline\'s game and touchdown models performed on seasons they never trained on, and this season\'s graded record.'],
   '/weekly-picks': ['Past Weekly Picks | Gridline', 'Gridline\'s past weekly NFL picks by season and week.'],
 };
 

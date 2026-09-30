@@ -95,6 +95,7 @@ export * from './consumerGameProjection';
 export * from './consumerGameProjectionFactors';
 export * from './consumerGameProjections';
 export * from './consumerGameProjectionsEvaluation';
+export * from './consumerGameProjectionsEvaluationSeasonsItem';
 export * from './consumerGameProjectionsStatus';
 export * from './consumerGameProjectionsWeeksItem';
 export * from './consumerGames';

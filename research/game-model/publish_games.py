@@ -125,7 +125,12 @@ for row in ratings.sort_values("rating", ascending=False).to_dict("records"):
     team_payload.append(entry)
 
 metrics = json.load(open(METRICS))
-metrics.pop("seasons", None)
+# Per-season test results, for the Model Performance page.
+metrics["seasons"] = [{key: value for key, value in row.items() if not key.startswith(("ats_market", "ou_"))}
+                      for row in metrics.get("seasons", [])]
+for row in metrics["seasons"]:
+    wins, losses, pushes, rate = row.pop("ats_rating")
+    row.update({"ats_wins": wins, "ats_losses": losses, "ats_pushes": pushes})
 payload = {"season": int(current), "week": week, "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
            "modelVersion": MODEL_VERSION, "evaluation": metrics, "games": games, "teams": team_payload}
 print(f"{current} week {week}: {len(games)} games projected, {len(team_payload)} teams rated")

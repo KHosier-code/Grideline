@@ -250,7 +250,9 @@ const gameIngestSchema = zod.object({
   week: zod.number().int().min(1).max(22),
   generatedAt: zod.string().datetime({ offset: true }),
   modelVersion: zod.string().min(1).max(120),
-  evaluation: zod.record(zod.string(), zod.union([zod.number(), zod.string(), zod.null()])),
+  evaluation: zod.object({
+    seasons: zod.array(zod.record(zod.string(), zod.union([zod.number(), zod.string(), zod.null(), zod.array(zod.union([zod.number(), zod.null()]))]))).max(40).optional(),
+  }).catchall(zod.union([zod.number(), zod.string(), zod.null()])),
   games: zod.array(zod.object({
     gameId: zod.string().min(1).max(40),
     nflverseGameId: zod.string().min(1).max(40),

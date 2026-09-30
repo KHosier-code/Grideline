@@ -1544,8 +1544,7 @@ test("consumer market board keeps neutral language and 320px responsive controls
   assert.match(comparison, /Model difference/);
   // The Games page shows projections next to the sportsbook line through the shared board, never a bet.
   assert.match(component, /<GameBoard/);
-  assert.match(board, /Gridline <b>/);
-  assert.match(board, /Vegas <b>/);
+  assert.match(board, /<span>Open<\/span><span>Current<\/span><span>Gridline<\/span>/);
   for (const source of [component, board]) assert.doesNotMatch(source, /\bbet\b|\bedge\b|expected return|\block\b/i);
   assert.match(css, /@media \(max-width: 420px\)/);
   assert.match(css, /\.btn-icon \{[^}]*width: 44px;[^}]*height: 44px/);

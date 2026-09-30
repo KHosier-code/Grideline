@@ -17,6 +17,7 @@ import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useCon
 import { useEffect } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
 import { TeamChip } from '../../components/GameBoard';
+import { MatchupRanks } from '../../components/MatchupRanks';
 import { buildGameView, formatPrice, lineText, vegasLineText, type GameView } from '../../lib/pick-sheet';
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;
@@ -101,6 +102,7 @@ export default function ConsumerGameDetail() {
     </header>
 
     <GameProjectionPanel view={view} projection={qbProjection} />
+    <MatchupRanks home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
     <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />
     <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
     <DeferredDetailDisclosure key={`${game.gameId}-matchups`} testId="disclosure-matchups" title="Team matchup details" status="Offense vs defense, category by category">

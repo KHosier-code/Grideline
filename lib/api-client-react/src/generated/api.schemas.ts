@@ -114,6 +114,22 @@ export const ConsumerGameProjectionsStatus = {
   unavailable: 'unavailable',
 } as const;
 
+export type ConsumerGameProjectionsEvaluationSeasonsItem = {
+  season?: number;
+  games?: number;
+  mae_rating?: number;
+  mae_market_aware?: number;
+  mae_line?: number;
+  winners_model?: number;
+  winners_favorite?: number;
+  ats_wins?: number;
+  ats_losses?: number;
+  ats_pushes?: number;
+  total_miss_rating?: number;
+  total_miss_line?: number;
+  [key: string]: unknown;
+ };
+
 export type ConsumerGameProjectionsEvaluation = {
   marginMissRating?: number;
   marginMissLine?: number;
@@ -123,6 +139,7 @@ export type ConsumerGameProjectionsEvaluation = {
   totalMissRating?: number;
   totalMissLine?: number;
   testedOn?: string;
+  seasons?: ConsumerGameProjectionsEvaluationSeasonsItem[];
   [key: string]: unknown;
  };
 

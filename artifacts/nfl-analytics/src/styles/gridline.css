@@ -654,3 +654,31 @@
   .gl-gc-head { grid-template-columns: minmax(0, 1fr) 52px 52px 58px; }
 }
 .gl-logo-fallback { padding: 0; border-radius: 50%; letter-spacing: 0; }
+
+/* Matchup ranks */
+.gl-matchup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.gl-matchup-ranks th[scope="col"]:not(:first-child), .gl-matchup-ranks td { width: 96px; text-align: center; }
+.gl-matchup-ranks th[scope="col"] img, .gl-matchup-ranks th[scope="col"] .gl-chip { margin: 0 auto; }
+.gl-matchup-ranks th[scope="row"] { padding-left: 24px; color: hsl(var(--muted-foreground)); font-weight: 500; text-align: left; text-transform: none; letter-spacing: 0; font-size: 14px; background: none; }
+.gl-matchup-ranks .gl-group-row th { padding-top: 14px; background: none; color: hsl(var(--foreground)); font-size: 15px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.gl-matchup-ranks .gl-rank-cell span { min-width: 76px; padding: 4px 8px; }
+.gl-matchup-ranks td { padding: 5px 8px; }
+@media (max-width: 1100px) { .gl-matchup-grid { grid-template-columns: 1fr; } }
+
+/* Model performance */
+.gl-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.gl-summary-card { display: grid; align-content: start; gap: 6px; padding: 18px 20px; }
+.gl-summary-top { display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 600; }
+.gl-summary-icon { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid hsl(var(--border)); border-radius: 10px; color: hsl(var(--primary)); }
+.gl-summary-icon svg { width: 18px; height: 18px; }
+.gl-summary-card > b { font-family: var(--gl-display); font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.gl-summary-card > p { margin: 0 0 8px; color: hsl(var(--muted-foreground)); font-size: 13px; }
+.gl-summary-card dl { display: grid; gap: 6px; margin: 0; padding-top: 12px; border-top: 1px solid hsl(var(--border)); font-size: 13px; }
+.gl-summary-card dl div { display: flex; justify-content: space-between; gap: 10px; }
+.gl-summary-card dt { color: hsl(var(--muted-foreground)); }
+.gl-summary-card dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.gl-good { color: hsl(var(--status-good)); }
+.gl-bad { color: hsl(var(--status-bad)); }
+.gl-season-table th[scope="row"] { font-weight: 700; text-align: left; }
+@media (max-width: 1200px) { .gl-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .gl-summary-grid { grid-template-columns: 1fr; } }

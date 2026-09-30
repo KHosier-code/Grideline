@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerGameProjectionsEvaluationSeasonsItem } from './consumerGameProjectionsEvaluationSeasonsItem';
 
 export type ConsumerGameProjectionsEvaluation = {
   marginMissRating?: number;
@@ -15,5 +16,6 @@ export type ConsumerGameProjectionsEvaluation = {
   totalMissRating?: number;
   totalMissLine?: number;
   testedOn?: string;
+  seasons?: ConsumerGameProjectionsEvaluationSeasonsItem[];
   [key: string]: unknown;
  };
