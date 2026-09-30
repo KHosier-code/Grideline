@@ -18,6 +18,8 @@ import { useEffect } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
 import { TeamChip } from '../../components/GameBoard';
 import { MatchupRanks } from '../../components/MatchupRanks';
+import { HundredGrid, Simulator, abbr, toPoolGame } from '../../components/GameSim';
+import { matchupAccents } from '../../lib/team-colors';
 import { buildGameView, formatPrice, lineText, vegasLineText, type GameView } from '../../lib/pick-sheet';
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;
@@ -28,7 +30,8 @@ function QbCard({ team, qb }: { team: string; qb: ConsumerProjectionQb | null })
     <span className="gl-label">{team} quarterback</span>
     <b>{qb?.name ?? 'Not announced'}</b>
     <p>{epa(qb?.value)} EPA per dropback, recent games weighted most</p>
-    {qb?.newStarter && <p><span className="gl-flag">Not the usual starter</span></p>}
+    {qb?.outName ? <p><span className="gl-flag out">{qb.outName}: {qb.outReason ?? 'out'}</span> Starting in their place.</p>
+      : qb?.newStarter && <p><span className="gl-flag">Not the usual starter</span></p>}
     {qb && !qb.listed && <p>Expected starter based on recent starts</p>}
   </div>;
 }
@@ -102,6 +105,7 @@ export default function ConsumerGameDetail() {
     </header>
 
     <GameProjectionPanel view={view} projection={qbProjection} />
+    <HundredGames view={view} />
     <MatchupRanks home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
     <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />
     <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
@@ -165,5 +169,25 @@ function GameTouchdowns({ teams }: { teams: string[] }) {
         <span className="gl-td-card-odds"><b className="gl-pct">{pct(pick.probability)}</b><small>Fair {formatPrice(pick.fairOdds)}</small></span>
       </Link></li>)}
     </ol>
+  </section>;
+}
+
+/** The same 100-game view as Pick'em, for this matchup. */
+function HundredGames({ view }: { view: GameView }) {
+  const game = toPoolGame(view);
+  if (!game) return null;
+  const pick = abbr(game, game.pick);
+  const [winColor, lossColor] = matchupAccents(pick, abbr(game, game.pick === 'home' ? 'away' : 'home'));
+  return <section className="gl-section" aria-labelledby="hundred-heading">
+    <div className="gl-section-head"><h2 id="hundred-heading">If they played 100 times</h2><Link href="/pickem" className="gl-link">Every game this week ›</Link></div>
+    <div className="gl-card gl-hundred-card">
+      <div className="gl-hundred-top">
+        <HundredGrid wins={game.wins} winColor={winColor} lossColor={lossColor} label={`${pick} wins ${game.wins} of 100`} />
+        <p><b>{pick} wins {game.wins} of 100.</b> {game.source === 'gridline'
+          ? 'From our model; the betting line is not posted yet.'
+          : 'From the current betting line, the most accurate source in our testing. Our model\'s view is above.'}</p>
+      </div>
+      <Simulator game={game} showLink={false} title="How they'd finish" />
+    </div>
   </section>;
 }

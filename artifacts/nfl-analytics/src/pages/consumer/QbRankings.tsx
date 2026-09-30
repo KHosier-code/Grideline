@@ -26,7 +26,7 @@ export default function QbRankings() {
           const passEpa = typeof team.stats.off_epa_pass === 'number' ? team.stats.off_epa_pass : null;
           return <tr key={team.team}>
             <td className="gl-rank-num"><b>{team.qbRank}</b></td>
-            <td className="gl-team-cell"><TeamLogo team={team.team} /><span><b>{team.qbName ?? 'Not announced'}</b><small>{teamName(team.team)}{team.qbNewStarter ? ' · not the usual starter' : ''}</small></span></td>
+            <td className="gl-team-cell"><TeamLogo team={team.team} /><span><b>{team.qbName ?? 'Not announced'}</b><small>{teamName(team.team)}{team.qbOutName ? ` · starting for ${team.qbOutName} (${(team.qbOutReason ?? 'out').toLowerCase()})` : team.qbNewStarter ? ' · not the usual starter' : ''}</small></span></td>
             <td className="gl-rank-cell"><span style={rankCellStyle(team.qbRank)}><b>{team.qbValue !== null ? signed(team.qbValue, 3) : '—'}</b></span></td>
             <td className="gl-rating-cell"><span className="gl-rating-value">{signed(team.qb)} pts</span></td>
             <td className="gl-rank-cell"><span style={rankCellStyle(passRank)}><b>{passEpa !== null ? signed(passEpa, 2) : '—'}</b>{passRank !== null && <small>#{passRank}</small>}</span></td>

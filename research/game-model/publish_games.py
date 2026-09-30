@@ -55,7 +55,9 @@ def r(value, digits=3):
 def qb(row, side):
     return {"name": row[f"{side}_qb_name"] if isinstance(row[f"{side}_qb_name"], str) else None,
             "value": r(row[f"{side}_qb_value"]), "listed": bool(row[f"{side}_qb_listed"]),
-            "newStarter": bool(row[f"{side}_qb_new"])}
+            "newStarter": bool(row[f"{side}_qb_new"]),
+            "outName": row.get(f"{side}_qb_out_name") if isinstance(row.get(f"{side}_qb_out_name"), str) else None,
+            "outReason": row.get(f"{side}_qb_out_reason") if isinstance(row.get(f"{side}_qb_out_reason"), str) else None}
 
 
 games = []
@@ -67,6 +69,9 @@ for _, row in slate.iterrows():
         "kickoff": row.kickoff.tz_localize(eastern).astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
         "projectedMargin": r(row.margin_pred, 2), "projectedTotal": r(row.total_pred, 2),
         "homeWinProbability": r(row.home_win, 4),
+        # nflverse's consensus line (expected home margin), a fallback when no
+        # sportsbook capture exists yet.
+        "marketMargin": r(row.spread_line, 1), "marketTotal": r(row.total_line, 1),
         "homeQb": qb(row, "home"), "awayQb": qb(row, "away"),
         "factors": {"qbEdge": r(row.qb_edge), "teamEdge": r(row.epa_edge), "passEdge": r(row.pass_edge),
                     "rushEdge": r(row.rush_edge), "restDiff": r(row.rest_diff, 0), "neutralSite": bool(row.neutral)},
@@ -104,7 +109,9 @@ for _, row in teams.iterrows():
     team_rows.append({"team": row.team, "rating": round(total, 2), "offense": round(offense, 2),
                       "defense": round(defense, 2), "qb": round(qb_part, 2),
                       "qbName": row.qb_name if isinstance(row.qb_name, str) else None,
-                      "qbValue": r(row.qb_value), "qbNewStarter": bool(row.qb_new)})
+                      "qbValue": r(row.qb_value), "qbNewStarter": bool(row.qb_new),
+                      "qbOutName": row.qb_out_name if isinstance(getattr(row, "qb_out_name", None), str) else None,
+                      "qbOutReason": row.qb_out_reason if isinstance(getattr(row, "qb_out_reason", None), str) else None})
 ratings = pd.DataFrame(team_rows)
 for column in ("rating", "offense", "defense", "qb"):
     ratings[f"{column}Rank"] = ratings[column].rank(ascending=False, method="min").astype(int)
@@ -114,7 +121,8 @@ else:
     stats = pd.DataFrame()
 team_payload = []
 for row in ratings.sort_values("rating", ascending=False).to_dict("records"):
-    entry = dict(row)
+    # pandas stores missing text as NaN, which is not valid JSON.
+    entry = {key: (None if isinstance(value, float) and np.isnan(value) else value) for key, value in row.items()}
     if row["team"] in stats.index:
         s_row = stats.loc[row["team"]]
         entry["record"] = {"wins": int(s_row.wins), "losses": int(s_row.losses), "ties": int(s_row.ties)}

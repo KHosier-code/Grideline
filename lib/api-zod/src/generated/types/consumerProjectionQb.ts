@@ -18,4 +18,14 @@ export interface ConsumerProjectionQb {
   listed: boolean;
   /** Not the team's usual starter over its last four games */
   newStarter: boolean;
+  /**
+     * The usual or listed starter, when ruled out by the injury report or roster
+     * @nullable
+     */
+  outName?: string | null;
+  /**
+     * Why outName is not expected to play, such as Out or Injured reserve
+     * @nullable
+     */
+  outReason?: string | null;
 }

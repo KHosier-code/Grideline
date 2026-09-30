@@ -53,7 +53,7 @@ function ReplaySection({ replay }: { replay: Replay }) {
   return <section className="gl-section" aria-labelledby="replayed">
     <div className="gl-section-head"><h2 id="replayed">{replay.season} weeks {first}–{last}, replayed</h2><p>Recreated after the games, not picks we posted at the time</p></div>
     <div className="gl-replay-banner">
-      <b>Replayed, not live.</b> We launched these models after week {last}. To show how they would have done, we re-ran each earlier week using a model trained only on games played before that week. The live record above counts only picks posted before kickoff.
+      <b>Replayed, not live.</b> We launched these models after week {last}. To show how they would have done, we re-ran each earlier week using a model trained only on games played before that week. Replayed TD picks only include players who ended up playing, which flatters them a little. The live record above counts only picks posted before kickoff.
     </div>
     <div className="gl-record-grid">
       <div className="gl-card gl-record-card">

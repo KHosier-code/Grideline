@@ -225,6 +225,8 @@ export * from './consumerTeamRatingStats';
 export * from './consumerTeamRecord';
 export * from './consumerTouchdownFactors';
 export * from './consumerTouchdownPick';
+export * from './consumerTouchdownPickBookOdds';
+export * from './consumerTouchdownPickBookOddsBooksItem';
 export * from './consumerTouchdownPickPosition';
 export * from './consumerTouchdownRecord';
 export * from './consumerTouchdownRecordWeeksItem';

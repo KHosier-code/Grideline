@@ -12,6 +12,34 @@ export function teamColor(abbreviation: string | null | undefined) {
   return TEAM_COLORS[(abbreviation ?? '').toUpperCase()] ?? '#4b5468';
 }
 
+/**
+ * Bright, recognizable team colors for charts and dots on dark or light cards:
+ * a team whose primary is near-black uses its best-known secondary (Steelers
+ * gold, Seahawks green, Bears orange) or a lighter shade of the primary.
+ */
+const TEAM_ACCENTS: Record<string, string> = {
+  ARI: '#d6334f', ATL: '#e0303f', BAL: '#7b5cd6', BUF: '#2f6fde', CAR: '#0f96d6', CHI: '#e8672c',
+  CIN: '#fb4f14', CLE: '#ff5a1f', DAL: '#5b86d9', DEN: '#fb6a2b', DET: '#1a96dc', GB: '#ffb612',
+  HOU: '#d11f3a', IND: '#3f74c8', JAX: '#00a3b4', JAC: '#00a3b4', KC: '#e8263f', LV: '#a5acaf',
+  LAC: '#1fa2e6', LAR: '#ffd100', LA: '#ffd100', MIA: '#00a6b0', MIN: '#8a5ad0', NE: '#d8243f',
+  NO: '#d3bc8d', NYG: '#3a67d0', NYJ: '#23975f', PHI: '#16909c', PIT: '#ffb612', SF: '#d7262c',
+  SEA: '#69be28', TB: '#e0302b', TEN: '#4b92db', WAS: '#e0a82e', WSH: '#e0a82e',
+};
+
+export function teamAccent(abbreviation: string | null | undefined) {
+  return TEAM_ACCENTS[(abbreviation ?? '').toUpperCase()] ?? '#8a93a6';
+}
+
+/** Accent colors for two opponents, with the second grayed when the two would look alike. */
+export function matchupAccents(first: string, second: string) {
+  const a = teamAccent(first);
+  const b = teamAccent(second);
+  const rgb = (hex: string) => [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16));
+  const [x, y] = [rgb(a), rgb(b)];
+  const distance = Math.sqrt(x.reduce((sum, value, index) => sum + (value - y[index]) ** 2, 0));
+  return [a, distance < 90 ? '#6b7280' : b] as const;
+}
+
 /** Dark or light badge text, whichever reads better on the team color. */
 export function teamTextColor(abbreviation: string | null | undefined) {
   const hex = teamColor(abbreviation).slice(1);

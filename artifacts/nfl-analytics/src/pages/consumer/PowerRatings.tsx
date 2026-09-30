@@ -74,7 +74,7 @@ export default function PowerRatings() {
             </td>
             <RankCell rank={team.offenseRank} value={signed(team.offense)} />
             <RankCell rank={team.defenseRank} value={signed(team.defense)} />
-            <td className="gl-rank-cell gl-qb-cell"><span style={rankCellStyle(team.qbRank)}><b>{team.qbName ?? '—'}</b><small>{signed(team.qb)} · #{team.qbRank}</small></span>{team.qbNewStarter && <em className="gl-flag">Not usual starter</em>}</td>
+            <td className="gl-rank-cell gl-qb-cell"><span style={rankCellStyle(team.qbRank)}><b>{team.qbName ?? '—'}</b><small>{signed(team.qb)} · #{team.qbRank}</small></span>{team.qbOutName ? <em className="gl-flag out">{team.qbOutName} {(team.qbOutReason ?? 'out').toLowerCase()}</em> : team.qbNewStarter && <em className="gl-flag">Not usual starter</em>}</td>
             <RankCell rank={stat(team, 'off_points_rank')} value={pf !== null ? pf.toFixed(1) : '—'} />
             <RankCell rank={stat(team, 'def_points_rank')} value={pa !== null ? pa.toFixed(1) : '—'} />
           </tr>;

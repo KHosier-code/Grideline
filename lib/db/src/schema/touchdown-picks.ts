@@ -59,7 +59,11 @@ export const touchdownPickResultsTable = pgTable("touchdown_pick_results", {
   unique("touchdown_pick_results_player_week_unique").on(table.season, table.week, table.playerId),
 ]);
 
-export type GameProjectionQb = { name: string | null; value: number | null; listed: boolean; newStarter: boolean };
+export type GameProjectionQb = {
+  name: string | null; value: number | null; listed: boolean; newStarter: boolean;
+  /** Expected starter ruled out (injury report or roster), when the QB above replaces them. */
+  outName?: string | null; outReason?: string | null;
+};
 export type GameProjectionRow = {
   gameId: string;
   nflverseGameId: string;
@@ -69,6 +73,9 @@ export type GameProjectionRow = {
   projectedMargin: number;
   projectedTotal: number;
   homeWinProbability: number;
+  /** nflverse consensus line as an expected home margin (positive = home favored). */
+  marketMargin?: number | null;
+  marketTotal?: number | null;
   homeQb: GameProjectionQb;
   awayQb: GameProjectionQb;
   factors: { qbEdge: number | null; teamEdge: number | null; passEdge: number | null; rushEdge: number | null; restDiff: number | null; neutralSite: boolean };
@@ -87,6 +94,8 @@ export type TeamRatingRow = {
   qbName: string | null;
   qbValue: number | null;
   qbNewStarter: boolean;
+  qbOutName?: string | null;
+  qbOutReason?: string | null;
   record: { wins: number; losses: number; ties: number } | null;
   /** Season stats keyed like off_points / off_points_rank / def_sacks_rank. */
   stats: Record<string, number | null>;

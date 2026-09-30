@@ -10,6 +10,8 @@ import { projectionsBeforeKickoff, winnerRecord } from "../lib/game-projections"
 import { isEligiblePredictionSnapshot } from "../lib/live-predictions";
 import { addResult, emptyRecordLine, gradePicks, picksForProjection } from "../lib/pick-grading";
 import { boardForWeek, fairAmericanOdds, topTenRecord } from "../lib/touchdown-board";
+import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecision } from "../lib/odds";
+import { bestBookPrice, captureTouchdownProps, latestTouchdownProps } from "../lib/td-props";
 
 const router: IRouter = Router();
 
@@ -121,6 +123,7 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
     const board = boards.get(selected.week) ?? [];
     const latest = seasonRuns.filter((run) => run.week === selected.week).at(-1)!;
     const weekResults = resultsByWeek.get(selected.week) ?? new Map<string, boolean>();
+    const props = await latestTouchdownProps(selected.season, selected.week).catch(() => null);
     const evaluation = latest.evaluation as Record<string, unknown>;
     const numberOrNull = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
     res.json({
@@ -148,6 +151,7 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
         injuryStatus: entry.injuryStatus,
         factors: entry.factors,
         scored: weekResults.has(entry.playerId) ? weekResults.get(entry.playerId)! : null,
+        bookOdds: bestBookPrice(props, entry.name, entry.team),
       })),
       weeks: available,
       record: topTenRecord([...boards.entries()]
@@ -245,6 +249,7 @@ router.post("/touchdowns/ingest", async (req, res): Promise<void> => {
 const qbSchema = zod.object({
   name: zod.string().max(80).nullable(), value: zod.number().finite().nullable(),
   listed: zod.boolean(), newStarter: zod.boolean(),
+  outName: zod.string().max(80).nullable().optional(), outReason: zod.string().max(40).nullable().optional(),
 });
 const gameIngestSchema = zod.object({
   season: zod.number().int().min(2000).max(2200),
@@ -263,6 +268,8 @@ const gameIngestSchema = zod.object({
     projectedMargin: zod.number().min(-60).max(60),
     projectedTotal: zod.number().min(0).max(120),
     homeWinProbability: zod.number().min(0).max(1),
+    marketMargin: zod.number().min(-60).max(60).nullable().optional(),
+    marketTotal: zod.number().min(0).max(120).nullable().optional(),
     homeQb: qbSchema,
     awayQb: qbSchema,
     factors: zod.object({
@@ -276,6 +283,7 @@ const gameIngestSchema = zod.object({
     ratingRank: zod.number().int().min(1).max(32), offenseRank: zod.number().int().min(1).max(32),
     defenseRank: zod.number().int().min(1).max(32), qbRank: zod.number().int().min(1).max(32),
     qbName: zod.string().max(80).nullable(), qbValue: zod.number().finite().nullable(), qbNewStarter: zod.boolean(),
+    qbOutName: zod.string().max(80).nullable().optional(), qbOutReason: zod.string().max(40).nullable().optional(),
     record: zod.object({ wins: zod.number().int().min(0), losses: zod.number().int().min(0), ties: zod.number().int().min(0) }).nullable(),
     stats: zod.record(zod.string().regex(/^(off|def)_[a-z_]+$/), zod.number().finite().nullable()),
   })).max(40).default([]),
@@ -384,7 +392,7 @@ router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
 });
 
 const reportIngestSchema = zod.object({
-  kind: zod.enum(["usage", "replay"]),
+  kind: zod.enum(["usage", "replay", "share-td"]),
   season: zod.number().int().min(2000).max(2200),
   week: zod.number().int().min(0).max(22),
   generatedAt: zod.string().datetime({ offset: true }),
@@ -433,5 +441,67 @@ async function latestReport(kind: "usage" | "replay", req: import("express").Req
 
 router.get("/consumer/usage-report", (req, res) => latestReport("usage", req, res));
 router.get("/consumer/replay", (req, res) => latestReport("replay", req, res));
+
+/**
+ * Scheduled sportsbook capture, called by the GitHub "Odds" workflow. It uses
+ * the server's own ODDS_API_KEY and the same quota and billing safeguards as
+ * the data worker. Calls in the same 10-minute slot share one intent, so a
+ * retried workflow run can never pay twice.
+ */
+router.post("/odds/scheduled-capture", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const slot = new Date(Math.floor(Date.now() / 600_000) * 600_000);
+  try {
+    const quota = oddsCaptureQuotaDecision(await getOddsSchedulingBalance());
+    if (!quota.safe) {
+      res.json({ status: "skipped", reason: quota.reason, creditsRemaining: quota.creditsRemaining ?? null });
+      return;
+    }
+    const result = await captureOddsSnapshots({ jobKey: "github-odds", scheduledFor: slot });
+    res.status(result.status === "failed" ? 502 : result.status === "not_configured" ? 503 : 200).json({
+      status: result.status, reason: result.error ?? result.skipReason, snapshotsCreated: result.snapshotsCreated,
+      recordsReceived: result.recordsReceived, unmatchedEvents: result.unmatchedEvents,
+      creditsUsed: result.creditsUsed, creditsRemaining: result.creditsRemaining,
+    });
+  } catch (error) {
+    req.log.error({ error: error instanceof Error ? error.message : "Odds capture failed" }, "Scheduled odds capture failed");
+    res.status(502).json({ status: "failed", reason: "Odds capture failed on the server." });
+  }
+});
+
+/** Anytime-TD prices for games starting within `hours` (GitHub "Odds" workflow). */
+router.post("/odds/td-props-capture", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const hours = parseInteger(req.query.hours, 1, 96);
+  if (hours === null) {
+    res.status(400).json({ error: "hours must be 1-96" });
+    return;
+  }
+  try {
+    const result = await captureTouchdownProps(hours ?? 30);
+    res.status(result.status === "failed" ? 502 : result.status === "not_configured" ? 503 : 200).json(result);
+  } catch (error) {
+    req.log.error({ error: error instanceof Error ? error.message : "TD props capture failed" }, "TD props capture failed");
+    res.status(502).json({ status: "failed", reason: "TD props capture failed on the server." });
+  }
+});
+
+/** This week's TD picks card (research/td-model/share_card.py), the TD Picks link preview. */
+router.get("/share/td-card.png", async (req, res): Promise<void> => {
+  try {
+    const [latest] = await db.select({ payload: weeklyReportsTable.payload }).from(weeklyReportsTable)
+      .where(eq(weeklyReportsTable.kind, "share-td"))
+      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    const png = typeof latest?.payload.png === "string" ? Buffer.from(latest.payload.png, "base64") : null;
+    if (!png?.length) {
+      res.redirect(302, "/gridline-share.png");
+      return;
+    }
+    res.set({ "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" }).send(png);
+  } catch (error) {
+    req.log.error({ error }, "Share card read failed");
+    res.redirect(302, "/gridline-share.png");
+  }
+});
 
 export default router;

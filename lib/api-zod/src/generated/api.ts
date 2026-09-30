@@ -3651,7 +3651,16 @@ export const GetConsumerTouchdownsResponse = zod.object({
   "opponentTdsAllowedRatio": zod.number().nullable(),
   "recentTdRate": zod.number().nullable()
 }),
-  "scored": zod.boolean().nullable().describe('null until the game is graded')
+  "scored": zod.boolean().nullable().describe('null until the game is graded'),
+  "bookOdds": zod.object({
+  "price": zod.number().int(),
+  "book": zod.string(),
+  "books": zod.array(zod.object({
+  "book": zod.string(),
+  "price": zod.number().int()
+})),
+  "capturedAt": zod.coerce.date()
+}).nullish().describe('Best DraftKings or FanDuel anytime-TD price from the latest capture, when the player was listed')
 })),
   "weeks": zod.array(zod.object({
   "season": zod.number().int(),
@@ -3716,17 +3725,23 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "projectedMargin": zod.number().describe('Home minus away'),
   "projectedTotal": zod.number(),
   "homeWinProbability": zod.number(),
+  "marketMargin": zod.number().nullish().describe('Consensus betting line as an expected home margin (positive favors home), from nflverse'),
+  "marketTotal": zod.number().nullish().describe('Consensus betting total, from nflverse'),
   "homeQb": zod.object({
   "name": zod.string().nullable(),
   "value": zod.number().nullable().describe('Recency-weighted EPA per dropback, shrunk toward backup level'),
   "listed": zod.boolean().describe('True when the schedule lists this QB as the starter; false when inferred from recent starts'),
-  "newStarter": zod.boolean().describe('Not the team\'s usual starter over its last four games')
+  "newStarter": zod.boolean().describe('Not the team\'s usual starter over its last four games'),
+  "outName": zod.string().nullish().describe('The usual or listed starter, when ruled out by the injury report or roster'),
+  "outReason": zod.string().nullish().describe('Why outName is not expected to play, such as Out or Injured reserve')
 }),
   "awayQb": zod.object({
   "name": zod.string().nullable(),
   "value": zod.number().nullable().describe('Recency-weighted EPA per dropback, shrunk toward backup level'),
   "listed": zod.boolean().describe('True when the schedule lists this QB as the starter; false when inferred from recent starts'),
-  "newStarter": zod.boolean().describe('Not the team\'s usual starter over its last four games')
+  "newStarter": zod.boolean().describe('Not the team\'s usual starter over its last four games'),
+  "outName": zod.string().nullish().describe('The usual or listed starter, when ruled out by the injury report or roster'),
+  "outReason": zod.string().nullish().describe('Why outName is not expected to play, such as Out or Injured reserve')
 }),
   "factors": zod.object({
   "qbEdge": zod.number().nullable(),
@@ -3777,6 +3792,8 @@ export const GetConsumerPowerRatingsResponse = zod.object({
   "qbName": zod.string().nullable(),
   "qbValue": zod.number().nullable(),
   "qbNewStarter": zod.boolean(),
+  "qbOutName": zod.string().nullish(),
+  "qbOutReason": zod.string().nullish(),
   "record": zod.object({
   "wins": zod.number().int(),
   "losses": zod.number().int(),

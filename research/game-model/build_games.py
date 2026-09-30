@@ -75,6 +75,60 @@ defense = {team: frame.sort_values("kickoff") for team, frame in team_games.grou
 qb_hist = {qb: frame.sort_values("kickoff") for qb, frame in qb_games.groupby("id")}
 starters = qb_games.sort_values("dropbacks").groupby(["game_id", "posteam"]).tail(1)
 starter_by_team = {team: frame.sort_values("kickoff") for team, frame in starters.groupby("posteam")}
+actual_starter = {(r.game_id, r.posteam): r.id for r in starters.itertuples()}
+
+# ---------------------------------------------------------------- QB availability
+# The schedule's listed QB can lag reality (it kept listing an injured starter),
+# so upcoming games also check the newest injury report and weekly roster.
+UNAVAILABLE_REPORT = {"Out", "Doubtful"}
+injury_status, roster_status, report_week = {}, {}, None
+try:
+    inj = pd.read_parquet(f"{DATA}/injuries_{CURRENT_SEASON}.parquet", columns=["season", "week", "gsis_id", "report_status"])
+    inj = inj[inj.season == CURRENT_SEASON]
+    if len(inj):
+        report_week = int(inj.week.max())
+        latest = inj[inj.week == report_week].dropna(subset=["gsis_id"])
+        injury_status = dict(zip(latest.gsis_id, latest.report_status))
+except FileNotFoundError:
+    pass
+try:
+    rost = pd.read_parquet(f"{DATA}/rosters_{CURRENT_SEASON}.parquet", columns=["week", "gsis_id", "status"])
+    roster_status = {(r.gsis_id, int(r.week)): r.status for r in rost.dropna(subset=["gsis_id"]).itertuples()}
+except FileNotFoundError:
+    pass
+
+
+roster_names = pd.Series(dtype=object)
+try:
+    _names = pd.read_parquet(f"{DATA}/rosters_{CURRENT_SEASON}.parquet", columns=["gsis_id", "full_name"]).dropna()
+    roster_names = _names.drop_duplicates("gsis_id", keep="last").set_index("gsis_id").full_name
+except FileNotFoundError:
+    pass
+
+
+def qb_unavailable(qb_id, week):
+    """Reason the QB is not expected to play in `week` of the current season, or None."""
+    status = injury_status.get(qb_id)
+    if isinstance(status, str) and status in UNAVAILABLE_REPORT:
+        return status
+    roster = roster_status.get((qb_id, week))
+    if isinstance(roster, str) and roster in ("RES", "SUS", "PUP", "NON", "EXE"):
+        return "Injured reserve" if roster == "RES" else "Not active"
+    return None
+
+
+def expected_qb(team, kickoff, week, listed):
+    """(qb_id, unavailable_qb_id, reason) for an unplayed current-season game."""
+    history = starter_by_team.get(team)
+    recent = history[history.kickoff < kickoff].id.tolist()[::-1] if history is not None else []
+    candidate = listed if isinstance(listed, str) and listed else (recent[0] if recent else None)
+    reason = qb_unavailable(candidate, week) if candidate else None
+    if not reason:
+        return candidate, None, None
+    for qb_id in dict.fromkeys(recent):
+        if qb_id != candidate and not qb_unavailable(qb_id, week):
+            return qb_id, candidate, reason
+    return None, candidate, reason
 
 
 def team_features(team, kickoff, season):
@@ -127,6 +181,12 @@ for g in games.itertuples():
            "temp": g.temp if pd.notna(g.temp) else 65.0, "home_qb_name": g.home_qb_name, "away_qb_name": g.away_qb_name}
     for side, team, qb in (("home", g.home_team, g.home_qb_id), ("away", g.away_team, g.away_qb_id)):
         row[f"{side}_qb_listed"] = int(isinstance(qb, str) and bool(qb))
+        row[f"{side}_qb_out_id"], row[f"{side}_qb_out_reason"] = None, None
+        if g.played:
+            # Who actually took the snaps, not who the schedule listed.
+            qb = actual_starter.get((g.game_id, team), qb)
+        elif g.season == CURRENT_SEASON:
+            qb, row[f"{side}_qb_out_id"], row[f"{side}_qb_out_reason"] = expected_qb(team, g.kickoff, g.week, qb)
         for key, value in team_features(team, g.kickoff, g.season).items():
             row[f"{side}_{key}"] = value
         for key, value in qb_features(qb, team, g.kickoff, g.season).items():
@@ -138,8 +198,10 @@ df = pd.DataFrame(rows)
 names = pd.concat([games[["home_qb_id", "home_qb_name"]].set_axis(["id", "name"], axis=1),
                    games[["away_qb_id", "away_qb_name"]].set_axis(["id", "name"], axis=1)]).dropna()
 qb_names = names.drop_duplicates("id", keep="last").set_index("id").name
+qb_names = pd.concat([qb_names, roster_names]).groupby(level=0).first()
 for side in ("home", "away"):
     df[f"{side}_qb_name"] = df[f"{side}_qb_id"].map(qb_names).fillna(df[f"{side}_qb_name"])
+    df[f"{side}_qb_out_name"] = df[f"{side}_qb_out_id"].map(qb_names)
 df["margin"] = df.home_score - df.away_score
 df["total"] = df.home_score + df.away_score
 # Matchup differences (home minus away). Defensive numbers are EPA/success
@@ -163,16 +225,20 @@ for team in sorted(set(games.home_team) | set(games.away_team)):
     row = {"team": team}
     row.update(team_features(team, now, CURRENT_SEASON))
     upcoming = games[(games.kickoff >= now) & ((games.home_team == team) | (games.away_team == team))].head(1)
-    listed = None
+    listed, out_id, out_reason = None, None, None
     if len(upcoming):
         g = upcoming.iloc[0]
         listed = g.home_qb_id if g.home_team == team else g.away_qb_id
+        listed, out_id, out_reason = expected_qb(team, g.kickoff, g.week, listed)
     qb = qb_features(listed if isinstance(listed, str) else None, team, now, CURRENT_SEASON)
+    row.update({"qb_out_id": out_id, "qb_out_reason": out_reason})
     row.update({f"qb_{key.removeprefix('qb_')}": value for key, value in qb.items()})
     snapshot.append(row)
 teams = pd.DataFrame(snapshot)
 names = pd.concat([games[["home_qb_id", "home_qb_name"]].set_axis(["id", "name"], axis=1),
                    games[["away_qb_id", "away_qb_name"]].set_axis(["id", "name"], axis=1)]).dropna()
-teams["qb_name"] = teams.qb_id.map(names.drop_duplicates("id", keep="last").set_index("id").name)
+all_names = pd.concat([names.drop_duplicates("id", keep="last").set_index("id").name, roster_names]).groupby(level=0).first()
+teams["qb_name"] = teams.qb_id.map(all_names)
+teams["qb_out_name"] = teams.qb_out_id.map(all_names)
 teams.to_parquet(OUT.replace(".parquet", "_teams.parquet"))
 print("team snapshot", teams.shape)

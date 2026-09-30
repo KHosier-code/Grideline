@@ -5,8 +5,9 @@ import { useLocation } from 'wouter';
 const pages: Record<string, [string, string]> = {
   '/': ['Gridline | Free NFL Touchdown Picks and Game Projections', 'Free weekly anytime touchdown picks and a projected score for every NFL game, adjusted for the starting quarterback, next to the Vegas line.'],
   '/touchdowns': ['Anytime Touchdown Picks This Week | Gridline', 'Ranked anytime touchdown scorer picks for every NFL game, with each player\'s red-zone role, target and carry share, Vegas team total and defensive matchup.'],
+  '/pickem': ['NFL Pick\'em and Confidence Pool Picks This Week | Gridline', 'Every NFL game ranked by win chance out of 100 for pick\'em, confidence and survivor pools, with 100-game simulations of each matchup.'],
   '/power-ratings': ['NFL Power Ratings: All 32 Teams Ranked | Gridline', 'Every NFL team ranked 1-32 by points better or worse than an average team, with offense, defense and quarterback ratings.'],
-  '/qb-rankings': ['NFL QB Rankings by EPA per Dropback | Gridline', 'Every team\'s expected starting quarterback ranked by value per dropback, and what he\'s worth to the team in points.'],
+  '/qb-rankings': ['NFL QB Rankings by EPA per Dropback | Gridline', 'Every team\'s expected starting quarterback ranked by value per dropback, and what each is worth to the team in points.'],
   '/games': ['NFL Games, Projections and Lines | Gridline', 'Browse every NFL game by week with Gridline\'s projected score, the sportsbook line and final results.'],
   '/teams': ['NFL Team Rankings by EPA | Gridline', 'Offense and defense for all 32 NFL teams from play-by-play data, updated after every game.'],
   '/usage': ['NFL Player Usage: Target, Carry and Red-Zone Share | Gridline', 'Target share, carry share, air yards and red-zone looks for every NFL team and skill player, with week-by-week trends.'],
@@ -14,7 +15,6 @@ const pages: Record<string, [string, string]> = {
   '/defense-vs-position': ['NFL Defense vs Position | Gridline', 'Fantasy points and touchdowns each NFL defense allows to quarterbacks, running backs, receivers and tight ends.'],
   '/methodology': ['How Gridline Makes Its Picks | Gridline', 'What goes into Gridline\'s game projections and touchdown picks, how they are tested, and how picks are graded.'],
   '/performance': ['NFL Model Performance | Gridline', 'How Gridline\'s game and touchdown models performed on seasons they never trained on, and this season\'s graded record.'],
-  '/weekly-picks': ['Past Weekly Picks | Gridline', 'Gridline\'s past weekly NFL picks by season and week.'],
 };
 
 const setMeta = (selector: string, attribute: string, value: string) => {
@@ -55,6 +55,7 @@ export function useRouteMetadata() {
     const path = location.split('?')[0].replace(/\/$/, '') || '/';
     const page = pages[path];
     if (page) setPublicMetadata(path, page[0], page[1]);
+    else if (path === '/share') setPublicMetadata(path, 'Share This Week | Gridline', 'This week\'s TD picks card, post and email.', false);
     else setPublicMetadata(path, 'Gridline | Private or unavailable page', 'This page is not included in public search results.', false);
   }, [location]);
 }

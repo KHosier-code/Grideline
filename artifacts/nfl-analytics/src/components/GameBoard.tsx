@@ -1,21 +1,23 @@
 import { Link } from 'wouter';
 import { getGetConsumerPowerRatingsQueryKey, useGetConsumerPowerRatings, type ConsumerProjectionQb } from '@workspace/api-client-react';
+import { groupBySlate } from '@/lib/slates';
 import { TeamLogo } from './TeamLogo';
 import { lineText, vegasLineText, type GameView } from '@/lib/pick-sheet';
 import { teamColor, teamTextColor } from '@/lib/team-colors';
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-const dayLabel = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 const gameHref = (view: GameView) => `/games/${view.game.gameId}?season=${view.game.season}&week=${view.game.week}`;
 
 export function TeamChip({ team, large = false }: { team: string; large?: boolean }) {
   return <span className={`gl-chip${large ? ' lg' : ''}`} style={{ background: teamColor(team), color: teamTextColor(team) }}>{team}</span>;
 }
 
+const lastName = (name: string) => name.split(' ').slice(1).join(' ') || name;
+
 function QbLine({ qb }: { qb: ConsumerProjectionQb | null }) {
   if (!qb?.name) return null;
-  return <span className="gl-qb">QB {qb.name}{qb.newStarter && <span className="gl-flag">Not usual starter</span>}{!qb.listed && <span className="gl-qb-note"> · expected</span>}</span>;
+  return <span className="gl-qb">QB {qb.name}{qb.outName ? <span className="gl-flag out">{qb.outName} {(qb.outReason ?? 'out').toLowerCase()}</span> : qb.newStarter && <span className="gl-flag">Not usual starter</span>}{!qb.listed && <span className="gl-qb-note"> · expected</span>}</span>;
 }
 
 export function GameRow({ view, now }: { view: GameView; now: number }) {
@@ -102,7 +104,9 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
         <span className="gl-gc-team">
           <b>{item.team.abbreviation}</b>
           <small>{records?.get(item.team.abbreviation) ?? ''}{item.qb?.name ? `${records?.get(item.team.abbreviation) ? ' · ' : ''}${item.qb.name}` : ''}</small>
-          {item.qb?.newStarter && <em className="gl-flag" title="Not the team's usual starting quarterback">New QB</em>}
+          {item.qb?.outName
+            ? <em className="gl-flag out" title={`${item.qb.outName} is listed ${item.qb.outReason ?? 'out'}; ${item.qb.name ?? 'the backup'} is expected to start`}>{lastName(item.qb.outName)} {(item.qb.outReason ?? 'out').toLowerCase()}</em>
+            : item.qb?.newStarter && <em className="gl-flag" title="Not the team's usual starting quarterback">New QB</em>}
         </span>
         {final ? <span className="gl-gc-score">{item.score}</span> : <>
           <span className="gl-gc-line">{open ? <><b>{lineNumber(open.line * homeFactor)}</b><small>{item.side === 'home' ? price(open.price) : ''}</small></> : <b className="gl-muted">—</b>}</span>
@@ -116,7 +120,7 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
   </Link>;
 }
 
-/** Every game in a week, grouped by day, as cards. */
+/** Every game in a week, grouped by slate (Thursday, Sunday early, Sunday afternoon, Monday), as cards. */
 export function GameBoard({ views, now }: { views: GameView[]; now: number }) {
   const ratings = useGetConsumerPowerRatings(undefined, { query: { queryKey: getGetConsumerPowerRatingsQueryKey(), staleTime: 5 * 60_000 } });
   const records = new Map((ratings.data?.teams ?? []).filter(team => team.record)
@@ -125,13 +129,14 @@ export function GameBoard({ views, now }: { views: GameView[]; now: number }) {
     if (team === 'LAR') records.set('LA', record);
     if (team === 'WAS') records.set('WSH', record);
   }
-  const groups = new Map<string, GameView[]>();
-  for (const view of views) {
-    const key = view.game.kickoffTime ? dayLabel(view.game.kickoffTime) : 'Time to be announced';
-    groups.set(key, [...(groups.get(key) ?? []), view]);
-  }
-  return <div className="gl-days">{[...groups.entries()].map(([day, items]) => <section key={day} className="gl-day-col" aria-label={day}>
-    <h3 className="gl-day-head"><span className="gl-dot" aria-hidden="true" />{day}</h3>
-    <div className="gl-day-cards">{items.map(view => <GameCard key={view.game.gameId} view={view} now={now} records={records} />)}</div>
-  </section>)}</div>;
+  const slates = groupBySlate(views, view => view.game.kickoffTime);
+  return <div className="gl-board-slates">
+    {slates.length > 2 && <nav className="gl-slate-jump" aria-label="Jump to a slate">
+      {slates.map(({ slate, items }) => <a key={slate.key} href={`#slate-${slate.key}`}>{slate.label}<small>{items.length}</small></a>)}
+    </nav>}
+    <div className="gl-days">{slates.map(({ slate, items }) => <section key={slate.key} id={`slate-${slate.key}`} className="gl-day-col" aria-label={`${slate.label} ${slate.date}`}>
+      <h3 className="gl-day-head"><span className="gl-dot" aria-hidden="true" />{slate.label}{slate.date && <small>{slate.date}</small>}<span className="gl-day-count">{items.length} {items.length === 1 ? 'game' : 'games'}</span></h3>
+      <div className="gl-day-cards">{items.map(view => <GameCard key={view.game.gameId} view={view} now={now} records={records} />)}</div>
+    </section>)}</div>
+  </div>;
 }
