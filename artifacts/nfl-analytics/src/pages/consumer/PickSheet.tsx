@@ -211,7 +211,7 @@ export default function PickSheet() {
     <footer className="gl-card" style={{ padding: 18 }}>
       <div className="gl-footer-inner" style={{ padding: 0 }}>
         <p><b>What the edge means</b>The gap in points between our projection and the sportsbook line. The bigger the gap, the more we disagree with the market.</p>
-        <p><b>How good is the model?</b>Tested on the full 2025 season, it picked 61.8% of winners. Sportsbook lines were still more accurate on spreads, so treat spread picks as a second opinion. We don&apos;t make over/under picks until our totals model is good enough.</p>
+        <p><b>How good is the model?</b>Tested on 2023–2025, our spread picks went 49.9% against closing lines, and simply taking the Vegas favorite picked more winners than we did. Treat these as a second opinion, not a betting edge. We don&apos;t make over/under picks until our totals model is good enough.</p>
         <p><b>How picks are graded</b>Each game&apos;s pick is the one saved 30 minutes before kickoff, graded against the final score. A projection exactly on the line is not a pick.</p>
       </div>
     </footer>
