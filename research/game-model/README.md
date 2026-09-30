@@ -82,3 +82,31 @@ site shows it as a projection ("Gridline line") and makes no spread or total
 picks. Beating the market would need information the closing line does not
 already have, for example betting earlier in the week than the close. That
 needs historical opening lines to test.
+
+# Opening lines (September 30, 2026)
+
+Test of the same walk-forward rating against **opening** lines, with a
+market-aware layer fit on earlier seasons that predicts the cover margin
+against the opener. Opening lines for this test came from the public output
+of the nfelo project (github.com/greerreNFL/nfelo, `output_data/nfelo_games.csv`).
+That repository has no license, so the data is not copied into this repo.
+
+| Bet only when predicted edge vs open exceeds | 2021-2025 record | Win rate |
+|---|---:|---:|
+| 0 pts | 624-596 | 51.1% |
+| 0.5 pts | 405-370 | 52.3% |
+| 1.0 pts | 243-211 | 53.5% |
+| 1.5 pts | 131-112 | 53.9% |
+| 2.0 pts | 70-67 | 51.1% |
+| raw rating 3+ pts off the open | 232-199 | 53.8% |
+
+Against the close the same model was 49-51%. Selective bets against the
+opener clear break-even (52.4%) but the samples are small (a 95% range of
+about +/-4.6 points at n=454), so this is a lead, not proof. nfelo's own
+published projections, tuned on the same seasons, went 55.2% at the open and
+52.1% at the close over 2021-2025, which points the same way.
+
+Next steps to make this real: capture opening lines ourselves each week (the
+site's first-line odds capture already does this when ODDS_API_KEY is set),
+grade every recommendation against both the open and the close, and track
+closing line value.
