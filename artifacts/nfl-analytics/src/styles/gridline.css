@@ -450,3 +450,29 @@
   .gl-projection .gl-edge-compare { grid-template-columns: 1fr 1fr; }
   .gl-projection-score b { font-size: 44px; }
 }
+
+/* Older page headers (Teams, Matchups) in the new style */
+.consumer-shell .ct-hero, .consumer-shell .dvp-league-hero {
+  min-height: 0;
+  padding: 0 0 24px;
+  border: 0;
+  border-bottom: 1px solid hsl(var(--border));
+  border-radius: 0;
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+.consumer-shell .ct-hero::after, .consumer-shell .dvp-league-hero::after { display: none; }
+.consumer-shell .ct-hero h1, .consumer-shell .dvp-league-hero h1 {
+  font-family: var(--gl-display);
+  font-size: clamp(44px, 7vw, 72px);
+  font-weight: 700;
+  line-height: .95;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.consumer-shell .dvp-league-hero h1 em { color: hsl(var(--primary)); }
+.consumer-shell .ct-hero .ct-kicker, .consumer-shell .dvp-league-hero .consumer-eyebrow { color: hsl(var(--muted-foreground)); }
+.consumer-shell .ct-hero p:not(.ct-kicker), .consumer-shell .dvp-league-hero p:not(.consumer-eyebrow) { color: hsl(var(--muted-foreground)); font-size: 15px; }
+.consumer-shell .ct-hero-mark { display: none; }
+.ct-alert-details summary { margin-top: 6px; cursor: pointer; font-weight: 600; }
+.ct-alert-details[open] summary { margin-bottom: 6px; }

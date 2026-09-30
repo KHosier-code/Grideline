@@ -219,15 +219,17 @@ export default function ConsumerTeams() {
     </section>
 
     {(coverage?.partialReasons.length || incomplete.length > 0 || (dataAvailable && unreportedWeeks.length > 0) || delayedStats || missingNextSchedule || missingNextMatchups.length > 0 || unverifiedNextFixture || orphanNextStats.length > 0) ? <div className="ct-alert" role="status" data-testid="status-teams-coverage">
-      <AlertTriangle aria-hidden="true" /><div><strong>Coverage is incomplete</strong>
-        <p>Charts stop at the last fully verified week. Missing final-game statistics and schedule evidence are not inferred.</p>
-        {unreportedWeeks.length > 0 && <p>No week-level coverage reported for {unreportedWeeks.map(week => `W${week}`).join(', ')}.</p>}
-        {delayedStats && <p>Week {nextWeek} has paired team statistics for {nextCoverage!.statGames} of {nextCoverage!.finalGames} final games. Charts remain through week {throughWeek || 'none'}.</p>}
-        {missingNextSchedule && <p>Week {nextWeek} has no schedule coverage although later weeks are reported. Charts cannot skip it.</p>}
-        {missingNextMatchups.length > 0 && <p>Week {nextWeek} is missing {missingNextMatchups.length} provider matchup(s): {missingNextMatchups.join(', ')}. Charts cannot advance.</p>}
-        {unverifiedNextFixture && <p>Week {nextWeek} has no verifiable provider schedule fixture. Charts cannot advance.</p>}
-        {orphanNextStats.map(reason => <p key={reason}>{reason}</p>)}
-        {!!coverage?.partialReasons.length && <ul>{coverage.partialReasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>}
+      <AlertTriangle aria-hidden="true" /><div><strong>{throughWeek ? `Charts include games through week ${throughWeek}.` : 'Charts will fill in once this season\u2019s games are verified.'}</strong>
+        <p>Newer games are added after their play-by-play data is checked, usually within a day.</p>
+        <details className="ct-alert-details"><summary>Details</summary>
+          {unreportedWeeks.length > 0 && <p>No week-level coverage reported for {unreportedWeeks.map(week => `W${week}`).join(', ')}.</p>}
+          {delayedStats && <p>Week {nextWeek} has paired team statistics for {nextCoverage!.statGames} of {nextCoverage!.finalGames} final games. Charts remain through week {throughWeek || 'none'}.</p>}
+          {missingNextSchedule && <p>Week {nextWeek} has no schedule coverage although later weeks are reported. Charts cannot skip it.</p>}
+          {missingNextMatchups.length > 0 && <p>Week {nextWeek} is missing {missingNextMatchups.length} provider matchup(s): {missingNextMatchups.join(', ')}. Charts cannot advance.</p>}
+          {unverifiedNextFixture && <p>Week {nextWeek} has no verifiable provider schedule fixture. Charts cannot advance.</p>}
+          {orphanNextStats.map(reason => <p key={reason}>{reason}</p>)}
+          {!!coverage?.partialReasons.length && <ul>{coverage.partialReasons.map((reason, index) => <li key={`${index}-${reason}`}>{reason}</li>)}</ul>}
+        </details>
       </div>
     </div> : null}
 
