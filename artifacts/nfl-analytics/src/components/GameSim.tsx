@@ -2,7 +2,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'wouter';
 import { TeamLogo } from '@/components/TeamLogo';
 import { lineText, vegasLineText, type GameView } from '@/lib/pick-sheet';
-import { homeWinChance, outcomeCounts, simulateMargins } from '@/lib/sim';
+import { capturedText, homeWinChance, outcomeCounts, simulateMargins, winRange } from '@/lib/sim';
 import { matchupAccents, teamAccent } from '@/lib/team-colors';
 
 /** "If they played 100 times": shared by Pick'em and Game Detail. */
@@ -63,6 +63,8 @@ export function TeamSide({ game, side, records }: { game: PoolGame; side: Side; 
 
 export function Simulator({ game, showLink = true, title = 'If they played 100 times' }: { game: PoolGame; showLink?: boolean; title?: string }) {
   const [seed, setSeed] = useState<number | null>(null);
+  // Runs so far for this line; a line move starts the tally over.
+  const [tally, setTally] = useState({ margin: game.expectedHomeMargin, runs: 0, wins: 0 });
   const home = abbr(game, 'home');
   const away = abbr(game, 'away');
   const [pickColor, dogColor] = matchupAccents(abbr(game, game.pick), abbr(game, other(game.pick)));
@@ -77,6 +79,18 @@ export function Simulator({ game, showLink = true, title = 'If they played 100 t
   const pickName = abbr(game, game.pick);
   const dogName = abbr(game, other(game.pick));
   const upsets = 100 - game.wins;
+  const range = winRange(game.pick === 'home' ? game.homeWin : 1 - game.homeWin);
+  const tallied = tally.margin === game.expectedHomeMargin ? tally : { runs: 0, wins: 0 };
+  const spread = game.view.game.market?.spread;
+  const lineSource = game.source === 'sportsbook'
+    ? [spread?.sportsbook ?? 'DraftKings/FanDuel', capturedText(spread?.capturedAt)].filter(Boolean).join(' ')
+    : game.source === 'consensus' ? 'consensus' : 'no line yet: Gridline model';
+  const playOut = () => {
+    const next = Math.floor(Math.random() * 2 ** 31);
+    const wins = simulateMargins(game.expectedHomeMargin, next).filter(margin => margin * pickSign > 0).length;
+    setSeed(next);
+    setTally({ margin: game.expectedHomeMargin, runs: tallied.runs + 1, wins: tallied.wins + wins });
+  };
 
   return <div className="gl-pool-detail">
     <div className="gl-pool-sim">
@@ -101,18 +115,24 @@ export function Simulator({ game, showLink = true, title = 'If they played 100 t
     </div>
     <div className="gl-pool-run">
       <h3>Play them out</h3>
-      <p>Each square is one simulated game. Every run is different, which is the point: an 80% favorite still loses about 1 in 5.</p>
+      <p>Each square is one simulated game. Every run is different, which is the point: {pickName} is expected to win {game.wins}, and most runs land between {range.low} and {range.high}.</p>
       {run ? <HundredGrid key={seed} animate wins={runWins} winColor={colors[game.pick]} lossColor={colors[other(game.pick)]}
         cells={run.map(margin => margin * pickSign > 0)} label={`Simulated run: ${pickName} won ${runWins} of 100`} />
         : <span className="gl-hundred placeholder" aria-hidden="true">{Array.from({ length: 100 }, (_, index) => <i key={index} />)}</span>}
       <div className="gl-run-foot">
-        <button type="button" className="gl-button" onClick={() => setSeed(Math.floor(Math.random() * 2 ** 31))}>{run ? 'Run again' : 'Run 100 games'}</button>
+        <button type="button" className="gl-button" onClick={playOut}>{run ? 'Run again' : 'Run 100 games'}</button>
         {run && <span aria-live="polite">{pickName} won <b>{runWins}</b>, {dogName} won <b>{100 - runWins}</b>. Biggest: {biggest > 0 ? home : away} by {Math.abs(biggest)}.</span>}
       </div>
+      {run && <dl className="gl-run-compare">
+        <div><dt>Expected</dt><dd>{game.wins}</dd></div>
+        <div><dt>This run</dt><dd>{runWins}</dd></div>
+        <div><dt>Normal range</dt><dd>{range.low}–{range.high}</dd></div>
+        {tallied.runs > 1 && <div><dt>Average of {tallied.runs} runs</dt><dd>{(tallied.wins / tallied.runs).toFixed(1)}</dd></div>}
+      </dl>}
     </div>
     <div className="gl-pool-lines">
       <span>Line <b>{game.view.vegas.homeLine !== null ? vegasLineText(game.view.vegas.homeLine, home, away) : lineText(game.expectedHomeMargin, home, away)}</b>
-        <small>{game.source === 'sportsbook' ? 'DraftKings/FanDuel' : game.source === 'consensus' ? 'consensus' : 'no line yet: Gridline model'}</small></span>
+        <small>{lineSource}</small></span>
       {game.view.projection && <span>Gridline <b>{lineText(game.view.projection.margin, home, away)}</b><small>{game.modelWins !== null && game.modelPick ? `${abbr(game, game.modelPick)} ${game.modelWins} of 100` : ''}</small></span>}
       {showLink && <Link href={`/games/${game.view.game.gameId}`} className="gl-link">Full game breakdown ›</Link>}
     </div>
