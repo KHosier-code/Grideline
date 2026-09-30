@@ -5,6 +5,131 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+export interface ConsumerRecordLine {
+  wins: number;
+  losses: number;
+  pushes: number;
+}
+
+export interface ConsumerRecordWeek {
+  week: number;
+  winners: ConsumerRecordLine;
+  spread: ConsumerRecordLine;
+  total: ConsumerRecordLine;
+}
+
+export interface ConsumerRecord {
+  /** @nullable */
+  season: number | null;
+  seasons: number[];
+  graded: number;
+  winners: ConsumerRecordLine;
+  spread: ConsumerRecordLine;
+  total: ConsumerRecordLine;
+  weeks: ConsumerRecordWeek[];
+  /** @nullable */
+  lastGradedAt: string | null;
+}
+
+export interface ConsumerTouchdownFactors {
+  /** @nullable */
+  targetsPerGame: number | null;
+  /** @nullable */
+  carriesPerGame: number | null;
+  /** @nullable */
+  targetShare: number | null;
+  /** @nullable */
+  carryShare: number | null;
+  /** @nullable */
+  redZoneTouchesPerGame: number | null;
+  /** @nullable */
+  redZoneShare: number | null;
+  /** @nullable */
+  goalLineShare: number | null;
+  /** @nullable */
+  teamImpliedPoints: number | null;
+  /** @nullable */
+  opponentTdsAllowedRatio: number | null;
+  /** @nullable */
+  recentTdRate: number | null;
+}
+
+export type ConsumerTouchdownPickPosition = typeof ConsumerTouchdownPickPosition[keyof typeof ConsumerTouchdownPickPosition];
+
+
+export const ConsumerTouchdownPickPosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+} as const;
+
+export interface ConsumerTouchdownPick {
+  rank: number;
+  playerId: string;
+  name: string;
+  position: ConsumerTouchdownPickPosition;
+  team: string;
+  opponent: string;
+  isHome: boolean;
+  /** @nullable */
+  kickoff: string | null;
+  probability: number;
+  fairOdds: number;
+  /** @nullable */
+  injuryStatus: string | null;
+  factors: ConsumerTouchdownFactors;
+  /**
+     * null until the game is graded
+     * @nullable
+     */
+  scored: boolean | null;
+}
+
+export interface ConsumerTouchdownRecord {
+  weeksGraded: number;
+  topTenPicks: number;
+  topTenHits: number;
+}
+
+export type ConsumerTouchdownsStatus = typeof ConsumerTouchdownsStatus[keyof typeof ConsumerTouchdownsStatus];
+
+
+export const ConsumerTouchdownsStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+export type ConsumerTouchdownsEvaluation = {
+  /** @nullable */
+  topTenHitRate: number | null;
+  /** @nullable */
+  auc: number | null;
+  /** @nullable */
+  testedOn: string | null;
+};
+
+export type ConsumerTouchdownsWeeksItem = {
+  season: number;
+  week: number;
+};
+
+export interface ConsumerTouchdowns {
+  status: ConsumerTouchdownsStatus;
+  /** @nullable */
+  season: number | null;
+  /** @nullable */
+  week: number | null;
+  /** @nullable */
+  generatedAt: string | null;
+  /** @nullable */
+  modelVersion: string | null;
+  evaluation: ConsumerTouchdownsEvaluation;
+  picks: ConsumerTouchdownPick[];
+  weeks: ConsumerTouchdownsWeeksItem[];
+  record: ConsumerTouchdownRecord;
+}
+
 export type InitialLineAuditSelection = {
   gameId: string;
   selectedAt: string;
@@ -542,6 +667,8 @@ export interface ConsumerGameMarket {
   spread: ConsumerMarketQuote | null;
   moneyline: ConsumerMarketQuote | null;
   total: ConsumerMarketQuote | null;
+  /** Away team's moneyline from the same sportsbook as `moneyline`, when saved. */
+  awayMoneyline?: ConsumerMarketQuote | null;
   evidence: ConsumerMarketEvidence;
 }
 
@@ -4086,3 +4213,12 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
+
+export type GetConsumerRecordParams = {
+season?: number;
+};
+
+export type GetConsumerTouchdownsParams = {
+season?: number;
+week?: number;
+};

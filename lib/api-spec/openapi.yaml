@@ -1278,6 +1278,53 @@ paths:
               schema: { $ref: "#/components/schemas/ConsumerRedZoneOpportunities" }
         "400": { $ref: "#/components/responses/ConsumerInvalidRequest" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/record:
+    get:
+      operationId: getConsumerRecord
+      tags: [nfl]
+      summary: Read Gridline's win-loss record for its official game picks
+      description: >
+        Grades each official pregame prediction against the final score. Winner
+        picks count the projected winner. Spread and total picks take the side
+        of the saved line that the projection favors; a projection exactly on
+        the line is not a pick. Pushes are counted separately.
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Record for the season (or the latest graded season)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerRecord" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/touchdowns:
+    get:
+      operationId: getConsumerTouchdowns
+      tags: [nfl]
+      summary: Read anytime-touchdown picks for a week
+      description: >
+        Latest run of the anytime-TD model for the requested week (default: the
+        newest week with picks), ranked by probability, with the season's
+        top-10 hit record from graded weeks.
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: week
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Touchdown picks or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerTouchdowns" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -1296,6 +1343,97 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    ConsumerRecordLine:
+      type: object
+      required: [wins, losses, pushes]
+      properties:
+        wins: { type: integer }
+        losses: { type: integer }
+        pushes: { type: integer }
+    ConsumerRecordWeek:
+      type: object
+      required: [week, winners, spread, total]
+      properties:
+        week: { type: integer }
+        winners: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        spread: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        total: { $ref: "#/components/schemas/ConsumerRecordLine" }
+    ConsumerRecord:
+      type: object
+      required: [season, graded, winners, spread, total, weeks, lastGradedAt, seasons]
+      properties:
+        season: { type: ["integer", "null"] }
+        seasons: { type: array, items: { type: integer } }
+        graded: { type: integer }
+        winners: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        spread: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        total: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        weeks: { type: array, items: { $ref: "#/components/schemas/ConsumerRecordWeek" } }
+        lastGradedAt: { type: ["string", "null"], format: date-time }
+    ConsumerTouchdownFactors:
+      type: object
+      required: [targetsPerGame, carriesPerGame, targetShare, carryShare, redZoneTouchesPerGame, redZoneShare, goalLineShare, teamImpliedPoints, opponentTdsAllowedRatio, recentTdRate]
+      properties:
+        targetsPerGame: { type: ["number", "null"] }
+        carriesPerGame: { type: ["number", "null"] }
+        targetShare: { type: ["number", "null"] }
+        carryShare: { type: ["number", "null"] }
+        redZoneTouchesPerGame: { type: ["number", "null"] }
+        redZoneShare: { type: ["number", "null"] }
+        goalLineShare: { type: ["number", "null"] }
+        teamImpliedPoints: { type: ["number", "null"] }
+        opponentTdsAllowedRatio: { type: ["number", "null"] }
+        recentTdRate: { type: ["number", "null"] }
+    ConsumerTouchdownPick:
+      type: object
+      required: [rank, playerId, name, position, team, opponent, isHome, kickoff, probability, fairOdds, injuryStatus, factors, scored]
+      properties:
+        rank: { type: integer }
+        playerId: { type: string }
+        name: { type: string }
+        position: { type: string, enum: [QB, RB, WR, TE] }
+        team: { type: string }
+        opponent: { type: string }
+        isHome: { type: boolean }
+        kickoff: { type: ["string", "null"], format: date-time }
+        probability: { type: number }
+        fairOdds: { type: integer }
+        injuryStatus: { type: ["string", "null"] }
+        factors: { $ref: "#/components/schemas/ConsumerTouchdownFactors" }
+        scored: { type: ["boolean", "null"], description: "null until the game is graded" }
+    ConsumerTouchdownRecord:
+      type: object
+      required: [weeksGraded, topTenPicks, topTenHits]
+      properties:
+        weeksGraded: { type: integer }
+        topTenPicks: { type: integer }
+        topTenHits: { type: integer }
+    ConsumerTouchdowns:
+      type: object
+      required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"] }
+        week: { type: ["integer", "null"] }
+        generatedAt: { type: ["string", "null"], format: date-time }
+        modelVersion: { type: ["string", "null"] }
+        evaluation:
+          type: object
+          required: [topTenHitRate, auc, testedOn]
+          properties:
+            topTenHitRate: { type: ["number", "null"] }
+            auc: { type: ["number", "null"] }
+            testedOn: { type: ["string", "null"] }
+        picks: { type: array, items: { $ref: "#/components/schemas/ConsumerTouchdownPick" } }
+        weeks:
+          type: array
+          items:
+            type: object
+            required: [season, week]
+            properties:
+              season: { type: integer }
+              week: { type: integer }
+        record: { $ref: "#/components/schemas/ConsumerTouchdownRecord" }
     InitialLineAudit:
       type: object
       required: [season, week, selection, games]
@@ -1642,6 +1780,9 @@ components:
         spread: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         moneyline: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         total: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        awayMoneyline:
+          description: Away team's moneyline from the same sportsbook as `moneyline`, when saved.
+          anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }]
         evidence: { $ref: "#/components/schemas/ConsumerMarketEvidence" }
     ConsumerInitialMarkets:
       type: object

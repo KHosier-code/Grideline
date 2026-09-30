@@ -3,7 +3,9 @@
 set -euo pipefail
 mkdir -p data && cd data
 base=https://github.com/nflverse/nflverse-data/releases/download
-season=${1:-2026}
+month=$((10#$(date -u +%m))); year=$(date -u +%Y)
+default_season=$(( month >= 3 ? year : year - 1 ))
+season=${1:-$default_season}
 for y in $(seq 2019 "$season"); do
   curl -fsSL -o "pbp_$y.parquet" "$base/pbp/play_by_play_$y.parquet"
   curl -fsSL -o "stats_$y.parquet" "$base/stats_player/stats_player_week_$y.parquet"

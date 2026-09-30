@@ -12,5 +12,7 @@ export interface ConsumerGameMarket {
   spread: ConsumerMarketQuote | null;
   moneyline: ConsumerMarketQuote | null;
   total: ConsumerMarketQuote | null;
+  /** Away team's moneyline from the same sportsbook as `moneyline`, when saved. */
+  awayMoneyline?: ConsumerMarketQuote | null;
   evidence: ConsumerMarketEvidence;
 }

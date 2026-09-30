@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 
 import './index.css';
+import './styles/gridline.css';
 
 const clerkPublishableKey = publishableKeyFromHost(
   window.location.hostname,

@@ -71,6 +71,8 @@ app.use(
     ),
   })),
 );
+// Weekly touchdown runs are larger than the default 100 KB body limit.
+app.use("/api/touchdowns/ingest", express.json({ limit: "2mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

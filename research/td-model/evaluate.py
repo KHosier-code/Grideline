@@ -80,6 +80,13 @@ for group, cols in GROUPS.items():
     results.append(metrics(f"gbm without {group}", test, m.predict_proba(test[feats])[:, 1]))
 
 print(pd.DataFrame(results).to_string(index=False))
+if len(sys.argv) > 2:
+    main = next(r for r in results if r["model"] == "gbm: all")
+    seasons = sorted(test.season.unique())
+    tested_on = f"{seasons[0]}" + (f"–{seasons[-1]}" if len(seasons) > 1 else "")
+    json.dump({"topTenHitRate": main["top10_hit"], "auc": main["auc"],
+               "testedOn": f"{len(test):,} player-games from {tested_on} the model never trained on"},
+              open(sys.argv[2], "w"))
 
 # Calibration of the GBM on test
 m, feats = fits["gbm: all"]

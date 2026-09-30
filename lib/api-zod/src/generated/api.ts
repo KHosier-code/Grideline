@@ -1399,6 +1399,13 @@ export const GetConsumerDashboardResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
+  "awayMoneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Away team\'s moneyline from the same sportsbook as `moneyline`, when saved.'),
   "evidence": zod.object({
   "available": zod.boolean(),
   "capturedAt": zod.coerce.date().nullable(),
@@ -1702,6 +1709,13 @@ export const ListConsumerGamesResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
+  "awayMoneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Away team\'s moneyline from the same sportsbook as `moneyline`, when saved.'),
   "evidence": zod.object({
   "available": zod.boolean(),
   "capturedAt": zod.coerce.date().nullable(),
@@ -1977,6 +1991,13 @@ export const GetConsumerGameResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
+  "awayMoneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Away team\'s moneyline from the same sportsbook as `moneyline`, when saved.'),
   "evidence": zod.object({
   "available": zod.boolean(),
   "capturedAt": zod.coerce.date().nullable(),
@@ -2523,6 +2544,13 @@ export const ListSavedGamesResponseItem = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]),
+  "awayMoneyline": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Away team\'s moneyline from the same sportsbook as `moneyline`, when saved.'),
   "evidence": zod.object({
   "available": zod.boolean(),
   "capturedAt": zod.coerce.date().nullable(),
@@ -3527,4 +3555,111 @@ export const GetConsumerRedZoneOpportunitiesResponse = zod.object({
   "carryShare": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMax).nullable()
 }))
 }))
+})
+
+
+/**
+ * Grades each official pregame prediction against the final score. Winner picks count the projected winner. Spread and total picks take the side of the saved line that the projection favors; a projection exactly on the line is not a pick. Pushes are counted separately.
+ * @summary Read Gridline's win-loss record for its official game picks
+ */
+export const GetConsumerRecordQueryParams = zod.object({
+  "season": zod.coerce.number().int().optional()
+})
+
+export const GetConsumerRecordResponse = zod.object({
+  "season": zod.number().int().nullable(),
+  "seasons": zod.array(zod.number().int()),
+  "graded": zod.number().int(),
+  "winners": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "spread": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "total": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "weeks": zod.array(zod.object({
+  "week": zod.number().int(),
+  "winners": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "spread": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "total": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+})
+})),
+  "lastGradedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * Latest run of the anytime-TD model for the requested week (default: the newest week with picks), ranked by probability, with the season's top-10 hit record from graded weeks.
+ * @summary Read anytime-touchdown picks for a week
+ */
+export const GetConsumerTouchdownsQueryParams = zod.object({
+  "season": zod.coerce.number().int().optional(),
+  "week": zod.coerce.number().int().optional()
+})
+
+export const GetConsumerTouchdownsResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "season": zod.number().int().nullable(),
+  "week": zod.number().int().nullable(),
+  "generatedAt": zod.coerce.date().nullable(),
+  "modelVersion": zod.string().nullable(),
+  "evaluation": zod.object({
+  "topTenHitRate": zod.number().nullable(),
+  "auc": zod.number().nullable(),
+  "testedOn": zod.string().nullable()
+}),
+  "picks": zod.array(zod.object({
+  "rank": zod.number().int(),
+  "playerId": zod.string(),
+  "name": zod.string(),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE']),
+  "team": zod.string(),
+  "opponent": zod.string(),
+  "isHome": zod.boolean(),
+  "kickoff": zod.coerce.date().nullable(),
+  "probability": zod.number(),
+  "fairOdds": zod.number().int(),
+  "injuryStatus": zod.string().nullable(),
+  "factors": zod.object({
+  "targetsPerGame": zod.number().nullable(),
+  "carriesPerGame": zod.number().nullable(),
+  "targetShare": zod.number().nullable(),
+  "carryShare": zod.number().nullable(),
+  "redZoneTouchesPerGame": zod.number().nullable(),
+  "redZoneShare": zod.number().nullable(),
+  "goalLineShare": zod.number().nullable(),
+  "teamImpliedPoints": zod.number().nullable(),
+  "opponentTdsAllowedRatio": zod.number().nullable(),
+  "recentTdRate": zod.number().nullable()
+}),
+  "scored": zod.boolean().nullable().describe('null until the game is graded')
+})),
+  "weeks": zod.array(zod.object({
+  "season": zod.number().int(),
+  "week": zod.number().int()
+})),
+  "record": zod.object({
+  "weeksGraded": zod.number().int(),
+  "topTenPicks": zod.number().int(),
+  "topTenHits": zod.number().int()
+})
 })

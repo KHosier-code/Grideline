@@ -45,7 +45,7 @@ function shutdown(signal, exitCode = 0) {
 process.once('SIGTERM', () => shutdown('SIGTERM'));
 process.once('SIGINT', () => shutdown('SIGINT'));
 
-start('Gridline API', ['--enable-source-maps', 'artifacts/api-server/dist/production.mjs'], {
+start('Gridline API', ['--enable-source-maps', process.env.GRIDLINE_API_ENTRY || 'artifacts/api-server/dist/production.mjs'], {
   PORT: String(apiPort),
 });
 start('Gridline web', ['artifacts/nfl-analytics/serve.mjs'], {

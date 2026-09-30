@@ -9,3 +9,4 @@ export * from "./usage-analytics";
 export * from "./game-alerts";
 export * from "./saved-games";
 export * from "./worker-heartbeat";
+export * from "./touchdown-picks";

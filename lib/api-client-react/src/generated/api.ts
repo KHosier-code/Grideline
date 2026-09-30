@@ -43,9 +43,11 @@ import type {
   ConsumerPlayerUsage,
   ConsumerPlayerUsageGames,
   ConsumerPropsAvailability,
+  ConsumerRecord,
   ConsumerRedZoneOpportunities,
   ConsumerScheduleSelection,
   ConsumerTeamAnalytics,
+  ConsumerTouchdowns,
   ConsumerTrends,
   ConsumerUpcomingPlayerProjections,
   ConsumerWeeklyPickArchive,
@@ -57,8 +59,10 @@ import type {
   GetConsumerPerformanceParams,
   GetConsumerPlayerPositionMatchupParams,
   GetConsumerPlayerUsageParams,
+  GetConsumerRecordParams,
   GetConsumerRedZoneOpportunitiesParams,
   GetConsumerTeamAnalyticsParams,
+  GetConsumerTouchdownsParams,
   GetConsumerWeeklyPicksParams,
   GetImageryCandidatePreviewParams,
   GetInitialLineAuditParams,
@@ -5182,6 +5186,176 @@ export function useGetConsumerRedZoneOpportunities<TData = Awaited<ReturnType<ty
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerRedZoneOpportunitiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerRecordUrl = (params?: GetConsumerRecordParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/record?${stringifiedParams}` : `/api/consumer/record`
+}
+
+/**
+ * Grades each official pregame prediction against the final score. Winner picks count the projected winner. Spread and total picks take the side of the saved line that the projection favors; a projection exactly on the line is not a pick. Pushes are counted separately.
+ * @summary Read Gridline's win-loss record for its official game picks
+ */
+export const getConsumerRecord = async (params?: GetConsumerRecordParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerRecord> => {
+
+  return customFetch<ConsumerRecord>(getGetConsumerRecordUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerRecordQueryKey = (params?: GetConsumerRecordParams,) => {
+    return [
+    `/api/consumer/record`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerRecordQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerRecord>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerRecordParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerRecordQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerRecord>>> = ({ signal }) => getConsumerRecord(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerRecord>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerRecordQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerRecord>>>
+export type GetConsumerRecordQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read Gridline's win-loss record for its official game picks
+ */
+
+export function useGetConsumerRecord<TData = Awaited<ReturnType<typeof getConsumerRecord>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerRecordParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerRecordQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerTouchdownsUrl = (params?: GetConsumerTouchdownsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/touchdowns?${stringifiedParams}` : `/api/consumer/touchdowns`
+}
+
+/**
+ * Latest run of the anytime-TD model for the requested week (default: the newest week with picks), ranked by probability, with the season's top-10 hit record from graded weeks.
+ * @summary Read anytime-touchdown picks for a week
+ */
+export const getConsumerTouchdowns = async (params?: GetConsumerTouchdownsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerTouchdowns> => {
+
+  return customFetch<ConsumerTouchdowns>(getGetConsumerTouchdownsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerTouchdownsQueryKey = (params?: GetConsumerTouchdownsParams,) => {
+    return [
+    `/api/consumer/touchdowns`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerTouchdownsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerTouchdowns>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerTouchdownsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerTouchdowns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerTouchdownsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerTouchdowns>>> = ({ signal }) => getConsumerTouchdowns(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerTouchdowns>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerTouchdownsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerTouchdowns>>>
+export type GetConsumerTouchdownsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read anytime-touchdown picks for a week
+ */
+
+export function useGetConsumerTouchdowns<TData = Awaited<ReturnType<typeof getConsumerTouchdowns>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerTouchdownsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerTouchdowns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerTouchdownsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

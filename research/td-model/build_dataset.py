@@ -5,11 +5,14 @@ All rolling features use only games strictly before the target game, and
 windows carry across seasons (a player's last 8 games may include last year).
 """
 import sys
+from datetime import date
 import numpy as np
 import pandas as pd
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "data"
-SEASONS = list(range(2019, 2027))
+# NFL seasons run September-February; January and February belong to last year's season.
+CURRENT_SEASON = date.today().year if date.today().month >= 3 else date.today().year - 1
+SEASONS = list(range(2019, CURRENT_SEASON + 1))
 POSITIONS = ["QB", "RB", "WR", "TE"]
 
 

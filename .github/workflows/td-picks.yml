@@ -1,0 +1,44 @@
+name: TD picks
+
+# Ranks the next week's anytime-touchdown candidates with research/td-model and
+# sends them to the site. Runs before each game window and after the Friday
+# injury report. Times are UTC (ET + 4 during the season).
+on:
+  schedule:
+    - cron: "0 14 * * 2"   # Tue 10:00 ET  - first look after Monday night
+    - cron: "0 15 * * 4"   # Thu 11:00 ET  - before Thursday night
+    - cron: "0 22 * * 5"   # Fri 18:00 ET  - after the final injury report
+    - cron: "0 15 * * 6"   # Sat 11:00 ET
+    - cron: "30 14 * * 0"  # Sun 10:30 ET  - before the 1:00 games
+  workflow_dispatch: {}
+
+concurrency:
+  group: td-picks
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: research/td-model
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: research/td-model/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Download nflverse data
+        run: ./fetch_data.sh
+      - name: Build dataset
+        run: python build_dataset.py data td_dataset.parquet
+      - name: Re-test the model
+        run: python evaluate.py td_dataset.parquet metrics.json
+      - name: Rank and send picks
+        env:
+          TD_PICKS_INGEST_URL: ${{ secrets.TD_PICKS_INGEST_URL }}
+          TD_PICKS_INGEST_TOKEN: ${{ secrets.TD_PICKS_INGEST_TOKEN }}
+        run: python publish.py td_dataset.parquet data metrics.json
