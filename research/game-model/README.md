@@ -110,3 +110,38 @@ Next steps to make this real: capture opening lines ourselves each week (the
 site's first-line odds capture already does this when ODDS_API_KEY is set),
 grade every recommendation against both the open and the close, and track
 closing line value.
+
+# Follow-ups: line movement and windy totals (September 30, 2026)
+
+`followups.py` re-runs the walk-forward rating (each season fit only on earlier
+seasons, 2021–2026 week 4) and asks two questions. Results are in
+`followups.json`; opening lines again come from nfelo's public output, read
+from disk and not committed.
+
+**Does the line move toward Gridline after it opens?** Yes, consistently.
+When the rating disagrees with the opener, the closing line ends up closer to
+Gridline's number about two times out of three:
+
+| Rating vs opener | Games | Moved toward Gridline | Moved away | Unchanged | Toward rate (95% CI) | Avg move toward |
+|---|---:|---:|---:|---:|---:|---:|
+| 0.5+ pts | 1,134 | 501 | 262 | 371 | 65.7% (62–69%) | +0.48 |
+| 1+ pts | 985 | 434 | 227 | 324 | 65.7% (62–69%) | +0.52 |
+| 2+ pts | 711 | 336 | 152 | 223 | 68.9% (65–73%) | +0.69 |
+| 3+ pts | 477 | 240 | 91 | 146 | 72.5% (68–77%) | +0.87 |
+
+The rating knows each game's starting quarterback, which the opener may not
+have. Leaving out every game where either team had a new or ruled-out starter
+(799 games) the pattern holds: 64% toward at 0.5+ points, 70% at 3+. So the
+rating reads games the way the market eventually does, and the value is in
+getting the number early. This is the same signal the site's closing line
+value card now tracks on live games.
+
+**Windy totals.** The totals model does not beat the closing total in wind
+either: 46–47 in outdoor games with 15+ mph wind (all games: 49.0%). Taking
+the under in those games went 57–36 (61.3%, 95 games), but the sample is too
+small to separate from luck and the wind values are recorded at kickoff, not
+forecast when you'd bet. Totals picks stay off.
+
+What changes on the site: nothing is presented as a pick. Closing line value
+on Model Performance and the "where we disagree with Vegas" list on the home
+page are the live test of the first result.

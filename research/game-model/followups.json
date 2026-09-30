@@ -1,0 +1,181 @@
+{
+ "testedSeasons": "2021\u20132026",
+ "lineMovement": {
+  "games": 1287,
+  "correlation": 0.347,
+  "byThreshold": [
+   {
+    "threshold": 0.5,
+    "games": 1134,
+    "towardGridline": 501,
+    "awayFromGridline": 262,
+    "unchanged": 371,
+    "towardRate": 0.657,
+    "towardRateCI": [
+     0.622,
+     0.689
+    ],
+    "averageMoveTowardGridline": 0.481
+   },
+   {
+    "threshold": 1,
+    "games": 985,
+    "towardGridline": 434,
+    "awayFromGridline": 227,
+    "unchanged": 324,
+    "towardRate": 0.657,
+    "towardRateCI": [
+     0.62,
+     0.692
+    ],
+    "averageMoveTowardGridline": 0.524
+   },
+   {
+    "threshold": 2,
+    "games": 711,
+    "towardGridline": 336,
+    "awayFromGridline": 152,
+    "unchanged": 223,
+    "towardRate": 0.689,
+    "towardRateCI": [
+     0.646,
+     0.728
+    ],
+    "averageMoveTowardGridline": 0.686
+   },
+   {
+    "threshold": 3,
+    "games": 477,
+    "towardGridline": 240,
+    "awayFromGridline": 91,
+    "unchanged": 146,
+    "towardRate": 0.725,
+    "towardRateCI": [
+     0.675,
+     0.77
+    ],
+    "averageMoveTowardGridline": 0.865
+   }
+  ],
+  "noQbChange": {
+   "games": 799,
+   "correlation": 0.279,
+   "byThreshold": [
+    {
+     "threshold": 0.5,
+     "games": 704,
+     "towardGridline": 291,
+     "awayFromGridline": 163,
+     "unchanged": 250,
+     "towardRate": 0.641,
+     "towardRateCI": [
+      0.596,
+      0.684
+     ],
+     "averageMoveTowardGridline": 0.33
+    },
+    {
+     "threshold": 1,
+     "games": 608,
+     "towardGridline": 247,
+     "awayFromGridline": 142,
+     "unchanged": 219,
+     "towardRate": 0.635,
+     "towardRateCI": [
+      0.586,
+      0.681
+     ],
+     "averageMoveTowardGridline": 0.343
+    },
+    {
+     "threshold": 2,
+     "games": 422,
+     "towardGridline": 191,
+     "awayFromGridline": 88,
+     "unchanged": 143,
+     "towardRate": 0.685,
+     "towardRateCI": [
+      0.628,
+      0.736
+     ],
+     "averageMoveTowardGridline": 0.466
+    },
+    {
+     "threshold": 3,
+     "games": 282,
+     "towardGridline": 134,
+     "awayFromGridline": 56,
+     "unchanged": 92,
+     "towardRate": 0.705,
+     "towardRateCI": [
+      0.637,
+      0.766
+     ],
+     "averageMoveTowardGridline": 0.571
+    }
+   ]
+  }
+ },
+ "windTotals": {
+  "all": {
+   "games": 1472,
+   "model": [
+    715,
+    744,
+    13
+   ],
+   "modelRate": 0.49,
+   "modelRateCI": [
+    0.464,
+    0.516
+   ],
+   "alwaysUnder": [
+    752,
+    707
+   ],
+   "alwaysUnderRate": 0.515,
+   "modelMiss": 10.65,
+   "lineMiss": 10.34
+  },
+  "outdoorCalm": {
+   "games": 917,
+   "model": [
+    443,
+    466,
+    8
+   ],
+   "modelRate": 0.487,
+   "modelRateCI": [
+    0.455,
+    0.52
+   ],
+   "alwaysUnder": [
+    470,
+    439
+   ],
+   "alwaysUnderRate": 0.517,
+   "modelMiss": 10.61,
+   "lineMiss": 10.32
+  },
+  "outdoorWind15Plus": {
+   "games": 95,
+   "model": [
+    46,
+    47,
+    2
+   ],
+   "modelRate": 0.495,
+   "modelRateCI": [
+    0.395,
+    0.594
+   ],
+   "alwaysUnder": [
+    57,
+    36
+   ],
+   "alwaysUnderRate": 0.613,
+   "modelMiss": 9.76,
+   "lineMiss": 9.43
+  }
+ }
+}
