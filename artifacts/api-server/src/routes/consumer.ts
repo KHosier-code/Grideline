@@ -490,6 +490,23 @@ export function consumerMarket(
   const spread = quote("spread");
   const moneyline = quote("moneyline");
   const total = quote("total");
+  const awayMoneyline = (() => {
+    if (!moneyline) return null;
+    const quotes = Array.isArray(markets?.moneyline?.quotes) ? markets.moneyline.quotes : [];
+    const value = quotes.find((item: unknown) => Boolean(item) && typeof item === "object"
+      && (item as Record<string, unknown>).sportsbook === moneyline.sportsbook
+      && !isHomeSelection((item as Record<string, unknown>).selection, home)) as Record<string, unknown> | undefined;
+    const price = safeNumber(value?.price);
+    return value && price !== null && validAmericanOdds(price)
+      ? {
+          sportsbook: moneyline.sportsbook,
+          selection: "Away",
+          point: null,
+          price,
+          capturedAt: typeof value.capturedAt === "string" ? value.capturedAt : null,
+        }
+      : null;
+  })();
   const captured = [spread, moneyline, total]
     .map((item) => item?.capturedAt)
     .filter((value): value is string => Boolean(value))
@@ -499,6 +516,7 @@ export function consumerMarket(
     spread,
     moneyline,
     total,
+    awayMoneyline,
     evidence: {
       available: Boolean(spread || moneyline || total),
       capturedAt: captured,

@@ -4,6 +4,9 @@ import {
   FOOTBALL_TIMEZONE,
   INJURY_WEEKLY_SLOTS,
   ODDS_WEEKLY_SLOTS,
+  ADAPTIVE_ODDS_CADENCE,
+  nextLeanOddsCapture,
+  oddsCaptureMode,
   classifySchedulerAlerts,
   confidenceCaptureOccurrences,
   canonicalPredictionOccurrence,
@@ -173,7 +176,7 @@ test("adaptive job persistence reactivates null schedules and follows kickoff ch
   assert.deepEqual(adaptiveOddsJobReconciliation(dormant, next, now), {
     enabled: true,
     nextRunAt: next,
-    cadence: "adaptive: established weekly cadence >6h; 12m 6-1h; 5m final hour when quota-safe",
+    cadence: ADAPTIVE_ODDS_CADENCE,
   });
   const obsolete = { ...dormant, enabled: true, nextRunAt: new Date("2026-09-19T14:00:00.000Z") };
   assert.equal(adaptiveOddsJobReconciliation(obsolete, next, now)?.nextRunAt, next);
@@ -185,7 +188,7 @@ test("adaptive job persistence does not move an active lease", () => {
     enabled: true,
     nextRunAt: new Date("2026-09-17T23:35:00.000Z"),
     lockUntil: new Date("2026-09-17T23:31:00.000Z"),
-    cadence: "adaptive: established weekly cadence >6h; 12m 6-1h; 5m final hour when quota-safe",
+    cadence: ADAPTIVE_ODDS_CADENCE,
   }, new Date("2026-09-17T23:35:00.000Z"), now), null);
 });
 
@@ -196,7 +199,7 @@ test("adaptive job persistence keeps a due final-hour occurrence claimable on re
     enabled: true,
     nextRunAt: due,
     lockUntil: null,
-    cadence: "adaptive: established weekly cadence >6h; 12m 6-1h; 5m final hour when quota-safe",
+    cadence: ADAPTIVE_ODDS_CADENCE,
   }, new Date("2026-09-17T23:45:30.000Z"), now), null);
 });
 
@@ -365,4 +368,22 @@ test("scheduler health distinguishes a still-valid overdue lock", () => {
     lockUntil: new Date("2025-09-07T13:00:00.000Z"),
   }], [], new Date("2025-09-07T12:00:00.000Z"));
   assert.deepEqual(alerts.map((alert) => alert.code), ["overdue_locked"]);
+});
+
+test("odds capture defaults to lean mode unless intensive is requested", () => {
+  assert.equal(oddsCaptureMode(undefined), "lean");
+  assert.equal(oddsCaptureMode(""), "lean");
+  assert.equal(oddsCaptureMode("Intensive"), "intensive");
+  assert.equal(oddsCaptureMode("frequent"), "lean");
+});
+
+test("lean odds capture takes one snapshot 40 minutes before each distinct kickoff", () => {
+  const now = new Date("2026-09-20T16:30:00.000Z");
+  const early = new Date("2026-09-20T17:00:00.000Z");
+  const late = new Date("2026-09-20T20:25:00.000Z");
+  const slot = new Date("2026-09-22T14:00:00.000Z");
+  // Early kickoff capture (16:20) has passed, so the late window is next.
+  assert.deepEqual(nextLeanOddsCapture(now, [early, early, late], [slot]), new Date("2026-09-20T19:45:00.000Z"));
+  assert.deepEqual(nextLeanOddsCapture(new Date("2026-09-20T21:00:00.000Z"), [late], [slot]), slot);
+  assert.equal(nextLeanOddsCapture(now, [], []), null);
 });

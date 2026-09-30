@@ -1278,6 +1278,91 @@ paths:
               schema: { $ref: "#/components/schemas/ConsumerRedZoneOpportunities" }
         "400": { $ref: "#/components/responses/ConsumerInvalidRequest" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/record:
+    get:
+      operationId: getConsumerRecord
+      tags: [nfl]
+      summary: Read Gridline's win-loss record for its official game picks
+      description: >
+        Grades each official pregame prediction against the final score. Winner
+        picks count the projected winner. Spread and total picks take the side
+        of the saved line that the projection favors; a projection exactly on
+        the line is not a pick. Pushes are counted separately.
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Record for the season (or the latest graded season)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerRecord" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/touchdowns:
+    get:
+      operationId: getConsumerTouchdowns
+      tags: [nfl]
+      summary: Read anytime-touchdown picks for a week
+      description: >
+        Latest run of the anytime-TD model for the requested week (default: the
+        newest week with picks), ranked by probability, with the season's
+        top-10 hit record from graded weeks.
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: week
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Touchdown picks or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerTouchdowns" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/game-projections:
+    get:
+      operationId: getConsumerGameProjections
+      tags: [nfl]
+      summary: Read QB-adjusted game projections for a season
+      description: >
+        For each game, the latest projection from the QB-adjusted rating model
+        published before kickoff, plus the straight-up winner record for games
+        that are final. Projections, not picks against the spread.
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Projections or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerGameProjections" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/power-ratings:
+    get:
+      operationId: getConsumerPowerRatings
+      tags: [nfl]
+      summary: Read QB-adjusted power ratings and 1-32 stat ranks for every team
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Ratings from the latest model run, or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerPowerRatings" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -1296,6 +1381,225 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    ConsumerTeamRating:
+      type: object
+      required: [team, rating, offense, defense, qb, ratingRank, offenseRank, defenseRank, qbRank, qbName, qbValue, qbNewStarter, record, stats, rankChange]
+      properties:
+        team: { type: string }
+        rating: { type: number, description: "Projected margin vs a league-average team on a neutral field" }
+        offense: { type: number }
+        defense: { type: number }
+        qb: { type: number }
+        ratingRank: { type: integer }
+        offenseRank: { type: integer }
+        defenseRank: { type: integer }
+        qbRank: { type: integer }
+        qbName: { type: ["string", "null"] }
+        qbValue: { type: ["number", "null"] }
+        qbNewStarter: { type: boolean }
+        record:
+          type: ["object", "null"]
+          required: [wins, losses, ties]
+          properties:
+            wins: { type: integer }
+            losses: { type: integer }
+            ties: { type: integer }
+        stats:
+          type: object
+          additionalProperties: { type: ["number", "null"] }
+        rankChange: { type: ["integer", "null"], description: "Positive when the team moved up since last week" }
+    ConsumerPowerRatings:
+      type: object
+      required: [status, season, week, generatedAt, teams]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"] }
+        week: { type: ["integer", "null"] }
+        generatedAt: { type: ["string", "null"], format: date-time }
+        teams: { type: array, items: { $ref: "#/components/schemas/ConsumerTeamRating" } }
+    ConsumerProjectionQb:
+      type: object
+      required: [name, value, listed, newStarter]
+      properties:
+        name: { type: ["string", "null"] }
+        value: { type: ["number", "null"], description: "Recency-weighted EPA per dropback, shrunk toward backup level" }
+        listed: { type: boolean, description: "True when the schedule lists this QB as the starter; false when inferred from recent starts" }
+        newStarter: { type: boolean, description: "Not the team's usual starter over its last four games" }
+    ConsumerGameProjection:
+      type: object
+      required: [gameId, nflverseGameId, homeTeam, awayTeam, kickoff, projectedMargin, projectedTotal, homeWinProbability, homeQb, awayQb, factors, projectedAt]
+      properties:
+        gameId: { type: string }
+        nflverseGameId: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        kickoff: { type: ["string", "null"], format: date-time }
+        projectedMargin: { type: number, description: "Home minus away" }
+        projectedTotal: { type: number }
+        homeWinProbability: { type: number }
+        homeQb: { $ref: "#/components/schemas/ConsumerProjectionQb" }
+        awayQb: { $ref: "#/components/schemas/ConsumerProjectionQb" }
+        factors:
+          type: object
+          required: [qbEdge, teamEdge, passEdge, rushEdge, restDiff, neutralSite]
+          properties:
+            qbEdge: { type: ["number", "null"] }
+            teamEdge: { type: ["number", "null"] }
+            passEdge: { type: ["number", "null"] }
+            rushEdge: { type: ["number", "null"] }
+            restDiff: { type: ["number", "null"] }
+            neutralSite: { type: boolean }
+        projectedAt: { type: string, format: date-time }
+    ConsumerGameProjections:
+      type: object
+      required: [status, season, modelVersion, generatedAt, evaluation, games, record, weeks]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"] }
+        modelVersion: { type: ["string", "null"] }
+        generatedAt: { type: ["string", "null"], format: date-time }
+        evaluation:
+          type: object
+          additionalProperties: true
+          properties:
+            marginMissRating: { type: number }
+            marginMissLine: { type: number }
+            winnersModel: { type: number }
+            winnersFavorite: { type: number }
+            atsRating: { type: number }
+            totalMissRating: { type: number }
+            totalMissLine: { type: number }
+            testedOn: { type: string }
+            seasons:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+                properties:
+                  season: { type: integer }
+                  games: { type: integer }
+                  mae_rating: { type: number }
+                  mae_market_aware: { type: number }
+                  mae_line: { type: number }
+                  winners_model: { type: number }
+                  winners_favorite: { type: number }
+                  ats_wins: { type: integer }
+                  ats_losses: { type: integer }
+                  ats_pushes: { type: integer }
+                  total_miss_rating: { type: number }
+                  total_miss_line: { type: number }
+        games: { type: array, items: { $ref: "#/components/schemas/ConsumerGameProjection" } }
+        record: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        weeks:
+          type: array
+          items:
+            type: object
+            required: [week, wins, losses, pushes]
+            properties:
+              week: { type: integer }
+              wins: { type: integer }
+              losses: { type: integer }
+              pushes: { type: integer }
+    ConsumerRecordLine:
+      type: object
+      required: [wins, losses, pushes]
+      properties:
+        wins: { type: integer }
+        losses: { type: integer }
+        pushes: { type: integer }
+    ConsumerRecordWeek:
+      type: object
+      required: [week, winners, spread, total]
+      properties:
+        week: { type: integer }
+        winners: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        spread: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        total: { $ref: "#/components/schemas/ConsumerRecordLine" }
+    ConsumerRecord:
+      type: object
+      required: [season, graded, winners, spread, total, weeks, lastGradedAt, seasons]
+      properties:
+        season: { type: ["integer", "null"] }
+        seasons: { type: array, items: { type: integer } }
+        graded: { type: integer }
+        winners: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        spread: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        total: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        weeks: { type: array, items: { $ref: "#/components/schemas/ConsumerRecordWeek" } }
+        lastGradedAt: { type: ["string", "null"], format: date-time }
+    ConsumerTouchdownFactors:
+      type: object
+      required: [targetsPerGame, carriesPerGame, targetShare, carryShare, redZoneTouchesPerGame, redZoneShare, goalLineShare, teamImpliedPoints, opponentTdsAllowedRatio, recentTdRate]
+      properties:
+        targetsPerGame: { type: ["number", "null"] }
+        carriesPerGame: { type: ["number", "null"] }
+        targetShare: { type: ["number", "null"] }
+        carryShare: { type: ["number", "null"] }
+        redZoneTouchesPerGame: { type: ["number", "null"] }
+        redZoneShare: { type: ["number", "null"] }
+        goalLineShare: { type: ["number", "null"] }
+        teamImpliedPoints: { type: ["number", "null"] }
+        opponentTdsAllowedRatio: { type: ["number", "null"] }
+        recentTdRate: { type: ["number", "null"] }
+    ConsumerTouchdownPick:
+      type: object
+      required: [rank, playerId, name, position, team, opponent, isHome, kickoff, probability, fairOdds, injuryStatus, factors, scored]
+      properties:
+        rank: { type: integer }
+        playerId: { type: string }
+        name: { type: string }
+        position: { type: string, enum: [QB, RB, WR, TE] }
+        team: { type: string }
+        opponent: { type: string }
+        isHome: { type: boolean }
+        kickoff: { type: ["string", "null"], format: date-time }
+        probability: { type: number }
+        fairOdds: { type: integer }
+        injuryStatus: { type: ["string", "null"] }
+        factors: { $ref: "#/components/schemas/ConsumerTouchdownFactors" }
+        scored: { type: ["boolean", "null"], description: "null until the game is graded" }
+    ConsumerTouchdownRecord:
+      type: object
+      required: [weeksGraded, topTenPicks, topTenHits, weeks]
+      properties:
+        weeksGraded: { type: integer }
+        topTenPicks: { type: integer }
+        topTenHits: { type: integer }
+        weeks:
+          type: array
+          items:
+            type: object
+            required: [week, picks, hits]
+            properties:
+              week: { type: integer }
+              picks: { type: integer }
+              hits: { type: integer }
+    ConsumerTouchdowns:
+      type: object
+      required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"] }
+        week: { type: ["integer", "null"] }
+        generatedAt: { type: ["string", "null"], format: date-time }
+        modelVersion: { type: ["string", "null"] }
+        evaluation:
+          type: object
+          required: [topTenHitRate, auc, testedOn]
+          properties:
+            topTenHitRate: { type: ["number", "null"] }
+            auc: { type: ["number", "null"] }
+            testedOn: { type: ["string", "null"] }
+        picks: { type: array, items: { $ref: "#/components/schemas/ConsumerTouchdownPick" } }
+        weeks:
+          type: array
+          items:
+            type: object
+            required: [season, week]
+            properties:
+              season: { type: integer }
+              week: { type: integer }
+        record: { $ref: "#/components/schemas/ConsumerTouchdownRecord" }
     InitialLineAudit:
       type: object
       required: [season, week, selection, games]
@@ -1642,6 +1946,9 @@ components:
         spread: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         moneyline: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
         total: { anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }] }
+        awayMoneyline:
+          description: Away team's moneyline from the same sportsbook as `moneyline`, when saved.
+          anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }]
         evidence: { $ref: "#/components/schemas/ConsumerMarketEvidence" }
     ConsumerInitialMarkets:
       type: object

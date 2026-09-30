@@ -1,12 +1,19 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 
+// Keep in sync with metadata.mjs (server-rendered tags for the same pages).
 const pages: Record<string, [string, string]> = {
-  '/': ['Gridline | NFL Games and Model Evidence', 'Explore saved NFL matchups, available model evidence and source status. Missing projections are marked unavailable; predictions are not guaranteed results.'],
-  '/games': ['NFL Games and Saved Matchups | Gridline', 'Browse NFL matchups and their saved projections, market evidence and official results where available. Data and comparisons may be incomplete.'],
-  '/methodology': ['Methodology and Limitations | Gridline', 'Learn how Gridline sources NFL data, labels saved and official predictions, separates player simulations from forecasts, and grades verified results.'],
-  '/weekly-picks': ['Past Official Weekly Picks | Gridline', 'Review saved official weekly NFL winners by season and week. Weeks without verified first-line selection evidence are marked unavailable.'],
-  '/performance': ['Verified Prediction Performance | Gridline', 'Review available graded official NFL predictions, eligible sample counts and model error measures. These are not betting-return claims.'],
+  '/': ['Gridline | Free NFL Touchdown Picks and Game Projections', 'Free weekly anytime touchdown picks and a projected score for every NFL game, adjusted for the starting quarterback, next to the Vegas line.'],
+  '/touchdowns': ['Anytime Touchdown Picks This Week | Gridline', 'Ranked anytime touchdown scorer picks for every NFL game, with each player\'s red-zone role, target and carry share, Vegas team total and defensive matchup.'],
+  '/power-ratings': ['NFL Power Ratings: All 32 Teams Ranked | Gridline', 'Every NFL team ranked 1-32 by points better or worse than an average team, with offense, defense and quarterback ratings.'],
+  '/qb-rankings': ['NFL QB Rankings by EPA per Dropback | Gridline', 'Every team\'s expected starting quarterback ranked by value per dropback, and what he\'s worth to the team in points.'],
+  '/games': ['NFL Games, Projections and Lines | Gridline', 'Browse every NFL game by week with Gridline\'s projected score, the sportsbook line and final results.'],
+  '/teams': ['NFL Team Rankings by EPA | Gridline', 'Offense and defense for all 32 NFL teams from play-by-play data, updated after every game.'],
+  '/usage': ['NFL Player Usage: Targets, Carries and Snaps | Gridline', 'Target share, carry share and red-zone usage for every NFL skill player.'],
+  '/defense-vs-position': ['NFL Defense vs Position | Gridline', 'Fantasy points and touchdowns each NFL defense allows to quarterbacks, running backs, receivers and tight ends.'],
+  '/methodology': ['How Gridline Makes Its Picks | Gridline', 'What goes into Gridline\'s game projections and touchdown picks, how they are tested, and how picks are graded.'],
+  '/performance': ['NFL Model Performance | Gridline', 'How Gridline\'s game and touchdown models performed on seasons they never trained on, and this season\'s graded record.'],
+  '/weekly-picks': ['Past Weekly Picks | Gridline', 'Gridline\'s past weekly NFL picks by season and week.'],
 };
 
 const setMeta = (selector: string, attribute: string, value: string) => {

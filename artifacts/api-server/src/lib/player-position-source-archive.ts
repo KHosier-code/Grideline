@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { copyFile, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Transform } from "node:stream";
 import { Storage } from "@google-cloud/storage";
@@ -38,6 +38,13 @@ const bucket = () => {
   if (!id) throw new Error("Player-position source archive requires App Storage");
   return storage.bucket(id);
 };
+
+/** Development-only stand-in for App Storage: a local folder, used only when
+ * no bucket is configured and GRIDLINE_LOCAL_SOURCE_ARCHIVE_DIR is set. */
+const localArchiveDir = () =>
+  process.env.NODE_ENV === "development" && !process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID
+    ? process.env.GRIDLINE_LOCAL_SOURCE_ARCHIVE_DIR || null
+    : null;
 
 const validSha = (sha: string) => /^[a-f0-9]{64}$/.test(sha);
 const keyFor = (dataset: SourceArchive["dataset"], season: number, sha: string) =>
@@ -87,6 +94,20 @@ export async function archivePlayerPositionSource(source: {
     throw new Error(`Player-position ${source.dataset} source changed before archival`);
   }
   const objectKey = keyFor(source.dataset, source.season, source.sha256);
+  const localDir = localArchiveDir();
+  if (localDir) {
+    const target = join(localDir, objectKey);
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(source.localPath, target, constants.COPYFILE_EXCL).catch((error) => {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    });
+    const archive: SourceArchive = {
+      dataset: source.dataset, season: source.season, sourceUrl: source.sourceUrl,
+      sha256: source.sha256, size: source.size, objectKey, generation: "1",
+    };
+    await verifyArchivedSource(archive);
+    return archive;
+  }
   const file = bucket().file(objectKey);
   try {
     await pipeline(createReadStream(source.localPath), file.createWriteStream({
@@ -128,7 +149,13 @@ export async function verifyArchivedSource(archive: SourceArchive, outputPath?: 
   const temporary = outputPath ? `${outputPath}.${process.pid}.tmp` : null;
   if (temporary) await mkdir(dirname(temporary), { recursive: true });
   try {
-    const reader = archivedFile(archive).createReadStream();
+    const localDir = localArchiveDir();
+    if (localDir && archive.objectKey !== keyFor(archive.dataset, archive.season, archive.sha256)) {
+      throw new Error("Invalid player-position archive reference");
+    }
+    const reader = localDir
+      ? createReadStream(join(localDir, archive.objectKey))
+      : archivedFile(archive).createReadStream();
     const hashing = new Transform({
       transform(chunk: Buffer, _encoding, callback) {
         hash.update(chunk);

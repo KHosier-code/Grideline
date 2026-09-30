@@ -79,8 +79,10 @@ import './index.css';
 
 import { useTheme } from '@/lib/theme';
 
-const ConsumerHome = lazy(() => import('@/pages/consumer/ConsumerHome'));
-const VisitorHome = lazy(() => import('@/pages/consumer/VisitorHome'));
+const PickSheet = lazy(() => import('@/pages/consumer/PickSheet'));
+const TouchdownPicks = lazy(() => import('@/pages/consumer/TouchdownPicks'));
+const PowerRatings = lazy(() => import('@/pages/consumer/PowerRatings'));
+const QbRankings = lazy(() => import('@/pages/consumer/QbRankings'));
 const ConsumerWeeklyPicks = lazy(() => import('@/pages/consumer/ConsumerWeeklyPicks'));
 const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
 const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
@@ -88,7 +90,6 @@ const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGame
 const ConsumerPerformance = lazy(() => import('@/pages/consumer/ConsumerPerformance'));
 const ConsumerMethodology = lazy(() => import('@/pages/consumer/ConsumerMethodology'));
 const ConsumerTrends = lazy(() => import('@/pages/consumer/ConsumerTrends'));
-const ConsumerProps = lazy(() => import('@/pages/consumer/ConsumerProps'));
 const ConsumerUsage = lazy(() => import('@/pages/consumer/ConsumerUsage'));
 const ConsumerRedZone = lazy(() => import('@/pages/consumer/ConsumerRedZone'));
 const DefenseVsPositionLeague = lazy(() => import('@/components/DefenseVsPosition'));
@@ -2129,7 +2130,9 @@ function Router() {
   const publicRoute = location === '/' || location === '/games' || location.startsWith('/games/')
     || location === '/performance' || location === '/methodology'
     || location === '/defense-vs-position' || location === '/teams' || location === '/usage'
-    || location === '/saved-games'
+    || location === '/saved-games' || location === '/touchdowns' || location === '/props'
+    || location === '/power-ratings' || location === '/qb-rankings'
+    || location === '/weekly-picks'
     || (redZoneEnabled && location === '/red-zone');
   if (!isLoaded && !publicRoute) return <ConsumerLoadingFallback />;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
@@ -2145,7 +2148,11 @@ function Router() {
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
     <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
     {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}
-    <Route path="/"><ConsumerShell><VisitorHome /></ConsumerShell></Route>
+    <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
+    <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
+    <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
+    <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
+    <Route path="/"><ConsumerShell><PickSheet /></ConsumerShell></Route>
     <Route component={SignInPage} />
   </Switch></RoutedErrorBoundary>;
   return <RoutedErrorBoundary><Switch>
@@ -2162,10 +2169,13 @@ function Router() {
       {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}
       <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
       <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
-      <Route path="/props"><ConsumerShell><ConsumerProps /></ConsumerShell></Route>
+      <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
+      <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
+      <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
+      <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
       {/* The production-build performance fixture mounts this same weekly Home
           component without Clerk; only this branch grants signed-in routing. */}
-      <Route path="/"><ConsumerShell><ConsumerHome /></ConsumerShell></Route>
+      <Route path="/"><ConsumerShell><PickSheet /></ConsumerShell></Route>
       <Route component={NotFound} />
   </Switch></RoutedErrorBoundary>;
 }
