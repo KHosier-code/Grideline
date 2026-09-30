@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  BarChart3, BookOpen, Bookmark, CalendarDays, Crosshair, Gauge, Grid3x3, ListOrdered, Menu, ShieldHalf, Star, Trophy, UserRound, Users, X,
+  BarChart3, BookOpen, Bookmark, CalendarDays, Crosshair, Gauge, Grid3x3, Layers, ListOrdered, Menu, ShieldHalf, Star, Trophy, UserRound, Users, X,
 } from 'lucide-react';
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from './ConsumerAccountNavigation';
 import type { consumerAccountState } from '@/lib/consumer-account-state';
@@ -14,6 +14,7 @@ export const consumerNavGroups: NavGroup[] = [
     { href: '/', label: 'This week', icon: Star },
     { href: '/touchdowns', label: 'TD Picks', icon: Trophy, isNew: true },
     { href: '/pickem', label: 'Pick\'em Pool', icon: Grid3x3, isNew: true },
+    { href: '/parlays', label: 'Parlay Builder', icon: Layers, isNew: true },
   ] },
   { label: 'Model', items: [
     { href: '/games', label: 'Games', icon: CalendarDays },
