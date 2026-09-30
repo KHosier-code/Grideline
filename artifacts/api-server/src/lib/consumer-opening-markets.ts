@@ -85,3 +85,28 @@ export function selectFirstRequestMarkets(
     total: total ? publicQuote(total) : null,
   };
 }
+
+/**
+ * Opening lines from the first capture saved for a game. Used when no locked
+ * first-request decision exists: that decision came from the retired
+ * pick-of-the-week flow, so most games will not have one.
+ */
+export function firstSavedMarkets(history: Quote[]) {
+  const empty = { capturedAt: null, moneyline: null, spread: null, total: null };
+  const rows = history.filter((row) => ["DraftKings", "FanDuel"].includes(row.sportsbook) && validPrice(row.price));
+  if (!rows.length) return empty;
+  const firstAt = Math.min(...rows.map((row) => row.capturedAt.getTime()));
+  const first = rows.filter((row) => row.capturedAt.getTime() === firstAt)
+    .sort((a, b) => a.sportsbook.localeCompare(b.sportsbook)); // DraftKings before FanDuel
+  const spread = first.find((row) => row.market === "spread" && row.point !== null && row.point < 0)
+    ?? first.find((row) => row.market === "spread" && row.point !== null);
+  const moneyline = first.find((row) => row.market === "moneyline" && row.price < 0)
+    ?? first.find((row) => row.market === "moneyline");
+  const total = first.find((row) => row.market === "total" && row.selection.toLowerCase() === "over" && row.point !== null);
+  return {
+    capturedAt: new Date(firstAt).toISOString(),
+    moneyline: moneyline ? publicQuote(moneyline) : null,
+    spread: spread ? publicQuote(spread) : null,
+    total: total ? publicQuote(total) : null,
+  };
+}

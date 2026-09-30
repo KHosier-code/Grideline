@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { logger } from "./logger";
 import { and, desc, eq, gte, inArray, or, sql, type SQL } from "drizzle-orm";
 import {
   db,
@@ -1663,15 +1664,21 @@ async function runOddsCapture(options: OddsCaptureOptions = {}): Promise<OddsCap
     },
   });
   await recordEventAudits(requestId, eventAudits);
-  for (const event of initialEvents) {
-    await captureInitialLineOutcome({
-      ...event, requestId, requestedAt, observedAt: now,
-    });
-  }
-  for (const game of matchedGames.values()) {
-    const [schedule] = await db.select({ season: gamesTable.season, week: gamesTable.week })
-      .from(gamesTable).where(eq(gamesTable.gameId, game.gameId)).limit(1);
-    if (schedule) await selectInitialWeeklyPick(schedule.season, schedule.week, now);
+  // Bookkeeping for the retired pick-of-the-week flow. The quotes above are
+  // already saved, so a failure here must not turn the capture into a failure.
+  try {
+    for (const event of initialEvents) {
+      await captureInitialLineOutcome({
+        ...event, requestId, requestedAt, observedAt: now,
+      });
+    }
+    for (const game of matchedGames.values()) {
+      const [schedule] = await db.select({ season: gamesTable.season, week: gamesTable.week })
+        .from(gamesTable).where(eq(gamesTable.gameId, game.gameId)).limit(1);
+      if (schedule) await selectInitialWeeklyPick(schedule.season, schedule.week, now);
+    }
+  } catch (error) {
+    logger.warn({ error: safeErrorMessage(error, "Initial-line bookkeeping failed") }, "Initial-line bookkeeping skipped after odds capture");
   }
   lastCaptureFailure = null;
   return {

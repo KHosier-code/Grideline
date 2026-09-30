@@ -52,7 +52,7 @@ import { getConsumerSourceHealth } from "../lib/consumer-source-health";
 import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
 import { readInitialLineAudit, readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/initial-line-picks";
-import { selectFirstRequestMarkets } from "../lib/consumer-opening-markets";
+import { firstSavedMarkets, selectFirstRequestMarkets } from "../lib/consumer-opening-markets";
 import { inspectRetrospectiveWeek, recordRetrospectiveReview, retrospectiveScope, RetrospectiveReviewError } from "../lib/retrospective-weekly-reviews";
 import { RetrospectiveReviewReadinessError } from "../lib/retrospective-review-readiness";
 import { GetInitialLineAuditResponse } from "@workspace/api-zod";
@@ -456,6 +456,26 @@ function validAmericanOdds(value: unknown): value is number {
 export function americanOddsImpliedProbability(value: unknown): number | null {
   if (!validAmericanOdds(value)) return null;
   return value < 0 ? Math.abs(value) / (Math.abs(value) + 100) : 100 / (value + 100);
+}
+
+/** Builds the consumer market from the latest saved quote per book, market and side. */
+export function latestSavedMarket(
+  rows: Array<Pick<typeof sportsbookOddsTable.$inferSelect, "sportsbook" | "market" | "selection" | "point" | "price" | "capturedAt">>,
+  home?: ConsumerHomeTeam,
+) {
+  const latest = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) {
+    const key = `${row.sportsbook}|${row.market}|${row.selection}`;
+    const current = latest.get(key);
+    if (!current || row.capturedAt >= current.capturedAt) latest.set(key, row);
+  }
+  const markets: Record<string, { quotes: Array<Record<string, unknown>> }> = { spread: { quotes: [] }, moneyline: { quotes: [] }, total: { quotes: [] } };
+  for (const row of latest.values()) {
+    markets[row.market]?.quotes.push({
+      sportsbook: row.sportsbook, selection: row.selection, point: row.point, price: row.price, capturedAt: row.capturedAt.toISOString(),
+    });
+  }
+  return consumerMarket({ marketSnapshot: { markets } } as unknown as typeof predictionSnapshotsTable.$inferSelect, home);
 }
 
 export function consumerMarket(
@@ -1466,7 +1486,12 @@ export async function consumerGames(
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
     const consumerHome = home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined;
-    const market = consumerMarket(snapshot, consumerHome);
+    const gameRows = marketRows.filter((row) => row.gameId === game.gameId);
+    // The newest saved sportsbook lines, straight from the odds captures; the
+    // prediction snapshot's copy is only a fallback, since those snapshots come
+    // from a worker job that may not run.
+    const savedMarket = latestSavedMarket(gameRows, consumerHome);
+    const market = savedMarket.evidence.available ? savedMarket : consumerMarket(snapshot, consumerHome);
     const latestMarketAudit = latestMarketAuditByGame.get(game.gameId);
     const marketVerifiedAt = latestMarketAudit && completeGameMarketObservation(latestMarketAudit)
       ? latestMarketAudit.auditedAt
@@ -1630,11 +1655,14 @@ export async function consumerGames(
       },
       finalScore: consumerFinalScore(game, asOf),
       prediction: consumerProjection(snapshot),
-      initialMarkets: selectFirstRequestMarkets(
-        firstDecisionByGame.get(game.gameId), marketRows.filter((row) => row.gameId === game.gameId),
-        home?.abbreviation ?? "", away?.abbreviation ?? "",
-        snapshot?.homeWinProbability ?? null, snapshot?.projectedTotal ?? null,
-      ),
+      initialMarkets: (() => {
+        const locked = selectFirstRequestMarkets(
+          firstDecisionByGame.get(game.gameId), gameRows,
+          home?.abbreviation ?? "", away?.abbreviation ?? "",
+          snapshot?.homeWinProbability ?? null, snapshot?.projectedTotal ?? null,
+        );
+        return locked.capturedAt ? locked : firstSavedMarkets(gameRows);
+      })(),
       market,
       marketBoard,
       recommendation,
