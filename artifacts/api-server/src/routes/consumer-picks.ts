@@ -267,6 +267,15 @@ const gameIngestSchema = zod.object({
       restDiff: factorSchema, neutralSite: zod.boolean(),
     }),
   })).max(32),
+  teams: zod.array(zod.object({
+    team: zod.string().min(2).max(4),
+    rating: zod.number().finite(), offense: zod.number().finite(), defense: zod.number().finite(), qb: zod.number().finite(),
+    ratingRank: zod.number().int().min(1).max(32), offenseRank: zod.number().int().min(1).max(32),
+    defenseRank: zod.number().int().min(1).max(32), qbRank: zod.number().int().min(1).max(32),
+    qbName: zod.string().max(80).nullable(), qbValue: zod.number().finite().nullable(), qbNewStarter: zod.boolean(),
+    record: zod.object({ wins: zod.number().int().min(0), losses: zod.number().int().min(0), ties: zod.number().int().min(0) }).nullable(),
+    stats: zod.record(zod.string().regex(/^(off|def)_[a-z_]+$/), zod.number().finite().nullable()),
+  })).max(40).default([]),
 });
 
 router.post("/games/projections/ingest", async (req, res): Promise<void> => {
@@ -280,9 +289,9 @@ router.post("/games/projections/ingest", async (req, res): Promise<void> => {
   try {
     await db.insert(gameProjectionRunsTable).values({
       season: body.season, week: body.week, generatedAt: new Date(body.generatedAt),
-      modelVersion: body.modelVersion, evaluation: body.evaluation, games: body.games,
+      modelVersion: body.modelVersion, evaluation: body.evaluation, games: body.games, teams: body.teams,
     }).onConflictDoNothing();
-    res.status(201).json({ stored: body.games.length });
+    res.status(201).json({ stored: body.games.length, teams: body.teams.length });
   } catch (error) {
     req.log.error({ error }, "Game projection ingest failed");
     res.status(500).json({ error: "Game projection ingest failed" });
@@ -332,6 +341,42 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Consumer game projections read failed");
     res.status(503).json({ error: "Game projections are being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
+  const season = parseInteger(req.query.season, 1990, 2200);
+  if (season === null) {
+    res.status(400).json({ error: "Invalid season" });
+    return;
+  }
+  try {
+    const runs = await db.select({
+      season: gameProjectionRunsTable.season, week: gameProjectionRunsTable.week,
+      generatedAt: gameProjectionRunsTable.generatedAt, teams: gameProjectionRunsTable.teams,
+    }).from(gameProjectionRunsTable)
+      .where(season === undefined ? undefined : eq(gameProjectionRunsTable.season, season))
+      .orderBy(desc(gameProjectionRunsTable.generatedAt)).limit(200);
+    const latest = runs.find((run) => run.teams.length > 0);
+    if (!latest) {
+      res.json({ status: "unavailable", season: season ?? null, week: null, generatedAt: null, teams: [] });
+      return;
+    }
+    const previous = runs.find((run) => run.teams.length > 0 && run.season === latest.season && run.week < latest.week);
+    const previousRank = new Map(previous?.teams.map((team) => [team.team, team.ratingRank]) ?? []);
+    res.json({
+      status: "available",
+      season: latest.season,
+      week: latest.week,
+      generatedAt: latest.generatedAt.toISOString(),
+      teams: [...latest.teams].sort((a, b) => a.ratingRank - b.ratingRank).map((team) => ({
+        ...team,
+        rankChange: previousRank.has(team.team) ? previousRank.get(team.team)! - team.ratingRank : null,
+      })),
+    });
+  } catch (error) {
+    req.log.error({ error }, "Consumer power ratings read failed");
+    res.status(503).json({ error: "Power ratings are being refreshed", code: "consumer_data_unavailable" });
   }
 });
 

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS game_projection_runs (
  model_version text NOT NULL,
  evaluation jsonb NOT NULL DEFAULT '{}'::jsonb,
  games jsonb NOT NULL,
+ teams jsonb NOT NULL DEFAULT '[]'::jsonb,
  CONSTRAINT game_projection_runs_week_generated_unique UNIQUE (season, week, generated_at),
  CONSTRAINT game_projection_runs_week_check CHECK (week BETWEEN 1 AND 22)
 );

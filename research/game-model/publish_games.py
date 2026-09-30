@@ -1,6 +1,6 @@
 """Project the next week's games with the QB-adjusted rating and send them to the site.
 
-Usage: publish_games.py <games.parquet> <metrics.json>
+Usage: publish_games.py <games.parquet> <metrics.json> [team_stats.parquet]
 Environment: GRIDLINE_INGEST_URL (site origin, e.g. https://gridelineanalytics.com)
              GRIDLINE_INGEST_TOKEN
 Without both, the payload is written to games_payload.json instead.
@@ -19,6 +19,8 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 GAMES, METRICS = sys.argv[1], sys.argv[2]
+TEAMS_SNAPSHOT = GAMES.replace(".parquet", "_teams.parquet")
+TEAM_STATS = sys.argv[3] if len(sys.argv) > 3 else None
 MODEL_VERSION = "gridline-qb-rating-v1"
 RATING = ["epa_edge", "pass_edge", "rush_edge", "success_edge", "qb_edge", "qb_cpoe_edge", "qb_new_edge",
           "rest_diff", "hfa", "div_game"]
@@ -69,11 +71,66 @@ for _, row in slate.iterrows():
                     "rushEdge": r(row.rush_edge), "restDiff": r(row.rest_diff, 0), "neutralSite": bool(row.neutral)},
     })
 
+
+# ---------------------------------------------------------------- power ratings
+# A team's rating is its projected margin against a league-average team on a
+# neutral field with its expected starting QB. The model is linear, so the
+# offense and defense parts add up to the total.
+teams = pd.read_parquet(TEAMS_SNAPSHOT)
+average = teams[["off_epa", "off_pass_epa", "off_rush_epa", "off_success", "def_epa", "def_pass_epa", "def_rush_epa",
+                 "def_success", "qb_value", "qb_cpoe"]].mean()
+
+
+def vector(row, offense=True, defense=True, qb=True):
+    o = (lambda name: row[f"off_{name}"] - average[f"off_{name}"]) if offense else (lambda name: 0.0)
+    d = (lambda name: row[f"def_{name}"] - average[f"def_{name}"]) if defense else (lambda name: 0.0)
+    return pd.DataFrame([{
+        "epa_edge": o("epa") - d("epa"), "pass_edge": o("pass_epa") - d("pass_epa"),
+        "rush_edge": o("rush_epa") - d("rush_epa"), "success_edge": o("success") - d("success"),
+        "qb_edge": (row.qb_value - average.qb_value) if qb else 0.0,
+        "qb_cpoe_edge": ((row.qb_cpoe if pd.notna(row.qb_cpoe) else average.qb_cpoe) - average.qb_cpoe) if qb else 0.0,
+        "qb_new_edge": 0, "rest_diff": 0, "hfa": 0, "div_game": 0,
+    }])[RATING]
+
+
+baseline = float(rating.predict(vector(teams.iloc[0], False, False, False))[0])
+team_rows = []
+for _, row in teams.iterrows():
+    total = float(rating.predict(vector(row))[0]) - baseline
+    offense = float(rating.predict(vector(row, True, False, False))[0]) - baseline
+    defense = float(rating.predict(vector(row, False, True, False))[0]) - baseline
+    qb_part = total - offense - defense
+    team_rows.append({"team": row.team, "rating": round(total, 2), "offense": round(offense, 2),
+                      "defense": round(defense, 2), "qb": round(qb_part, 2),
+                      "qbName": row.qb_name if isinstance(row.qb_name, str) else None,
+                      "qbValue": r(row.qb_value), "qbNewStarter": bool(row.qb_new)})
+ratings = pd.DataFrame(team_rows)
+for column in ("rating", "offense", "defense", "qb"):
+    ratings[f"{column}Rank"] = ratings[column].rank(ascending=False, method="min").astype(int)
+if TEAM_STATS and os.path.exists(TEAM_STATS):
+    stats = pd.read_parquet(TEAM_STATS).set_index("team")
+else:
+    stats = pd.DataFrame()
+team_payload = []
+for row in ratings.sort_values("rating", ascending=False).to_dict("records"):
+    entry = dict(row)
+    if row["team"] in stats.index:
+        s_row = stats.loc[row["team"]]
+        entry["record"] = {"wins": int(s_row.wins), "losses": int(s_row.losses), "ties": int(s_row.ties)}
+        entry["stats"] = {key: (None if pd.isna(value) else (int(value) if key.endswith("_rank") else round(float(value), 4)))
+                          for key, value in s_row.items() if key.startswith(("off_", "def_"))}
+    else:
+        entry["record"] = None
+        entry["stats"] = {}
+    team_payload.append(entry)
+
 metrics = json.load(open(METRICS))
 metrics.pop("seasons", None)
 payload = {"season": int(current), "week": week, "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-           "modelVersion": MODEL_VERSION, "evaluation": metrics, "games": games}
-print(f"{current} week {week}: {len(games)} games projected")
+           "modelVersion": MODEL_VERSION, "evaluation": metrics, "games": games, "teams": team_payload}
+print(f"{current} week {week}: {len(games)} games projected, {len(team_payload)} teams rated")
+for team in team_payload[:8]:
+    print(f"  #{team['ratingRank']:>2} {team['team']:<3} {team['rating']:+.1f} (off {team['offense']:+.1f}, def {team['defense']:+.1f}, QB {team['qbName']} {team['qb']:+.1f})")
 for game in games:
     fav = game["homeTeam"] if game["projectedMargin"] > 0 else game["awayTeam"]
     print(f"  {game['awayTeam']} ({game['awayQb']['name']}) at {game['homeTeam']} ({game['homeQb']['name']}): "

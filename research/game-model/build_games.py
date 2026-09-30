@@ -154,3 +154,25 @@ df["qb_new_edge"] = df.home_qb_new - df.away_qb_new
 df["pace_sum"] = df.home_off_epa + df.away_off_epa + df.home_def_epa + df.away_def_epa
 df.to_parquet(OUT)
 print(df.shape, df.groupby("season").played.sum().to_dict())
+
+# ---------------------------------------------------------------- team snapshot for power ratings
+# Every team's current inputs as of now, with its expected starter (most recent start).
+now = pd.Timestamp.now(tz="America/New_York").tz_localize(None)
+snapshot = []
+for team in sorted(set(games.home_team) | set(games.away_team)):
+    row = {"team": team}
+    row.update(team_features(team, now, CURRENT_SEASON))
+    upcoming = games[(games.kickoff >= now) & ((games.home_team == team) | (games.away_team == team))].head(1)
+    listed = None
+    if len(upcoming):
+        g = upcoming.iloc[0]
+        listed = g.home_qb_id if g.home_team == team else g.away_qb_id
+    qb = qb_features(listed if isinstance(listed, str) else None, team, now, CURRENT_SEASON)
+    row.update({f"qb_{key.removeprefix('qb_')}": value for key, value in qb.items()})
+    snapshot.append(row)
+teams = pd.DataFrame(snapshot)
+names = pd.concat([games[["home_qb_id", "home_qb_name"]].set_axis(["id", "name"], axis=1),
+                   games[["away_qb_id", "away_qb_name"]].set_axis(["id", "name"], axis=1)]).dropna()
+teams["qb_name"] = teams.qb_id.map(names.drop_duplicates("id", keep="last").set_index("id").name)
+teams.to_parquet(OUT.replace(".parquet", "_teams.parquet"))
+print("team snapshot", teams.shape)

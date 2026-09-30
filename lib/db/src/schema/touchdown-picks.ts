@@ -74,6 +74,24 @@ export type GameProjectionRow = {
   factors: { qbEdge: number | null; teamEdge: number | null; passEdge: number | null; rushEdge: number | null; restDiff: number | null; neutralSite: boolean };
 };
 
+export type TeamRatingRow = {
+  team: string;
+  rating: number;
+  offense: number;
+  defense: number;
+  qb: number;
+  ratingRank: number;
+  offenseRank: number;
+  defenseRank: number;
+  qbRank: number;
+  qbName: string | null;
+  qbValue: number | null;
+  qbNewStarter: boolean;
+  record: { wins: number; losses: number; ties: number } | null;
+  /** Season stats keyed like off_points / off_points_rank / def_sacks_rank. */
+  stats: Record<string, number | null>;
+};
+
 /** One row per run of the QB-adjusted game model (research/game-model). */
 export const gameProjectionRunsTable = pgTable("game_projection_runs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -84,6 +102,7 @@ export const gameProjectionRunsTable = pgTable("game_projection_runs", {
   modelVersion: text("model_version").notNull(),
   evaluation: jsonb("evaluation").$type<Record<string, unknown>>().notNull().default({}),
   games: jsonb("games").$type<GameProjectionRow[]>().notNull(),
+  teams: jsonb("teams").$type<TeamRatingRow[]>().notNull().default([]),
 }, (table) => [
   unique("game_projection_runs_week_generated_unique").on(table.season, table.week, table.generatedAt),
   index("game_projection_runs_week_idx").on(table.season, table.week, table.generatedAt),

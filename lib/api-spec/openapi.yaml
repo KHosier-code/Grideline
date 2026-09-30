@@ -1346,6 +1346,23 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerGameProjections" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/power-ratings:
+    get:
+      operationId: getConsumerPowerRatings
+      tags: [nfl]
+      summary: Read QB-adjusted power ratings and 1-32 stat ranks for every team
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Ratings from the latest model run, or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerPowerRatings" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -1364,6 +1381,42 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ConsumerError" }
   schemas:
+    ConsumerTeamRating:
+      type: object
+      required: [team, rating, offense, defense, qb, ratingRank, offenseRank, defenseRank, qbRank, qbName, qbValue, qbNewStarter, record, stats, rankChange]
+      properties:
+        team: { type: string }
+        rating: { type: number, description: "Projected margin vs a league-average team on a neutral field" }
+        offense: { type: number }
+        defense: { type: number }
+        qb: { type: number }
+        ratingRank: { type: integer }
+        offenseRank: { type: integer }
+        defenseRank: { type: integer }
+        qbRank: { type: integer }
+        qbName: { type: ["string", "null"] }
+        qbValue: { type: ["number", "null"] }
+        qbNewStarter: { type: boolean }
+        record:
+          type: ["object", "null"]
+          required: [wins, losses, ties]
+          properties:
+            wins: { type: integer }
+            losses: { type: integer }
+            ties: { type: integer }
+        stats:
+          type: object
+          additionalProperties: { type: ["number", "null"] }
+        rankChange: { type: ["integer", "null"], description: "Positive when the team moved up since last week" }
+    ConsumerPowerRatings:
+      type: object
+      required: [status, season, week, generatedAt, teams]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"] }
+        week: { type: ["integer", "null"] }
+        generatedAt: { type: ["string", "null"], format: date-time }
+        teams: { type: array, items: { $ref: "#/components/schemas/ConsumerTeamRating" } }
     ConsumerProjectionQb:
       type: object
       required: [name, value, listed, newStarter]

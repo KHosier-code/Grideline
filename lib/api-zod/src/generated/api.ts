@@ -3736,3 +3736,39 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "pushes": zod.number().int()
 }))
 })
+
+
+/**
+ * @summary Read QB-adjusted power ratings and 1-32 stat ranks for every team
+ */
+export const GetConsumerPowerRatingsQueryParams = zod.object({
+  "season": zod.coerce.number().int().optional()
+})
+
+export const GetConsumerPowerRatingsResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "season": zod.number().int().nullable(),
+  "week": zod.number().int().nullable(),
+  "generatedAt": zod.coerce.date().nullable(),
+  "teams": zod.array(zod.object({
+  "team": zod.string(),
+  "rating": zod.number().describe('Projected margin vs a league-average team on a neutral field'),
+  "offense": zod.number(),
+  "defense": zod.number(),
+  "qb": zod.number(),
+  "ratingRank": zod.number().int(),
+  "offenseRank": zod.number().int(),
+  "defenseRank": zod.number().int(),
+  "qbRank": zod.number().int(),
+  "qbName": zod.string().nullable(),
+  "qbValue": zod.number().nullable(),
+  "qbNewStarter": zod.boolean(),
+  "record": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "ties": zod.number().int()
+}).nullable(),
+  "stats": zod.record(zod.string(), zod.number().nullable()),
+  "rankChange": zod.number().int().nullable().describe('Positive when the team moved up since last week')
+}))
+})

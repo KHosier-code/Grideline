@@ -5,6 +5,62 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * @nullable
+ */
+export type ConsumerTeamRatingRecord = {
+  wins: number;
+  losses: number;
+  ties: number;
+} | null;
+
+export type ConsumerTeamRatingStats = {[key: string]: number | null};
+
+export interface ConsumerTeamRating {
+  team: string;
+  /** Projected margin vs a league-average team on a neutral field */
+  rating: number;
+  offense: number;
+  defense: number;
+  qb: number;
+  ratingRank: number;
+  offenseRank: number;
+  defenseRank: number;
+  qbRank: number;
+  /** @nullable */
+  qbName: string | null;
+  /** @nullable */
+  qbValue: number | null;
+  qbNewStarter: boolean;
+  /** @nullable */
+  record: ConsumerTeamRatingRecord;
+  stats: ConsumerTeamRatingStats;
+  /**
+     * Positive when the team moved up since last week
+     * @nullable
+     */
+  rankChange: number | null;
+}
+
+export type ConsumerPowerRatingsStatus = typeof ConsumerPowerRatingsStatus[keyof typeof ConsumerPowerRatingsStatus];
+
+
+export const ConsumerPowerRatingsStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+export interface ConsumerPowerRatings {
+  status: ConsumerPowerRatingsStatus;
+  /** @nullable */
+  season: number | null;
+  /** @nullable */
+  week: number | null;
+  /** @nullable */
+  generatedAt: string | null;
+  teams: ConsumerTeamRating[];
+}
+
 export interface ConsumerProjectionQb {
   /** @nullable */
   name: string | null;
@@ -4317,5 +4373,9 @@ week?: number;
 };
 
 export type GetConsumerGameProjectionsParams = {
+season?: number;
+};
+
+export type GetConsumerPowerRatingsParams = {
 season?: number;
 };

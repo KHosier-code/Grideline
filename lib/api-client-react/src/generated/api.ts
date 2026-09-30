@@ -43,6 +43,7 @@ import type {
   ConsumerPlayerTdForecasts,
   ConsumerPlayerUsage,
   ConsumerPlayerUsageGames,
+  ConsumerPowerRatings,
   ConsumerPropsAvailability,
   ConsumerRecord,
   ConsumerRedZoneOpportunities,
@@ -61,6 +62,7 @@ import type {
   GetConsumerPerformanceParams,
   GetConsumerPlayerPositionMatchupParams,
   GetConsumerPlayerUsageParams,
+  GetConsumerPowerRatingsParams,
   GetConsumerRecordParams,
   GetConsumerRedZoneOpportunitiesParams,
   GetConsumerTeamAnalyticsParams,
@@ -5443,6 +5445,90 @@ export function useGetConsumerGameProjections<TData = Awaited<ReturnType<typeof 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerGameProjectionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerPowerRatingsUrl = (params?: GetConsumerPowerRatingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/power-ratings?${stringifiedParams}` : `/api/consumer/power-ratings`
+}
+
+/**
+ * @summary Read QB-adjusted power ratings and 1-32 stat ranks for every team
+ */
+export const getConsumerPowerRatings = async (params?: GetConsumerPowerRatingsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPowerRatings> => {
+
+  return customFetch<ConsumerPowerRatings>(getGetConsumerPowerRatingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerPowerRatingsQueryKey = (params?: GetConsumerPowerRatingsParams,) => {
+    return [
+    `/api/consumer/power-ratings`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerPowerRatingsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPowerRatings>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerPowerRatingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPowerRatings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPowerRatingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPowerRatings>>> = ({ signal }) => getConsumerPowerRatings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPowerRatings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerPowerRatingsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerPowerRatings>>>
+export type GetConsumerPowerRatingsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read QB-adjusted power ratings and 1-32 stat ranks for every team
+ */
+
+export function useGetConsumerPowerRatings<TData = Awaited<ReturnType<typeof getConsumerPowerRatings>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerPowerRatingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPowerRatings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerPowerRatingsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

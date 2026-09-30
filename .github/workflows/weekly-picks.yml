@@ -45,5 +45,6 @@ jobs:
         working-directory: research/game-model
         run: |
           python build_games.py ../td-model/data games.parquet
+          python team_stats.py ../td-model/data team_stats.parquet
           python evaluate_games.py games.parquet metrics.json
-          python publish_games.py games.parquet metrics.json
+          python publish_games.py games.parquet metrics.json team_stats.parquet
