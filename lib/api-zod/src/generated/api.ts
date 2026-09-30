@@ -3660,7 +3660,12 @@ export const GetConsumerTouchdownsResponse = zod.object({
   "record": zod.object({
   "weeksGraded": zod.number().int(),
   "topTenPicks": zod.number().int(),
-  "topTenHits": zod.number().int()
+  "topTenHits": zod.number().int(),
+  "weeks": zod.array(zod.object({
+  "week": zod.number().int(),
+  "picks": zod.number().int(),
+  "hits": zod.number().int()
+}))
 })
 })
 

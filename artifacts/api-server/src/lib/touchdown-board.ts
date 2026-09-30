@@ -40,17 +40,20 @@ export function fairAmericanOdds(probability: number) {
 
 /** Top-10 record over weeks where every top-10 player has a graded result. */
 export function topTenRecord(
-  weeks: Array<{ board: BoardEntry[]; results: Map<string, boolean> }>,
+  weeks: Array<{ week?: number; board: BoardEntry[]; results: Map<string, boolean> }>,
 ) {
   let weeksGraded = 0;
   let topTenPicks = 0;
   let topTenHits = 0;
-  for (const { board, results } of weeks) {
+  const byWeek: Array<{ week: number; picks: number; hits: number }> = [];
+  for (const { week, board, results } of weeks) {
     const top = board.slice(0, 10);
     if (top.length < 10 || top.some((entry) => !results.has(entry.playerId))) continue;
+    const hits = top.filter((entry) => results.get(entry.playerId)).length;
     weeksGraded += 1;
     topTenPicks += top.length;
-    topTenHits += top.filter((entry) => results.get(entry.playerId)).length;
+    topTenHits += hits;
+    if (week !== undefined) byWeek.push({ week, picks: top.length, hits });
   }
-  return { weeksGraded, topTenPicks, topTenHits };
+  return { weeksGraded, topTenPicks, topTenHits, weeks: byWeek.sort((a, b) => a.week - b.week) };
 }

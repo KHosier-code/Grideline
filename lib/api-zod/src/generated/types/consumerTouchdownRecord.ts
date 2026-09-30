@@ -5,9 +5,11 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerTouchdownRecordWeeksItem } from './consumerTouchdownRecordWeeksItem';
 
 export interface ConsumerTouchdownRecord {
   weeksGraded: number;
   topTenPicks: number;
   topTenHits: number;
+  weeks: ConsumerTouchdownRecordWeeksItem[];
 }

@@ -221,6 +221,7 @@ export * from './consumerTouchdownFactors';
 export * from './consumerTouchdownPick';
 export * from './consumerTouchdownPickPosition';
 export * from './consumerTouchdownRecord';
+export * from './consumerTouchdownRecordWeeksItem';
 export * from './consumerTouchdowns';
 export * from './consumerTouchdownsEvaluation';
 export * from './consumerTouchdownsStatus';

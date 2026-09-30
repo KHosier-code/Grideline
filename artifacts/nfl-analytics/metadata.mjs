@@ -10,14 +10,14 @@ const escape = value => String(value).replace(/[&<>"']/g, char => ({
 const url = path => `${origin}${prefix}${path}`;
 
 const pages = {
-  '/': ['Gridline | Free NFL Picks Against the Spread and Anytime TD Picks', 'Free weekly NFL picks: projected scores for every game next to the sportsbook line, the biggest edges of the week, and a graded season record.'],
+  '/': ['Gridline | Free NFL Touchdown Picks and Game Projections', 'Free weekly anytime touchdown picks and a projected score for every NFL game, adjusted for the starting quarterback, next to the Vegas line.'],
   '/touchdowns': ['Anytime Touchdown Picks This Week | Gridline', 'Ranked anytime touchdown scorer picks for every NFL game, with each player\'s red-zone role, target and carry share, Vegas team total and defensive matchup.'],
   '/games': ['NFL Games, Projections and Lines | Gridline', 'Browse every NFL game by week with Gridline\'s projected score, the sportsbook line and final results.'],
   '/teams': ['NFL Team Rankings by EPA | Gridline', 'Offense and defense for all 32 NFL teams from play-by-play data, updated after every game.'],
   '/usage': ['NFL Player Usage: Targets, Carries and Snaps | Gridline', 'Target share, carry share and red-zone usage for every NFL skill player.'],
   '/defense-vs-position': ['NFL Defense vs Position | Gridline', 'Fantasy points and touchdowns each NFL defense allows to quarterbacks, running backs, receivers and tight ends.'],
   '/methodology': ['How Gridline Makes Its Picks | Gridline', 'What goes into Gridline\'s game projections and touchdown picks, how they are tested, and how picks are graded.'],
-  '/performance': ['Gridline Pick Record | Gridline', 'Gridline\'s graded record on winners and against the spread, week by week.'],
+  '/performance': ['Gridline Pick Record | Gridline', 'Gridline\'s graded touchdown pick and game winner record, week by week.'],
 };
 
 function tags({ title, description, path, index }) {

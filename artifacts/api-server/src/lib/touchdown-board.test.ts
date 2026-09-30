@@ -49,7 +49,7 @@ test("fair odds", () => {
 test("top-10 record only counts fully graded weeks", () => {
   const board = Array.from({ length: 12 }, (_, index) => ({ ...pick(`p${index}`, 0.5 - index / 100, SUN), generatedAt: new Date() }));
   const results = new Map(board.map((entry, index) => [entry.playerId, index % 2 === 0]));
-  assert.deepEqual(topTenRecord([{ board, results }]), { weeksGraded: 1, topTenPicks: 10, topTenHits: 5 });
+  assert.deepEqual(topTenRecord([{ week: 4, board, results }]), { weeksGraded: 1, topTenPicks: 10, topTenHits: 5, weeks: [{ week: 4, picks: 10, hits: 5 }] });
   const partial = new Map([...results].slice(0, 5));
-  assert.deepEqual(topTenRecord([{ board, results: partial }]), { weeksGraded: 0, topTenPicks: 0, topTenHits: 0 });
+  assert.deepEqual(topTenRecord([{ board, results: partial }]), { weeksGraded: 0, topTenPicks: 0, topTenHits: 0, weeks: [] });
 });

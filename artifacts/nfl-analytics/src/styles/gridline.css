@@ -407,3 +407,24 @@
 @media (max-width: 460px) {
   .gl-board-row.gl-lines-row { grid-template-columns: 1fr; }
 }
+
+/* Long-form pages */
+.gl-prose { display: grid; gap: 14px; max-width: 820px; }
+.gl-prose section { padding: 22px 24px; }
+.gl-prose h2 { margin: 0 0 10px; font-family: var(--gl-display); font-size: 26px; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; }
+.gl-prose p, .gl-prose li { color: hsl(var(--muted-foreground)); line-height: 1.7; }
+.gl-prose p { margin: 0 0 10px; }
+.gl-prose p:last-child { margin-bottom: 0; }
+.gl-prose ul { margin: 0 0 10px; padding-left: 20px; }
+.gl-prose b { color: hsl(var(--foreground)); }
+
+/* Record */
+.gl-record-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.gl-record-card { display: grid; gap: 6px; padding: 18px 20px; }
+.gl-record-card b { font-family: var(--gl-display); font-size: 44px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.gl-record-card p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 14px; }
+.gl-table-wrap { overflow-x: auto; }
+.gl-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.gl-table th { padding: 10px 16px; background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
+.gl-table td { padding: 11px 16px; border-top: 1px solid hsl(var(--border)); }
+@media (max-width: 700px) { .gl-record-grid { grid-template-columns: 1fr; } }

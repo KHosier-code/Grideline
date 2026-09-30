@@ -1489,11 +1489,20 @@ components:
         scored: { type: ["boolean", "null"], description: "null until the game is graded" }
     ConsumerTouchdownRecord:
       type: object
-      required: [weeksGraded, topTenPicks, topTenHits]
+      required: [weeksGraded, topTenPicks, topTenHits, weeks]
       properties:
         weeksGraded: { type: integer }
         topTenPicks: { type: integer }
         topTenHits: { type: integer }
+        weeks:
+          type: array
+          items:
+            type: object
+            required: [week, picks, hits]
+            properties:
+              week: { type: integer }
+              picks: { type: integer }
+              hits: { type: integer }
     ConsumerTouchdowns:
       type: object
       required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record]

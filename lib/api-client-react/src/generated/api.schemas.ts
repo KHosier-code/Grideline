@@ -172,10 +172,17 @@ export interface ConsumerTouchdownPick {
   scored: boolean | null;
 }
 
+export type ConsumerTouchdownRecordWeeksItem = {
+  week: number;
+  picks: number;
+  hits: number;
+};
+
 export interface ConsumerTouchdownRecord {
   weeksGraded: number;
   topTenPicks: number;
   topTenHits: number;
+  weeks: ConsumerTouchdownRecordWeeksItem[];
 }
 
 export type ConsumerTouchdownsStatus = typeof ConsumerTouchdownsStatus[keyof typeof ConsumerTouchdownsStatus];
