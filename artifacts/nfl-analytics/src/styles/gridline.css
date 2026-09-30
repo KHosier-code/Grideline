@@ -481,3 +481,144 @@
   .gl-lines-row .gl-mkt { display: grid; grid-template-columns: 1fr 1fr; align-items: baseline; gap: 2px 12px; }
   .gl-lines-row .gl-mkt .m-label { grid-column: 1 / -1; }
 }
+
+/* ================================================================
+ * 2026-10 layout: sidebar app shell on a charcoal palette.
+ * Later rules in this file override the earlier top-bar styles.
+ * ================================================================ */
+.consumer-shell {
+  --background: 0 0% 97%;
+  --card: 0 0% 100%;
+  --secondary: 0 0% 94%;
+  --muted: 0 0% 94%;
+  --border: 0 0% 87%;
+  --card-border: 0 0% 87%;
+  --foreground: 0 0% 9%;
+  --muted-foreground: 0 0% 38%;
+  --gl-sidebar: 0 0% 100%;
+  --gl-bar: 0 0% 90%;
+  --gl-good-cell: 150 45% 36%;
+  --gl-bad-cell: 340 45% 42%;
+}
+.dark .consumer-shell {
+  --background: 0 0% 8%;
+  --card: 0 0% 12%;
+  --secondary: 0 0% 15%;
+  --muted: 0 0% 15%;
+  --border: 0 0% 19%;
+  --card-border: 0 0% 19%;
+  --foreground: 0 0% 93%;
+  --muted-foreground: 0 0% 62%;
+  --gl-sidebar: 0 0% 10%;
+  --gl-bar: 0 0% 20%;
+  --gl-good-cell: 150 50% 30%;
+  --gl-bad-cell: 340 45% 32%;
+}
+.gl-app { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 100vh; }
+.gl-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  height: 100vh;
+  padding: 20px 14px;
+  border-right: 1px solid hsl(var(--border));
+  background: hsl(var(--gl-sidebar));
+  overflow-y: auto;
+}
+.gl-sidebar .gl-brand { padding: 4px 10px 8px; }
+.gl-side-nav { display: grid; gap: 16px; }
+.gl-side-group { display: grid; gap: 2px; }
+.gl-side-label { margin: 0 0 4px; padding: 0 10px; color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+.gl-side-group a, .gl-mobile-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: hsl(var(--foreground) / .82);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.gl-side-group a svg, .gl-mobile-nav a svg { display: block; width: 17px; height: 17px; color: hsl(var(--muted-foreground)); }
+.gl-side-group a:hover, .gl-mobile-nav a:hover { background: hsl(var(--secondary)); color: hsl(var(--foreground)); }
+.gl-side-group a[aria-current="page"], .gl-mobile-nav a[aria-current="page"] { background: hsl(var(--secondary)); color: hsl(var(--foreground)); font-weight: 700; box-shadow: none; }
+.gl-side-group a[aria-current="page"] svg { color: hsl(var(--primary)); }
+.gl-side-group .gl-new { margin-left: auto; }
+.gl-side-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding: 12px 6px 0; border-top: 1px solid hsl(var(--border)); }
+.gl-side-foot .button-subtle { padding: 7px 14px; border: 1px solid hsl(var(--border)); border-radius: 8px; color: hsl(var(--foreground)); font-size: 14px; font-weight: 600; text-decoration: none; }
+.gl-side-foot .theme-toggle { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid hsl(var(--border)); border-radius: 8px; background: transparent; color: hsl(var(--foreground)); cursor: pointer; }
+.gl-side-foot .theme-toggle svg { width: 17px; height: 17px; }
+.gl-side-foot .theme-toggle span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.gl-main-col { display: flex; min-width: 0; flex-direction: column; }
+.gl-crumbbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 14px; height: 54px; padding: 0 28px; border-bottom: 1px solid hsl(var(--border)); background: hsl(var(--background) / .92); backdrop-filter: blur(10px); }
+.gl-crumbs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; color: hsl(var(--muted-foreground)); font-size: 14px; }
+.gl-crumbs li + li::before { content: "›"; margin-right: 8px; color: hsl(var(--muted-foreground)); }
+.gl-crumbs li[aria-current="page"] { color: hsl(var(--foreground)); font-weight: 600; }
+.gl-crumbs a { color: inherit; text-decoration: none; }
+.gl-brand-mobile { display: none; }
+.gl-shell-main { width: min(1400px, 100%); margin: 0; padding: 28px 28px 64px; }
+.gl-footer-inner { width: min(1400px, 100%); margin: 0; padding: 24px 28px 36px; }
+.gl-mobile-nav { display: grid; gap: 14px; padding: 12px 16px 16px; border-bottom: 1px solid hsl(var(--border)); background: hsl(var(--gl-sidebar)); }
+
+/* Titles: mixed case and compact; condensed type stays for numbers. */
+.gl-hero .gl-title, .consumer-shell .ct-hero h1, .consumer-shell .dvp-league-hero h1, .consumer-page-header h1 {
+  margin: 4px 0 0;
+  font-family: var(--app-font-sans);
+  font-size: clamp(28px, 3.2vw, 38px);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+  text-transform: none;
+}
+.gl-hero .gl-title span { color: hsl(var(--primary)); }
+.gl-section-head h2, .gl-prose h2, .consumer-section-heading h2 { font-family: var(--app-font-sans); font-size: 18px; font-weight: 700; letter-spacing: -.01em; text-transform: none; }
+.gl-hero { padding-bottom: 20px; }
+.gl-matchup-title { font-size: clamp(24px, 3vw, 34px) !important; }
+.gl-card { border-radius: 12px; }
+
+@media (max-width: 1080px) {
+  .gl-app { grid-template-columns: 1fr; }
+  .gl-sidebar { display: none; }
+  .gl-menu-toggle { display: inline-grid; }
+  .gl-brand-mobile { display: inline-flex; font-size: 22px; }
+  .gl-brand-mobile img { width: 22px; height: 22px; }
+  .gl-crumbs { display: none; }
+  .gl-crumbbar { padding: 0 16px; }
+  .gl-shell-main { padding: 20px 16px 56px; }
+  .gl-footer-inner { padding: 20px 16px 32px; }
+}
+@media (min-width: 1081px) { .gl-menu-toggle { display: none; } }
+
+/* Ratings tables */
+.gl-logo { display: block; width: 28px; height: 28px; object-fit: contain; }
+.gl-ratings { font-size: 14px; }
+.gl-ratings th button { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.gl-ratings td { vertical-align: middle; }
+.gl-rank-num { white-space: nowrap; }
+.gl-rank-num b { display: inline-block; min-width: 22px; font-family: var(--gl-display); font-size: 20px; font-variant-numeric: tabular-nums; }
+.gl-change { margin-left: 6px; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gl-change.up { color: hsl(var(--status-good)); }
+.gl-change.down { color: hsl(var(--status-bad)); }
+.gl-change.flat { color: hsl(var(--muted-foreground)); }
+.gl-team-cell { display: flex; align-items: center; gap: 12px; min-width: 190px; }
+.gl-team-cell span { display: grid; }
+.gl-team-cell small { color: hsl(var(--muted-foreground)); font-size: 12px; }
+.gl-rating-cell { min-width: 150px; }
+.gl-rating-value { display: block; font-family: var(--gl-display); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gl-rating-bar { position: relative; display: block; height: 6px; margin-top: 4px; border-radius: 99px; background: hsl(var(--gl-bar)); }
+.gl-rating-bar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: hsl(var(--muted-foreground)); }
+.gl-rating-bar i { position: absolute; top: 0; bottom: 0; border-radius: 99px; }
+.gl-rating-bar i.pos { left: 50%; background: hsl(var(--status-good)); }
+.gl-rating-bar i.neg { right: 50%; background: hsl(var(--status-bad)); }
+.gl-rank-cell span { display: inline-grid; min-width: 86px; padding: 6px 10px; border-radius: 8px; text-align: center; }
+.gl-rank-cell b { font-variant-numeric: tabular-nums; }
+.gl-rank-cell small { color: hsl(var(--foreground) / .7); font-size: 11px; }
+.gl-qb-cell span { min-width: 150px; text-align: left; }
+.gl-qb-cell .gl-flag { display: inline-block; margin-top: 4px; font-style: normal; }
+/* Sidebar column background runs the full page height. */
+.gl-app { background: linear-gradient(to right, hsl(var(--gl-sidebar)) 249px, hsl(var(--border)) 249px, hsl(var(--border)) 250px, hsl(var(--background)) 250px); }
+.gl-sidebar { border-right: 0; background: transparent; }
+@media (max-width: 1080px) { .gl-app { background: hsl(var(--background)); } }
