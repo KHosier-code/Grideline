@@ -390,7 +390,7 @@ router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
 });
 
 const reportIngestSchema = zod.object({
-  kind: zod.enum(["usage", "replay"]),
+  kind: zod.enum(["usage", "replay", "share-td"]),
   season: zod.number().int().min(2000).max(2200),
   week: zod.number().int().min(0).max(22),
   generatedAt: zod.string().datetime({ offset: true }),
@@ -481,6 +481,24 @@ router.post("/odds/td-props-capture", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error: error instanceof Error ? error.message : "TD props capture failed" }, "TD props capture failed");
     res.status(502).json({ status: "failed", reason: "TD props capture failed on the server." });
+  }
+});
+
+/** This week's TD picks card (research/td-model/share_card.py), the TD Picks link preview. */
+router.get("/share/td-card.png", async (req, res): Promise<void> => {
+  try {
+    const [latest] = await db.select({ payload: weeklyReportsTable.payload }).from(weeklyReportsTable)
+      .where(eq(weeklyReportsTable.kind, "share-td"))
+      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    const png = typeof latest?.payload.png === "string" ? Buffer.from(latest.payload.png, "base64") : null;
+    if (!png?.length) {
+      res.redirect(302, "/gridline-share.png");
+      return;
+    }
+    res.set({ "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" }).send(png);
+  } catch (error) {
+    req.log.error({ error }, "Share card read failed");
+    res.redirect(302, "/gridline-share.png");
   }
 });
 

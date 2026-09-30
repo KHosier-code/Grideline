@@ -752,3 +752,11 @@
 .gl-replay-grid .gl-table td { padding: 8px 12px; }
 .gl-inline-team { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 1100px) { .gl-replay-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Share this week ---------- */
+.gl-button { display: inline-flex; align-items: center; padding: 7px 14px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--foreground)); color: hsl(var(--background)); font-size: 13px; font-weight: 700; cursor: pointer; }
+.gl-share-box { display: grid; gap: 12px; margin-bottom: 16px; padding: 18px; }
+.gl-share-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.gl-share-head h2 { margin: 0; font-size: 18px; }
+.gl-share-card { width: 100%; max-width: 720px; border-radius: 10px; border: 1px solid hsl(var(--border)); }
+.gl-share-box textarea { width: 100%; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }

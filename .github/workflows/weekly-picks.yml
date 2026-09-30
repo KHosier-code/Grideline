@@ -41,6 +41,16 @@ jobs:
           python build_dataset.py data td_dataset.parquet
           python evaluate.py td_dataset.parquet metrics.json
           python publish.py td_dataset.parquet data metrics.json
+      - name: Share card
+        if: ${{ !cancelled() }}
+        working-directory: research/td-model
+        run: |
+          mkdir -p fonts
+          for weight in Medium SemiBold Bold; do
+            curl -fsSL -o "fonts/BarlowCondensed-$weight.ttf" \
+              "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-$weight.ttf" || true
+          done
+          python share_card.py td_payload.json
       - name: Usage, defense vs position and red zone report
         if: ${{ !cancelled() }}
         working-directory: research/td-model

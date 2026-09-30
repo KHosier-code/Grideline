@@ -13,7 +13,7 @@ const pages = {
   '/': ['Gridline | Free NFL Touchdown Picks and Game Projections', 'Free weekly anytime touchdown picks and a projected score for every NFL game, adjusted for the starting quarterback, next to the Vegas line.'],
   '/touchdowns': ['Anytime Touchdown Picks This Week | Gridline', 'Ranked anytime touchdown scorer picks for every NFL game, with each player\'s red-zone role, target and carry share, Vegas team total and defensive matchup.'],
   '/power-ratings': ['NFL Power Ratings: All 32 Teams Ranked | Gridline', 'Every NFL team ranked 1-32 by points better or worse than an average team, with offense, defense and quarterback ratings.'],
-  '/qb-rankings': ['NFL QB Rankings by EPA per Dropback | Gridline', 'Every team\'s expected starting quarterback ranked by value per dropback, and what he\'s worth to the team in points.'],
+  '/qb-rankings': ['NFL QB Rankings by EPA per Dropback | Gridline', 'Every team\'s expected starting quarterback ranked by value per dropback, and what each is worth to the team in points.'],
   '/games': ['NFL Games, Projections and Lines | Gridline', 'Browse every NFL game by week with Gridline\'s projected score, the sportsbook line and final results.'],
   '/teams': ['NFL Team Rankings by EPA | Gridline', 'Offense and defense for all 32 NFL teams from play-by-play data, updated after every game.'],
   '/usage': ['NFL Player Usage: Target, Carry and Red-Zone Share | Gridline', 'Target share, carry share, air yards and red-zone looks for every NFL team and skill player, with week-by-week trends.'],
@@ -25,7 +25,12 @@ const pages = {
 
 function tags({ title, description, path, index }) {
   const canonical = url(path);
-  const image = url('/gridline-share.png');
+  // TD Picks and Home preview with this week's picks card. The version changes
+  // every Tuesday so X and iMessage don't keep showing last week's card.
+  const nflWeek = Math.floor((Date.now() - Date.UTC(2020, 0, 7, 12)) / (7 * 86_400_000));
+  const image = path === '/touchdowns' || path === '/'
+    ? `${origin}/api/share/td-card.png?v=${nflWeek}`
+    : url('/gridline-share.png');
   return [
     `<title>${escape(title)}</title>`,
     `<meta name="description" content="${escape(description)}" />`,
@@ -52,6 +57,9 @@ export async function documentForPath(pathname, { apiOrigin = defaultApiOrigin }
   if (pages[normalized]) {
     const [title, description] = pages[normalized];
     return { status: 200, tags: tags({ title, description, path: normalized, index: true }) };
+  }
+  if (normalized === '/share') {
+    return { status: 200, tags: tags({ title: 'Share This Week | Gridline', description: 'This week\'s TD picks card, post and email.', path: '/touchdowns', index: false }) };
   }
   const match = /^\/games\/([^/]+)$/.exec(normalized);
   if (match) {

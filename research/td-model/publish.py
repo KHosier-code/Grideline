@@ -119,9 +119,10 @@ print(f"{season} week {week}: {len(picks)} players ranked, {len(results)} result
 for pick in picks[:10]:
     print(f"  {pick['probability']:.1%}  {pick['name']} ({pick['position']}, {pick['team']} vs {pick['opponent']})")
 
+# Kept for share_card.py and for inspecting a run.
+json.dump(payload, open("td_payload.json", "w"), indent=1)
 origin, token = os.environ.get("GRIDLINE_INGEST_URL"), os.environ.get("GRIDLINE_INGEST_TOKEN")
 if not origin or not token:
-    json.dump(payload, open("td_payload.json", "w"), indent=1)
     print("GRIDLINE_INGEST_URL/TOKEN not set: wrote td_payload.json instead of sending.")
     sys.exit(0)
 url = f"{origin.rstrip('/')}/api/touchdowns/ingest"
