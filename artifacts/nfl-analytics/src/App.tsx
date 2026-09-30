@@ -66,7 +66,7 @@ import {
   useGetChallengerReadinessReport,
   getGetChallengerReadinessReportQueryKey,
 } from '@workspace/api-client-react';
-import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
+import { Link, Redirect, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -83,7 +83,6 @@ const PickSheet = lazy(() => import('@/pages/consumer/PickSheet'));
 const TouchdownPicks = lazy(() => import('@/pages/consumer/TouchdownPicks'));
 const PowerRatings = lazy(() => import('@/pages/consumer/PowerRatings'));
 const QbRankings = lazy(() => import('@/pages/consumer/QbRankings'));
-const ConsumerWeeklyPicks = lazy(() => import('@/pages/consumer/ConsumerWeeklyPicks'));
 const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
 const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
 const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
@@ -2141,7 +2140,7 @@ function Router() {
     <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
     <Route path="/saved-games"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
     <Route path="/methodology"><ConsumerShell><ConsumerMethodology /></ConsumerShell></Route>
-    <Route path="/weekly-picks"><ConsumerShell><ConsumerWeeklyPicks /></ConsumerShell></Route>
+    <Route path="/weekly-picks"><Redirect to="/performance" replace /></Route>
     <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
     <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
@@ -2161,7 +2160,7 @@ function Router() {
       <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
       <Route path="/saved-games"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
       <Route path="/methodology"><ConsumerShell><ConsumerMethodology /></ConsumerShell></Route>
-      <Route path="/weekly-picks"><ConsumerShell><ConsumerWeeklyPicks /></ConsumerShell></Route>
+      <Route path="/weekly-picks"><Redirect to="/performance" replace /></Route>
       <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
       <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
