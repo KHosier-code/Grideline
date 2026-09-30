@@ -5612,3 +5612,80 @@ export function useGetConsumerUsageReport<TData = Awaited<ReturnType<typeof getC
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
+export const getGetConsumerReplayUrl = () => {
+
+
+
+
+  return `/api/consumer/replay`
+}
+
+/**
+ * @summary Read this season's replayed weeks (walk-forward TD top 10 and game winners, graded)
+ */
+export const getConsumerReplay = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerUsageReport> => {
+
+  return customFetch<ConsumerUsageReport>(getGetConsumerReplayUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerReplayQueryKey = () => {
+    return [
+    `/api/consumer/replay`
+    ] as const;
+    }
+
+
+export const getGetConsumerReplayQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerReplay>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerReplay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerReplayQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerReplay>>> = ({ signal }) => getConsumerReplay({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerReplay>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerReplayQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerReplay>>>
+export type GetConsumerReplayQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read this season's replayed weeks (walk-forward TD top 10 and game winners, graded)
+ */
+
+export function useGetConsumerReplay<TData = Awaited<ReturnType<typeof getConsumerReplay>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerReplay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerReplayQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

@@ -1375,6 +1375,18 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerUsageReport" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/replay:
+    get:
+      operationId: getConsumerReplay
+      tags: [nfl]
+      summary: Read this season's replayed weeks (walk-forward TD top 10 and game winners, graded)
+      responses:
+        "200":
+          description: The newest replay report, or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerUsageReport" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:

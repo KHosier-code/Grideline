@@ -113,7 +113,9 @@ test("public navigation and signed-out routing expose player usage", () => {
   const publicRoutes = source.split("if (!isSignedIn) return")[1]?.split("return <RoutedErrorBoundary><Switch>")[0];
   assert.ok(publicRoutes, "signed-out routes must exist");
   assert.match(publicRoutes, /<Route path="\/usage"><ConsumerShell><ConsumerUsage \/><\/ConsumerShell><\/Route>/);
-  assert.match(source, /\{ href: '\/usage', label: 'Player Usage'/);
+  const shell = readFileSync(fileURLToPath(new URL("../components/ConsumerShellView.tsx", import.meta.url)), "utf8");
+  assert.match(shell, /\{ href: '\/usage', label: 'Player Usage'/);
+  assert.match(source, /import\('@\/pages\/consumer\/PlayerUsage'\)/);
 });
 
 test("position-aware overview uses observed volume and yardage without mixing roles", () => {

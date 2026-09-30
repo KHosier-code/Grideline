@@ -384,7 +384,7 @@ router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
 });
 
 const reportIngestSchema = zod.object({
-  kind: zod.enum(["usage"]),
+  kind: zod.enum(["usage", "replay"]),
   season: zod.number().int().min(2000).max(2200),
   week: zod.number().int().min(0).max(22),
   generatedAt: zod.string().datetime({ offset: true }),
@@ -411,10 +411,10 @@ router.post("/reports/ingest", async (req, res): Promise<void> => {
   }
 });
 
-router.get("/consumer/usage-report", async (req, res): Promise<void> => {
+async function latestReport(kind: "usage" | "replay", req: import("express").Request, res: import("express").Response) {
   try {
     const [latest] = await db.select().from(weeklyReportsTable)
-      .where(eq(weeklyReportsTable.kind, "usage"))
+      .where(eq(weeklyReportsTable.kind, kind))
       .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
     if (!latest) {
       res.json({ status: "unavailable", season: null, week: null, generatedAt: null, report: null });
@@ -426,9 +426,12 @@ router.get("/consumer/usage-report", async (req, res): Promise<void> => {
       generatedAt: latest.generatedAt.toISOString(), report: latest.payload,
     });
   } catch (error) {
-    req.log.error({ error }, "Usage report read failed");
-    res.status(503).json({ error: "Usage report is being refreshed", code: "consumer_data_unavailable" });
+    req.log.error({ error, kind }, "Weekly report read failed");
+    res.status(503).json({ error: "Report is being refreshed", code: "consumer_data_unavailable" });
   }
-});
+}
+
+router.get("/consumer/usage-report", (req, res) => latestReport("usage", req, res));
+router.get("/consumer/replay", (req, res) => latestReport("replay", req, res));
 
 export default router;

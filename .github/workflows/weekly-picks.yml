@@ -42,12 +42,18 @@ jobs:
           python evaluate.py td_dataset.parquet metrics.json
           python publish.py td_dataset.parquet data metrics.json
       - name: Usage, defense vs position and red zone report
+        if: ${{ !cancelled() }}
         working-directory: research/td-model
         run: python weekly_report.py data
       - name: Game projections
+        if: ${{ !cancelled() }}
         working-directory: research/game-model
         run: |
           python build_games.py ../td-model/data games.parquet
           python team_stats.py ../td-model/data team_stats.parquet
           python evaluate_games.py games.parquet metrics.json
           python publish_games.py games.parquet metrics.json team_stats.parquet
+      - name: Replay this season's completed weeks
+        if: ${{ !cancelled() }}
+        working-directory: research
+        run: python replay.py td-model/td_dataset.parquet game-model/games.parquet
