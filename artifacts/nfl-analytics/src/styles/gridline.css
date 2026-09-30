@@ -682,3 +682,4 @@
 .gl-season-table th[scope="row"] { font-weight: 700; text-align: left; }
 @media (max-width: 1200px) { .gl-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .gl-summary-grid { grid-template-columns: 1fr; } }
+.gl-mobile-nav .theme-toggle svg { display: block; width: 17px; height: 17px; }
