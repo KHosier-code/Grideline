@@ -1,12 +1,14 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Router, type IRouter } from "express";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
-  db, gameProjectionRunsTable, gamesTable, predictionSnapshotsTable, touchdownPickResultsTable, touchdownPickRunsTable,
-  weeklyReportsTable,
+  db, gameProjectionRunsTable, gamesTable, predictionSnapshotsTable, sportsbookOddsTable, teamsTable, touchdownPickResultsTable,
+  touchdownPickRunsTable, weeklyReportsTable,
 } from "@workspace/db";
-import { projectionsBeforeKickoff, winnerRecord } from "../lib/game-projections";
+import {
+  favoriteRecord, lineValueGames, lineValueSummary, projectionsBeforeKickoff, winnerRecord, type SpreadQuote,
+} from "../lib/game-projections";
 import { isEligiblePredictionSnapshot } from "../lib/live-predictions";
 import { addResult, emptyRecordLine, gradePicks, picksForProjection } from "../lib/pick-grading";
 import { boardForWeek, fairAmericanOdds, topTenRecord } from "../lib/touchdown-board";
@@ -309,6 +311,15 @@ router.post("/games/projections/ingest", async (req, res): Promise<void> => {
   }
 });
 
+const squash = (value: string | null | undefined) => (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Whether a sportsbook selection ("Kansas City Chiefs") names this team. */
+function spreadSide(selection: string, team: { teamName: string; abbreviation: string } | undefined) {
+  if (!team) return false;
+  const value = squash(selection);
+  return value === squash(team.teamName) || value === squash(team.abbreviation);
+}
+
 router.get("/consumer/game-projections", async (req, res): Promise<void> => {
   const season = parseInteger(req.query.season, 1990, 2200);
   if (season === null) {
@@ -321,7 +332,8 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
     const selectedSeason = season ?? latest?.season;
     if (selectedSeason === undefined) {
       res.json({ status: "unavailable", season: null, modelVersion: null, generatedAt: null, evaluation: {}, games: [],
-        record: { wins: 0, losses: 0, pushes: 0 }, weeks: [] });
+        record: { wins: 0, losses: 0, pushes: 0 }, favoriteRecord: { wins: 0, losses: 0, pushes: 0 },
+        lineValue: lineValueSummary([]), weeks: [] });
       return;
     }
     const runs = await db.select().from(gameProjectionRunsTable)
@@ -329,6 +341,7 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
     const projections = projectionsBeforeKickoff(runs);
     const ids = [...projections.keys()];
     const finals = new Map<string, { home: number; away: number; week: number }>();
+    const quotesByGame = new Map<string, SpreadQuote[]>();
     if (ids.length) {
       const rows = await db.select().from(gamesTable).where(eq(gamesTable.season, selectedSeason));
       for (const row of rows) {
@@ -336,8 +349,27 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
           finals.set(row.gameId, { home: row.finalHomeScore, away: row.finalAwayScore, week: row.week });
         }
       }
+      const teams = new Map((await db.select().from(teamsTable)).map((team) => [team.teamId, team]));
+      const sides = new Map(rows.filter((row) => ids.includes(row.gameId)).map((row) => [row.gameId, {
+        home: teams.get(row.homeTeamId), away: teams.get(row.awayTeamId),
+      }]));
+      const odds = await db.select({
+        gameId: sportsbookOddsTable.gameId, sportsbook: sportsbookOddsTable.sportsbook, selection: sportsbookOddsTable.selection,
+        point: sportsbookOddsTable.point, capturedAt: sportsbookOddsTable.capturedAt,
+      }).from(sportsbookOddsTable)
+        .where(and(eq(sportsbookOddsTable.market, "spread"), inArray(sportsbookOddsTable.gameId, [...sides.keys()])));
+      for (const row of odds) {
+        const side = sides.get(row.gameId);
+        if (row.point === null || !side) continue;
+        const homeLine = spreadSide(row.selection, side.home) ? row.point : spreadSide(row.selection, side.away) ? -row.point : null;
+        if (homeLine === null) continue;
+        const list = quotesByGame.get(row.gameId) ?? [];
+        list.push({ sportsbook: row.sportsbook, capturedAt: row.capturedAt, homeLine });
+        quotesByGame.set(row.gameId, list);
+      }
     }
     const record = winnerRecord(projections.values(), finals);
+    const lineValue = lineValueSummary(lineValueGames(runs, quotesByGame, finals));
     const newest = runs.at(-1);
     res.json({
       status: runs.length ? "available" : "unavailable",
@@ -347,6 +379,8 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
       evaluation: newest?.evaluation ?? {},
       games: [...projections.values()].map(({ generatedAt, ...game }) => ({ ...game, projectedAt: generatedAt.toISOString() })),
       record: record.total,
+      favoriteRecord: favoriteRecord(projections.values(), finals),
+      lineValue,
       weeks: [...record.weeks.entries()].sort(([a], [b]) => a - b).map(([week, line]) => ({ week, ...line })),
     });
   } catch (error) {

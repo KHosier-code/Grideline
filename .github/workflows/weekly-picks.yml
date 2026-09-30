@@ -10,6 +10,9 @@ on:
     - cron: "0 22 * * 5"   # Fri 18:00 ET  - after the final injury report
     - cron: "0 15 * * 6"   # Sat 11:00 ET
     - cron: "30 14 * * 0"  # Sun 10:30 ET  - before the 1:00 games
+    - cron: "45 15 * * 0"  # Sun 11:45 ET  - after 1:00 inactives post (QB changes, late scratches)
+    - cron: "15 23 * * 0"  # Sun 19:15 ET  - before Sunday night
+    - cron: "0 23 * * 1"   # Mon 19:00 ET  - before Monday night
   workflow_dispatch: {}
 
 concurrency:

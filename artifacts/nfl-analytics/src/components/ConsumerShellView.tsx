@@ -6,27 +6,30 @@ import {
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from './ConsumerAccountNavigation';
 import type { consumerAccountState } from '@/lib/consumer-account-state';
 
-type NavItem = { href: string; label: string; icon: typeof Gauge; isNew?: boolean; signedInOnly?: boolean };
+/** `newUntil` is the last day (UTC) the item shows a NEW badge, so badges retire on their own. */
+type NavItem = { href: string; label: string; icon: typeof Gauge; newUntil?: string; signedInOnly?: boolean };
+
+const isNew = (item: NavItem, now = Date.now()) => item.newUntil !== undefined && now < Date.parse(`${item.newUntil}T23:59:59Z`);
 type NavGroup = { label: string; items: NavItem[] };
 
 export const consumerNavGroups: NavGroup[] = [
   { label: 'Picks', items: [
     { href: '/', label: 'This week', icon: Star },
-    { href: '/touchdowns', label: 'TD Picks', icon: Trophy, isNew: true },
-    { href: '/pickem', label: 'Pick\'em Pool', icon: Grid3x3, isNew: true },
-    { href: '/parlays', label: 'Parlay Builder', icon: Layers, isNew: true },
+    { href: '/touchdowns', label: 'TD Picks', icon: Trophy },
+    { href: '/pickem', label: 'Pick\'em Pool', icon: Grid3x3, newUntil: '2026-10-14' },
+    { href: '/parlays', label: 'Parlay Builder', icon: Layers, newUntil: '2026-10-14' },
   ] },
   { label: 'Model', items: [
     { href: '/games', label: 'Games', icon: CalendarDays },
-    { href: '/power-ratings', label: 'Power Ratings', icon: ListOrdered, isNew: true },
-    { href: '/qb-rankings', label: 'QB Rankings', icon: UserRound, isNew: true },
+    { href: '/power-ratings', label: 'Power Ratings', icon: ListOrdered },
+    { href: '/qb-rankings', label: 'QB Rankings', icon: UserRound },
     { href: '/performance', label: 'Model Performance', icon: BarChart3 },
   ] },
   { label: 'Teams & players', items: [
     { href: '/teams', label: 'Team Charts', icon: Gauge },
     { href: '/usage', label: 'Player Usage', icon: Users },
     { href: '/defense-vs-position', label: 'Defense vs Position', icon: ShieldHalf },
-    { href: '/red-zone', label: 'Red Zone', icon: Crosshair, isNew: true },
+    { href: '/red-zone', label: 'Red Zone', icon: Crosshair },
   ] },
   { label: 'About', items: [
     { href: '/methodology', label: 'How it works', icon: BookOpen },
@@ -71,7 +74,7 @@ export function ConsumerShellView({
         const Icon = item.icon;
         const active = isActive(location, item.href);
         return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
-          <Icon aria-hidden="true" />{item.label}{item.isNew && <span className="gl-new">NEW</span>}
+          <Icon aria-hidden="true" />{item.label}{isNew(item) && <span className="gl-new">NEW</span>}
         </Link>;
       })}
     </div>;

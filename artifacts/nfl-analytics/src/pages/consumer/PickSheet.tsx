@@ -4,8 +4,8 @@ import {
   getGetConsumerDashboardQueryKey, getGetConsumerGameProjectionsQueryKey, useGetConsumerDashboard,
   useGetConsumerGameProjections, useGetConsumerTouchdowns,
 } from '@workspace/api-client-react';
-import { buildGameView, currentWeek, formatPrice } from '@/lib/pick-sheet';
-import { GameBoard, TeamChip } from '@/components/GameBoard';
+import { buildGameView, currentWeek, formatPrice, lineGap } from '@/lib/pick-sheet';
+import { GameBoard, TeamChip, openHomeLine } from '@/components/GameBoard';
 import { HundredGrid, abbr, toPoolGame } from '@/components/GameSim';
 import { matchupAccents } from '@/lib/team-colors';
 import { ConsumerLoading, useConsumerNow } from './consumer-ui';
@@ -41,13 +41,15 @@ function HeroStats({ season }: { season: number | undefined }) {
   const games = projections.data;
   const winners = games?.record;
   const decided = winners ? winners.wins + winners.losses : 0;
+  const favorite = games?.favoriteRecord;
+  const favoriteDecided = favorite ? favorite.wins + favorite.losses : 0;
   return <div className="gl-stats" aria-label="How the models are doing">
     {td?.record && td.record.weeksGraded > 0
       ? <div className="gl-stat"><b>{td.record.topTenHits}/{td.record.topTenPicks}</b><small>Top-10 TD picks that scored this season</small></div>
       : td?.evaluation.topTenHitRate != null && <div className="gl-stat"><b>{percent(td.evaluation.topTenHitRate)}</b><small>of top-10 TD picks scored in testing</small></div>}
     {decided > 0
-      ? <div className="gl-stat"><b>{winners!.wins}–{winners!.losses}</b><small>Winners picked this season</small></div>
-      : typeof games?.evaluation.winnersModel === 'number' && <div className="gl-stat"><b>{percent(games.evaluation.winnersModel)}</b><small>of winners picked in testing</small></div>}
+      ? <div className="gl-stat"><b>{winners!.wins}–{winners!.losses}</b><small>Winners picked this season{favoriteDecided > 0 ? ` (Vegas favorite ${favorite!.wins}–${favorite!.losses})` : ''}</small></div>
+      : typeof games?.evaluation.winnersModel === 'number' && <div className="gl-stat"><b>{percent(games.evaluation.winnersModel)}</b><small>of winners picked in testing{typeof games.evaluation.winnersFavorite === 'number' ? ` (Vegas favorite ${percent(games.evaluation.winnersFavorite)})` : ''}</small></div>}
     <p className="gl-stats-note">Tested on past seasons the models never trained on. <Link href="/methodology" className="gl-link">How we test</Link></p>
   </div>;
 }
@@ -69,6 +71,28 @@ function PoolTeaser({ views, now }: { views: ReturnType<typeof buildGameView>[];
       </span>;
     })}
   </Link>;
+}
+
+/** Upcoming games where Gridline's line is furthest from the book's. A second opinion, not a pick. */
+function BiggestGaps({ views, now }: { views: ReturnType<typeof buildGameView>[]; now: number }) {
+  const gaps = views
+    .filter(view => !view.game.finalScore && (!view.game.kickoffTime || Date.parse(view.game.kickoffTime) > now))
+    .map(view => ({ view, gap: lineGap(view, openHomeLine(view)?.line ?? null) }))
+    .filter((item): item is { view: typeof item.view; gap: NonNullable<typeof item.gap> & { side: 'home' | 'away' } } => item.gap?.side != null)
+    .sort((a, b) => b.gap.points - a.gap.points)
+    .slice(0, 3);
+  if (!gaps.length) return null;
+  return <section className="gl-section" aria-labelledby="gaps-heading">
+    <div className="gl-section-head"><h2 id="gaps-heading">Where we disagree with Vegas</h2><p>Biggest gaps between our line and the current line. Not picks: we track whether the line moves our way.</p></div>
+    <div className="gl-gap-list">{gaps.map(({ view, gap }) => {
+      const team = view.game.matchup[gap.side].abbreviation;
+      const other = view.game.matchup[gap.side === 'home' ? 'away' : 'home'].abbreviation;
+      return <Link key={view.game.gameId} href={`/games/${view.game.gameId}?season=${view.game.season}&week=${view.game.week}`} className="gl-card gl-gap-card">
+        <TeamChip team={team} />
+        <span><b>{gap.points} pts</b> more on {team} vs {other}<small>{gap.moved === null || gap.moved === 0 ? 'Line unchanged since open' : `Line moved ${Math.abs(gap.moved)} ${gap.moved > 0 ? 'toward' : 'away from'} us since open`}</small></span>
+      </Link>;
+    })}</div>
+  </section>;
 }
 
 export default function PickSheet() {
@@ -96,6 +120,8 @@ export default function PickSheet() {
     <TopTouchdowns now={now} />
 
     <PoolTeaser views={views} now={now} />
+
+    <BiggestGaps views={views} now={now} />
 
     {dashboard.isLoading && <ConsumerLoading label="Loading this week's games…" />}
     {dashboard.isError && <div className="gl-empty"><strong>We couldn&apos;t load this week&apos;s games.</strong>Refresh the page in a minute. If it keeps happening, the schedule feed may be updating.</div>}

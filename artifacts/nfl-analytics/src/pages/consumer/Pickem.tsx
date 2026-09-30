@@ -5,6 +5,9 @@ import {
   useGetConsumerDashboard, useGetConsumerGameProjections, useGetConsumerPowerRatings,
 } from '@workspace/api-client-react';
 import { TeamLogo } from '@/components/TeamLogo';
+import { PoolStrategy, SurvivorPlanner } from '@/components/PoolTools';
+import { normalizeTeam } from '@/lib/parlay';
+import { shareCardImage } from '@/lib/share-image';
 import { HundredGrid, Simulator, TeamSide, abbr, other, toPoolGame, type PoolGame, type Side } from '@/components/GameSim';
 import { buildGameView, currentWeek } from '@/lib/pick-sheet';
 import { groupBySlate, slateFor } from '@/lib/slates';
@@ -65,16 +68,21 @@ export default function Pickem() {
     return (week?.games ?? []).map(game => toPoolGame(buildGameView(game, byGame.get(game.gameId))))
       .filter((game): game is PoolGame => game !== null);
   }, [week, projections.data]);
+  const teamRatings = useMemo(() => new Map((ratings.data?.teams ?? []).map(team => [normalizeTeam(team.team), team.rating])), [ratings.data]);
   const slates = groupBySlate(all, game => game.view.game.kickoffTime);
   const selected = slate === 'all' ? all : all.filter(game => slateFor(game.view.game.kickoffTime).key === slate);
-  const ranked = [...selected].sort((a, b) => b.wins - a.wins || a.view.game.gameId.localeCompare(b.view.game.gameId));
+  // Confidence points come from the whole week's ranking, so a slate filter only hides rows.
+  const byConfidence = (a: PoolGame, b: PoolGame) => b.wins - a.wins || a.view.game.gameId.localeCompare(b.view.game.gameId);
+  const weekPoints = new Map([...all].sort(byConfidence).map((game, index) => [game.view.game.gameId, all.length - index]));
+  const ranked = [...selected].sort(byConfidence);
+  const points = (game: PoolGame) => weekPoints.get(game.view.game.gameId) ?? 0;
   const safest = ranked.filter(game => !game.view.game.finalScore).slice(0, 3);
   const closest = [...ranked].filter(game => !game.view.game.finalScore).reverse().slice(0, 3);
   const disagreements = ranked.filter(game => game.modelPick && game.modelPick !== game.pick && game.source !== 'gridline');
   const slateLabel = slate === 'all' ? `Week ${week?.week}` : slates.find(group => group.slate.key === slate)?.slate.label ?? '';
 
-  const copyText = [`Gridline ${slateLabel} confidence picks`, ...ranked.map((game, index) =>
-    `${ranked.length - index}  ${abbr(game, game.pick)} over ${abbr(game, other(game.pick))} (${game.wins} of 100)`), 'gridelineanalytics.com/pickem'].join('\n');
+  const copyText = [`Gridline ${slateLabel} confidence picks`, ...ranked.map(game =>
+    `${points(game)}  ${abbr(game, game.pick)} over ${abbr(game, other(game.pick))} (${game.wins} of 100)`), 'gridelineanalytics.com/pickem'].join('\n');
 
   return <div className="gl-page">
     <header className="gl-hero">
@@ -107,15 +115,25 @@ export default function Pickem() {
           <button type="button" aria-pressed={slate === 'all'} onClick={() => setSlate('all')}>All games</button>
           {slates.map(({ slate: item }) => <button key={item.key} type="button" aria-pressed={slate === item.key} onClick={() => setSlate(item.key)}>{item.label}</button>)}
         </div>
-        <button type="button" className="gl-button" onClick={() => {
-          void navigator.clipboard?.writeText(copyText).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
-        }}>{copied ? 'Copied' : `Copy ${ranked.length} picks`}</button>
+        <div className="gl-pool-actions">
+          <button type="button" className="gl-button" onClick={() => {
+            void navigator.clipboard?.writeText(copyText).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+          }}>{copied ? 'Copied' : `Copy ${ranked.length} picks`}</button>
+          <button type="button" className="gl-button ghost" onClick={() => void shareCardImage({
+            eyebrow: `${week?.season ?? ''} ${slateLabel}`.trim(), title: 'Confidence picks',
+            rows: ranked.map(game => ({ left: `${points(game)}  ${abbr(game, game.pick)} over ${abbr(game, other(game.pick))}`, right: `${game.wins} of 100` })),
+            footer: 'gridelineanalytics.com/pickem',
+          }, 'gridline-pickem.png')}>Share image</button>
+        </div>
       </div>
 
       <div className="gl-pool-head" aria-hidden="true"><span>Pts</span><span>Projected winner</span><span /><span>Wins / 100</span></div>
       <div className="gl-pool-list">
-        {ranked.map((game, index) => <PoolRow key={game.view.game.gameId} game={game} points={ranked.length - index} records={records} now={now} />)}
+        {ranked.map(game => <PoolRow key={game.view.game.gameId} game={game} points={points(game)} records={records} now={now} />)}
       </div>
+
+      <PoolStrategy games={all} points={points} now={now} />
+      {week && <SurvivorPlanner season={week.season} games={all} future={dashboard.data?.games ?? []} ratings={teamRatings} now={now} />}
 
       <p className="gl-note">Win chances come from the current betting line, converted with how much NFL results vary around it (about 12 points). We tested this against our own model on 1,468 games from 2021 to 2026: the line was more accurate at every blend we tried, so pool picks follow the line, and our model&apos;s different view is flagged as a second opinion. Games that have started are locked. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
     </>}

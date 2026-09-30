@@ -9,6 +9,7 @@ import type { ConsumerGameProjection } from './consumerGameProjection';
 import type { ConsumerGameProjectionsEvaluation } from './consumerGameProjectionsEvaluation';
 import type { ConsumerGameProjectionsStatus } from './consumerGameProjectionsStatus';
 import type { ConsumerGameProjectionsWeeksItem } from './consumerGameProjectionsWeeksItem';
+import type { ConsumerLineValue } from './consumerLineValue';
 import type { ConsumerRecordLine } from './consumerRecordLine';
 
 export interface ConsumerGameProjections {
@@ -22,5 +23,8 @@ export interface ConsumerGameProjections {
   evaluation: ConsumerGameProjectionsEvaluation;
   games: ConsumerGameProjection[];
   record: ConsumerRecordLine;
+  /** Straight-up record of the betting favorite on the same games, for comparison with `record`. */
+  favoriteRecord: ConsumerRecordLine;
+  lineValue: ConsumerLineValue;
   weeks: ConsumerGameProjectionsWeeksItem[];
 }

@@ -103,3 +103,23 @@ export function currentWeek(games: ConsumerGame[], now: number) {
 export function formatPrice(value: number) {
   return value > 0 ? `+${value}` : String(value);
 }
+
+/**
+ * How far Gridline's line is from the sportsbook's, and whether the book has
+ * moved toward Gridline since it opened. `points` is always positive; `side`
+ * is the team Gridline likes more than the book does. `moved` is points the
+ * line has moved toward that side since the open (negative = away from it).
+ */
+export function lineGap(view: GameView, openHomeLine: number | null) {
+  const current = view.vegas.homeLine;
+  if (!view.projection || current === null) return null;
+  const gap = view.projection.margin + current;
+  if (Math.abs(gap) < 0.05) return { points: 0, side: null, moved: null };
+  const side: Side = gap > 0 ? 'home' : 'away';
+  const homeMove = openHomeLine === null ? null : openHomeLine - current;
+  return {
+    points: Math.round(Math.abs(gap) * 10) / 10,
+    side,
+    moved: homeMove === null ? null : side === 'home' ? homeMove : -homeMove,
+  };
+}

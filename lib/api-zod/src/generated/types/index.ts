@@ -114,6 +114,7 @@ export * from './consumerKeyPlayerCurrentPersonnel';
 export * from './consumerKeyPlayerEligibility';
 export * from './consumerKeyPlayerEligibilityStatus';
 export * from './consumerKeyPlayerRecentUsage';
+export * from './consumerLineValue';
 export * from './consumerMarketBoard';
 export * from './consumerMarketBoardStatus';
 export * from './consumerMarketComparison';

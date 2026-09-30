@@ -212,6 +212,26 @@ export interface ConsumerRecordLine {
   pushes: number;
 }
 
+/**
+ * Closing line value. For each game with a saved opening and closing spread at one book, Gridline's line when the opener was captured is compared with the opener; a lean is Gridline disagreeing by at least `threshold` points.
+ */
+export interface ConsumerLineValue {
+  games: number;
+  leans: number;
+  threshold: number;
+  /** Leans where the line closed closer to Gridline's side than it opened. */
+  movedToward: number;
+  movedAway: number;
+  unchanged: number;
+  /**
+     * Average points the line moved toward Gridline's lean.
+     * @nullable
+     */
+  averageMove: number | null;
+  atsOpen: ConsumerRecordLine;
+  atsClose: ConsumerRecordLine;
+}
+
 export interface ConsumerGameProjections {
   status: ConsumerGameProjectionsStatus;
   /** @nullable */
@@ -223,6 +243,9 @@ export interface ConsumerGameProjections {
   evaluation: ConsumerGameProjectionsEvaluation;
   games: ConsumerGameProjection[];
   record: ConsumerRecordLine;
+  /** Straight-up record of the betting favorite on the same games, for comparison with `record`. */
+  favoriteRecord: ConsumerRecordLine;
+  lineValue: ConsumerLineValue;
   weeks: ConsumerGameProjectionsWeeksItem[];
 }
 

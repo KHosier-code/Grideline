@@ -3758,6 +3758,30 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "losses": zod.number().int(),
   "pushes": zod.number().int()
 }),
+  "favoriteRecord": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}).describe('Straight-up record of the betting favorite on the same games, for comparison with `record`.'),
+  "lineValue": zod.object({
+  "games": zod.number().int(),
+  "leans": zod.number().int(),
+  "threshold": zod.number(),
+  "movedToward": zod.number().int().describe('Leans where the line closed closer to Gridline\'s side than it opened.'),
+  "movedAway": zod.number().int(),
+  "unchanged": zod.number().int(),
+  "averageMove": zod.number().nullable().describe('Average points the line moved toward Gridline\'s lean.'),
+  "atsOpen": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "atsClose": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+})
+}).describe('Closing line value. For each game with a saved opening and closing spread at one book, Gridline\'s line when the opener was captured is compared with the opener; a lean is Gridline disagreeing by at least `threshold` points.'),
   "weeks": zod.array(zod.object({
   "week": zod.number().int(),
   "wins": zod.number().int(),

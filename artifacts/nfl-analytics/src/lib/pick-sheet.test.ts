@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ConsumerGame, ConsumerGameProjection } from '@workspace/api-client-react';
-import { buildGameView, currentWeek, lineText, vegasLineText } from './pick-sheet.ts';
+import { buildGameView, currentWeek, lineGap, lineText, vegasLineText, type GameView } from './pick-sheet.ts';
 
 const quote = (point: number | null, price: number) => ({ sportsbook: 'DraftKings', selection: 'X', point, price, capturedAt: '2026-09-29T18:00:00Z' });
 function game(overrides: { gameId?: string; week?: number; kickoffTime?: string; finalScore?: { home: number; away: number } | null; homeLine?: number } = {}): ConsumerGame {
@@ -68,4 +68,16 @@ test('the market line prefers a sportsbook capture and falls back to the consens
   assert.deepEqual(buildGameView(noBook, { ...projection, marketMargin: 6.5, marketTotal: 47.5 }).market,
     { homeMargin: 6.5, total: 47.5, source: 'consensus' });
   assert.equal(buildGameView(noBook, projection).market, null);
+});
+
+test('lineGap measures the Gridline vs book gap and movement toward Gridline', () => {
+  const view = (margin: number, homeLine: number) => ({
+    projection: { margin }, vegas: { homeLine },
+  }) as unknown as GameView;
+  // Gridline home by 6, book home -3: Gridline likes home by 3 more. Opened -2, so moved 1 toward home.
+  assert.deepEqual(lineGap(view(6, -3), -2), { points: 3, side: 'home', moved: 1 });
+  // Gridline away by 1, book home -3: likes away by 4. Line went -3 from -4: 1 toward away.
+  assert.deepEqual(lineGap(view(-1, -3), -4), { points: 4, side: 'away', moved: 1 });
+  assert.equal(lineGap(view(3, -3), null)?.side, null);
+  assert.equal(lineGap(view(3, -3.5), null)?.moved, null);
 });

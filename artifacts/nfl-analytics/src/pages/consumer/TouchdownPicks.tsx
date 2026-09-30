@@ -4,12 +4,13 @@ import {
   getGetConsumerTouchdownsQueryKey, useGetConsumerTouchdowns, type ConsumerTouchdownPick,
 } from '@workspace/api-client-react';
 import { formatPrice } from '@/lib/pick-sheet';
+import { impliedProbability, tdFairProbability } from '@/lib/market';
 import { ConsumerLoading } from './consumer-ui';
 import { TeamChip } from '@/components/GameBoard';
 
 type Level = 'hi' | 'mid' | 'lo';
 const BOOK_SHORT: Record<string, string> = { draftkings: 'DK', fanduel: 'FD' };
-const impliedPct = (price: number) => `${Math.round((price > 0 ? 100 / (price + 100) : -price / (-price + 100)) * 100)}%`;
+const pctOf = (value: number) => `${Math.round(value * 100)}%`;
 const pct = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${Math.round(value * 100)}%`;
 const fixed = (value: number | null | undefined, digits = 1) => value === null || value === undefined ? '—' : value.toFixed(digits);
 const level = (value: number | null | undefined, high: number, low: number): Level =>
@@ -52,7 +53,7 @@ function PickRow({ pick, rank, max }: { pick: ConsumerTouchdownPick; rank: numbe
           {pick.scored !== null && <span className={`gl-scored ${pick.scored ? 'yes' : 'no'}`}>{pick.scored ? 'Scored ✓' : 'No TD'}</span>}
         </span>
       </span>
-      <span className="gl-bar"><i><b style={{ width: `${((pick.probability / max) * 100).toFixed(1)}%` }} /></i><small>Fair {formatPrice(pick.fairOdds)}{pick.bookOdds && <> · Book <b className={pick.bookOdds.price > pick.fairOdds ? 'gl-good' : undefined}>{formatPrice(pick.bookOdds.price)}</b> {BOOK_SHORT[pick.bookOdds.book] ?? pick.bookOdds.book}</>}</small></span>
+      <span className="gl-bar"><i><b style={{ width: `${((pick.probability / max) * 100).toFixed(1)}%` }} /></i><small>Fair {formatPrice(pick.fairOdds)}{pick.bookOdds && <> · Book <b>{formatPrice(pick.bookOdds.price)}</b> {BOOK_SHORT[pick.bookOdds.book] ?? pick.bookOdds.book}</>}</small></span>
       <span className="gl-pct">{Math.round(pick.probability * 100)}%</span>
     </summary>
     <div className="gl-why">
@@ -66,7 +67,7 @@ function PickRow({ pick, rank, max }: { pick: ConsumerTouchdownPick; rank: numbe
       {pick.bookOdds && <div className="gl-factor">
         <span className="gl-label">Sportsbooks</span>
         <b>{pick.bookOdds.books.map(item => `${BOOK_SHORT[item.book] ?? item.book} ${formatPrice(item.price)}`).join(' · ')}</b>
-        <p>Book implies {impliedPct(pick.bookOdds.price)}; we say {Math.round(pick.probability * 100)}%</p>
+        <p>Book implies {pctOf(impliedProbability(pick.bookOdds.price))} with its cut, about {pctOf(tdFairProbability(pick.bookOdds.price))} without; we say {pctOf(pick.probability)}</p>
         <p>Captured {new Date(pick.bookOdds.capturedAt).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}. Prices move; check your book.</p>
       </div>}
     </div>
@@ -118,7 +119,7 @@ export default function TouchdownPicks() {
 
     {query.isLoading && <ConsumerLoading label="Loading touchdown picks…" />}
     {query.isError && <div className="gl-empty"><strong>We couldn&apos;t load touchdown picks.</strong>Refresh the page in a minute.</div>}
-    {data && data.status === 'unavailable' && <div className="gl-empty"><strong>This week&apos;s touchdown picks aren&apos;t posted yet.</strong>Rankings update Tuesday, Thursday, Friday after the injury report, Saturday and Sunday morning.</div>}
+    {data && data.status === 'unavailable' && <div className="gl-empty"><strong>This week&apos;s touchdown picks aren&apos;t posted yet.</strong>Rankings update Tuesday, Thursday, Friday after the injury report, Saturday, Sunday morning, after the 1:00 inactives, and before the Sunday and Monday night games.</div>}
 
     {picks.length > 0 && <div className="gl-td-list">
       {picks.slice(0, limit).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} />)}
@@ -129,8 +130,8 @@ export default function TouchdownPicks() {
 
     <footer className="gl-card" style={{ padding: 18 }}>
       <div className="gl-footer-inner" style={{ padding: 0 }}>
-        <p><b>Fair odds</b>The price that matches our probability. If your sportsbook pays more than this, the bet is priced in your favor by our numbers.</p>
-        <p><b>Book</b>The best anytime-TD price at DraftKings or FanDuel when we last checked (green when it pays more than our fair odds). We&apos;re tracking these prices to test, over the coming weeks, whether our numbers actually beat the books.</p>
+        <p><b>Fair odds</b>The price that matches our probability. It is not a bet recommendation: our TD model beats players&apos; own scoring rates in testing, but it hasn&apos;t yet been tested against sportsbook prices.</p>
+        <p><b>Book</b>The best anytime-TD price at DraftKings or FanDuel when we last checked. Books keep a cut of roughly 20% on these bets, so compare our chance with the book&apos;s chance after the cut, not the raw price. We&apos;re saving every price to test whether our numbers beat the books before we call anything a value.</p>
         <p><b>Red-zone touches</b>Targets plus carries inside the opponent&apos;s 20-yard line, per game over the player&apos;s last 8 games.</p>
         <p><b>Matchup</b>Touchdowns this defense allowed to the position over its last 8 games, compared with the league average. <Link href="/defense-vs-position" className="gl-link">See all matchups</Link>.</p>
       </div>
