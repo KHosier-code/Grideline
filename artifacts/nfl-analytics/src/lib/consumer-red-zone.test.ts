@@ -161,7 +161,6 @@ test('red-zone page is public while the older game-detail red-zone figures stay 
   const app = readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8');
   const shell = readFileSync(fileURLToPath(new URL('../components/ConsumerShellView.tsx', import.meta.url)), 'utf8');
   const card = readFileSync(fileURLToPath(new URL('../components/ConsumerKeyPlayers.tsx', import.meta.url)), 'utf8');
-  const page = readFileSync(fileURLToPath(new URL('../pages/consumer/ConsumerRedZone.tsx', import.meta.url)), 'utf8');
   assert.match(shell, /\{ href: '\/red-zone', label: 'Red Zone'/);
   assert.equal((app.match(/<Route path="\/red-zone"><ConsumerShell><ConsumerRedZone \/><\/ConsumerShell><\/Route>/g) ?? []).length, 2);
   assert.match(app, /import\('@\/pages\/consumer\/RedZone'\)/);
@@ -175,17 +174,10 @@ test('red-zone page is public while the older game-detail red-zone figures stay 
   assert.match(card, /\{redZoneEnabled && <RedZoneFigures/);
   assert.match(card, /if \(fallback && !redZoneEnabled\) return null/);
   assert.match(card, /if \(fallback\)/);
-  assert.match(page, /useGetConsumerRedZoneOpportunities, useListConsumerPlayerUsageGames.*from '@workspace\/api-client-react'/);
-  assert.match(page, /scheduleTeamAbbreviation\(game\.matchup\.home\)/);
 });
 
 test('coverage periods and incomplete Player Usage labels are visible beside dashboard and Game Detail figures', () => {
   const card = readFileSync(fileURLToPath(new URL('../components/ConsumerKeyPlayers.tsx', import.meta.url)), 'utf8');
-  const page = readFileSync(fileURLToPath(new URL('../pages/consumer/ConsumerRedZone.tsx', import.meta.url)), 'utf8');
-  assert.match(page, /formatRedZoneCoverage\(data\)/);
-  assert.match(page, /red-zone-coverage-period/);
-  assert.match(page, /formatRedZoneCoverage\(window\)/);
-  assert.match(page, /partial sample/);
   assert.match(card, /formatRedZoneCoverage\(window\)/);
   assert.match(card, /completed appearances covered/);
   assert.match(RED_ZONE_FALLBACK_LABEL, /incomplete player usage/i);

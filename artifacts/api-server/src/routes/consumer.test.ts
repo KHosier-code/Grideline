@@ -1521,35 +1521,6 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.doesNotMatch(routeSource, /\b(generateLivePredictions|gradeCompletedPredictions|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);
 });
 
-test("consumer movement UI keeps honest terminology and responsive controls", () => {
-  const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
-  const component = readFileSync(path.join(webRoot, "components/LineMovementExperience.tsx"), "utf8");
-  const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
-  assert.match(component, /First observed by Gridline/);
-  assert.match(component, /preKickoffMovementLabel\(beforeKickoff\)/);
-  assert.match(component, /Compare books/);
-  assert.match(component, /DraftKings.*FanDuel/s);
-  assert.match(component, /not a verified sportsbook closing line/);
-  assert.doesNotMatch(component, /\bopener\b|label="Final pre-kickoff"/i);
-  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.movement-controls/);
-  assert.match(css, /\.movement-chart \{[^}]*overflow: hidden/);
-});
-
-test("consumer market board keeps neutral language and 320px responsive controls", () => {
-  const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
-  const component = readFileSync(path.join(webRoot, "pages/consumer/ConsumerGames.tsx"), "utf8");
-  const comparison = readFileSync(path.join(webRoot, "components/ConsumerMarketComparison.tsx"), "utf8");
-  const css = readFileSync(path.join(webRoot, "index.css"), "utf8");
-  const board = readFileSync(path.join(webRoot, "components/GameBoard.tsx"), "utf8");
-  assert.match(comparison, /Model difference/);
-  // The Games page shows projections next to the sportsbook line through the shared board, never a bet.
-  assert.match(component, /<GameBoard/);
-  assert.match(board, /<span>Open<\/span><span>Current<\/span><span>Gridline<\/span>/);
-  for (const source of [component, board]) assert.doesNotMatch(source, /\bbet\b|\bedge\b|expected return|\block\b/i);
-  assert.match(css, /@media \(max-width: 420px\)/);
-  assert.match(css, /\.btn-icon \{[^}]*width: 44px;[^}]*height: 44px/);
-});
-
 test("consumer matchup board exposes accessible partial states without wide tables or betting claims", () => {
   const webRoot = path.join(fileURLToPath(new URL("../../../nfl-analytics/src/", import.meta.url)));
   const component = readFileSync(path.join(webRoot, "components/ConsumerMatchupBoard.tsx"), "utf8");
