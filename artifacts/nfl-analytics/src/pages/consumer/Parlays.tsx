@@ -7,6 +7,8 @@ import {
 import { HundredGrid, toPoolGame } from '@/components/GameSim';
 import { TeamLogo } from '@/components/TeamLogo';
 import { addLeg, fairAmerican, gameKeyFor, quoteParlay, simulateParlay, type ParlayLeg } from '@/lib/parlay';
+import { devig } from '@/lib/market';
+import { shareCardImage } from '@/lib/share-image';
 import { buildGameView, currentWeek, formatPrice } from '@/lib/pick-sheet';
 import { ConsumerLoading, useConsumerNow } from './consumer-ui';
 
@@ -33,11 +35,16 @@ function useParlayLegs(now: number) {
       const home = game.matchup.home.abbreviation;
       const away = game.matchup.away.abbreviation;
       const key = gameKeyFor(home, away);
+      // The payout is a moneyline price, so the chance should come from the same
+      // market: both moneyline sides with the vig removed. The spread is the fallback.
+      const homePrice = game.market?.moneyline?.price ?? null;
+      const awayPrice = game.market?.awayMoneyline?.price ?? null;
+      const homeWin = homePrice !== null && awayPrice !== null ? devig(homePrice, awayPrice)[0] : pool.homeWin;
       winners.push(
-        { id: `win-${home}-${key}`, kind: 'winner', team: home, gameKey: key, label: `${home} to win`, detail: `vs ${away}`, probability: pool.homeWin,
-          bookPrice: game.market?.moneyline?.price ?? null, kickoff: game.kickoffTime },
-        { id: `win-${away}-${key}`, kind: 'winner', team: away, gameKey: key, label: `${away} to win`, detail: `at ${home}`, probability: 1 - pool.homeWin,
-          bookPrice: game.market?.awayMoneyline?.price ?? null, kickoff: game.kickoffTime },
+        { id: `win-${home}-${key}`, kind: 'winner', team: home, gameKey: key, label: `${home} to win`, detail: `vs ${away}`, probability: homeWin,
+          bookPrice: homePrice, kickoff: game.kickoffTime },
+        { id: `win-${away}-${key}`, kind: 'winner', team: away, gameKey: key, label: `${away} to win`, detail: `at ${home}`, probability: 1 - homeWin,
+          bookPrice: awayPrice, kickoff: game.kickoffTime },
       );
     }
     winners.sort((a, b) => b.probability - a.probability);
@@ -142,13 +149,20 @@ function Slip({ legs, onRemove, onClear }: { legs: ParlayLeg[]; onRemove: (id: s
     <dl className="gl-slip-odds">
       <div><dt>Fair payout</dt><dd>{price(quote.fairOdds)}</dd></div>
       <div><dt>Book payout</dt><dd>{quote.bookOdds !== null ? price(quote.bookOdds) : 'Not all legs priced'}</dd></div>
-      {quote.expectedOnTen !== null && <div><dt>Per $10 bet, on average</dt><dd className={quote.expectedOnTen >= 0 ? 'gl-good' : 'gl-bad'}>{quote.expectedOnTen >= 0 ? '+' : '−'}${Math.abs(quote.expectedOnTen).toFixed(2)}</dd></div>}
+      {quote.expectedOnTen !== null && legs.every(leg => leg.kind === 'winner')
+        && <div><dt>Book&apos;s cut per $10</dt><dd>{quote.expectedOnTen >= 0 ? '+' : '−'}${Math.abs(quote.expectedOnTen).toFixed(2)}</dd></div>}
     </dl>
     <div className="gl-run-foot">
       <button type="button" className="gl-button" onClick={() => setSeed(Math.floor(Math.random() * 2 ** 31))}>{runs ? 'Run again' : 'Simulate 100 weekends'}</button>
       <button type="button" className="gl-button ghost" onClick={() => {
         void navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
       }}>{copied ? 'Copied' : 'Copy'}</button>
+      <button type="button" className="gl-button ghost" onClick={() => void shareCardImage({
+        eyebrow: `${legs.length}-leg parlay`, title: 'My parlay',
+        grid: { wins: hitCount, caption: `hits ${pctText(quote.probability)} of 100 · fair ${price(quote.fairOdds)}` },
+        rows: legs.map(leg => ({ left: leg.label, right: `${pctText(leg.probability)}%` })),
+        footer: 'gridelineanalytics.com/parlays',
+      }, 'gridline-parlay.png')}>Share image</button>
     </div>
     {runs && <p className="gl-slip-run" aria-live="polite">Hit <b>{hits}</b> times. Missed by just one leg <b>{oneAway}</b> times.</p>}
   </aside>;
@@ -203,7 +217,7 @@ export default function Parlays() {
         <span>{legs.length} {legs.length === 1 ? 'leg' : 'legs'}</span><b>Hits {pctText(quote.probability)} of 100</b><span>Fair {price(quote.fairOdds)} ›</span>
       </a>}
 
-      <p className="gl-note">Winner chances come from the betting line; touchdown chances come from our TD model, which has been well calibrated in testing. Parlays multiply each sportsbook&apos;s cut, so they usually pay less than they should; the per-$10 figure shows that cost when every leg has a book price. Same-game parlays aren&apos;t offered yet because legs in one game move together. 21+ where legal. If gambling stops being fun, call or text 1-800-GAMBLER. <Link href="/pickem" className="gl-link">Pick&apos;em Pool</Link> · <Link href="/touchdowns" className="gl-link">TD Picks</Link></p>
+      <p className="gl-note">Winner chances come from the sportsbook&apos;s moneyline with its cut removed (or the spread when no moneyline is saved). Touchdown chances come from our TD model, which was well calibrated on past seasons but hasn&apos;t been tested against sportsbook TD prices yet, so we don&apos;t show a value figure for TD legs. Parlays multiply each sportsbook&apos;s cut, so they usually pay less than they should; for winner-only parlays the per-$10 figure shows that cost. Same-game parlays aren&apos;t offered yet because legs in one game move together. 21+ where legal. If gambling stops being fun, call or text 1-800-GAMBLER. <Link href="/pickem" className="gl-link">Pick&apos;em Pool</Link> · <Link href="/touchdowns" className="gl-link">TD Picks</Link></p>
     </>}
   </div>;
 }

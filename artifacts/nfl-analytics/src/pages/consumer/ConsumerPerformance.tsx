@@ -113,6 +113,12 @@ export default function ConsumerPerformance() {
   const tdRecord = td?.record;
   const seasonWinners = game?.record;
   const decided = seasonWinners ? seasonWinners.wins + seasonWinners.losses : 0;
+  const seasonFavorite = game?.favoriteRecord;
+  const favoriteDecided = seasonFavorite ? seasonFavorite.wins + seasonFavorite.losses : 0;
+  const clv = game?.lineValue;
+  const moved = clv ? clv.movedToward + clv.movedAway : 0;
+  const record = (line: { wins: number; losses: number; pushes: number }) =>
+    line.wins + line.losses ? `${line.wins}-${line.losses}${line.pushes ? `-${line.pushes}` : ''} (${pct(line.wins / (line.wins + line.losses))})` : '—';
 
   return <div className="gl-page">
     <header className="gl-hero">
@@ -179,8 +185,18 @@ export default function ConsumerPerformance() {
       <div className="gl-record-grid">
         <div className="gl-card gl-record-card">
           <span className="gl-label">Game winners</span>
-          {decided > 0 ? <><b>{seasonWinners!.wins}–{seasonWinners!.losses}</b><p>{pct(seasonWinners!.wins / decided)} of winners picked.</p></>
+          {decided > 0 ? <><b>{seasonWinners!.wins}–{seasonWinners!.losses}</b><p>{pct(seasonWinners!.wins / decided)} of winners picked.{favoriteDecided > 0
+            ? ` The Vegas favorite went ${seasonFavorite!.wins}–${seasonFavorite!.losses} (${pct(seasonFavorite!.wins / favoriteDecided)}) on the same games.` : ''}</p></>
             : <><b>—</b><p>The first graded games appear after this week&apos;s games.</p></>}
+        </div>
+        <div className="gl-card gl-record-card">
+          <span className="gl-label">Closing line value</span>
+          {clv && clv.leans > 0 ? <>
+            <b>{moved ? `${clv.movedToward}/${moved}` : '—'}</b>
+            <p>Times the line moved toward our side after the opener, when we disagreed with it by {clv.threshold}+ points
+              ({clv.leans} {clv.leans === 1 ? 'game' : 'games'}, {clv.unchanged} unchanged{clv.averageMove !== null ? `, average ${clv.averageMove > 0 ? '+' : ''}${clv.averageMove.toFixed(2)} pts` : ''}).
+              Against the spread: {record(clv.atsOpen)} at the opener, {record(clv.atsClose)} at the close.</p>
+          </> : <><b>—</b><p>Appears once we have an opening and closing line for games where we disagreed with the opener.</p></>}
         </div>
         <div className="gl-card gl-record-card">
           <span className="gl-label">Touchdown top 10</span>
@@ -201,6 +217,6 @@ export default function ConsumerPerformance() {
 
     {replay && replay.weeks.length > 0 && <ReplaySection replay={replay} />}
 
-    <p className="gl-note">Against the opening line instead of the close, the same game model went about 53–54% when it disagreed by more than a point (2021–2025), which beats break-even but isn&apos;t yet enough evidence to call it an edge. We&apos;re now tracking opening lines to test it on live games. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
+    <p className="gl-note">Against the opening line instead of the close, the same game model went about 53–54% when it disagreed by more than a point (2021–2025), which beats break-even but isn&apos;t yet enough evidence to call it an edge. We&apos;re now tracking opening and closing lines to test it on live games: if the line keeps moving toward our number after it opens, that is the earliest sign of a real edge, well before a win-loss record can show one. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
   </div>;
 }

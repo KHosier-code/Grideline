@@ -29,7 +29,7 @@ export default function ConsumerMethodology() {
           <li><b>Matchup:</b> touchdowns the defense has allowed to that position recently.</li>
           <li><b>Track record:</b> how often the player has scored, adjusted for small samples.</li>
         </ul>
-        <p>Players ruled out on the injury report are removed. In testing on {td?.testedOn ?? 'games the model never trained on'}, <b>{pct(td?.topTenHitRate, '59.5%')}</b> of each week&apos;s top 10 scored. The percentages are realistic: players we gave about a 30% chance scored about 30% of the time. Most volume and red-zone value is already priced in by sportsbooks, so compare our fair odds with your book&apos;s price.</p>
+        <p>Players ruled out on the injury report are removed. In testing on {td?.testedOn ?? 'games the model never trained on'}, <b>{pct(td?.topTenHitRate, '59.5%')}</b> of each week&apos;s top 10 scored. The percentages are realistic: players we gave about a 30% chance scored about 30% of the time. Most volume and red-zone value is already priced in by sportsbooks, and we haven&apos;t yet tested the model against sportsbook TD prices, so treat our fair odds as a reference, not a signal to bet. Books keep a cut of roughly 20% on anytime-TD bets.</p>
       </>,
     },
     {
@@ -49,6 +49,13 @@ export default function ConsumerMethodology() {
       body: <>
         <p>Against the spread, our projections went <b>{pct(game.atsRating, '49.4%')}</b> in testing. You need about 52.4% to break even at standard -110 odds. Betting only the games where we disagreed with Vegas the most didn&apos;t help either. Closing lines already reflect quarterback news, so public data rarely beats them.</p>
         <p>We&apos;d rather tell you that than dress up a coin flip as a lock. Our line is shown next to Vegas&apos;s as a second opinion, and spread picks will only return if a model beats closing lines in testing.</p>
+      </>,
+    },
+    {
+      title: 'Where our line helps: before the market moves',
+      body: <>
+        <p>Closing lines are hard to beat, but opening lines are softer. From 2021 to 2026, when our projection disagreed with the opening spread, the line moved toward our number by kickoff about two times in three (65–72%, depending on the size of the gap), and this held in games with no quarterback news. That is called closing line value, and it is the earliest sign that a number has real information in it.</p>
+        <p>We now save each game&apos;s opening and closing line from DraftKings and FanDuel and grade this live on the <Link href="/performance" className="gl-link">Model Performance</Link> page. The home page lists the games where we disagree with Vegas most, with how far the line has moved since it opened. Until the live record backs it up, these are second opinions, not picks.</p>
       </>,
     },
     {
