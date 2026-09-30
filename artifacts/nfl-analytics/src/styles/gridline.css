@@ -622,3 +622,35 @@
 .gl-app { background: linear-gradient(to right, hsl(var(--gl-sidebar)) 249px, hsl(var(--border)) 249px, hsl(var(--border)) 250px, hsl(var(--background)) 250px); }
 .gl-sidebar { border-right: 0; background: transparent; }
 @media (max-width: 1080px) { .gl-app { background: hsl(var(--background)); } }
+
+/* Game cards grouped by day */
+.gl-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; align-items: start; }
+.gl-day-col { display: grid; gap: 10px; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card) / .5); }
+.gl-day-head { display: flex; align-items: center; gap: 8px; margin: 2px 4px; font-size: 14px; font-weight: 700; }
+.gl-dot { width: 8px; height: 8px; border-radius: 99px; background: hsl(var(--muted-foreground)); }
+.gl-day-cards { display: grid; gap: 10px; }
+.gl-game-card { display: grid; gap: 6px; padding: 12px 14px; color: inherit; text-decoration: none; }
+.gl-game-card:hover { border-color: hsl(var(--muted-foreground)); }
+.gl-gc-head, .gl-gc-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) 62px 62px 68px; align-items: center; gap: 8px; }
+.gl-gc-head { grid-template-columns: minmax(0, 1fr) 62px 62px 68px; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 600; }
+.gl-gc-head span:not(:first-child) { text-align: center; }
+.gl-gc-team { display: grid; min-width: 0; }
+.gl-gc-team b { font-size: 16px; }
+.gl-gc-team small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.gl-gc-team .gl-flag { justify-self: start; margin-top: 2px; font-style: normal; font-size: 10px; }
+.gl-gc-line { display: grid; justify-items: center; padding: 5px 0; border-radius: 8px; font-variant-numeric: tabular-nums; }
+.gl-gc-line b { font-size: 15px; }
+.gl-gc-line small { min-height: 14px; color: hsl(var(--muted-foreground)); font-size: 11px; }
+.gl-gc-model { background: hsl(var(--secondary)); }
+.gl-gc-model.fav { background: hsl(var(--primary) / .16); }
+.gl-gc-model.fav small { color: hsl(var(--primary)); font-weight: 700; }
+.gl-gc-score { grid-column: 3 / -1; justify-self: end; font-family: var(--gl-display); font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gl-gc-row:not(.fav) .gl-gc-team b { color: hsl(var(--foreground) / .8); }
+.gl-gc-foot { margin: 2px 0 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.gl-muted { color: hsl(var(--muted-foreground)); font-weight: 400; }
+@media (max-width: 420px) {
+  .gl-days { grid-template-columns: minmax(0, 1fr); }
+  .gl-gc-head, .gl-gc-row { grid-template-columns: 26px minmax(0, 1fr) 52px 52px 58px; gap: 6px; }
+  .gl-gc-head { grid-template-columns: minmax(0, 1fr) 52px 52px 58px; }
+}
+.gl-logo-fallback { padding: 0; border-radius: 50%; letter-spacing: 0; }
