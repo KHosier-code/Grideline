@@ -25,6 +25,10 @@ export interface ConsumerTeamRating {
   qbValue: number | null;
   qbNewStarter: boolean;
   /** @nullable */
+  qbOutName?: string | null;
+  /** @nullable */
+  qbOutReason?: string | null;
+  /** @nullable */
   record: ConsumerTeamRatingRecord;
   stats: ConsumerTeamRatingStats;
   /**

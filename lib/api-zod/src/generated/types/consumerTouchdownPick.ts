@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ConsumerTouchdownFactors } from './consumerTouchdownFactors';
+import type { ConsumerTouchdownPickBookOdds } from './consumerTouchdownPickBookOdds';
 import type { ConsumerTouchdownPickPosition } from './consumerTouchdownPickPosition';
 
 export interface ConsumerTouchdownPick {
@@ -28,4 +29,9 @@ export interface ConsumerTouchdownPick {
      * @nullable
      */
   scored: boolean | null;
+  /**
+     * Best DraftKings or FanDuel anytime-TD price from the latest capture, when the player was listed
+     * @nullable
+     */
+  bookOdds?: ConsumerTouchdownPickBookOdds;
 }

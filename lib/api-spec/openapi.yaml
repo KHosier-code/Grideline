@@ -1421,6 +1421,8 @@ components:
         qbName: { type: ["string", "null"] }
         qbValue: { type: ["number", "null"] }
         qbNewStarter: { type: boolean }
+        qbOutName: { type: ["string", "null"] }
+        qbOutReason: { type: ["string", "null"] }
         record:
           type: ["object", "null"]
           required: [wins, losses, ties]
@@ -1461,6 +1463,8 @@ components:
         value: { type: ["number", "null"], description: "Recency-weighted EPA per dropback, shrunk toward backup level" }
         listed: { type: boolean, description: "True when the schedule lists this QB as the starter; false when inferred from recent starts" }
         newStarter: { type: boolean, description: "Not the team's usual starter over its last four games" }
+        outName: { type: ["string", "null"], description: "The usual or listed starter, when ruled out by the injury report or roster" }
+        outReason: { type: ["string", "null"], description: "Why outName is not expected to play, such as Out or Injured reserve" }
     ConsumerGameProjection:
       type: object
       required: [gameId, nflverseGameId, homeTeam, awayTeam, kickoff, projectedMargin, projectedTotal, homeWinProbability, homeQb, awayQb, factors, projectedAt]
@@ -1594,6 +1598,22 @@ components:
         injuryStatus: { type: ["string", "null"] }
         factors: { $ref: "#/components/schemas/ConsumerTouchdownFactors" }
         scored: { type: ["boolean", "null"], description: "null until the game is graded" }
+        bookOdds:
+          type: ["object", "null"]
+          description: Best DraftKings or FanDuel anytime-TD price from the latest capture, when the player was listed
+          required: [price, book, books, capturedAt]
+          properties:
+            price: { type: integer }
+            book: { type: string }
+            books:
+              type: array
+              items:
+                type: object
+                required: [book, price]
+                properties:
+                  book: { type: string }
+                  price: { type: integer }
+            capturedAt: { type: string, format: date-time }
     ConsumerTouchdownRecord:
       type: object
       required: [weeksGraded, topTenPicks, topTenHits, weeks]

@@ -33,6 +33,10 @@ export interface ConsumerTeamRating {
   qbValue: number | null;
   qbNewStarter: boolean;
   /** @nullable */
+  qbOutName?: string | null;
+  /** @nullable */
+  qbOutReason?: string | null;
+  /** @nullable */
   record: ConsumerTeamRatingRecord;
   stats: ConsumerTeamRatingStats;
   /**
@@ -105,6 +109,16 @@ export interface ConsumerProjectionQb {
   listed: boolean;
   /** Not the team's usual starter over its last four games */
   newStarter: boolean;
+  /**
+     * The usual or listed starter, when ruled out by the injury report or roster
+     * @nullable
+     */
+  outName?: string | null;
+  /**
+     * Why outName is not expected to play, such as Out or Injured reserve
+     * @nullable
+     */
+  outReason?: string | null;
 }
 
 export type ConsumerGameProjectionFactors = {
@@ -255,6 +269,22 @@ export const ConsumerTouchdownPickPosition = {
   TE: 'TE',
 } as const;
 
+export type ConsumerTouchdownPickBookOddsBooksItem = {
+  book: string;
+  price: number;
+};
+
+/**
+ * Best DraftKings or FanDuel anytime-TD price from the latest capture, when the player was listed
+ * @nullable
+ */
+export type ConsumerTouchdownPickBookOdds = {
+  price: number;
+  book: string;
+  books: ConsumerTouchdownPickBookOddsBooksItem[];
+  capturedAt: string;
+} | null;
+
 export interface ConsumerTouchdownPick {
   rank: number;
   playerId: string;
@@ -275,6 +305,11 @@ export interface ConsumerTouchdownPick {
      * @nullable
      */
   scored: boolean | null;
+  /**
+     * Best DraftKings or FanDuel anytime-TD price from the latest capture, when the player was listed
+     * @nullable
+     */
+  bookOdds?: ConsumerTouchdownPickBookOdds;
 }
 
 export type ConsumerTouchdownRecordWeeksItem = {

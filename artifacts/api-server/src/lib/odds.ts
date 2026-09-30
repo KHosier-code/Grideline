@@ -926,8 +926,15 @@ export async function approveNextOddsSpend(input: {
         .where(eq(oddsRequestResolutionsTable.requestId, latest.id)).limit(1)
       : [];
     const [pending] = await tx.select({ id: oddsApiRequestsTable.id }).from(oddsApiRequestsTable)
-      .where(sql`(${oddsApiRequestsTable.status} in ('admitted', 'running')
-        or (${oddsApiRequestsTable.status} = 'failed' and ${oddsApiRequestsTable.creditsRemaining} is null))
+      // Only an outcome we cannot know blocks automatic capture: a request that
+      // never got an HTTP answer (timeout, lost connection) or one still marked
+      // in flight. An HTTP error such as a rejected key is a known, unbilled
+      // outcome, and an in-flight row older than an hour belongs to a process
+      // that died; at 3 credits a request, neither is worth a permanent stop.
+      .where(sql`((${oddsApiRequestsTable.status} in ('admitted', 'running')
+          and ${oddsApiRequestsTable.requestedAt} > now() - interval '1 hour')
+        or (${oddsApiRequestsTable.status} = 'failed' and ${oddsApiRequestsTable.creditsRemaining} is null
+          and ${oddsApiRequestsTable.httpStatus} is null))
         and not exists (select 1 from odds_request_resolutions r where r.request_id = ${oddsApiRequestsTable.id})`)
       .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)).limit(1);
     if (!latest || !resolution || newestResolution?.id !== resolution.id
@@ -1023,6 +1030,7 @@ export async function admitPaidRequest(input: {
         id: oddsApiRequestsTable.id,
         status: oddsApiRequestsTable.status,
         creditsRemaining: oddsApiRequestsTable.creditsRemaining,
+        httpStatus: oddsApiRequestsTable.httpStatus,
         metadata: oddsApiRequestsTable.metadata,
       })
       .from(oddsApiRequestsTable)
@@ -1033,20 +1041,24 @@ export async function admitPaidRequest(input: {
       latest &&
       (latest.status === "admitted" ||
         latest.status === "running" ||
-        (latest.status === "failed" && latest.creditsRemaining === null));
+        (latest.status === "failed" && latest.creditsRemaining === null && latest.httpStatus === null));
     // A one-time exception does not resolve the old row. Keep later automatic
     // attempts blocked even if the exceptional request itself succeeds.
     const [oldUnresolved] = await tx.select({ id: oddsApiRequestsTable.id })
       .from(oddsApiRequestsTable)
-      .where(sql`(${oddsApiRequestsTable.status} in ('admitted', 'running')
-        or (${oddsApiRequestsTable.status} = 'failed' and ${oddsApiRequestsTable.creditsRemaining} is null))
+      // Only an outcome we cannot know blocks automatic capture: a request that
+      // never got an HTTP answer (timeout, lost connection) or one still marked
+      // in flight. An HTTP error such as a rejected key is a known, unbilled
+      // outcome, and an in-flight row older than an hour belongs to a process
+      // that died; at 3 credits a request, neither is worth a permanent stop.
+      .where(sql`((${oddsApiRequestsTable.status} in ('admitted', 'running')
+          and ${oddsApiRequestsTable.requestedAt} > now() - interval '1 hour')
+        or (${oddsApiRequestsTable.status} = 'failed' and ${oddsApiRequestsTable.creditsRemaining} is null
+          and ${oddsApiRequestsTable.httpStatus} is null))
         and not exists (select 1 from odds_request_resolutions r where r.request_id = ${oddsApiRequestsTable.id})`)
       .orderBy(desc(oddsApiRequestsTable.requestedAt), desc(oddsApiRequestsTable.id)).limit(1);
-    const recoveryOriginId = typeof latest?.metadata?.riskOverrideForRequestId === "number"
-      ? latest.metadata.riskOverrideForRequestId : null;
-    // Once a stranded admission has required reconciliation, *every* later
-    // paid intent needs a new one-use approval. A successful approved request
-    // must not silently restore the old automatic cadence.
+    // The newest reconciliation, if any, lets a matching one-use approval
+    // through while a stranded request is still unresolved.
     const [resolution] = await tx.select().from(oddsRequestResolutionsTable)
       .orderBy(desc(oddsRequestResolutionsTable.id)).limit(1);
     const [approval] = resolution
@@ -1074,7 +1086,9 @@ export async function admitPaidRequest(input: {
       && input.requestedAt.getTime() - risk.verifiedAt.getTime() >= 0
       && input.requestedAt.getTime() - risk.verifiedAt.getTime() < 5 * 60_000
       && risk.approvedBy.trim());
-    if ((oldUnresolved || resolution || recoveryOriginId) && !approvedRecovery && !approvedOneTimeRisk) {
+    // A past reconciliation no longer blocks forever: once nothing is
+    // unresolved, automatic capture resumes.
+    if (oldUnresolved && !approvedRecovery && !approvedOneTimeRisk) {
       const reason = "A prior paid request has unresolved admission state; no second upstream request was started.";
       const [skipped] = await tx.insert(oddsApiRequestsTable).values({
         intentKey: input.intentKey,

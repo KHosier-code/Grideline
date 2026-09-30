@@ -55,7 +55,9 @@ def r(value, digits=3):
 def qb(row, side):
     return {"name": row[f"{side}_qb_name"] if isinstance(row[f"{side}_qb_name"], str) else None,
             "value": r(row[f"{side}_qb_value"]), "listed": bool(row[f"{side}_qb_listed"]),
-            "newStarter": bool(row[f"{side}_qb_new"])}
+            "newStarter": bool(row[f"{side}_qb_new"]),
+            "outName": row.get(f"{side}_qb_out_name") if isinstance(row.get(f"{side}_qb_out_name"), str) else None,
+            "outReason": row.get(f"{side}_qb_out_reason") if isinstance(row.get(f"{side}_qb_out_reason"), str) else None}
 
 
 games = []
@@ -104,7 +106,9 @@ for _, row in teams.iterrows():
     team_rows.append({"team": row.team, "rating": round(total, 2), "offense": round(offense, 2),
                       "defense": round(defense, 2), "qb": round(qb_part, 2),
                       "qbName": row.qb_name if isinstance(row.qb_name, str) else None,
-                      "qbValue": r(row.qb_value), "qbNewStarter": bool(row.qb_new)})
+                      "qbValue": r(row.qb_value), "qbNewStarter": bool(row.qb_new),
+                      "qbOutName": row.qb_out_name if isinstance(getattr(row, "qb_out_name", None), str) else None,
+                      "qbOutReason": row.qb_out_reason if isinstance(getattr(row, "qb_out_reason", None), str) else None})
 ratings = pd.DataFrame(team_rows)
 for column in ("rating", "offense", "defense", "qb"):
     ratings[f"{column}Rank"] = ratings[column].rank(ascending=False, method="min").astype(int)
@@ -114,7 +118,8 @@ else:
     stats = pd.DataFrame()
 team_payload = []
 for row in ratings.sort_values("rating", ascending=False).to_dict("records"):
-    entry = dict(row)
+    # pandas stores missing text as NaN, which is not valid JSON.
+    entry = {key: (None if isinstance(value, float) and np.isnan(value) else value) for key, value in row.items()}
     if row["team"] in stats.index:
         s_row = stats.loc[row["team"]]
         entry["record"] = {"wins": int(s_row.wins), "losses": int(s_row.losses), "ties": int(s_row.ties)}

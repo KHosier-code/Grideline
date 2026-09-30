@@ -8,6 +8,8 @@ import { ConsumerLoading } from './consumer-ui';
 import { TeamChip } from '@/components/GameBoard';
 
 type Level = 'hi' | 'mid' | 'lo';
+const BOOK_SHORT: Record<string, string> = { draftkings: 'DK', fanduel: 'FD' };
+const impliedPct = (price: number) => `${Math.round((price > 0 ? 100 / (price + 100) : -price / (-price + 100)) * 100)}%`;
 const pct = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${Math.round(value * 100)}%`;
 const fixed = (value: number | null | undefined, digits = 1) => value === null || value === undefined ? '—' : value.toFixed(digits);
 const level = (value: number | null | undefined, high: number, low: number): Level =>
@@ -50,7 +52,7 @@ function PickRow({ pick, rank, max }: { pick: ConsumerTouchdownPick; rank: numbe
           {pick.scored !== null && <span className={`gl-scored ${pick.scored ? 'yes' : 'no'}`}>{pick.scored ? 'Scored ✓' : 'No TD'}</span>}
         </span>
       </span>
-      <span className="gl-bar"><i><b style={{ width: `${((pick.probability / max) * 100).toFixed(1)}%` }} /></i><small>Fair odds {formatPrice(pick.fairOdds)}</small></span>
+      <span className="gl-bar"><i><b style={{ width: `${((pick.probability / max) * 100).toFixed(1)}%` }} /></i><small>Fair {formatPrice(pick.fairOdds)}{pick.bookOdds && <> · Book <b className={pick.bookOdds.price > pick.fairOdds ? 'gl-good' : undefined}>{formatPrice(pick.bookOdds.price)}</b> {BOOK_SHORT[pick.bookOdds.book] ?? pick.bookOdds.book}</>}</small></span>
       <span className="gl-pct">{Math.round(pick.probability * 100)}%</span>
     </summary>
     <div className="gl-why">
@@ -61,6 +63,12 @@ function PickRow({ pick, rank, max }: { pick: ConsumerTouchdownPick; rank: numbe
         <p>{item.unit}</p>
         <p>{item.detail}</p>
       </div>)}
+      {pick.bookOdds && <div className="gl-factor">
+        <span className="gl-label">Sportsbooks</span>
+        <b>{pick.bookOdds.books.map(item => `${BOOK_SHORT[item.book] ?? item.book} ${formatPrice(item.price)}`).join(' · ')}</b>
+        <p>Book implies {impliedPct(pick.bookOdds.price)}; we say {Math.round(pick.probability * 100)}%</p>
+        <p>Captured {new Date(pick.bookOdds.capturedAt).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}. Prices move; check your book.</p>
+      </div>}
     </div>
   </details>;
 }
@@ -122,6 +130,7 @@ export default function TouchdownPicks() {
     <footer className="gl-card" style={{ padding: 18 }}>
       <div className="gl-footer-inner" style={{ padding: 0 }}>
         <p><b>Fair odds</b>The price that matches our probability. If your sportsbook pays more than this, the bet is priced in your favor by our numbers.</p>
+        <p><b>Book</b>The best anytime-TD price at DraftKings or FanDuel when we last checked (green when it pays more than our fair odds). We&apos;re tracking these prices to test, over the coming weeks, whether our numbers actually beat the books.</p>
         <p><b>Red-zone touches</b>Targets plus carries inside the opponent&apos;s 20-yard line, per game over the player&apos;s last 8 games.</p>
         <p><b>Matchup</b>Touchdowns this defense allowed to the position over its last 8 games, compared with the league average. <Link href="/defense-vs-position" className="gl-link">See all matchups</Link>.</p>
       </div>

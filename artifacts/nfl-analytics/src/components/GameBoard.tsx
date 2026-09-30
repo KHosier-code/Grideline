@@ -13,9 +13,11 @@ export function TeamChip({ team, large = false }: { team: string; large?: boolea
   return <span className={`gl-chip${large ? ' lg' : ''}`} style={{ background: teamColor(team), color: teamTextColor(team) }}>{team}</span>;
 }
 
+const lastName = (name: string) => name.split(' ').slice(1).join(' ') || name;
+
 function QbLine({ qb }: { qb: ConsumerProjectionQb | null }) {
   if (!qb?.name) return null;
-  return <span className="gl-qb">QB {qb.name}{qb.newStarter && <span className="gl-flag">Not usual starter</span>}{!qb.listed && <span className="gl-qb-note"> · expected</span>}</span>;
+  return <span className="gl-qb">QB {qb.name}{qb.outName ? <span className="gl-flag out">{qb.outName} {(qb.outReason ?? 'out').toLowerCase()}</span> : qb.newStarter && <span className="gl-flag">Not usual starter</span>}{!qb.listed && <span className="gl-qb-note"> · expected</span>}</span>;
 }
 
 export function GameRow({ view, now }: { view: GameView; now: number }) {
@@ -102,7 +104,9 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
         <span className="gl-gc-team">
           <b>{item.team.abbreviation}</b>
           <small>{records?.get(item.team.abbreviation) ?? ''}{item.qb?.name ? `${records?.get(item.team.abbreviation) ? ' · ' : ''}${item.qb.name}` : ''}</small>
-          {item.qb?.newStarter && <em className="gl-flag" title="Not the team's usual starting quarterback">New QB</em>}
+          {item.qb?.outName
+            ? <em className="gl-flag out" title={`${item.qb.outName} is listed ${item.qb.outReason ?? 'out'}; ${item.qb.name ?? 'the backup'} is expected to start`}>{lastName(item.qb.outName)} {(item.qb.outReason ?? 'out').toLowerCase()}</em>
+            : item.qb?.newStarter && <em className="gl-flag" title="Not the team's usual starting quarterback">New QB</em>}
         </span>
         {final ? <span className="gl-gc-score">{item.score}</span> : <>
           <span className="gl-gc-line">{open ? <><b>{lineNumber(open.line * homeFactor)}</b><small>{item.side === 'home' ? price(open.price) : ''}</small></> : <b className="gl-muted">—</b>}</span>

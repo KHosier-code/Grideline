@@ -28,7 +28,8 @@ function QbCard({ team, qb }: { team: string; qb: ConsumerProjectionQb | null })
     <span className="gl-label">{team} quarterback</span>
     <b>{qb?.name ?? 'Not announced'}</b>
     <p>{epa(qb?.value)} EPA per dropback, recent games weighted most</p>
-    {qb?.newStarter && <p><span className="gl-flag">Not the usual starter</span></p>}
+    {qb?.outName ? <p><span className="gl-flag out">{qb.outName}: {qb.outReason ?? 'out'}</span> Starting in their place.</p>
+      : qb?.newStarter && <p><span className="gl-flag">Not the usual starter</span></p>}
     {qb && !qb.listed && <p>Expected starter based on recent starts</p>}
   </div>;
 }
