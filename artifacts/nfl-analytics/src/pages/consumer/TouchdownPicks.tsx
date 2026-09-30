@@ -5,7 +5,7 @@ import {
 } from '@workspace/api-client-react';
 import { formatPrice } from '@/lib/pick-sheet';
 import { ConsumerLoading } from './consumer-ui';
-import { TeamChip } from './PickSheet';
+import { TeamChip } from '@/components/GameBoard';
 
 type Level = 'hi' | 'mid' | 'lo';
 const pct = (value: number | null | undefined) => value === null || value === undefined ? '—' : `${Math.round(value * 100)}%`;
