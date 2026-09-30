@@ -476,3 +476,8 @@
 .consumer-shell .ct-hero-mark { display: none; }
 .ct-alert-details summary { margin-top: 6px; cursor: pointer; font-weight: 600; }
 .ct-alert-details[open] summary { margin-bottom: 6px; }
+
+@media (max-width: 900px) {
+  .gl-lines-row .gl-mkt { display: grid; grid-template-columns: 1fr 1fr; align-items: baseline; gap: 2px 12px; }
+  .gl-lines-row .gl-mkt .m-label { grid-column: 1 / -1; }
+}

@@ -42,7 +42,7 @@ export default function ConsumerPerformance() {
           <p>of top-10 picks scored{td?.evaluation.testedOn ? `, across ${td.evaluation.testedOn}` : ''}.</p>
         </div>
       </div>
-      {tdRecord && tdRecord.weeks.length > 0 && <div className="gl-card gl-table-wrap">
+      {(tdRecord?.weeks?.length ?? 0) > 0 && tdRecord && <div className="gl-card gl-table-wrap">
         <table className="gl-table">
           <thead><tr><th scope="col">Week</th><th scope="col">Top-10 picks that scored</th><th scope="col">Hit rate</th></tr></thead>
           <tbody>{tdRecord.weeks.map(week => <tr key={week.week}><td>Week {week.week}</td><td>{week.hits} of {week.picks}</td><td>{pct(week.hits / week.picks)}</td></tr>)}</tbody>
@@ -65,7 +65,7 @@ export default function ConsumerPerformance() {
           <p>of winners picked{typeof game?.evaluation.winnersFavorite === 'number' ? `. Always taking the Vegas favorite picked ${pct(game.evaluation.winnersFavorite)}.` : '.'}</p>
         </div>
       </div>
-      {game && game.weeks.length > 0 && <div className="gl-card gl-table-wrap">
+      {(game?.weeks?.length ?? 0) > 0 && game && <div className="gl-card gl-table-wrap">
         <table className="gl-table">
           <thead><tr><th scope="col">Week</th><th scope="col">Winners right</th><th scope="col">Wrong</th><th scope="col">Ties</th></tr></thead>
           <tbody>{game.weeks.map(week => <tr key={week.week}><td>Week {week.week}</td><td>{week.wins}</td><td>{week.losses}</td><td>{week.pushes}</td></tr>)}</tbody>
