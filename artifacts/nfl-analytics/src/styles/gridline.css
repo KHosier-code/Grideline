@@ -865,3 +865,59 @@
 .gl-board-slates .gl-days { grid-template-columns: minmax(0, 1fr); }
 .gl-board-slates .gl-day-cards { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-items: start; }
 @media (max-width: 700px) { .gl-board-slates .gl-day-cards { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Parlay builder ---------- */
+.gl-parlay-suggest { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.gl-parlay-suggest > .gl-card { display: grid; align-content: start; gap: 10px; padding: 16px; }
+.gl-parlay-suggest-top { display: flex; align-items: center; gap: 12px; }
+.gl-parlay-suggest-top .gl-hundred { width: 56px; flex: none; }
+.gl-parlay-suggest-top b { display: block; font-family: var(--gl-display); font-size: 30px; line-height: 1; }
+.gl-parlay-suggest-top small { color: hsl(var(--muted-foreground)); font-size: 12px; }
+.gl-parlay-suggest ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.gl-parlay-suggest li { display: flex; justify-content: space-between; gap: 8px; }
+.gl-parlay-suggest li span { color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
+.gl-parlay-suggest p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.gl-parlay-suggest .gl-button { justify-self: start; }
+.gl-parlay { display: grid; grid-template-columns: minmax(0, 1fr) 360px; align-items: start; gap: 16px; }
+.gl-parlay-tabs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.gl-parlay-tabs .gl-filters small { margin-left: 4px; opacity: .7; }
+.gl-input { min-width: 200px; padding: 7px 12px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); color: hsl(var(--foreground)); font: inherit; font-size: 13px; }
+.gl-leg-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+.gl-leg { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); color: inherit; text-align: left; cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+.gl-leg:hover { border-color: hsl(var(--foreground) / .35); }
+.gl-leg.on { border-color: hsl(var(--primary)); background: hsl(var(--primary) / .12); }
+.gl-leg-text { display: grid; min-width: 0; flex: 1; }
+.gl-leg-text b { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.gl-leg-text small, .gl-leg-odds small { color: hsl(var(--muted-foreground)); font-size: 11px; }
+.gl-leg-odds { display: grid; justify-items: end; }
+.gl-leg-odds b { font-family: var(--gl-display); font-size: 18px; font-variant-numeric: tabular-nums; }
+.gl-slip { position: sticky; top: 16px; display: grid; gap: 14px; padding: 16px; }
+.gl-slip-head { display: flex; align-items: center; justify-content: space-between; }
+.gl-slip-head .gl-link { border: 0; background: none; font: inherit; font-size: 13px; cursor: pointer; }
+.gl-slip-empty { margin: 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.5; }
+.gl-slip-legs { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.gl-slip-legs li { display: grid; grid-template-columns: minmax(0, 1fr) auto 24px; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: hsl(var(--secondary)); font-size: 13px; }
+.gl-slip-legs li > span:first-child { display: grid; min-width: 0; }
+.gl-slip-legs b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-slip-legs small { color: hsl(var(--muted-foreground)); font-size: 11px; }
+.gl-slip-legs button { width: 24px; height: 24px; border: 0; border-radius: 50%; background: hsl(var(--background)); color: hsl(var(--muted-foreground)); font-size: 16px; line-height: 1; cursor: pointer; }
+.gl-slip-result { display: flex; align-items: center; gap: 14px; }
+.gl-slip-result .gl-hundred { width: 110px; flex: none; gap: 2px; }
+.gl-slip-big { display: block; font-family: var(--gl-display); font-size: 44px; line-height: 1; }
+.gl-slip-big small { color: hsl(var(--muted-foreground)); font-size: 15px; }
+.gl-slip-result p { margin: 6px 0 0; color: hsl(var(--muted-foreground)); font-size: 13px; }
+.gl-slip-odds { display: grid; gap: 6px; margin: 0; }
+.gl-slip-odds div { display: flex; justify-content: space-between; font-size: 13px; }
+.gl-slip-odds dt { color: hsl(var(--muted-foreground)); }
+.gl-slip-odds dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gl-slip-run { margin: 0; font-size: 13px; color: hsl(var(--muted-foreground)); }
+.gl-slip-run b { color: hsl(var(--foreground)); }
+.gl-button.ghost { background: transparent; color: hsl(var(--foreground)); }
+.gl-slip-bar { display: none; }
+@media (max-width: 1000px) {
+  .gl-parlay-suggest { grid-template-columns: 1fr; }
+  .gl-parlay { grid-template-columns: 1fr; }
+  .gl-slip { position: static; }
+  .gl-slip-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding: 12px 16px; border-radius: 14px; background: hsl(var(--foreground)); color: hsl(var(--background)); font-size: 14px; box-shadow: 0 8px 24px rgb(0 0 0 / .35); }
+}
+.gl-show-more { margin-top: 10px; } .gl-slip { scroll-margin-top: 16px; }

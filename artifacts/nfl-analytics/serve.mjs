@@ -23,7 +23,7 @@ createServer(async (req, res) => {
   try {
     if (relative === 'sitemap.xml') {
       const origin = new URL(process.env.PUBLIC_SITE_URL || 'https://gridelineanalytics.com').origin;
-      const urls = ['/', '/touchdowns', '/pickem', '/power-ratings', '/qb-rankings', '/games', '/teams', '/usage', '/defense-vs-position', '/red-zone', '/performance', '/methodology']
+      const urls = ['/', '/touchdowns', '/pickem', '/parlays', '/power-ratings', '/qb-rankings', '/games', '/teams', '/usage', '/defense-vs-position', '/red-zone', '/performance', '/methodology']
         .map(path => `<url><loc>${origin}${prefix}${path}</loc></url>`).join('');
       res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
       res.end(req.method === 'HEAD' ? undefined : `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
