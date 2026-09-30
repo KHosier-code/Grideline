@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'wouter';
 import {
-  getGetConsumerDashboardQueryKey, getGetConsumerRecordQueryKey, useGetConsumerDashboard, useGetConsumerRecord, useGetConsumerTouchdowns,
-  type ConsumerRecordLine,
+  getGetConsumerDashboardQueryKey, getGetConsumerGameProjectionsQueryKey, useGetConsumerDashboard,
+  useGetConsumerGameProjections, useGetConsumerTouchdowns, type ConsumerProjectionQb,
 } from '@workspace/api-client-react';
-import { analyzeGame, biggestEdges, currentWeek, formatPrice, signed, type EdgePick, type GamePicks } from '@/lib/pick-sheet';
+import { buildGameView, currentWeek, formatPrice, lineText, vegasLineText, type GameView } from '@/lib/pick-sheet';
 import { teamColor, teamTextColor } from '@/lib/team-colors';
 import { ConsumerLoading, useConsumerNow } from './consumer-ui';
 
@@ -15,204 +15,144 @@ export function TeamChip({ team, large = false }: { team: string; large?: boolea
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-const gameHref = (picks: GamePicks) => `/games/${picks.game.gameId}?season=${picks.game.season}&week=${picks.game.week}`;
+const gameHref = (view: GameView) => `/games/${view.game.gameId}?season=${view.game.season}&week=${view.game.week}`;
 
-function recordText(line: ConsumerRecordLine) {
-  return `${line.wins}–${line.losses}${line.pushes ? `–${line.pushes}` : ''}`;
-}
-function winRate(line: ConsumerRecordLine) {
-  const decided = line.wins + line.losses;
-  return decided ? `${Math.round((line.wins / decided) * 100)}%` : '—';
+function QbLine({ qb }: { qb: ConsumerProjectionQb | null }) {
+  if (!qb?.name) return null;
+  return <span className="gl-qb">QB {qb.name}{qb.newStarter && <span className="gl-flag">Not usual starter</span>}{!qb.listed && <span className="gl-qb-note"> · expected</span>}</span>;
 }
 
-function RecordStrip({ season }: { season: number | undefined }) {
-  const params = season ? { season } : undefined;
-  const record = useGetConsumerRecord(params, { query: { queryKey: getGetConsumerRecordQueryKey(params), enabled: season !== undefined } });
-  const data = record.data;
-  if (!data || data.graded === 0) {
-    return <div className="gl-stats" aria-label="Season record">
-      <div className="gl-stat"><b>0–0</b><small>Winners</small></div>
-      <div className="gl-stat"><b>0–0</b><small>Against the spread</small></div>
-      <p className="gl-stats-note">{record.isLoading ? 'Loading the record…' : 'The record fills in as this season’s locked picks are graded.'}</p>
-    </div>;
-  }
-  return <div className="gl-stats" aria-label="Season record">
-    <div className="gl-stat"><b>{recordText(data.winners)}</b><small>Winners · {winRate(data.winners)}</small></div>
-    <div className="gl-stat"><b>{recordText(data.spread)}</b><small>Against the spread · {winRate(data.spread)}</small></div>
-    <p className="gl-stats-note">{data.season} record from {data.graded} graded games · <Link href="/performance" className="gl-link">Full record</Link></p>
-  </div>;
+function TopTouchdowns({ now }: { now: number }) {
+  const touchdowns = useGetConsumerTouchdowns();
+  const picks = (touchdowns.data?.picks ?? []).filter(pick => !pick.kickoff || Date.parse(pick.kickoff) > now).slice(0, 10);
+  if (touchdowns.isLoading) return <ConsumerLoading label="Loading touchdown picks…" />;
+  if (!picks.length) return null;
+  return <section className="gl-section" aria-labelledby="td-heading">
+    <div className="gl-section-head"><h2 id="td-heading">Top touchdown picks</h2><Link href="/touchdowns" className="gl-link">All players and the reasons behind each pick ›</Link></div>
+    <ol className="gl-td-grid">
+      {picks.map((pick, index) => <li key={pick.playerId}>
+        <Link href="/touchdowns" className="gl-card gl-td-card">
+          <span className="gl-rank">{index + 1}</span>
+          <span className="gl-who"><strong>{pick.name}</strong><span><span className="pos">{pick.position}</span><TeamChip team={pick.team} />{pick.isHome ? 'vs' : 'at'} {pick.opponent}</span></span>
+          <span className="gl-td-card-odds"><b className="gl-pct">{percent(pick.probability)}</b><small>Fair {formatPrice(pick.fairOdds)}</small></span>
+        </Link>
+      </li>)}
+    </ol>
+  </section>;
 }
 
-function EdgeCard({ item }: { item: EdgePick }) {
-  const { picks, kind, edge } = item;
-  const { game, projection } = picks;
-  const home = game.matchup.home.abbreviation;
-  const away = game.matchup.away.abbreviation;
-  const pickTeam = kind === 'spread' && picks.spread ? (picks.spread.side === 'home' ? home : away) : null;
-  return <Link href={gameHref(picks)} className="gl-card gl-edge">
-    <div className="gl-edge-top">
-      <span>{away} at {home} · {game.kickoffTime ? `${new Date(game.kickoffTime).toLocaleDateString('en-US', { weekday: 'short' })} ${time(game.kickoffTime)}` : 'TBD'}</span>
-      <span className={`gl-pill ${edge >= 3 ? 'strong' : edge >= 1.5 ? 'lean' : 'small'}`}>+{edge.toFixed(1)} pts</span>
-    </div>
-    <div className="gl-edge-pick">
-      {kind === 'spread' && picks.spread && pickTeam
-        ? <><TeamChip team={pickTeam} large /><span>{signed(picks.spread.line)}</span></>
-        : picks.total && <span>{picks.total.side} {picks.total.line}</span>}
-    </div>
-    <div className="gl-edge-compare">
-      <div><span className="gl-label">Sportsbook</span><b>{kind === 'spread' && picks.spread && pickTeam ? `${pickTeam} ${signed(picks.spread.line)}` : picks.total?.line}</b></div>
-      <div><span className="gl-label">Gridline</span><b>{kind === 'spread' && projection
-        ? `${projection.margin > 0 ? home : away} by ${Math.abs(projection.margin).toFixed(1)}`
-        : projection?.total.toFixed(1)}</b></div>
-    </div>
-    {projection && <p className="gl-note">Projected score: {away} {projection.away.toFixed(1)}, {home} {projection.home.toFixed(1)}.</p>}
-  </Link>;
-}
-
-function Result({ result }: { result: 'win' | 'loss' | 'push' | null }) {
-  if (!result) return null;
-  return <span className={`gl-pill ${result === 'win' ? 'win' : result === 'loss' ? 'loss' : 'small'}`}>{result === 'win' ? 'Won' : result === 'loss' ? 'Lost' : 'Push'}</span>;
-}
-
-function pickResults(picks: GamePicks) {
-  const final = picks.game.finalScore;
-  if (!final) return { spread: null, total: null, winner: null };
-  const margin = final.home - final.away;
-  const side = (pickSide: 'home' | 'away', value: number) => value === 0 ? 'push' as const : (value > 0) === (pickSide === 'home') ? 'win' as const : 'loss' as const;
-  return {
-    winner: picks.winner ? side(picks.winner.side, margin) : null,
-    spread: picks.spread ? side(picks.spread.side, margin + picks.spread.homeLine) : null,
-    total: picks.total ? (() => {
-      const over = final.home + final.away - picks.total!.line;
-      return over === 0 ? 'push' as const : (over > 0) === (picks.total!.side === 'Over') ? 'win' as const : 'loss' as const;
-    })() : null,
-  };
-}
-
-function GameRow({ picks, now }: { picks: GamePicks; now: number }) {
-  const { game, projection, spread, total, moneyline, winner } = picks;
+function GameRow({ view, now }: { view: GameView; now: number }) {
+  const { game, projection, winner, vegas, result } = view;
   const home = game.matchup.home;
   const away = game.matchup.away;
   const final = game.finalScore;
   const started = game.kickoffTime ? Date.parse(game.kickoffTime) <= now : false;
-  const results = pickResults(picks);
-  const rows = [
-    { side: 'away' as const, team: away, projected: projection?.away, actual: final?.away, probability: projection ? 1 - projection.homeWin : null },
-    { side: 'home' as const, team: home, projected: projection?.home, actual: final?.home, probability: projection?.homeWin ?? null },
+  const sides = [
+    { side: 'away' as const, team: away, projected: projection?.away, actual: final?.away, qb: projection?.awayQb ?? null, probability: projection ? 1 - projection.homeWin : null },
+    { side: 'home' as const, team: home, projected: projection?.home, actual: final?.home, qb: projection?.homeQb ?? null, probability: projection?.homeWin ?? null },
   ];
-  const favored = winner?.side;
-  return <Link href={gameHref(picks)} className="gl-board-row" aria-label={`${away.name} at ${home.name}`}>
+  return <Link href={gameHref(view)} className="gl-board-row gl-lines-row" aria-label={`${away.name} at ${home.name}`}>
     <span className="gl-time">{final ? 'Final' : started ? 'Live' : game.kickoffTime ? time(game.kickoffTime) : 'TBD'}</span>
     <div className="gl-teams">
-      {rows.map(row => <div key={row.side} className={`gl-team${favored === row.side ? ' fav' : ''}`}>
-        <TeamChip team={row.team.abbreviation} />
-        <span className="name">{row.team.name}</span>
-        <span className="wp">{row.probability !== null ? percent(row.probability) : ''}</span>
-        <span className="score">{final ? <span className="gl-final">{row.actual}</span> : row.projected !== undefined ? row.projected.toFixed(1) : '—'}</span>
+      {sides.map(item => <div key={item.side} className={`gl-team${winner?.side === item.side ? ' fav' : ''}`}>
+        <TeamChip team={item.team.abbreviation} />
+        <span className="name">{item.team.name}<QbLine qb={item.qb} /></span>
+        <span className="wp">{item.probability !== null ? percent(item.probability) : ''}</span>
+        <span className="score">{final ? <span className="gl-final">{item.actual}</span> : item.projected !== undefined ? item.projected.toFixed(1) : '—'}</span>
       </div>)}
       {!projection && <span className="gl-note">Projection is being prepared for this game.</span>}
-      {final && projection && <span className="gl-note">We projected {away.abbreviation} {projection.away.toFixed(1)}, {home.abbreviation} {projection.home.toFixed(1)}</span>}
+      {final && projection && <span className="gl-note gl-result">We projected {away.abbreviation} {projection.away.toFixed(1)}, {home.abbreviation} {projection.home.toFixed(1)}
+        {result && <span className={`gl-pill ${result === 'win' ? 'win' : result === 'loss' ? 'loss' : 'small'}`}>{result === 'win' ? 'Winner right' : result === 'loss' ? 'Winner wrong' : 'Tie'}</span>}</span>}
     </div>
     <div className="gl-mkt">
       <span className="gl-label m-label">Spread</span>
-      <span className="line">{spread ? <>Line <b>{home.abbreviation} {signed(spread.homeLine)}</b></> : game.market?.spread ? <>Line <b>{home.abbreviation} {signed(game.market.spread.point ?? 0)}</b></> : 'No line yet'}</span>
-      <span className="gl-result">{spread && <span className={`gl-pill ${spread.strength}`}>{spread.side === 'home' ? home.abbreviation : away.abbreviation} {signed(spread.line)} · +{spread.edge.toFixed(1)}</span>}<Result result={results.spread} /></span>
+      <span className="line">Gridline <b>{projection ? lineText(projection.margin, home.abbreviation, away.abbreviation) : '—'}</b></span>
+      <span className="line">Vegas <b>{vegas.homeLine !== null ? vegasLineText(vegas.homeLine, home.abbreviation, away.abbreviation) : '—'}</b></span>
     </div>
     <div className="gl-mkt">
       <span className="gl-label m-label">Total</span>
-      <span className="line">{game.market?.total ? <>Line <b>{game.market.total.point}</b></> : 'No line yet'}{projection ? <> · Ours {projection.total.toFixed(1)}</> : null}</span>
-      <span className="gl-result">{total && <span className={`gl-pill ${total.strength}`}>{total.side} · +{total.edge.toFixed(1)}</span>}<Result result={results.total} /></span>
-    </div>
-    <div className="gl-mkt">
-      <span className="gl-label m-label">Moneyline</span>
-      <span className="line">{moneyline && winner ? <>{winner.side === 'home' ? home.abbreviation : away.abbreviation} <b>{moneyline.price !== null ? formatPrice(moneyline.price) : 'no price'}</b></> : 'No pick yet'}</span>
-      <span className="gl-result">{winner && <span className={`gl-pill ${moneyline?.edge !== null && moneyline?.edge !== undefined && moneyline.edge >= 0.05 ? 'strong' : 'small'}`}>{winner.side === 'home' ? home.abbreviation : away.abbreviation} wins {percent(winner.probability)}</span>}<Result result={results.winner} /></span>
+      <span className="line">Gridline <b>{projection ? projection.total.toFixed(1) : '—'}</b></span>
+      <span className="line">Vegas <b>{vegas.total ?? '—'}</b></span>
     </div>
     <span className="gl-go" aria-hidden="true">›</span>
   </Link>;
 }
 
-function TouchdownTeaser() {
+function HeroStats({ season }: { season: number | undefined }) {
   const touchdowns = useGetConsumerTouchdowns();
-  const now = useConsumerNow();
-  const picks = (touchdowns.data?.picks ?? []).filter(pick => !pick.kickoff || Date.parse(pick.kickoff) > now).slice(0, 5);
-  if (!picks.length) return null;
-  return <section className="gl-section" aria-labelledby="td-teaser">
-    <div className="gl-section-head"><h2 id="td-teaser">Top touchdown picks</h2><Link href="/touchdowns" className="gl-link">All TD picks ›</Link></div>
-    <div className="gl-card gl-board">
-      {picks.map((pick, index) => <Link key={pick.playerId} href="/touchdowns" className="gl-board-row gl-td-teaser-row">
-        <span className="gl-rank">{index + 1}</span>
-        <span className="gl-who"><strong>{pick.name}</strong><span><span className="pos">{pick.position}</span><TeamChip team={pick.team} />{pick.isHome ? 'vs' : 'at'} {pick.opponent}</span></span>
-        <span className="gl-pct">{Math.round(pick.probability * 100)}%</span>
-      </Link>)}
-    </div>
-  </section>;
+  const params = season ? { season } : undefined;
+  const projections = useGetConsumerGameProjections(params, { query: { queryKey: getGetConsumerGameProjectionsQueryKey(params), enabled: season !== undefined } });
+  const td = touchdowns.data;
+  const games = projections.data;
+  const winners = games?.record;
+  const decided = winners ? winners.wins + winners.losses : 0;
+  return <div className="gl-stats" aria-label="How the models are doing">
+    {td?.record && td.record.weeksGraded > 0
+      ? <div className="gl-stat"><b>{td.record.topTenHits}/{td.record.topTenPicks}</b><small>Top-10 TD picks that scored this season</small></div>
+      : td?.evaluation.topTenHitRate != null && <div className="gl-stat"><b>{percent(td.evaluation.topTenHitRate)}</b><small>of top-10 TD picks scored in testing</small></div>}
+    {decided > 0
+      ? <div className="gl-stat"><b>{winners!.wins}–{winners!.losses}</b><small>Winners picked this season</small></div>
+      : typeof games?.evaluation.winnersModel === 'number' && <div className="gl-stat"><b>{percent(games.evaluation.winnersModel)}</b><small>of winners picked in testing</small></div>}
+    <p className="gl-stats-note">Tested on past seasons the models never trained on. <Link href="/methodology" className="gl-link">How we test</Link></p>
+  </div>;
 }
 
 export default function PickSheet() {
   const dashboard = useGetConsumerDashboard({ query: { queryKey: getGetConsumerDashboardQueryKey(), staleTime: 60_000, refetchInterval: 120_000 } });
   const now = useConsumerNow();
-  const [minimumEdge, setMinimumEdge] = useState(0);
   const week = useMemo(() => currentWeek(dashboard.data?.games ?? [], now), [dashboard.data, now]);
-  const analyzed = useMemo(() => (week?.games ?? []).map(analyzeGame), [week]);
-  const edges = useMemo(() => biggestEdges(analyzed, now), [analyzed, now]);
-  const linesAt = analyzed.map(item => item.game.market?.spread?.capturedAt ?? item.game.market?.total?.capturedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
+  const params = week ? { season: week.season } : undefined;
+  const projections = useGetConsumerGameProjections(params, { query: { queryKey: getGetConsumerGameProjectionsQueryKey(params), enabled: week !== null } });
+  const views = useMemo(() => {
+    const byGame = new Map((projections.data?.games ?? []).map(projection => [projection.gameId, projection]));
+    return (week?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId)));
+  }, [week, projections.data]);
+  const linesAt = views.map(view => view.game.market?.spread?.capturedAt ?? view.game.market?.total?.capturedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
   const days = useMemo(() => {
-    const groups = new Map<string, GamePicks[]>();
-    for (const item of analyzed) {
-      if (item.bestEdge < minimumEdge) continue;
-      const key = item.game.kickoffTime ? dayLabel(item.game.kickoffTime) : 'Time to be announced';
-      groups.set(key, [...(groups.get(key) ?? []), item]);
+    const groups = new Map<string, GameView[]>();
+    for (const view of views) {
+      const key = view.game.kickoffTime ? dayLabel(view.game.kickoffTime) : 'Time to be announced';
+      groups.set(key, [...(groups.get(key) ?? []), view]);
     }
     return [...groups.entries()];
-  }, [analyzed, minimumEdge]);
+  }, [views]);
 
   return <div className="gl-page">
     <header className="gl-hero">
       <div>
         <p className="gl-label">{week ? `${week.season} season · Week ${week.week}` : 'NFL picks'}</p>
         <h1 className="gl-title">This week&apos;s <span>picks</span></h1>
-        <p className="gl-lede">Our model&apos;s projected score for every game next to the sportsbook line. Picks lock 30 minutes before kickoff and are graded after the final whistle.</p>
+        <p className="gl-lede">Who&apos;s most likely to score a touchdown, and our projected score for every game, adjusted for who&apos;s playing quarterback. Built from NFL play-by-play data and updated through the week.</p>
       </div>
-      <RecordStrip season={week?.season} />
+      <HeroStats season={week?.season} />
     </header>
+
+    <TopTouchdowns now={now} />
 
     {dashboard.isLoading && <ConsumerLoading label="Loading this week's games…" />}
     {dashboard.isError && <div className="gl-empty"><strong>We couldn&apos;t load this week&apos;s games.</strong>Refresh the page in a minute. If it keeps happening, the schedule feed may be updating.</div>}
 
-    {edges.length > 0 && <section className="gl-section" aria-labelledby="edges-heading">
-      <div className="gl-section-head"><h2 id="edges-heading">Biggest edges</h2><p>Games where our number is furthest from the line</p></div>
-      <div className="gl-edges">{edges.map(item => <EdgeCard key={`${item.picks.game.gameId}-${item.kind}`} item={item} />)}</div>
-    </section>}
-
     {week && <section className="gl-section" aria-labelledby="board-heading">
       <div className="gl-section-head">
         <h2 id="board-heading">Every game</h2>
-        <div className="gl-filters" role="group" aria-label="Filter games by edge">
-          {[{ label: 'All games', value: 0 }, { label: 'Edge 1.5+ pts', value: 1.5 }, { label: 'Edge 3+ pts', value: 3 }].map(option =>
-            <button key={option.value} type="button" aria-pressed={minimumEdge === option.value} onClick={() => setMinimumEdge(option.value)}>{option.label}</button>)}
-        </div>
+        <p>Our projected score and line next to the sportsbook&apos;s{linesAt ? ` (lines as of ${new Date(linesAt).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })})` : ''}</p>
       </div>
-      {linesAt && <p className="gl-note">Lines from DraftKings or FanDuel as of {new Date(linesAt).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}. Lines move, so check your book before betting.</p>}
-      {days.length === 0 && <div className="gl-empty"><strong>No games match this filter.</strong>Try a smaller edge.</div>}
       {days.map(([day, items]) => <div key={day} className="gl-day">
         <h3 className="gl-label">{day}</h3>
         <div className="gl-card gl-board">
-          <div className="gl-board-head gl-label"><span>Kickoff</span><span>Projected score</span><span>Spread</span><span>Total</span><span>Moneyline</span><span /></div>
-          {items.map(item => <GameRow key={item.game.gameId} picks={item} now={now} />)}
+          <div className="gl-board-head gl-lines-row gl-label"><span>Kickoff</span><span>Projected score · win chance</span><span>Spread</span><span>Total</span><span /></div>
+          {items.map(view => <GameRow key={view.game.gameId} view={view} now={now} />)}
         </div>
       </div>)}
     </section>}
 
     {!dashboard.isLoading && !dashboard.isError && !week && <div className="gl-empty"><strong>No games on the schedule right now.</strong>Picks return when the next week&apos;s schedule is posted. <Link href="/games" className="gl-link">Browse past games</Link>.</div>}
 
-    <TouchdownTeaser />
-
     <footer className="gl-card" style={{ padding: 18 }}>
       <div className="gl-footer-inner" style={{ padding: 0 }}>
-        <p><b>What the edge means</b>The gap in points between our projection and the sportsbook line. The bigger the gap, the more we disagree with the market.</p>
-        <p><b>How good is the model?</b>Tested on 2023–2025, our spread picks went 49.9% against closing lines, and simply taking the Vegas favorite picked more winners than we did. Treat these as a second opinion, not a betting edge. We don&apos;t make over/under picks until our totals model is good enough.</p>
-        <p><b>How picks are graded</b>Each game&apos;s pick is the one saved 30 minutes before kickoff, graded against the final score. A projection exactly on the line is not a pick.</p>
+        <p><b>How the game projections work</b>Team offense and defense from every play this season and last, adjusted for each starting quarterback, rest and home field. Backup and new starters are flagged.</p>
+        <p><b>Why no spread picks?</b>In testing on 2021–2025, our projections came within about 0.4 points of the Vegas closing line on average but didn&apos;t beat it against the spread. We show our number as a second opinion instead of calling it a bet.</p>
+        <p><b>Touchdown picks</b>Ranked by the chance each player scores, using their role near the goal line, target and carry share, Vegas team totals and the defense they face. <Link href="/touchdowns" className="gl-link">See all</Link>.</p>
       </div>
     </footer>
   </div>;
