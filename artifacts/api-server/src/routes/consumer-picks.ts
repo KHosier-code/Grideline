@@ -443,6 +443,23 @@ router.get("/consumer/usage-report", (req, res) => latestReport("usage", req, re
 router.get("/consumer/replay", (req, res) => latestReport("replay", req, res));
 
 /**
+ * The failure message for the token-protected capture routes, so the workflow
+ * log shows what went wrong. The Odds API key is scrubbed from the text.
+ */
+function describeError(error: unknown) {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; current && depth < 3; depth += 1) {
+    parts.push(current instanceof Error ? `${current.name}: ${current.message}` : String(current));
+    current = current instanceof Error ? (current as Error & { cause?: unknown }).cause : null;
+  }
+  let text = parts.join(" <- ") || "Unknown error";
+  const key = process.env.ODDS_API_KEY;
+  if (key) text = text.split(key).join("***");
+  return text.replace(/apiKey=[^&\s"]+/g, "apiKey=***").slice(0, 400);
+}
+
+/**
  * Scheduled sportsbook capture, called by the GitHub "Odds" workflow. It uses
  * the server's own ODDS_API_KEY and the same quota and billing safeguards as
  * the data worker. Calls in the same 10-minute slot share one intent, so a
@@ -464,8 +481,9 @@ router.post("/odds/scheduled-capture", async (req, res): Promise<void> => {
       creditsUsed: result.creditsUsed, creditsRemaining: result.creditsRemaining,
     });
   } catch (error) {
-    req.log.error({ error: error instanceof Error ? error.message : "Odds capture failed" }, "Scheduled odds capture failed");
-    res.status(502).json({ status: "failed", reason: "Odds capture failed on the server." });
+    const reason = describeError(error);
+    req.log.error({ error: reason }, "Scheduled odds capture failed");
+    res.status(502).json({ status: "failed", reason });
   }
 });
 
@@ -481,8 +499,9 @@ router.post("/odds/td-props-capture", async (req, res): Promise<void> => {
     const result = await captureTouchdownProps(hours ?? 30);
     res.status(result.status === "failed" ? 502 : result.status === "not_configured" ? 503 : 200).json(result);
   } catch (error) {
-    req.log.error({ error: error instanceof Error ? error.message : "TD props capture failed" }, "TD props capture failed");
-    res.status(502).json({ status: "failed", reason: "TD props capture failed on the server." });
+    const reason = describeError(error);
+    req.log.error({ error: reason }, "TD props capture failed");
+    res.status(502).json({ status: "failed", reason });
   }
 });
 
