@@ -44,7 +44,30 @@ const TICK_MS = 60 * 1000;
 const SCHEDULE_INTERVAL_MS = 30 * 60 * 1000;
 const PERSONNEL_CONTEXT_INTERVAL_MS = 30 * 60 * 1000;
 const FEATURE_REPAIR_INTERVAL_MS = 30 * 60 * 1000;
-const ADAPTIVE_ODDS_CADENCE = "adaptive: established weekly cadence >6h; 12m 6-1h; 5m final hour when quota-safe";
+const INTENSIVE_ODDS_CADENCE = "adaptive: established weekly cadence >6h; 12m 6-1h; 5m final hour when quota-safe";
+const LEAN_ODDS_CADENCE = "lean: established weekly cadence plus one capture 40m before each distinct kickoff";
+
+/**
+ * "lean" (default) keeps the Odds API inside a free-plan budget: the weekly
+ * slots plus one capture shortly before each distinct kickoff time, about 12
+ * requests a week. "intensive" polls every 12 minutes in the six hours before
+ * kickoff and every 5 minutes in the final hour, which needs a paid plan.
+ */
+export function oddsCaptureMode(value = process.env.GRIDLINE_ODDS_MODE): "lean" | "intensive" {
+  return value?.trim().toLowerCase() === "intensive" ? "intensive" : "lean";
+}
+
+export const LEAN_ODDS_KICKOFF_LEAD_MINUTES = 40;
+
+/** Next lean capture: the earliest future weekly slot or pre-kickoff capture. */
+export function nextLeanOddsCapture(now: Date, kickoffs: Date[], slotCandidates: Date[]): Date | null {
+  const preKickoff = kickoffs.map((kickoff) => new Date(kickoff.getTime() - LEAN_ODDS_KICKOFF_LEAD_MINUTES * 60_000));
+  return [...slotCandidates, ...preKickoff]
+    .filter((candidate) => candidate > now)
+    .sort((left, right) => left.getTime() - right.getTime())[0] ?? null;
+}
+
+export const ADAPTIVE_ODDS_CADENCE = oddsCaptureMode() === "intensive" ? INTENSIVE_ODDS_CADENCE : LEAN_ODDS_CADENCE;
 export const SCHEDULER_OVERDUE_GRACE_MS = 2 * TICK_MS;
 export const REPEATED_FAILURE_THRESHOLD = 3;
 export const CONFIDENCE_CAPTURE_OFFSETS = [
@@ -623,6 +646,18 @@ async function nextAdaptiveOddsOccurrence(now: Date): Promise<Date | null> {
   const [upcoming] = upcomingGames;
   if (!upcoming?.kickoffTime) return null;
   const hours = (upcoming.kickoffTime.getTime() - now.getTime()) / 3_600_000;
+  if (oddsCaptureMode() === "lean") {
+    const kickoffs = upcomingGames
+      .map((game) => game.kickoffTime)
+      .filter((kickoff): kickoff is Date => Boolean(kickoff));
+    const weekdays = new Set(kickoffs.map((kickoff) => timeParts(kickoff).weekday));
+    const slots = await Promise.all(
+      ODDS_WEEKLY_SLOTS
+        .filter((definition) => definition.kind !== "odds-dynamic" || weekdays.has(definition.weekday))
+        .map((definition) => nextOccurrence(definition, now)),
+    );
+    return nextLeanOddsCapture(now, kickoffs, slots);
+  }
   if (hours > 6) {
     // Preserve the established low-frequency paid-feed cadence. The adaptive
     // owner only takes over inside the six-hour game window.
@@ -1138,7 +1173,7 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
           } else {
           const schedulingBalance = await getOddsSchedulingBalance();
           const hoursUntilKickoff = (nextGame.kickoffTime.getTime() - Date.now()) / 3_600_000;
-          const requiredRequestCount = hoursUntilKickoff <= 6
+          const requiredRequestCount = oddsCaptureMode() === "intensive" && hoursUntilKickoff <= 6
             ? oddsCaptureRequestCount(hoursUntilKickoff)
             : 1;
           const quota = oddsCaptureQuotaDecision(

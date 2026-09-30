@@ -45,6 +45,18 @@ the old projections went stale. In the Replit deployment's secrets, add
 `GRIDLINE_NEW_WORKER_APPROVED` = `1` and republish. Only one worker may run, and
 the deployment runs exactly one.
 
+### Odds API usage
+
+The worker uses your existing `ODDS_API_KEY` secret. By default it runs in
+**lean** mode, which makes about 12 requests a week (Tuesday, Thursday and
+Saturday mornings, Sunday mornings, and once about 40 minutes before each kickoff
+time). Each request costs 3 credits, so that's about 36 credits a week, or
+roughly 155 a month, which fits the free 500-credit plan.
+
+On a paid plan you can add `GRIDLINE_ODDS_MODE` = `intensive` to the deployment
+secrets. That checks lines every 12 minutes in the six hours before kickoff and
+every 5 minutes in the final hour, which uses roughly 2,500 credits a month.
+
 ## What to check afterwards
 
 - The home page loads with TD picks at the top and every game listed.
