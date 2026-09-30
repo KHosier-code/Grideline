@@ -2,8 +2,10 @@ import { Link } from 'wouter';
 import { CircleCheck, Crosshair, Target, Trophy } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
-  getGetConsumerGameProjectionsQueryKey, useGetConsumerGameProjections, useGetConsumerTouchdowns,
+  getGetConsumerGameProjectionsQueryKey, getGetConsumerReplayQueryKey, useGetConsumerGameProjections, useGetConsumerReplay,
+  useGetConsumerTouchdowns,
 } from '@workspace/api-client-react';
+import { TeamLogo } from '@/components/TeamLogo';
 import { ConsumerLoading } from './consumer-ui';
 
 const pct = (value: number, digits = 1) => `${(value * 100).toFixed(digits)}%`;
@@ -26,7 +28,77 @@ function Delta({ value, unit, betterWhenLower = false }: { value: number | null;
   return <span className={good ? 'gl-good' : 'gl-bad'}>{value > 0 ? '+' : ''}{unit === '%' ? pct(value) : value.toFixed(2)}{unit === '%' ? '' : ` ${unit}`}</span>;
 }
 
+type ReplayWeek = {
+  week: number;
+  touchdowns: { hits: number; picks: Array<{ name: string; position: string; team: string; opponent: string; probability: number; scored: boolean }> };
+  games: Array<{ home: string; away: string; homeScore: number; awayScore: number; pick: string; pickProbability: number; vegasFavorite: string | null; correct: boolean | null; favoriteCorrect: boolean | null }>;
+  winners: { wins: number; losses: number };
+  favorite: { wins: number; losses: number };
+};
+type Replay = { season: number; generatedAt: string; weeks: ReplayWeek[] };
+
+function Mark({ ok }: { ok: boolean | null }) {
+  if (ok === null) return <span className="gl-muted">Tie</span>;
+  return <span className={ok ? 'gl-good' : 'gl-bad'} aria-label={ok ? 'Correct' : 'Wrong'}>{ok ? '✓' : '✗'}</span>;
+}
+
+function ReplaySection({ replay }: { replay: Replay }) {
+  const hits = replay.weeks.reduce((sum, week) => sum + week.touchdowns.hits, 0);
+  const picks = replay.weeks.reduce((sum, week) => sum + week.touchdowns.picks.length, 0);
+  const wins = replay.weeks.reduce((sum, week) => sum + week.winners.wins, 0);
+  const losses = replay.weeks.reduce((sum, week) => sum + week.winners.losses, 0);
+  const favWins = replay.weeks.reduce((sum, week) => sum + week.favorite.wins, 0);
+  const favLosses = replay.weeks.reduce((sum, week) => sum + week.favorite.losses, 0);
+  const first = replay.weeks[0]?.week; const last = replay.weeks.at(-1)?.week;
+  return <section className="gl-section" aria-labelledby="replayed">
+    <div className="gl-section-head"><h2 id="replayed">{replay.season} weeks {first}–{last}, replayed</h2><p>Recreated after the games, not picks we posted at the time</p></div>
+    <div className="gl-replay-banner">
+      <b>Replayed, not live.</b> We launched these models after week {last}. To show how they would have done, we re-ran each earlier week using a model trained only on games played before that week. The live record above counts only picks posted before kickoff.
+    </div>
+    <div className="gl-record-grid">
+      <div className="gl-card gl-record-card">
+        <span className="gl-label">Touchdown top 10, replayed</span>
+        <b>{hits}/{picks}</b><p>{pct(hits / Math.max(1, picks), 0)} scored. In back-testing the weekly top 10 averaged about 60%.</p>
+      </div>
+      <div className="gl-card gl-record-card">
+        <span className="gl-label">Game winners, replayed</span>
+        <b>{wins}–{losses}</b><p>Taking every Vegas favorite went {favWins}–{favLosses} over the same games.</p>
+      </div>
+    </div>
+    {replay.weeks.map(week => <details key={week.week} className="gl-card gl-replay-week">
+      <summary>
+        <b>Week {week.week}</b>
+        <span>TD top 10: <strong>{week.touchdowns.hits}/10</strong></span>
+        <span>Winners: <strong>{week.winners.wins}–{week.winners.losses}</strong> <small>(favorites {week.favorite.wins}–{week.favorite.losses})</small></span>
+      </summary>
+      <div className="gl-replay-grid">
+        <table className="gl-table">
+          <caption className="gl-table-caption">Touchdown top 10</caption>
+          <thead><tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Chance</th><th scope="col">Scored</th></tr></thead>
+          <tbody>{week.touchdowns.picks.map((pick, index) => <tr key={pick.name + pick.team}>
+            <td>{index + 1}</td>
+            <td><b>{pick.name}</b> <small className="gl-muted">{pick.position} · {pick.team} vs {pick.opponent}</small></td>
+            <td>{pct(pick.probability, 0)}</td><td><Mark ok={pick.scored} /></td>
+          </tr>)}</tbody>
+        </table>
+        <table className="gl-table">
+          <caption className="gl-table-caption">Game winners</caption>
+          <thead><tr><th scope="col">Game</th><th scope="col">Final</th><th scope="col">Our pick</th><th scope="col">Vegas favorite</th></tr></thead>
+          <tbody>{week.games.map(game => <tr key={game.away + game.home}>
+            <td>{game.away} at {game.home}</td>
+            <td>{game.awayScore}–{game.homeScore}</td>
+            <td><span className="gl-inline-team"><TeamLogo team={game.pick} size={18} />{game.pick} <small className="gl-muted">{pct(game.pickProbability, 0)}</small> <Mark ok={game.correct} /></span></td>
+            <td>{game.vegasFavorite ? <span className="gl-inline-team">{game.vegasFavorite} <Mark ok={game.favoriteCorrect} /></span> : '—'}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </details>)}
+  </section>;
+}
+
 export default function ConsumerPerformance() {
+  const replayQuery = useGetConsumerReplay({ query: { queryKey: getGetConsumerReplayQueryKey(), staleTime: 5 * 60_000 } });
+  const replay = replayQuery.data?.status === 'available' ? replayQuery.data.report as unknown as Replay : null;
   const touchdowns = useGetConsumerTouchdowns();
   const games = useGetConsumerGameProjections(undefined, { query: { queryKey: getGetConsumerGameProjectionsQueryKey() } });
   const td = touchdowns.data;
@@ -126,6 +198,8 @@ export default function ConsumerPerformance() {
         </table>
       </div>}
     </section>
+
+    {replay && replay.weeks.length > 0 && <ReplaySection replay={replay} />}
 
     <p className="gl-note">Against the opening line instead of the close, the same game model went about 53–54% when it disagreed by more than a point (2021–2025), which beats break-even but isn&apos;t yet enough evidence to call it an edge. We&apos;re now tracking opening lines to test it on live games. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
   </div>;

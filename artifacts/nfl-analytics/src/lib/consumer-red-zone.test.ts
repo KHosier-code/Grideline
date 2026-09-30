@@ -157,13 +157,14 @@ test('Game Detail red-zone-only fallback selects at most three per team by sourc
   assert.equal(data.players[1]!.season.stats.targets, 0);
 });
 
-test('red-zone navigation, routes, and key-player UI are strict opt-in while consumer pages remain', () => {
+test('red-zone page is public while the older game-detail red-zone figures stay opt-in', () => {
   const app = readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8');
+  const shell = readFileSync(fileURLToPath(new URL('../components/ConsumerShellView.tsx', import.meta.url)), 'utf8');
   const card = readFileSync(fileURLToPath(new URL('../components/ConsumerKeyPlayers.tsx', import.meta.url)), 'utf8');
   const page = readFileSync(fileURLToPath(new URL('../pages/consumer/ConsumerRedZone.tsx', import.meta.url)), 'utf8');
-  assert.match(app, /VITE_GRIDLINE_RED_ZONE_ENABLED === '1'/);
-  assert.match(app, /redZoneEnabled \? \[\{ href: '\/red-zone', label: 'Red Zone'/);
-  assert.equal((app.match(/\{redZoneEnabled && <Route path="\/red-zone">/g) ?? []).length, 2);
+  assert.match(shell, /\{ href: '\/red-zone', label: 'Red Zone'/);
+  assert.equal((app.match(/<Route path="\/red-zone"><ConsumerShell><ConsumerRedZone \/><\/ConsumerShell><\/Route>/g) ?? []).length, 2);
+  assert.match(app, /import\('@\/pages\/consumer\/RedZone'\)/);
   assert.match(app, /<Route path="\/games">/);
   assert.match(app, /<Route path="\/usage">/);
   assert.match(card, /VITE_GRIDLINE_RED_ZONE_ENABLED === '1'/);

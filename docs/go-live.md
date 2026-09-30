@@ -15,6 +15,15 @@ Merge the branch `claude/beautiful-mendel-t4wvmz` into `main` on GitHub.
    adds tables and doesn't change existing ones. The same SQL is in
    `lib/db/migrations/0051_touchdown_picks.sql` and `0052_game_projection_runs.sql`.
 
+## 2b. Create the new database tables
+
+In the Replit **Shell**, type:
+
+    GRIDLINE_MIGRATION_ENV=development pnpm --filter @workspace/scripts run db:migrate
+
+Then **Republish**. If Replit asks to apply database changes to production,
+approve them. This adds the tables that store TD picks and game projections.
+
 ## 3. Create the upload key (one password, used in two places)
 
 The weekly GitHub job sends TD picks and game projections to the site. It proves

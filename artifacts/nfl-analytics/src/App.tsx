@@ -90,9 +90,9 @@ const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGame
 const ConsumerPerformance = lazy(() => import('@/pages/consumer/ConsumerPerformance'));
 const ConsumerMethodology = lazy(() => import('@/pages/consumer/ConsumerMethodology'));
 const ConsumerTrends = lazy(() => import('@/pages/consumer/ConsumerTrends'));
-const ConsumerUsage = lazy(() => import('@/pages/consumer/ConsumerUsage'));
-const ConsumerRedZone = lazy(() => import('@/pages/consumer/ConsumerRedZone'));
-const DefenseVsPositionLeague = lazy(() => import('@/components/DefenseVsPosition'));
+const ConsumerUsage = lazy(() => import('@/pages/consumer/PlayerUsage'));
+const ConsumerRedZone = lazy(() => import('@/pages/consumer/RedZone'));
+const DefenseVsPositionLeague = lazy(() => import('@/pages/consumer/DefenseVsPositionPage'));
 const ConsumerTeams = lazy(() => import('@/pages/consumer/ConsumerTeams'));
 const UsageAnalytics = lazy(() => import('@/pages/admin/UsageAnalytics'));
 
@@ -102,7 +102,6 @@ const AdminDepthChart = lazy(() => import('@/components/AdminDepthChart').then(m
 const AdminPlayerStatsImport = lazy(() => import('@/components/AdminPlayerStatsImport').then(module => ({ default: module.AdminPlayerStatsImport })));
 
 const queryClient = new QueryClient();
-const redZoneEnabled = import.meta.env.VITE_GRIDLINE_RED_ZONE_ENABLED === '1';
 
 type IconType = typeof Activity;
 
@@ -2133,7 +2132,7 @@ function Router() {
     || location === '/saved-games' || location === '/touchdowns' || location === '/props'
     || location === '/power-ratings' || location === '/qb-rankings'
     || location === '/weekly-picks'
-    || (redZoneEnabled && location === '/red-zone');
+    || location === '/red-zone';
   if (!isLoaded && !publicRoute) return <ConsumerLoadingFallback />;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
     <Route path="/sign-up/*?" component={SignUpPage} />
@@ -2147,7 +2146,7 @@ function Router() {
     <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
     <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
-    {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}
+    <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
     <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
@@ -2166,7 +2165,7 @@ function Router() {
       <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
       <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
-      {redZoneEnabled && <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>}
+      <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
       <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
       <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
       <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>

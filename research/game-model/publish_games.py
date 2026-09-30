@@ -8,6 +8,7 @@ Without both, the payload is written to games_payload.json instead.
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -149,5 +150,9 @@ if not origin or not token:
 request = urllib.request.Request(f"{origin.rstrip('/')}/api/games/projections/ingest", data=json.dumps(payload).encode(),
                                  method="POST", headers={"Content-Type": "application/json",
                                                          "Authorization": f"Bearer {token}", "User-Agent": "gridline-game-model"})
-with urllib.request.urlopen(request, timeout=60) as response:
-    print("Sent:", response.status, response.read().decode()[:200])
+try:
+    with urllib.request.urlopen(request, timeout=60) as response:
+        print("Sent:", response.status, response.read().decode()[:200])
+except urllib.error.HTTPError as error:
+    print(f"Upload failed: HTTP {error.code} {error.read().decode(errors='replace')[:500]}")
+    sys.exit(1)

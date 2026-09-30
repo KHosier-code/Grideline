@@ -3786,3 +3786,27 @@ export const GetConsumerPowerRatingsResponse = zod.object({
   "rankChange": zod.number().int().nullable().describe('Positive when the team moved up since last week')
 }))
 })
+
+
+/**
+ * @summary Read the latest weekly player usage, defense vs position and red zone report
+ */
+export const GetConsumerUsageReportResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "season": zod.number().int().nullable(),
+  "week": zod.number().int().nullable().describe('Last completed week the report covers'),
+  "generatedAt": zod.coerce.date().nullable(),
+  "report": zod.record(zod.string(), zod.unknown()).nullable().describe('Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py')
+})
+
+
+/**
+ * @summary Read this season's replayed weeks (walk-forward TD top 10 and game winners, graded)
+ */
+export const GetConsumerReplayResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "season": zod.number().int().nullable(),
+  "week": zod.number().int().nullable().describe('Last completed week the report covers'),
+  "generatedAt": zod.coerce.date().nullable(),
+  "report": zod.record(zod.string(), zod.unknown()).nullable().describe('Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py')
+})

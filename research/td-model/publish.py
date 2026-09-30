@@ -9,6 +9,7 @@ Without both variables the payload is written to td_payload.json and not sent.
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -126,5 +127,9 @@ if not origin or not token:
 url = f"{origin.rstrip('/')}/api/touchdowns/ingest"
 request = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST", headers={
     "Content-Type": "application/json", "Authorization": f"Bearer {token}", "User-Agent": "gridline-td-model"})
-with urllib.request.urlopen(request, timeout=60) as response:
-    print("Sent:", response.status, response.read().decode()[:200])
+try:
+    with urllib.request.urlopen(request, timeout=60) as response:
+        print("Sent:", response.status, response.read().decode()[:200])
+except urllib.error.HTTPError as error:
+    print(f"Upload failed: HTTP {error.code} {error.read().decode(errors='replace')[:500]}")
+    sys.exit(1)
