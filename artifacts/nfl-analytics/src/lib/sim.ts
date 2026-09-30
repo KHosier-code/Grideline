@@ -74,3 +74,22 @@ export function simulateMargins(expectedHomeMargin: number, seed: number, games 
   }
   return margins;
 }
+
+/**
+ * Where a run's win count usually lands: about 19 of 20 runs of `games` fall
+ * inside this range (normal approximation to the binomial, clamped to 0-games).
+ * An 80% favorite: 72-88.
+ */
+export function winRange(winChance: number, games = 100) {
+  const mean = winChance * games;
+  const spread = 1.96 * Math.sqrt(games * winChance * (1 - winChance));
+  return { low: Math.max(0, Math.round(mean - spread)), high: Math.min(games, Math.round(mean + spread)) };
+}
+
+/** "as of Sep 30, 2:15 PM" for a capture time, or null when missing or unreadable. */
+export function capturedText(capturedAt: string | null | undefined) {
+  if (!capturedAt) return null;
+  const when = new Date(capturedAt);
+  if (Number.isNaN(when.getTime())) return null;
+  return `as of ${when.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
+}

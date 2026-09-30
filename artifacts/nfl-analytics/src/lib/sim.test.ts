@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { homeWinChance, normalCdf, outcomeCounts, simulateMargins, toCounts } from './sim.ts';
+import { capturedText, homeWinChance, normalCdf, outcomeCounts, simulateMargins, toCounts, winRange } from './sim.ts';
 
 test('normal CDF matches known values', () => {
   assert.ok(Math.abs(normalCdf(0) - 0.5) < 1e-7);
@@ -28,4 +28,23 @@ test('simulated runs are replayable, tie-free and centered on the expectation', 
   assert.ok(!many.includes(0));
   const mean = many.reduce((sum, value) => sum + value, 0) / many.length;
   assert.ok(Math.abs(mean - 4) < 0.4, `mean ${mean}`);
+});
+
+test('the normal range holds about 95% of runs', () => {
+  assert.deepEqual(winRange(0.8), { low: 72, high: 88 });
+  assert.deepEqual(winRange(0.5), { low: 40, high: 60 });
+  assert.deepEqual(winRange(1), { low: 100, high: 100 });
+  const range = winRange(homeWinChance(7));
+  let inside = 0;
+  for (let seed = 1; seed <= 2_000; seed += 1) {
+    const wins = simulateMargins(7, seed).filter(margin => margin > 0).length;
+    if (wins >= range.low && wins <= range.high) inside += 1;
+  }
+  assert.ok(inside / 2_000 > 0.93 && inside / 2_000 < 0.98, `inside ${inside}`);
+});
+
+test('capture times read as a short date, and bad input reads as nothing', () => {
+  assert.match(capturedText('2026-09-30T12:00:00Z') ?? '', /^as of Sep 30, /);
+  assert.equal(capturedText(null), null);
+  assert.equal(capturedText('not a date'), null);
 });
