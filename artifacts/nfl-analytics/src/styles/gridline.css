@@ -230,7 +230,7 @@
 .gl-hero .gl-title { margin: 6px 0 0; font-size: clamp(44px, 7vw, 72px); }
 .gl-hero .gl-title span { color: hsl(var(--primary)); }
 .gl-hero p.gl-lede { max-width: 58ch; margin: 12px 0 0; color: hsl(var(--muted-foreground)); line-height: 1.6; }
-.gl-stats { display: flex; flex-wrap: wrap; gap: 28px; }
+.gl-stats { display: flex; flex-wrap: wrap; gap: 28px; max-width: 440px; }
 .gl-stat { display: grid; gap: 3px; }
 .gl-stat b { font-family: var(--gl-display); font-size: 34px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .gl-stat small { color: hsl(var(--muted-foreground)); font-size: 12px; }

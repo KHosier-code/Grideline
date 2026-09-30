@@ -114,7 +114,7 @@ closing line value.
 # Follow-ups: line movement and windy totals (September 30, 2026)
 
 `followups.py` re-runs the walk-forward rating (each season fit only on earlier
-seasons, 2021–2026 week 4) and asks two questions. Results are in
+seasons; tested on 2021 through the 2026 games played so far) and asks two questions. Results are in
 `followups.json`; opening lines again come from nfelo's public output, read
 from disk and not committed.
 
