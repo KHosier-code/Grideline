@@ -41,6 +41,9 @@ jobs:
           python build_dataset.py data td_dataset.parquet
           python evaluate.py td_dataset.parquet metrics.json
           python publish.py td_dataset.parquet data metrics.json
+      - name: Usage, defense vs position and red zone report
+        working-directory: research/td-model
+        run: python weekly_report.py data
       - name: Game projections
         working-directory: research/game-model
         run: |

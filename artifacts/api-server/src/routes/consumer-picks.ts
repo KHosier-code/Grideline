@@ -4,6 +4,7 @@ import { asc, desc, eq } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
   db, gameProjectionRunsTable, gamesTable, predictionSnapshotsTable, touchdownPickResultsTable, touchdownPickRunsTable,
+  weeklyReportsTable,
 } from "@workspace/db";
 import { projectionsBeforeKickoff, winnerRecord } from "../lib/game-projections";
 import { isEligiblePredictionSnapshot } from "../lib/live-predictions";
@@ -379,6 +380,54 @@ router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Consumer power ratings read failed");
     res.status(503).json({ error: "Power ratings are being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+const reportIngestSchema = zod.object({
+  kind: zod.enum(["usage"]),
+  season: zod.number().int().min(2000).max(2200),
+  week: zod.number().int().min(0).max(22),
+  generatedAt: zod.string().datetime({ offset: true }),
+  payload: zod.record(zod.string(), zod.unknown()),
+});
+
+router.post("/reports/ingest", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const parsed = reportIngestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid report payload", issues: parsed.error.issues.slice(0, 10) });
+    return;
+  }
+  const body = parsed.data;
+  try {
+    await db.insert(weeklyReportsTable).values({
+      kind: body.kind, season: body.season, week: body.week,
+      generatedAt: new Date(body.generatedAt), payload: body.payload,
+    }).onConflictDoNothing();
+    res.status(201).json({ stored: body.kind });
+  } catch (error) {
+    req.log.error({ error }, "Weekly report ingest failed");
+    res.status(500).json({ error: "Weekly report ingest failed" });
+  }
+});
+
+router.get("/consumer/usage-report", async (req, res): Promise<void> => {
+  try {
+    const [latest] = await db.select().from(weeklyReportsTable)
+      .where(eq(weeklyReportsTable.kind, "usage"))
+      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    if (!latest) {
+      res.json({ status: "unavailable", season: null, week: null, generatedAt: null, report: null });
+      return;
+    }
+    res.set("Cache-Control", "public, max-age=300");
+    res.json({
+      status: "available", season: latest.season, week: latest.week,
+      generatedAt: latest.generatedAt.toISOString(), report: latest.payload,
+    });
+  } catch (error) {
+    req.log.error({ error }, "Usage report read failed");
+    res.status(503).json({ error: "Usage report is being refreshed", code: "consumer_data_unavailable" });
   }
 });
 

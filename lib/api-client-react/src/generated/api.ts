@@ -52,6 +52,7 @@ import type {
   ConsumerTouchdowns,
   ConsumerTrends,
   ConsumerUpcomingPlayerProjections,
+  ConsumerUsageReport,
   ConsumerWeeklyPickArchive,
   DashboardSummary,
   DataHealth,
@@ -5529,6 +5530,83 @@ export function useGetConsumerPowerRatings<TData = Awaited<ReturnType<typeof get
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerPowerRatingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerUsageReportUrl = () => {
+
+
+
+
+  return `/api/consumer/usage-report`
+}
+
+/**
+ * @summary Read the latest weekly player usage, defense vs position and red zone report
+ */
+export const getConsumerUsageReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerUsageReport> => {
+
+  return customFetch<ConsumerUsageReport>(getGetConsumerUsageReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerUsageReportQueryKey = () => {
+    return [
+    `/api/consumer/usage-report`
+    ] as const;
+    }
+
+
+export const getGetConsumerUsageReportQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerUsageReport>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerUsageReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerUsageReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerUsageReport>>> = ({ signal }) => getConsumerUsageReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerUsageReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerUsageReportQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerUsageReport>>>
+export type GetConsumerUsageReportQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read the latest weekly player usage, defense vs position and red zone report
+ */
+
+export function useGetConsumerUsageReport<TData = Awaited<ReturnType<typeof getConsumerUsageReport>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerUsageReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerUsageReportQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

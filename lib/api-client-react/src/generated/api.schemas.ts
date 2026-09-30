@@ -42,6 +42,38 @@ export interface ConsumerTeamRating {
   rankChange: number | null;
 }
 
+export type ConsumerUsageReportStatus = typeof ConsumerUsageReportStatus[keyof typeof ConsumerUsageReportStatus];
+
+
+export const ConsumerUsageReportStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+/**
+ * Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py
+ * @nullable
+ */
+export type ConsumerUsageReportReport = { [key: string]: unknown } | null;
+
+export interface ConsumerUsageReport {
+  status: ConsumerUsageReportStatus;
+  /** @nullable */
+  season: number | null;
+  /**
+     * Last completed week the report covers
+     * @nullable
+     */
+  week: number | null;
+  /** @nullable */
+  generatedAt: string | null;
+  /**
+     * Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py
+     * @nullable
+     */
+  report: ConsumerUsageReportReport;
+}
+
 export type ConsumerPowerRatingsStatus = typeof ConsumerPowerRatingsStatus[keyof typeof ConsumerPowerRatingsStatus];
 
 

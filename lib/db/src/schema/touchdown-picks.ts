@@ -108,3 +108,22 @@ export const gameProjectionRunsTable = pgTable("game_projection_runs", {
   index("game_projection_runs_week_idx").on(table.season, table.week, table.generatedAt),
   check("game_projection_runs_week_check", sql`${table.week} between 1 and 22`),
 ]);
+
+/**
+ * Weekly observed-history reports sent by the GitHub workflow
+ * (research/td-model/weekly_report.py): player usage, defense vs position and
+ * red zone. One row per upload; readers take the newest row of a kind.
+ */
+export const weeklyReportsTable = pgTable("weekly_reports", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  kind: text("kind").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  generatedAt: timestamp("generated_at", { withTimezone: true }).notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+}, (table) => [
+  unique("weekly_reports_kind_generated_unique").on(table.kind, table.season, table.generatedAt),
+  index("weekly_reports_kind_idx").on(table.kind, table.generatedAt),
+  check("weekly_reports_week_check", sql`${table.week} between 0 and 22`),
+]);

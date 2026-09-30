@@ -30,7 +30,7 @@ export default defineConfig({
           if (req.url?.split('?')[0] === `${basePath.replace(/\/$/, '')}/sitemap.xml`) {
             const origin = new URL(process.env.PUBLIC_SITE_URL || 'https://gridelineanalytics.com').origin;
             const prefix = basePath.replace(/\/$/, '');
-            const urls = ['/', '/touchdowns', '/power-ratings', '/qb-rankings', '/games', '/teams', '/usage', '/defense-vs-position', '/performance', '/methodology'].map(p => `<url><loc>${origin}${prefix}${p}</loc></url>`).join('');
+            const urls = ['/', '/touchdowns', '/power-ratings', '/qb-rankings', '/games', '/teams', '/usage', '/defense-vs-position', '/red-zone', '/performance', '/methodology'].map(p => `<url><loc>${origin}${prefix}${p}</loc></url>`).join('');
             res.setHeader('Content-Type', 'application/xml; charset=utf-8');
             res.end(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
             return;

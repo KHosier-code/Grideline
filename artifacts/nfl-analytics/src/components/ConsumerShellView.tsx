@@ -6,8 +6,6 @@ import {
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from './ConsumerAccountNavigation';
 import type { consumerAccountState } from '@/lib/consumer-account-state';
 
-const redZoneEnabled = import.meta.env.VITE_GRIDLINE_RED_ZONE_ENABLED === '1';
-
 type NavItem = { href: string; label: string; icon: typeof Gauge; isNew?: boolean; signedInOnly?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
 
@@ -26,7 +24,7 @@ export const consumerNavGroups: NavGroup[] = [
     { href: '/teams', label: 'Team Charts', icon: Gauge },
     { href: '/usage', label: 'Player Usage', icon: Users },
     { href: '/defense-vs-position', label: 'Defense vs Position', icon: ShieldHalf },
-    ...(redZoneEnabled ? [{ href: '/red-zone', label: 'Red Zone', icon: Crosshair }] : []),
+    { href: '/red-zone', label: 'Red Zone', icon: Crosshair, isNew: true },
   ] },
   { label: 'About', items: [
     { href: '/methodology', label: 'How it works', icon: BookOpen },

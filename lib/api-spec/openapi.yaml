@@ -1363,6 +1363,18 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerPowerRatings" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/usage-report:
+    get:
+      operationId: getConsumerUsageReport
+      tags: [nfl]
+      summary: Read the latest weekly player usage, defense vs position and red zone report
+      responses:
+        "200":
+          description: The newest report from the weekly workflow, or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerUsageReport" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -1408,6 +1420,18 @@ components:
           type: object
           additionalProperties: { type: ["number", "null"] }
         rankChange: { type: ["integer", "null"], description: "Positive when the team moved up since last week" }
+    ConsumerUsageReport:
+      type: object
+      required: [status, season, week, generatedAt, report]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"] }
+        week: { type: ["integer", "null"], description: "Last completed week the report covers" }
+        generatedAt: { type: ["string", "null"], format: date-time }
+        report:
+          type: ["object", "null"]
+          additionalProperties: true
+          description: Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py
     ConsumerPowerRatings:
       type: object
       required: [status, season, week, generatedAt, teams]

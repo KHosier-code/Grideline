@@ -19,7 +19,7 @@ Merge the branch `claude/beautiful-mendel-t4wvmz` into `main` on GitHub.
 
 In the Replit **Shell**, type:
 
-    pnpm --filter @workspace/scripts run db:migrate
+    GRIDLINE_MIGRATION_ENV=development pnpm --filter @workspace/scripts run db:migrate
 
 Then **Republish**. If Replit asks to apply database changes to production,
 approve them. This adds the tables that store TD picks and game projections.
