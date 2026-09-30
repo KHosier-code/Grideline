@@ -268,6 +268,8 @@ const gameIngestSchema = zod.object({
     projectedMargin: zod.number().min(-60).max(60),
     projectedTotal: zod.number().min(0).max(120),
     homeWinProbability: zod.number().min(0).max(1),
+    marketMargin: zod.number().min(-60).max(60).nullable().optional(),
+    marketTotal: zod.number().min(0).max(120).nullable().optional(),
     homeQb: qbSchema,
     awayQb: qbSchema,
     factors: zod.object({

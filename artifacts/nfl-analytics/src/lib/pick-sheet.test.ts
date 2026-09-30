@@ -61,3 +61,11 @@ test('current week keeps finished games from the same week', () => {
   ];
   assert.deepEqual(currentWeek(games, now)?.games.map(item => item.gameId), ['thu', 'sun']);
 });
+
+test('the market line prefers a sportsbook capture and falls back to the consensus line', () => {
+  assert.deepEqual(buildGameView(game({ homeLine: -7 }), projection).market, { homeMargin: 7, total: 48.5, source: 'sportsbook' });
+  const noBook = { ...game(), market: null } as unknown as ConsumerGame;
+  assert.deepEqual(buildGameView(noBook, { ...projection, marketMargin: 6.5, marketTotal: 47.5 }).market,
+    { homeMargin: 6.5, total: 47.5, source: 'consensus' });
+  assert.equal(buildGameView(noBook, projection).market, null);
+});

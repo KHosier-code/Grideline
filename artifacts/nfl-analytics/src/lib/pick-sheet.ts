@@ -26,6 +26,11 @@ export type GameView = {
   } | null;
   winner: { side: Side; probability: number } | null;
   vegas: { homeLine: number | null; total: number | null; favorite: Side | null };
+  /**
+   * The betting market's expected home margin: the captured sportsbook spread
+   * when we have one, else nflverse's consensus line sent with the projection.
+   */
+  market: { homeMargin: number; total: number | null; source: 'sportsbook' | 'consensus' } | null;
   result: 'win' | 'loss' | 'push' | null;
 };
 
@@ -59,7 +64,12 @@ export function buildGameView(game: ConsumerGame, qbModel?: ConsumerGameProjecti
     const actual = game.finalScore.home - game.finalScore.away;
     result = actual === 0 ? 'push' : (actual > 0) === (winner.side === 'home') ? 'win' : 'loss';
   }
-  return { game, projection, winner, vegas: { homeLine, total: vegasTotal, favorite }, result };
+  const market: GameView['market'] = homeLine !== null
+    ? { homeMargin: -homeLine, total: vegasTotal, source: 'sportsbook' }
+    : qbModel && finite(qbModel.marketMargin)
+      ? { homeMargin: qbModel.marketMargin, total: finite(qbModel.marketTotal) ? qbModel.marketTotal : null, source: 'consensus' }
+      : null;
+  return { game, projection, winner, vegas: { homeLine, total: vegasTotal, favorite }, market, result };
 }
 
 /** "BUF -7.5" style line for the team a margin favors (home-minus-away margin). */

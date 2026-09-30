@@ -73,6 +73,9 @@ export type GameProjectionRow = {
   projectedMargin: number;
   projectedTotal: number;
   homeWinProbability: number;
+  /** nflverse consensus line as an expected home margin (positive = home favored). */
+  marketMargin?: number | null;
+  marketTotal?: number | null;
   homeQb: GameProjectionQb;
   awayQb: GameProjectionQb;
   factors: { qbEdge: number | null; teamEdge: number | null; passEdge: number | null; rushEdge: number | null; restDiff: number | null; neutralSite: boolean };

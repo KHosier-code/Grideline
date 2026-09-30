@@ -19,6 +19,16 @@ export interface ConsumerGameProjection {
   projectedMargin: number;
   projectedTotal: number;
   homeWinProbability: number;
+  /**
+     * Consensus betting line as an expected home margin (positive favors home), from nflverse
+     * @nullable
+     */
+  marketMargin?: number | null;
+  /**
+     * Consensus betting total, from nflverse
+     * @nullable
+     */
+  marketTotal?: number | null;
   homeQb: ConsumerProjectionQb;
   awayQb: ConsumerProjectionQb;
   factors: ConsumerGameProjectionFactors;

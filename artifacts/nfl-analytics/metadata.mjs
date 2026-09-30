@@ -12,6 +12,7 @@ const url = path => `${origin}${prefix}${path}`;
 const pages = {
   '/': ['Gridline | Free NFL Touchdown Picks and Game Projections', 'Free weekly anytime touchdown picks and a projected score for every NFL game, adjusted for the starting quarterback, next to the Vegas line.'],
   '/touchdowns': ['Anytime Touchdown Picks This Week | Gridline', 'Ranked anytime touchdown scorer picks for every NFL game, with each player\'s red-zone role, target and carry share, Vegas team total and defensive matchup.'],
+  '/pickem': ['NFL Pick\'em and Confidence Pool Picks This Week | Gridline', 'Every NFL game ranked by win chance out of 100 for pick\'em, confidence and survivor pools, with 100-game simulations of each matchup.'],
   '/power-ratings': ['NFL Power Ratings: All 32 Teams Ranked | Gridline', 'Every NFL team ranked 1-32 by points better or worse than an average team, with offense, defense and quarterback ratings.'],
   '/qb-rankings': ['NFL QB Rankings by EPA per Dropback | Gridline', 'Every team\'s expected starting quarterback ranked by value per dropback, and what each is worth to the team in points.'],
   '/games': ['NFL Games, Projections and Lines | Gridline', 'Browse every NFL game by week with Gridline\'s projected score, the sportsbook line and final results.'],

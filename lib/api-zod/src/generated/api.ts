@@ -3725,6 +3725,8 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "projectedMargin": zod.number().describe('Home minus away'),
   "projectedTotal": zod.number(),
   "homeWinProbability": zod.number(),
+  "marketMargin": zod.number().nullish().describe('Consensus betting line as an expected home margin (positive favors home), from nflverse'),
+  "marketTotal": zod.number().nullish().describe('Consensus betting total, from nflverse'),
   "homeQb": zod.object({
   "name": zod.string().nullable(),
   "value": zod.number().nullable().describe('Recency-weighted EPA per dropback, shrunk toward backup level'),

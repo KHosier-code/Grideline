@@ -69,6 +69,9 @@ for _, row in slate.iterrows():
         "kickoff": row.kickoff.tz_localize(eastern).astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
         "projectedMargin": r(row.margin_pred, 2), "projectedTotal": r(row.total_pred, 2),
         "homeWinProbability": r(row.home_win, 4),
+        # nflverse's consensus line (expected home margin), a fallback when no
+        # sportsbook capture exists yet.
+        "marketMargin": r(row.spread_line, 1), "marketTotal": r(row.total_line, 1),
         "homeQb": qb(row, "home"), "awayQb": qb(row, "away"),
         "factors": {"qbEdge": r(row.qb_edge), "teamEdge": r(row.epa_edge), "passEdge": r(row.pass_edge),
                     "rushEdge": r(row.rush_edge), "restDiff": r(row.rest_diff, 0), "neutralSite": bool(row.neutral)},

@@ -6,6 +6,8 @@ import {
 } from '@workspace/api-client-react';
 import { buildGameView, currentWeek, formatPrice } from '@/lib/pick-sheet';
 import { GameBoard, TeamChip } from '@/components/GameBoard';
+import { HundredGrid, abbr, toPoolGame } from '@/components/GameSim';
+import { matchupAccents } from '@/lib/team-colors';
 import { ConsumerLoading, useConsumerNow } from './consumer-ui';
 
 export { TeamChip };
@@ -50,6 +52,25 @@ function HeroStats({ season }: { season: number | undefined }) {
   </div>;
 }
 
+/** Three surest winners this week, linking to the full Pick'em Pool. */
+function PoolTeaser({ views, now }: { views: ReturnType<typeof buildGameView>[]; now: number }) {
+  const games = views
+    .filter(view => !view.game.finalScore && (!view.game.kickoffTime || Date.parse(view.game.kickoffTime) > now))
+    .map(toPoolGame).filter((game): game is NonNullable<typeof game> => game !== null)
+    .sort((a, b) => b.wins - a.wins).slice(0, 3);
+  if (games.length < 3) return null;
+  return <Link href="/pickem" className="gl-card gl-pool-teaser">
+    <span className="gl-pool-teaser-copy"><span className="gl-label">Pick&apos;em Pool</span><b>Safest picks this week</b><small>Every game ranked for confidence and survivor pools ›</small></span>
+    {games.map(game => {
+      const [win, loss] = matchupAccents(abbr(game, game.pick), abbr(game, game.pick === 'home' ? 'away' : 'home'));
+      return <span key={game.view.game.gameId} className="gl-pool-teaser-pick">
+        <HundredGrid wins={game.wins} winColor={win} lossColor={loss} label={`${abbr(game, game.pick)} wins ${game.wins} of 100`} />
+        <span><b>{abbr(game, game.pick)}</b> over {abbr(game, game.pick === 'home' ? 'away' : 'home')}<small>{game.wins} of 100</small></span>
+      </span>;
+    })}
+  </Link>;
+}
+
 export default function PickSheet() {
   const dashboard = useGetConsumerDashboard({ query: { queryKey: getGetConsumerDashboardQueryKey(), staleTime: 60_000, refetchInterval: 120_000 } });
   const now = useConsumerNow();
@@ -73,6 +94,8 @@ export default function PickSheet() {
     </header>
 
     <TopTouchdowns now={now} />
+
+    <PoolTeaser views={views} now={now} />
 
     {dashboard.isLoading && <ConsumerLoading label="Loading this week's games…" />}
     {dashboard.isError && <div className="gl-empty"><strong>We couldn&apos;t load this week&apos;s games.</strong>Refresh the page in a minute. If it keeps happening, the schedule feed may be updating.</div>}

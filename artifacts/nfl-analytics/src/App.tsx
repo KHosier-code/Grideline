@@ -26,6 +26,7 @@ const ConsumerRedZone = lazy(() => import('@/pages/consumer/RedZone'));
 const DefenseVsPositionLeague = lazy(() => import('@/pages/consumer/DefenseVsPositionPage'));
 const ConsumerTeams = lazy(() => import('@/pages/consumer/ConsumerTeams'));
 const SharePicks = lazy(() => import('@/pages/consumer/SharePicks'));
+const Pickem = lazy(() => import('@/pages/consumer/Pickem'));
 const AdminRoutes = lazy(() => import('@/pages/admin/AdminApp'));
 
 const queryClient = new QueryClient();
@@ -125,7 +126,7 @@ function Router() {
     || location === '/saved-games' || location === '/touchdowns' || location === '/props'
     || location === '/power-ratings' || location === '/qb-rankings'
     || location === '/weekly-picks'
-    || location === '/red-zone' || location === '/share';
+    || location === '/red-zone' || location === '/share' || location === '/pickem';
   if (!isLoaded && !publicRoute) return <ConsumerLoadingFallback />;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
     <Route path="/sign-up/*?" component={SignUpPage} />
@@ -142,6 +143,7 @@ function Router() {
     <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
     <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
+    <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
     <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
@@ -164,6 +166,7 @@ function Router() {
       <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
       <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
+    <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
       <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
       <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>

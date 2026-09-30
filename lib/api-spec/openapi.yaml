@@ -1477,6 +1477,8 @@ components:
         projectedMargin: { type: number, description: "Home minus away" }
         projectedTotal: { type: number }
         homeWinProbability: { type: number }
+        marketMargin: { type: ["number", "null"], description: "Consensus betting line as an expected home margin (positive favors home), from nflverse" }
+        marketTotal: { type: ["number", "null"], description: "Consensus betting total, from nflverse" }
         homeQb: { $ref: "#/components/schemas/ConsumerProjectionQb" }
         awayQb: { $ref: "#/components/schemas/ConsumerProjectionQb" }
         factors:
