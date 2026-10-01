@@ -90,3 +90,41 @@ Hit rate is not profit: these players are priced as favourites, so a pick only
 has value when the book's price is longer than the break-even odds for its
 predicted chance. Historical prop prices aren't in the public data; the site
 captures DraftKings/FanDuel anytime-TD prices live, which is the way to grade value.
+
+## Venom Analytics-style picks
+
+Kalen asked how Venom Analytics (a Whop product) runs its NFL algorithms. Their
+method isn't public. What is public (search listings of venomanalytics.io, their
+Whop page and X accounts; the pages themselves are blocked from our research
+environment and the product is paid) describes an MLB home-run tool: a
+proprietary "Venom Score" ranking every player daily, a "DUE" tag for players
+whose underlying numbers run ahead of their results, a "PITCHER VULNERABLE" tag,
+and weekly "NFL Touchdown Watch" posts from a co-founder. No NFL spread product
+and no published win/loss record turned up; the Whop listing shows a 4.9/5
+review score, which is not a betting record.
+
+`venom_backtest.py` recreates those ideas for NFL anytime-TD picks and, since
+nothing they describe is a spread model, a team-level "due for points" rule
+graded against the spread. 2021 through 2026 week 3, walk-forward.
+
+| Top 5 weekly picks | 2021-2026 wk 3 | 2023-2026 wk 3 |
+|---|---|---|
+| Gridline TD model (live) | 261/465 (56.1%) | 177/285 (62.1%) |
+| Venom Score (equal-weight opportunity, share, implied total, opponent) | 254/465 (54.6%) | 165/285 (57.9%) |
+| Player's own TD rate | 230/465 (49.5%) | 149/285 (52.3%) |
+| Touchdown Watch (near misses inside the 5 last game) | 209/465 (45.0%) | 130/285 (45.6%) |
+| DUE (expected TDs minus actual TDs) | 131/465 (28.2%) | 86/285 (30.2%) |
+| Venom Score, DUE-tagged players only | 106/465 (22.8%) | 66/285 (23.2%) |
+
+"Due" doesn't work in the NFL: among players with real red-zone volume, those
+tagged DUE scored 85/286 (29.7%) against 37.4% for the rest, close to what our
+model already expected for them (26.5%). Players who aren't scoring keep not
+scoring. The Gridline TD model's 62.1% also depends on its random seed and first
+training season: five seeds with 2019 or 2020 as the first season give 55.1% to
+62.5% (median about 60%).
+
+Against the spread, 12 "due offense" rules (yards per point or red-zone TD
+shortfall, last 3 or 8 games, three gap sizes) went 46.7% to 52.4% at the
+opener and 47.6% to 53.3% at the close. The best of 12 coin-flip rules
+typically reaches 54.8%, so none shows skill. Results are in
+`out/venom_backtest.json`.
