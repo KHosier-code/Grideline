@@ -128,3 +128,40 @@ shortfall, last 3 or 8 games, three gap sizes) went 46.7% to 52.4% at the
 opener and 47.6% to 53.3% at the close. The best of 12 coin-flip rules
 typically reaches 54.8%, so none shows skill. Results are in
 `out/venom_backtest.json`.
+
+### Venom's published NFL formula, rebuilt
+
+Kalen later shared Venom's "NFL Metrics Explained" page, which gives the
+anytime-TD recipe: over a player's last five meaningful games, Venom Score =
+baseline x 0.60 + opportunity x 0.40 + a due bonus (+8 for an elite red-zone
+role and 3 straight games without a TD, +5 for 12+ touches and 4 straight).
+Baseline is red-zone share 35%, touches 25%, goal-line carries 15%, target
+share 15%, TD rate 10%; opportunity is implied team total 55% and TDs the
+opponent allows the position 45%. "TD debt" prices every touch at the league
+rate for its zone and play type; expected minus actual TDs tags players "Due
+For TD" or "Regression Risk". `venom_replica.py` rebuilds it (the docstring
+lists the choices the page leaves open: percentile scaling, what counts as
+meaningful, zone edges, the elite cutoff).
+
+| Top 5 weekly picks | 2021-2026 wk 3 | 2023-2026 wk 3 |
+|---|---|---|
+| Venom Score, as published | 249/465 (53.5%) | 157/285 (55.1%) |
+| Venom Score without the due bonus | 259/465 (55.7%) | 169/285 (59.3%) |
+| Gridline TD model (seed 7) | 261/465 (56.1%) | 177/285 (62.1%) |
+| Gridline TD model, five seeds | 52.9% to 56.1% | 55.1% to 62.5% |
+
+- The due bonus is what hurts. Top-1 picks hit 45.2% with it and 55.9%
+  without. Inside Venom's weekly top 10, players tagged Due For TD scored
+  42.4% (330 picks) against 53.5% for the rest (600).
+- TD debt adds nothing once usage is known: Due For TD players scored 24.1%
+  (Gridline expected 24.4%), Regression Risk players 27.2% (expected 26.7%).
+- Without the bonus the Venom formula is roughly as good as our model; the
+  gap is inside the seed range. Their weekly top 5 and ours share only 30% of
+  players. Our probabilities are better calibrated (Brier 0.1388 vs 0.1418).
+- Team TD debt against the spread (six rules, offense alone or with the
+  opposing defense's debt) went 48.0% to 52.0% at the opener and 49.4% to
+  52.3% at the close: no edge.
+
+Hit rate still isn't profit: these are favourite-priced props, so a pick only
+pays when the book's price is longer than the break-even odds. Results are in
+`out/venom_replica.json`.
