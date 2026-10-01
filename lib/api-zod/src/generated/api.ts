@@ -1406,6 +1406,20 @@ export const GetConsumerDashboardResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]).optional().describe('Away team\'s moneyline from the same sportsbook as `moneyline`, when saved.'),
+  "awaySpread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Away team\'s spread from the same sportsbook as `spread`, at the opposite line, when saved.'),
+  "under": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Under from the same sportsbook as `total`, at the same line, when saved.'),
   "evidence": zod.object({
   "available": zod.boolean(),
   "capturedAt": zod.coerce.date().nullable(),
@@ -1716,6 +1730,20 @@ export const ListConsumerGamesResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]).optional().describe('Away team\'s moneyline from the same sportsbook as `moneyline`, when saved.'),
+  "awaySpread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Away team\'s spread from the same sportsbook as `spread`, at the opposite line, when saved.'),
+  "under": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Under from the same sportsbook as `total`, at the same line, when saved.'),
   "evidence": zod.object({
   "available": zod.boolean(),
   "capturedAt": zod.coerce.date().nullable(),
@@ -1998,6 +2026,20 @@ export const GetConsumerGameResponse = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]).optional().describe('Away team\'s moneyline from the same sportsbook as `moneyline`, when saved.'),
+  "awaySpread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Away team\'s spread from the same sportsbook as `spread`, at the opposite line, when saved.'),
+  "under": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Under from the same sportsbook as `total`, at the same line, when saved.'),
   "evidence": zod.object({
   "available": zod.boolean(),
   "capturedAt": zod.coerce.date().nullable(),
@@ -2551,6 +2593,20 @@ export const ListSavedGamesResponseItem = zod.object({
   "price": zod.number(),
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()]).optional().describe('Away team\'s moneyline from the same sportsbook as `moneyline`, when saved.'),
+  "awaySpread": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Away team\'s spread from the same sportsbook as `spread`, at the opposite line, when saved.'),
+  "under": zod.union([zod.object({
+  "sportsbook": zod.string(),
+  "selection": zod.string(),
+  "point": zod.number().nullable(),
+  "price": zod.number(),
+  "capturedAt": zod.coerce.date().nullable()
+}),zod.null()]).optional().describe('Under from the same sportsbook as `total`, at the same line, when saved.'),
   "evidence": zod.object({
   "available": zod.boolean(),
   "capturedAt": zod.coerce.date().nullable(),

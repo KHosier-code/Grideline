@@ -4,11 +4,12 @@
  * more likely), so multiplying their chances would overstate or understate
  * the parlay. Same-game parlays need a joint simulation and are not offered.
  */
+import { devig, impliedProbability } from './market';
 import { mulberry32 } from './sim';
 
 export type ParlayLeg = {
   id: string;
-  kind: 'winner' | 'td';
+  kind: 'winner' | 'spread' | 'total' | 'td';
   /** The team the leg is on, for its logo. */
   team: string;
   /** Stable key for the game, shared by every leg from that game. */
@@ -35,6 +36,55 @@ export const gameKeyFor = (teamA: string, teamB: string) => [teamA, teamB].map(n
 
 const TEAM_ALIASES: Record<string, string> = { LAR: 'LA', WSH: 'WAS', JAC: 'JAX' };
 export const normalizeTeam = (team: string) => TEAM_ALIASES[team.toUpperCase()] ?? team.toUpperCase();
+
+/**
+ * Typical overround on a spread or total (both sides at -110). Used only when the
+ * other side's price wasn't saved, so the vig can't be removed exactly.
+ */
+export const SIDE_MARKET_HOLD = 0.0476;
+
+/** A side's chance from its own price and, when saved, the other side's. */
+export const sideChance = (price: number, otherPrice: number | null) =>
+  otherPrice !== null ? devig(price, otherPrice)[0] : impliedProbability(price) / (1 + SIDE_MARKET_HOLD);
+
+type SideQuote = { point: number | null; price: number } | null | undefined;
+export type LineMarket = { spread?: SideQuote; awaySpread?: SideQuote; total?: SideQuote; under?: SideQuote };
+
+const signed = (point: number) => (point > 0 ? `+${point}` : point === 0 ? 'pick' : String(point));
+
+/**
+ * Spread and over/under legs for one game, from the sportsbook's saved lines.
+ * Chances come from the book's two prices with its cut removed, the same
+ * market that sets the payout.
+ */
+export function lineLegs(home: string, away: string, market: LineMarket | null | undefined, kickoff: string | null) {
+  const key = gameKeyFor(home, away);
+  const spreads: ParlayLeg[] = [];
+  const totals: ParlayLeg[] = [];
+  const homeSpread = market?.spread;
+  if (homeSpread && homeSpread.point !== null) {
+    const awaySpread = market?.awaySpread && market.awaySpread.point === -homeSpread.point ? market.awaySpread : null;
+    const homeChance = sideChance(homeSpread.price, awaySpread?.price ?? null);
+    spreads.push(
+      { id: `spread-${home}-${key}`, kind: 'spread', team: home, gameKey: key, label: `${home} ${signed(homeSpread.point)}`, detail: `Spread · vs ${away}`,
+        probability: homeChance, bookPrice: homeSpread.price, kickoff },
+      { id: `spread-${away}-${key}`, kind: 'spread', team: away, gameKey: key, label: `${away} ${signed(-homeSpread.point)}`, detail: `Spread · at ${home}`,
+        probability: 1 - homeChance, bookPrice: awaySpread?.price ?? null, kickoff },
+    );
+  }
+  const over = market?.total;
+  if (over && over.point !== null) {
+    const under = market?.under && market.under.point === over.point ? market.under : null;
+    const overChance = sideChance(over.price, under?.price ?? null);
+    totals.push(
+      { id: `over-${key}`, kind: 'total', team: home, gameKey: key, label: `Over ${over.point}`, detail: `Total points · ${away} at ${home}`,
+        probability: overChance, bookPrice: over.price, kickoff },
+      { id: `under-${key}`, kind: 'total', team: home, gameKey: key, label: `Under ${over.point}`, detail: `Total points · ${away} at ${home}`,
+        probability: 1 - overChance, bookPrice: under?.price ?? null, kickoff },
+    );
+  }
+  return { spreads, totals };
+}
 
 export type ParlayQuote = {
   legs: number;

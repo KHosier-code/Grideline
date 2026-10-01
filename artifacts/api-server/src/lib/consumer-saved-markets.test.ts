@@ -19,8 +19,21 @@ test("current market uses the newest saved quote per book and side", () => {
   assert.equal(market.spread?.point, -7);
   assert.equal(market.total?.point, 48.5);
   assert.equal(market.awayMoneyline?.price, 240);
+  assert.deepEqual([market.awaySpread?.point, market.awaySpread?.price], [7, -110]);
+  assert.deepEqual([market.under?.selection, market.under?.point], ["Under", 48.5]);
   assert.equal(market.evidence.available, true);
   assert.equal(latestSavedMarket([], home).evidence.available, false);
+});
+
+test("the other side of a spread or total only pairs at the matching line", () => {
+  const rows = [
+    row("DraftKings", "spread", "BUF", -7, -110, 30), row("DraftKings", "spread", "NE", 6.5, -115, 0),
+    row("DraftKings", "total", "Over", 48.5, -110, 30), row("DraftKings", "total", "Under", 48, -110, 0),
+    row("FanDuel", "total", "Under", 48.5, -105, 30),
+  ];
+  const market = latestSavedMarket(rows, home);
+  assert.equal(market.awaySpread, null);
+  assert.equal(market.under, null);
 });
 
 test("opening markets come from the first saved capture", () => {

@@ -6,7 +6,7 @@ import {
 } from '@workspace/api-client-react';
 import { HundredGrid, toPoolGame } from '@/components/GameSim';
 import { TeamLogo } from '@/components/TeamLogo';
-import { addLeg, fairAmerican, gameKeyFor, quoteParlay, simulateParlay, type ParlayLeg } from '@/lib/parlay';
+import { addLeg, fairAmerican, gameKeyFor, lineLegs, quoteParlay, simulateParlay, type ParlayLeg } from '@/lib/parlay';
 import { devig } from '@/lib/market';
 import { shareCardImage } from '@/lib/share-image';
 import { buildGameView, currentWeek, formatPrice } from '@/lib/pick-sheet';
@@ -28,6 +28,8 @@ function useParlayLegs(now: number) {
   return useMemo(() => {
     const byGame = new Map((projections.data?.games ?? []).map(projection => [projection.gameId, projection]));
     const winners: ParlayLeg[] = [];
+    const spreads: ParlayLeg[] = [];
+    const totals: ParlayLeg[] = [];
     for (const game of week?.games ?? []) {
       if (game.finalScore || started(game.kickoffTime, now)) continue;
       const pool = toPoolGame(buildGameView(game, byGame.get(game.gameId)));
@@ -46,6 +48,9 @@ function useParlayLegs(now: number) {
         { id: `win-${away}-${key}`, kind: 'winner', team: away, gameKey: key, label: `${away} to win`, detail: `at ${home}`, probability: 1 - homeWin,
           bookPrice: awayPrice, kickoff: game.kickoffTime },
       );
+      const lines = lineLegs(home, away, game.market, game.kickoffTime);
+      spreads.push(...lines.spreads);
+      totals.push(...lines.totals);
     }
     winners.sort((a, b) => b.probability - a.probability);
     const scorers: ParlayLeg[] = (touchdowns.data?.picks ?? [])
@@ -56,7 +61,7 @@ function useParlayLegs(now: number) {
         probability: pick.probability, bookPrice: pick.bookOdds?.price ?? null, kickoff: pick.kickoff,
       }));
     return {
-      week, winners, scorers,
+      week, winners, spreads, totals, scorers,
       loading: dashboard.isLoading || projections.isLoading || touchdowns.isLoading,
     };
   }, [week, projections.data, touchdowns.data, dashboard.isLoading, projections.isLoading, touchdowns.isLoading, now]);
@@ -127,7 +132,7 @@ function Slip({ legs, onRemove, onClear }: { legs: ParlayLeg[]; onRemove: (id: s
   if (!legs.length) {
     return <aside id="parlay-slip" className="gl-card gl-slip" aria-label="Parlay slip">
       <span className="gl-label">Your parlay</span>
-      <p className="gl-slip-empty">Add legs from the list: game winners and anytime touchdown scorers, one leg per game.</p>
+      <p className="gl-slip-empty">Add legs from the list: game winners, spreads, over/unders and anytime touchdown scorers, one leg per game.</p>
     </aside>;
   }
   const text = [`My parlay (${legs.length} legs)`, ...legs.map(leg => `• ${leg.label} (${pctText(leg.probability)}%)`),
@@ -149,7 +154,7 @@ function Slip({ legs, onRemove, onClear }: { legs: ParlayLeg[]; onRemove: (id: s
     <dl className="gl-slip-odds">
       <div><dt>Fair payout</dt><dd>{price(quote.fairOdds)}</dd></div>
       <div><dt>Book payout</dt><dd>{quote.bookOdds !== null ? price(quote.bookOdds) : 'Not all legs priced'}</dd></div>
-      {quote.expectedOnTen !== null && legs.every(leg => leg.kind === 'winner')
+      {quote.expectedOnTen !== null && legs.every(leg => leg.kind !== 'td')
         && <div><dt>Book&apos;s cut per $10</dt><dd>{quote.expectedOnTen >= 0 ? '+' : '−'}${Math.abs(quote.expectedOnTen).toFixed(2)}</dd></div>}
     </dl>
     <div className="gl-run-foot">
@@ -168,14 +173,16 @@ function Slip({ legs, onRemove, onClear }: { legs: ParlayLeg[]; onRemove: (id: s
   </aside>;
 }
 
+type Tab = 'winners' | 'spread' | 'total' | 'td';
+
 export default function Parlays() {
   const now = useConsumerNow();
-  const { week, winners, scorers, loading } = useParlayLegs(now);
+  const { week, winners, spreads, totals, scorers, loading } = useParlayLegs(now);
   const [legs, setLegs] = useState<ParlayLeg[]>([]);
-  const [tab, setTab] = useState<'winners' | 'td'>('winners');
+  const [tab, setTab] = useState<Tab>('winners');
   const [search, setSearch] = useState('');
   const [shown, setShown] = useState(24);
-  const list = tab === 'winners' ? winners : scorers.filter(leg => leg.label.toLowerCase().includes(search.trim().toLowerCase()));
+  const list = tab === 'winners' ? winners : tab === 'spread' ? spreads : tab === 'total' ? totals : scorers.filter(leg => leg.label.toLowerCase().includes(search.trim().toLowerCase()));
   const quote = quoteParlay(legs);
 
   return <div className="gl-page">
@@ -183,7 +190,7 @@ export default function Parlays() {
       <div>
         <p className="gl-label">{week ? `${week.season} season · Week ${week.week}` : 'Parlays'}</p>
         <h1 className="gl-title">Parlay <span>Builder</span></h1>
-        <p className="gl-lede">Build a parlay from game winners and anytime touchdown scorers. We show how often it really hits, what it should pay, and what your sportsbook is charging for it.</p>
+        <p className="gl-lede">Build a parlay from game winners, spreads, over/unders and anytime touchdown scorers. We show how often it really hits, what it should pay, and what your sportsbook is charging for it.</p>
       </div>
     </header>
 
@@ -199,8 +206,8 @@ export default function Parlays() {
           <div className="gl-parlay-pick">
             <div className="gl-parlay-tabs">
               <div className="gl-filters" role="group" aria-label="Leg type">
-                <button type="button" aria-pressed={tab === 'winners'} onClick={() => { setTab('winners'); setShown(24); }}>Game winners <small>{winners.length}</small></button>
-                <button type="button" aria-pressed={tab === 'td'} onClick={() => { setTab('td'); setShown(24); }}>TD scorers <small>{scorers.length}</small></button>
+                {([['winners', 'Game winners', winners], ['spread', 'Spreads', spreads], ['total', 'Over/under', totals], ['td', 'TD scorers', scorers]] as const)
+                  .map(([value, name, items]) => <button key={value} type="button" aria-pressed={tab === value} onClick={() => { setTab(value); setShown(24); }}>{name} <small>{items.length}</small></button>)}
               </div>
               {tab === 'td' && <input className="gl-input" type="search" placeholder="Find a player" value={search} onChange={event => setSearch(event.target.value)} aria-label="Find a player" />}
             </div>
@@ -217,7 +224,7 @@ export default function Parlays() {
         <span>{legs.length} {legs.length === 1 ? 'leg' : 'legs'}</span><b>Hits {pctText(quote.probability)} of 100</b><span>Fair {price(quote.fairOdds)} ›</span>
       </a>}
 
-      <p className="gl-note">Winner chances come from the sportsbook&apos;s moneyline with its cut removed (or the spread when no moneyline is saved). Touchdown chances come from our TD model, which was well calibrated on past seasons but hasn&apos;t been tested against sportsbook TD prices yet, so we don&apos;t show a value figure for TD legs. Parlays multiply each sportsbook&apos;s cut, so they usually pay less than they should; for winner-only parlays the per-$10 figure shows that cost. Same-game parlays aren&apos;t offered yet because legs in one game move together. 21+ where legal. If gambling stops being fun, call or text 1-800-GAMBLER. <Link href="/pickem" className="gl-link">Pick&apos;em Pool</Link> · <Link href="/touchdowns" className="gl-link">TD Picks</Link></p>
+      <p className="gl-note">Winner chances come from the sportsbook&apos;s moneyline with its cut removed (or the spread when no moneyline is saved). Spread and over/under chances come the same way from the book&apos;s two prices on that line, so they sit near 50%; a push on a whole-number line usually drops that leg from the parlay rather than losing it. Touchdown chances come from our TD model, which was well calibrated on past seasons but hasn&apos;t been tested against sportsbook TD prices yet, so we don&apos;t show a value figure for TD legs. Parlays multiply each sportsbook&apos;s cut, so they usually pay less than they should; for parlays without TD legs the per-$10 figure shows that cost. Same-game parlays aren&apos;t offered yet because legs in one game move together. 21+ where legal. If gambling stops being fun, call or text 1-800-GAMBLER. <Link href="/pickem" className="gl-link">Pick&apos;em Pool</Link> · <Link href="/touchdowns" className="gl-link">TD Picks</Link></p>
     </>}
   </div>;
 }
