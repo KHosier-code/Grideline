@@ -74,19 +74,22 @@ Summary in `out/live_variants_summary.json`.
 
 ## Touchdown picks backtest
 
-`td_backtest.py` re-tests the anytime-TD model walk-forward: each of 2023, 2024,
-2025 and 2026 (weeks 1-3) is predicted by a model trained on 2020 through the
-season before. Build the dataset with `../td-model/build_dataset.py` first.
+`td_backtest.py` re-tests the anytime-TD model walk-forward: each season is
+predicted by a model trained on 2020 through the season before. Build the
+dataset with `../td-model/build_dataset.py` first. The script tests 2023 on;
+set `TEST` to start at 2021 for the longer history below.
 
-| Weekly picks | 2023 | 2024 | 2025 | 2026 wk 1-3 | All | Break-even odds |
-|---|---|---|---|---|---|---|
-| Top 1 | 13/18 | 8/18 | 12/18 | 3/3 | 36/57 (63.2%) | -171 |
-| Top 3 | 36/54 | 31/54 | 30/54 | 9/9 | 106/171 (62.0%) | -163 |
-| Top 5 | 56/90 | 56/90 | 52/90 | 13/15 | 177/285 (62.1%) | -164 |
-| Top 10 | 101/180 | 102/180 | 98/180 | 21/30 | 322/570 (56.5%) | -130 |
+| Weekly picks | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 wk 1-3 | All |
+|---|---|---|---|---|---|---|---|
+| Top 1 | 7/18 | 15/18 | 13/18 | 8/18 | 12/18 | 3/3 | 58/93 (62.4%) |
+| Top 3 | 19/54 | 28/54 | 36/54 | 31/54 | 30/54 | 9/9 | 153/279 (54.8%) |
+| Top 5 | 41/90 | 43/90 | 56/90 | 56/90 | 52/90 | 13/15 | 261/465 (56.1%) |
+| Top 10 | 87/180 | 81/180 | 101/180 | 102/180 | 98/180 | 21/30 | 490/930 (52.7%) |
 
-Probabilities are well calibrated (predicted 54% -> scored 60%; 44% -> 45%).
-Hit rate is not profit: these players are priced as favourites, so a pick only
-has value when the book's price is longer than the break-even odds for its
-predicted chance. Historical prop prices aren't in the public data; the site
-captures DraftKings/FanDuel anytime-TD prices live, which is the way to grade value.
+The 62% top-5 rate holds only from 2023 on; 2021-2022 were under 50%, and
+another thread found the random seed alone moves the top-5 rate by about 3
+points. Break-even for 56% is about -128. Probabilities are well calibrated.
+Hit rate is not profit: a pick only has value when the book's price is longer
+than the break-even odds for its predicted chance. Historical prop prices
+aren't in the public data; the site captures DraftKings/FanDuel anytime-TD
+prices live, which is the way to grade value.
