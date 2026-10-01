@@ -71,3 +71,22 @@ the opener. Only betting 4+ point gaps: best 55.8% at the close; at the opener
 the median variant is 56% and 2 of 378 reach exactly 60%. The 10 best variants
 picked on 2021-2024 went 53.6% on 2025-2026 at the opener (4+ gaps).
 Summary in `out/live_variants_summary.json`.
+
+## Touchdown picks backtest
+
+`td_backtest.py` re-tests the anytime-TD model walk-forward: each of 2023, 2024,
+2025 and 2026 (weeks 1-3) is predicted by a model trained on 2020 through the
+season before. Build the dataset with `../td-model/build_dataset.py` first.
+
+| Weekly picks | 2023 | 2024 | 2025 | 2026 wk 1-3 | All | Break-even odds |
+|---|---|---|---|---|---|---|
+| Top 1 | 13/18 | 8/18 | 12/18 | 3/3 | 36/57 (63.2%) | -171 |
+| Top 3 | 36/54 | 31/54 | 30/54 | 9/9 | 106/171 (62.0%) | -163 |
+| Top 5 | 56/90 | 56/90 | 52/90 | 13/15 | 177/285 (62.1%) | -164 |
+| Top 10 | 101/180 | 102/180 | 98/180 | 21/30 | 322/570 (56.5%) | -130 |
+
+Probabilities are well calibrated (predicted 54% -> scored 60%; 44% -> 45%).
+Hit rate is not profit: these players are priced as favourites, so a pick only
+has value when the book's price is longer than the break-even odds for its
+predicted chance. Historical prop prices aren't in the public data; the site
+captures DraftKings/FanDuel anytime-TD prices live, which is the way to grade value.
