@@ -118,7 +118,7 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
     {final && projection && <p className="gl-gc-foot">We projected {game.matchup.away.abbreviation} {projection.away.toFixed(1)}, {game.matchup.home.abbreviation} {projection.home.toFixed(1)}</p>}
     {!final && projection && <p className="gl-gc-foot">Total: Gridline {projection.total.toFixed(1)} · Vegas {view.vegas.total ?? '—'}</p>}
     {!final && projection && <GapNote view={view} open={open?.line ?? null} />}
-    {projection?.source === 'legacy' && <p className="gl-gc-foot gl-muted">Gridline column from our earlier model; the quarterback-adjusted projection isn&apos;t available for this game.</p>}
+    {!final && !projection && <p className="gl-gc-foot gl-muted">Projection pending: our quarterback-adjusted line usually posts by Tuesday morning.</p>}
   </Link>;
 }
 

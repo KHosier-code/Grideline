@@ -20,7 +20,6 @@ const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetai
 const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
 const ConsumerPerformance = lazy(() => import('@/pages/consumer/ConsumerPerformance'));
 const ConsumerMethodology = lazy(() => import('@/pages/consumer/ConsumerMethodology'));
-const ConsumerTrends = lazy(() => import('@/pages/consumer/ConsumerTrends'));
 const ConsumerUsage = lazy(() => import('@/pages/consumer/PlayerUsage'));
 const ConsumerRedZone = lazy(() => import('@/pages/consumer/RedZone'));
 const DefenseVsPositionLeague = lazy(() => import('@/pages/consumer/DefenseVsPositionPage'));
@@ -165,7 +164,6 @@ function Router() {
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
       <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
       <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
-      <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
       <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>

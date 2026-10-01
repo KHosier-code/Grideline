@@ -133,7 +133,7 @@ function GameProjectionPanel({ view, projection }: { view: GameView; projection:
   const reasons = drivers(view, projection);
   return <section className="gl-section" aria-labelledby="projection-heading">
     <div className="gl-section-head"><h2 id="projection-heading">Gridline projection</h2>
-      <p>{p.source === 'qb-model' ? 'Adjusted for the starting quarterbacks' : 'From our earlier model'}{game.finalScore ? '' : ' · updates through the week'}</p></div>
+      <p>Adjusted for the starting quarterbacks{game.finalScore ? '' : ' · updates through the week'}</p></div>
     <div className="gl-card gl-projection">
       <div className="gl-projection-score">
         <div><TeamChip team={away} /><b>{p.away.toFixed(1)}</b><small>{pct(1 - p.homeWin)} to win</small></div>
@@ -150,7 +150,7 @@ function GameProjectionPanel({ view, projection }: { view: GameView; projection:
       </div>
       {view.result && <p className="gl-note">Our projected winner was {view.result === 'win' ? 'right' : view.result === 'loss' ? 'wrong' : 'tied'}.</p>}
     </div>
-    {p.source === 'qb-model' && <div className="gl-why gl-card"><QbCard team={away} qb={p.awayQb} /><QbCard team={home} qb={p.homeQb} /></div>}
+    <div className="gl-why gl-card"><QbCard team={away} qb={p.awayQb} /><QbCard team={home} qb={p.homeQb} /></div>
     {reasons.length > 0 && <div className="gl-card gl-reasons"><h3 className="gl-label">What drives the projection</h3><ul>{reasons.map(reason => <li key={reason}>{reason}</li>)}</ul></div>}
     <p className="gl-note">This is a projection, not a pick. Our lines haven&apos;t beaten Vegas closing lines in testing, so use them as a second opinion. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
   </section>;

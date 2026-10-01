@@ -20,7 +20,6 @@ export type GameView = {
     margin: number;
     total: number;
     homeWin: number;
-    source: 'qb-model' | 'legacy';
     homeQb: ConsumerProjectionQb | null;
     awayQb: ConsumerProjectionQb | null;
   } | null;
@@ -36,23 +35,17 @@ export type GameView = {
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
+/**
+ * The view for one game. The projection comes only from the QB-adjusted model
+ * (game_projection_runs); a game without a row stays "projection pending".
+ */
 export function buildGameView(game: ConsumerGame, qbModel?: ConsumerGameProjection): GameView {
-  let projection: GameView['projection'] = null;
-  if (qbModel) {
-    projection = {
-      home: (qbModel.projectedTotal + qbModel.projectedMargin) / 2,
-      away: (qbModel.projectedTotal - qbModel.projectedMargin) / 2,
-      margin: qbModel.projectedMargin, total: qbModel.projectedTotal, homeWin: qbModel.homeWinProbability,
-      source: 'qb-model', homeQb: qbModel.homeQb, awayQb: qbModel.awayQb,
-    };
-  } else {
-    const p = game.prediction;
-    if (p && finite(p.projectedHomeScore) && finite(p.projectedAwayScore) && finite(p.projectedMargin)
-      && finite(p.projectedTotal) && finite(p.homeWinProbability)) {
-      projection = { home: p.projectedHomeScore, away: p.projectedAwayScore, margin: p.projectedMargin, total: p.projectedTotal,
-        homeWin: p.homeWinProbability, source: 'legacy', homeQb: null, awayQb: null };
-    }
-  }
+  const projection: GameView['projection'] = qbModel ? {
+    home: (qbModel.projectedTotal + qbModel.projectedMargin) / 2,
+    away: (qbModel.projectedTotal - qbModel.projectedMargin) / 2,
+    margin: qbModel.projectedMargin, total: qbModel.projectedTotal, homeWin: qbModel.homeWinProbability,
+    homeQb: qbModel.homeQb, awayQb: qbModel.awayQb,
+  } : null;
   const winner = projection && projection.margin !== 0
     ? { side: (projection.margin > 0 ? 'home' : 'away') as Side, probability: projection.margin > 0 ? projection.homeWin : 1 - projection.homeWin }
     : null;

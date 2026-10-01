@@ -1,12 +1,16 @@
 import type { ConsumerGame, ConsumerMarketQuote } from '@workspace/api-client-react';
 import type { ReactNode } from 'react';
-import { getListSavedGameIdsQueryKey, getListSavedGamesQueryKey, useListSavedGameIds, useSaveConsumerGame, useRemoveSavedConsumerGame } from '@workspace/api-client-react';
+import {
+  getGetConsumerGameProjectionsQueryKey, getListSavedGameIdsQueryKey, getListSavedGamesQueryKey, useGetConsumerGameProjections,
+  useListSavedGameIds, useSaveConsumerGame, useRemoveSavedConsumerGame,
+} from '@workspace/api-client-react';
 import { useAuth } from '@clerk/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Bookmark, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { useEffect, useState } from 'react';
 import { TeamMark } from '../../components/VerifiedImage';
+import { buildGameView, lineText } from '../../lib/pick-sheet';
 
 export function useConsumerNow() {
   const [now, setNow] = useState(Date.now());
@@ -79,34 +83,32 @@ export function SaveGameControl({ isSignedIn, saved, pending = false, loading = 
 }
 
 export function ConsumerGameCard({ game, compact = false, href = `/games/${game.gameId}`, renderSaveControl }: { game: ConsumerGame; compact?: boolean; href?: string; renderSaveControl?: (gameId: string) => ReactNode }) {
+  // Same source as the Games page: the QB-adjusted model's projections for the season.
+  const params = { season: game.season };
+  const projections = useGetConsumerGameProjections(params, { query: { queryKey: getGetConsumerGameProjectionsQueryKey(params), staleTime: 60_000 } });
+  const view = buildGameView(game, projections.data?.games.find((item) => item.gameId === game.gameId));
+  const { projection } = view;
   const final = game.finalScore;
-  const prediction = game.prediction;
-  const spread = game.marketBoard.comparisons.find((comparison) => comparison.market === 'spread');
-  const spreadQuote = game.recommendation.markets.spread && (!game.kickoffTime || new Date(game.kickoffTime).getTime() > Date.now())
-    ? spread?.selectedQuote ?? null : null;
+  const home = game.matchup.home.abbreviation;
+  const away = game.matchup.away.abbreviation;
+  const spreadQuote = game.market?.spread ?? null;
+  const pending = projections.isLoading ? 'Updating' : 'Projection pending';
   return (
     <div className="consumer-game-card">
     <Link href={href} className="consumer-game-card-link">
-      <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : game.dataConfidence.label}</span></div>
+      <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : projection ? 'Gridline projection' : pending}</span></div>
       <div className="consumer-matchup">
-        <div><TeamMark className="consumer-team-mark" url={game.matchup.away.logoUrl} abbreviation={game.matchup.away.abbreviation} /><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(prediction?.projectedAwayScore)}</b>
-        <div><TeamMark className="consumer-team-mark" url={game.matchup.home.logoUrl} abbreviation={game.matchup.home.abbreviation} /><span>{game.matchup.home.name}</span></div><b>{final ? final.home : score(prediction?.projectedHomeScore)}</b>
+        <div><TeamMark className="consumer-team-mark" url={game.matchup.away.logoUrl} abbreviation={away} /><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(projection?.away)}</b>
+        <div><TeamMark className="consumer-team-mark" url={game.matchup.home.logoUrl} abbreviation={home} /><span>{game.matchup.home.name}</span></div><b>{final ? final.home : score(projection?.home)}</b>
       </div>
       {!compact && <div className="consumer-card-metrics">
-        <span><small>Projection</small>{prediction ? `${score(prediction.projectedMargin)} margin` : game.availability.prediction ?? 'Updating'}</span>
-         <span><small>Market spread</small>{spreadQuote ? formatQuote(spreadQuote, 'spread') : game.availability.market ?? 'Current comparison unavailable'}</span>
+        <span><small>Projection</small>{projection ? lineText(projection.margin, home, away) : pending}</span>
+         <span><small>Market spread</small>{spreadQuote ? formatQuote(spreadQuote, 'spread') : game.availability.market ?? 'Sportsbook line updating'}</span>
       </div>}
-      <div className="consumer-game-card-foot"><span>{game.dataConfidence.reason ?? `${game.dataConfidence.label} data confidence`}</span><ChevronRight className="h-4 w-4" /></div>
+      <div className="consumer-game-card-foot"><span>{projection ? `Total: Gridline ${projection.total.toFixed(1)} · Vegas ${view.vegas.total ?? '—'}`
+        : final ? 'No Gridline projection was posted for this game' : 'Our projection usually posts by Tuesday morning'}</span><ChevronRight className="h-4 w-4" /></div>
     </Link>
     <div className="consumer-game-card-save">{renderSaveControl ? renderSaveControl(game.gameId) : <SaveGameButton gameId={game.gameId} />}</div>
     </div>
   );
-}
-
-export function recordRows(value: unknown): Array<Record<string, unknown>> {
-  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object') : [];
-}
-
-export function metric(value: unknown, percent = false) {
-  return typeof value === 'number' && Number.isFinite(value) ? `${(percent ? value * 100 : value).toFixed(1)}${percent ? '%' : ''}` : 'Unavailable';
 }
