@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { TouchdownPickRow } from "@workspace/db";
-import { boardForWeek, fairAmericanOdds, topTenRecord } from "./touchdown-board";
+import { boardForWeek, decimalOdds, expectedValue, fairAmericanOdds, isValuePick, topTenRecord, valueRecord } from "./touchdown-board";
 
 const factors = {
   targetsPerGame: null, carriesPerGame: null, targetShare: null, carryShare: null, redZoneTouchesPerGame: null,
@@ -52,4 +52,23 @@ test("top-10 record only counts fully graded weeks", () => {
   assert.deepEqual(topTenRecord([{ week: 4, board, results }]), { weeksGraded: 1, topTenPicks: 10, topTenHits: 5, weeks: [{ week: 4, picks: 10, hits: 5 }] });
   const partial = new Map([...results].slice(0, 5));
   assert.deepEqual(topTenRecord([{ board, results: partial }]), { weeksGraded: 0, topTenPicks: 0, topTenHits: 0, weeks: [] });
+});
+
+test("value picks are top-5 picks priced longer than fair odds", () => {
+  assert.equal(decimalOdds(150), 2.5);
+  assert.equal(decimalOdds(-200), 1.5);
+  assert.ok(Math.abs(expectedValue(0.6, -120) - 0.1) < 1e-9);
+  assert.equal(isValuePick(1, 0.6, -120), true);   // fair is -150, book pays more
+  assert.equal(isValuePick(1, 0.6, -200), false);  // book pays less than fair
+  assert.equal(isValuePick(6, 0.6, -120), false);  // outside the top 5
+  assert.equal(isValuePick(1, 0.6, null), false);  // no price captured
+});
+
+test("value record counts graded value picks at 1 unit each", () => {
+  const board = ["a", "b", "c", "d", "e", "f"].map((id, index) => ({ ...pick(id, 0.6 - index * 0.01, SUN), generatedAt: new Date() }));
+  const prices: Record<string, number> = { a: -120, b: 110, c: -300, d: 150, f: 400 };
+  const results = new Map([["a", true], ["b", false], ["c", true], ["f", true]]);
+  const record = valueRecord([{ week: 4, board, results, price: (entry) => prices[entry.playerId] ?? null }]);
+  // a wins at -120 (+0.83), b loses (-1); c isn't value; d has no result yet; e has no price; f is outside the top 5.
+  assert.deepEqual(record, { picks: 2, hits: 1, units: -0.17, weeks: [{ week: 4, picks: 2, hits: 1, units: -0.17 }] });
 });

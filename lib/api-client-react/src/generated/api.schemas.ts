@@ -343,6 +343,30 @@ export interface ConsumerTouchdownPick {
      * @nullable
      */
   bookOdds?: ConsumerTouchdownPickBookOdds;
+  /**
+     * Expected profit per 1 unit staked at the best book price, using our probability; null without a price
+     * @nullable
+     */
+  expectedValue: number | null;
+  /** A top-5 pick whose best book price pays more than our probability says it should */
+  value: boolean;
+}
+
+export type ConsumerTouchdownValueRecordWeeksItem = {
+  week: number;
+  picks: number;
+  hits: number;
+  units: number;
+};
+
+/**
+ * Graded value picks this season, 1 unit each at the captured price
+ */
+export interface ConsumerTouchdownValueRecord {
+  picks: number;
+  hits: number;
+  units: number;
+  weeks: ConsumerTouchdownValueRecordWeeksItem[];
 }
 
 export type ConsumerTouchdownRecordWeeksItem = {
@@ -394,6 +418,7 @@ export interface ConsumerTouchdowns {
   picks: ConsumerTouchdownPick[];
   weeks: ConsumerTouchdownsWeeksItem[];
   record: ConsumerTouchdownRecord;
+  valueRecord: ConsumerTouchdownValueRecord;
 }
 
 export type InitialLineAuditSelection = {

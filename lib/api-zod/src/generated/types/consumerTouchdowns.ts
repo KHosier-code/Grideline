@@ -10,6 +10,7 @@ import type { ConsumerTouchdownRecord } from './consumerTouchdownRecord';
 import type { ConsumerTouchdownsEvaluation } from './consumerTouchdownsEvaluation';
 import type { ConsumerTouchdownsStatus } from './consumerTouchdownsStatus';
 import type { ConsumerTouchdownsWeeksItem } from './consumerTouchdownsWeeksItem';
+import type { ConsumerTouchdownValueRecord } from './consumerTouchdownValueRecord';
 
 export interface ConsumerTouchdowns {
   status: ConsumerTouchdownsStatus;
@@ -25,4 +26,5 @@ export interface ConsumerTouchdowns {
   picks: ConsumerTouchdownPick[];
   weeks: ConsumerTouchdownsWeeksItem[];
   record: ConsumerTouchdownRecord;
+  valueRecord: ConsumerTouchdownValueRecord;
 }

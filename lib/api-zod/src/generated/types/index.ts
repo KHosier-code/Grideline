@@ -235,6 +235,8 @@ export * from './consumerTouchdowns';
 export * from './consumerTouchdownsEvaluation';
 export * from './consumerTouchdownsStatus';
 export * from './consumerTouchdownsWeeksItem';
+export * from './consumerTouchdownValueRecord';
+export * from './consumerTouchdownValueRecordWeeksItem';
 export * from './consumerTrends';
 export * from './consumerTrendsStatus';
 export * from './consumerTrendsWindow';

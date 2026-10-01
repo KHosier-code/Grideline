@@ -11,9 +11,9 @@ import {
 } from "../lib/game-projections";
 import { isEligiblePredictionSnapshot } from "../lib/live-predictions";
 import { addResult, emptyRecordLine, gradePicks, picksForProjection } from "../lib/pick-grading";
-import { boardForWeek, fairAmericanOdds, topTenRecord } from "../lib/touchdown-board";
+import { boardForWeek, expectedValue, fairAmericanOdds, isValuePick, topTenRecord, valueRecord } from "../lib/touchdown-board";
 import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecision } from "../lib/odds";
-import { bestBookPrice, captureTouchdownProps, latestTouchdownProps } from "../lib/td-props";
+import { bestBookPrice, captureTouchdownProps, touchdownPropsForSeason } from "../lib/td-props";
 
 const router: IRouter = Router();
 
@@ -101,6 +101,7 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
       status: "unavailable" as const, season: selected?.season ?? season ?? null, week: selected?.week ?? week ?? null,
       generatedAt: null, modelVersion: null, evaluation: { topTenHitRate: null, auc: null, testedOn: null },
       picks: [], weeks: available, record: { weeksGraded: 0, topTenPicks: 0, topTenHits: 0, weeks: [] },
+      valueRecord: { picks: 0, hits: 0, units: 0, weeks: [] },
     };
     if (!selected) {
       res.json(empty);
@@ -125,7 +126,8 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
     const board = boards.get(selected.week) ?? [];
     const latest = seasonRuns.filter((run) => run.week === selected.week).at(-1)!;
     const weekResults = resultsByWeek.get(selected.week) ?? new Map<string, boolean>();
-    const props = await latestTouchdownProps(selected.season, selected.week).catch(() => null);
+    const propsByWeek = await touchdownPropsForSeason(selected.season).catch(() => new Map());
+    const props = propsByWeek.get(selected.week) ?? null;
     const evaluation = latest.evaluation as Record<string, unknown>;
     const numberOrNull = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
     res.json({
@@ -139,25 +141,34 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
         auc: numberOrNull(evaluation.auc),
         testedOn: typeof evaluation.testedOn === "string" ? evaluation.testedOn : null,
       },
-      picks: board.map((entry, index) => ({
-        rank: index + 1,
-        playerId: entry.playerId,
-        name: entry.name,
-        position: entry.position,
-        team: entry.team,
-        opponent: entry.opponent,
-        isHome: entry.isHome,
-        kickoff: entry.kickoff,
-        probability: entry.probability,
-        fairOdds: fairAmericanOdds(entry.probability),
-        injuryStatus: entry.injuryStatus,
-        factors: entry.factors,
-        scored: weekResults.has(entry.playerId) ? weekResults.get(entry.playerId)! : null,
-        bookOdds: bestBookPrice(props, entry.name, entry.team),
-      })),
+      picks: board.map((entry, index) => {
+        const bookOdds = bestBookPrice(props, entry.name, entry.team);
+        return {
+          rank: index + 1,
+          playerId: entry.playerId,
+          name: entry.name,
+          position: entry.position,
+          team: entry.team,
+          opponent: entry.opponent,
+          isHome: entry.isHome,
+          kickoff: entry.kickoff,
+          probability: entry.probability,
+          fairOdds: fairAmericanOdds(entry.probability),
+          injuryStatus: entry.injuryStatus,
+          factors: entry.factors,
+          scored: weekResults.has(entry.playerId) ? weekResults.get(entry.playerId)! : null,
+          bookOdds,
+          expectedValue: bookOdds ? Math.round(expectedValue(entry.probability, bookOdds.price) * 1000) / 1000 : null,
+          value: isValuePick(index + 1, entry.probability, bookOdds?.price),
+        };
+      }),
       weeks: available,
       record: topTenRecord([...boards.entries()]
         .map(([weekNumber, weekBoard]) => ({ week: weekNumber, board: weekBoard, results: resultsByWeek.get(weekNumber) ?? new Map() }))),
+      valueRecord: valueRecord([...boards.entries()].map(([weekNumber, weekBoard]) => ({
+        week: weekNumber, board: weekBoard, results: resultsByWeek.get(weekNumber) ?? new Map(),
+        price: (entry) => bestBookPrice(propsByWeek.get(weekNumber) ?? null, entry.name, entry.team)?.price ?? null,
+      }))),
     });
   } catch (error) {
     req.log.error({ error }, "Consumer touchdown picks read failed");

@@ -34,4 +34,11 @@ export interface ConsumerTouchdownPick {
      * @nullable
      */
   bookOdds?: ConsumerTouchdownPickBookOdds;
+  /**
+     * Expected profit per 1 unit staked at the best book price, using our probability; null without a price
+     * @nullable
+     */
+  expectedValue: number | null;
+  /** A top-5 pick whose best book price pays more than our probability says it should */
+  value: boolean;
 }

@@ -1606,7 +1606,7 @@ components:
         recentTdRate: { type: ["number", "null"] }
     ConsumerTouchdownPick:
       type: object
-      required: [rank, playerId, name, position, team, opponent, isHome, kickoff, probability, fairOdds, injuryStatus, factors, scored]
+      required: [rank, playerId, name, position, team, opponent, isHome, kickoff, probability, fairOdds, injuryStatus, factors, scored, expectedValue, value]
       properties:
         rank: { type: integer }
         playerId: { type: string }
@@ -1637,6 +1637,30 @@ components:
                   book: { type: string }
                   price: { type: integer }
             capturedAt: { type: string, format: date-time }
+        expectedValue:
+          type: ["number", "null"]
+          description: Expected profit per 1 unit staked at the best book price, using our probability; null without a price
+        value:
+          type: boolean
+          description: A top-5 pick whose best book price pays more than our probability says it should
+    ConsumerTouchdownValueRecord:
+      type: object
+      required: [picks, hits, units, weeks]
+      description: Graded value picks this season, 1 unit each at the captured price
+      properties:
+        picks: { type: integer }
+        hits: { type: integer }
+        units: { type: number }
+        weeks:
+          type: array
+          items:
+            type: object
+            required: [week, picks, hits, units]
+            properties:
+              week: { type: integer }
+              picks: { type: integer }
+              hits: { type: integer }
+              units: { type: number }
     ConsumerTouchdownRecord:
       type: object
       required: [weeksGraded, topTenPicks, topTenHits, weeks]
@@ -1655,7 +1679,7 @@ components:
               hits: { type: integer }
     ConsumerTouchdowns:
       type: object
-      required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record]
+      required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record, valueRecord]
       properties:
         status: { type: string, enum: [available, unavailable] }
         season: { type: ["integer", "null"] }
@@ -1679,6 +1703,7 @@ components:
               season: { type: integer }
               week: { type: integer }
         record: { $ref: "#/components/schemas/ConsumerTouchdownRecord" }
+        valueRecord: { $ref: "#/components/schemas/ConsumerTouchdownValueRecord" }
     InitialLineAudit:
       type: object
       required: [season, week, selection, games]
