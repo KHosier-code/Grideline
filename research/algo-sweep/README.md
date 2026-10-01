@@ -74,25 +74,28 @@ Summary in `out/live_variants_summary.json`.
 
 ## Touchdown picks backtest
 
-`td_backtest.py` re-tests the anytime-TD model walk-forward: each season is
-predicted by a model trained on 2020 through the season before. Build the
-dataset with `../td-model/build_dataset.py` first. The script tests 2023 on;
-set `TEST` to start at 2021 for the longer history below.
+`td_backtest.py` re-tests the anytime-TD model walk-forward on 2021 through
+2026 week 3: each season is predicted by a model trained on 2020 through the
+season before. Build the dataset with `../td-model/build_dataset.py` first.
+
+Since October 2026 the live model averages five seeds (`SeedAveragedGBM` in
+`../td-model/features.py`). A single seed moved the top-5 rate between 52.9%
+and 56.1%; two different five-seed sets gave 54.6% and 54.4%, and the averaged
+model's probabilities score slightly better (Brier 0.13688 vs 0.13712).
 
 | Weekly picks | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 wk 1-3 | All |
 |---|---|---|---|---|---|---|---|
-| Top 1 | 7/18 | 15/18 | 13/18 | 8/18 | 12/18 | 3/3 | 58/93 (62.4%) |
-| Top 3 | 19/54 | 28/54 | 36/54 | 31/54 | 30/54 | 9/9 | 153/279 (54.8%) |
-| Top 5 | 41/90 | 43/90 | 56/90 | 56/90 | 52/90 | 13/15 | 261/465 (56.1%) |
-| Top 10 | 87/180 | 81/180 | 101/180 | 102/180 | 98/180 | 21/30 | 490/930 (52.7%) |
+| Top 1 | 7/18 | 12/18 | 12/18 | 11/18 | 10/18 | 3/3 | 55/93 (59.1%) |
+| Top 3 | 19/54 | 28/54 | 34/54 | 33/54 | 31/54 | 8/9 | 153/279 (54.8%) |
+| Top 5 | 41/90 | 39/90 | 58/90 | 50/90 | 54/90 | 12/15 | 254/465 (54.6%) |
+| Top 10 | 87/180 | 78/180 | 99/180 | 106/180 | 101/180 | 20/30 | 491/930 (52.8%) |
 
-The 62% top-5 rate holds only from 2023 on; 2021-2022 were under 50%, and
-another thread found the random seed alone moves the top-5 rate by about 3
-points. Break-even for 56% is about -128. Probabilities are well calibrated.
-Hit rate is not profit: a pick only has value when the book's price is longer
-than the break-even odds for its predicted chance. Historical prop prices
-aren't in the public data; the site captures DraftKings/FanDuel anytime-TD
-prices live, which is the way to grade value.
+The old single-seed model's 56.1% top-5 (62% from 2023 on) was partly a lucky
+seed. 2021-2022 were under 50% either way. Break-even for 55% is about -120.
+Probabilities are well calibrated. Hit rate is not profit: a pick only has
+value when the book's price is longer than the break-even odds for its
+predicted chance. Historical prop prices aren't in the public data; the site
+captures DraftKings/FanDuel anytime-TD prices live, which is the way to grade value.
 
 ## Venom Analytics-style picks
 

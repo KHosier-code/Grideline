@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -47,8 +46,7 @@ def before(frame, week):
 replay_weeks = []
 for week in weeks:
     # --- TD picks -----------------------------------------------------------
-    model = HistGradientBoostingClassifier(max_iter=400, learning_rate=0.03, max_leaf_nodes=15, min_samples_leaf=80,
-                                           l2_regularization=1.0, random_state=7)
+    model = SeedAveragedGBM()
     train = before(played, week)
     model.fit(train[ALL], train.label)
     slate = played[(played.season == season) & (played.week == week)].copy()
