@@ -61,3 +61,13 @@ To see how much of that is fitting, the same search run on 2021-2024 only found
 90 combinations at 60%+. On 2025-2026, games they were not tuned on, the top 20
 went 212-164 (56.4%). So expect roughly 55-57% going forward, not 60%+.
 Results are in `out/filter_search.json`.
+
+## Variants of the live model
+
+`live_variants.py` runs 378 versions of the live rating (14 feature builds x 5
+input sets x 3 ridge strengths x QB weight 1 or 1.5) on 2021 through 2026 week 3.
+Betting every game, none reaches 60%: the best is 51.5% at the close and 53.3% at
+the opener. Only betting 4+ point gaps: best 55.8% at the close; at the opener
+the median variant is 56% and 2 of 378 reach exactly 60%. The 10 best variants
+picked on 2021-2024 went 53.6% on 2025-2026 at the opener (4+ gaps).
+Summary in `out/live_variants_summary.json`.
