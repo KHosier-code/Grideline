@@ -14,5 +14,9 @@ export interface ConsumerGameMarket {
   total: ConsumerMarketQuote | null;
   /** Away team's moneyline from the same sportsbook as `moneyline`, when saved. */
   awayMoneyline?: ConsumerMarketQuote | null;
+  /** Away team's spread from the same sportsbook as `spread`, at the opposite line, when saved. */
+  awaySpread?: ConsumerMarketQuote | null;
+  /** Under from the same sportsbook as `total`, at the same line, when saved. */
+  under?: ConsumerMarketQuote | null;
   evidence: ConsumerMarketEvidence;
 }

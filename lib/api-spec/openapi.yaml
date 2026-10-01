@@ -2028,6 +2028,12 @@ components:
         awayMoneyline:
           description: Away team's moneyline from the same sportsbook as `moneyline`, when saved.
           anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }]
+        awaySpread:
+          description: Away team's spread from the same sportsbook as `spread`, at the opposite line, when saved.
+          anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }]
+        under:
+          description: Under from the same sportsbook as `total`, at the same line, when saved.
+          anyOf: [{ $ref: "#/components/schemas/ConsumerMarketQuote" }, { type: "null" }]
         evidence: { $ref: "#/components/schemas/ConsumerMarketEvidence" }
     ConsumerInitialMarkets:
       type: object
