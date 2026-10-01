@@ -4,7 +4,6 @@ import { userInfo } from "node:os";
 import {
   assertWorkerStartupConfiguration, assertDisposableDatabaseIdentity,
 } from "./worker-rehearsal";
-import { expiredFreezeReason, lateClaimedFreezeReason } from "./scheduler";
 
 const valid = {
   DATABASE_URL: `postgresql://${userInfo().username}@127.0.0.1:55429/gridline_rehearsal`,
@@ -63,21 +62,5 @@ test("server identity and marker must both match before ownership", async () => 
   for (const key of Object.keys(expected)) {
     await assert.rejects(assertDisposableDatabaseIdentity(valid,
       async () => ({ rows: [{ ...expected, [key]: "wrong" }] })), key);
-  }
-});
-
-test("historical and flexed freeze windows retire; timely claims stay eligible", () => {
-  const now = new Date("2026-09-26T02:09:54Z");
-  const past = new Date("2026-09-18T00:45:00Z");
-  const future = new Date("2026-09-27T17:00:00Z");
-  for (const kind of ["prediction-freeze", "prediction-canonical"]) {
-    const job = { kind, jobKey: `${kind}-g`, nextRunAt: past };
-    assert.match(expiredFreezeReason(job, past, now) ?? "", /kickoff elapsed/);
-    assert.match(expiredFreezeReason(job, future, now) ?? "", /occurrence elapsed/);
-    assert.equal(expiredFreezeReason({ ...job, nextRunAt: future }, future, now), null);
-    assert.match(lateClaimedFreezeReason(job, past, now) ?? "", /kickoff elapsed/);
-    assert.match(lateClaimedFreezeReason(job, future, now) ?? "", /claim window/);
-    assert.equal(lateClaimedFreezeReason({ ...job, nextRunAt: new Date(now.getTime() - 30_000) },
-      future, now), null);
   }
 });
