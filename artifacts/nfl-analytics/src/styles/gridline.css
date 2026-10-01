@@ -944,3 +944,16 @@
 .gl-chip-button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
 .gl-chip-button[aria-pressed="true"] { opacity: .45; text-decoration: line-through; }
 .gl-pool-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Line shopping */
+.gl-best-number b { color: hsl(var(--foreground)); margin-right: 4px; }
+.gl-book-table { margin-top: 16px; }
+.gl-book-table .gl-note { padding: 0 16px 14px; margin: 0; }
+.gl-best-cell { background: hsl(var(--gl-good-bg)); color: hsl(var(--status-good)); font-weight: 700; }
+
+/* Watch list and receipts */
+.gl-watch-table td, .gl-watch-table th { white-space: nowrap; }
+.gl-receipt-meta { color: hsl(var(--muted-foreground)); font-size: 12px; }
+.gl-receipt-weeks { display: grid; gap: 12px; }
+.gl-receipt-week summary { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; padding: 14px 16px; cursor: pointer; }
+.gl-receipt-week summary a { margin-left: auto; }

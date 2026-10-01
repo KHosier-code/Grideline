@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { GameProjectionRow } from "@workspace/db";
-import { favoriteRecord, lineValueGames, lineValueSummary, projectionsBeforeKickoff, winnerRecord, type SpreadQuote } from "./game-projections";
+import {
+  favoriteRecord, lineValueGames, lineValueSummary, lockedAt, openerWatch, openerWatchSummary, projectionsBeforeKickoff, watchAlerts,
+  winnerRecord, type SpreadQuote,
+} from "./game-projections";
 
 const qb = { name: "QB", value: 0, listed: true, newStarter: false };
 const game = (gameId: string, margin: number, kickoff: string): GameProjectionRow => ({
@@ -88,8 +91,59 @@ test("line value uses the projection published by the opener, not a later one", 
 });
 
 test("favorite record grades the line's favorite", () => {
-  const entry = (gameId: string, marketMargin: number | null) => ({ ...game(gameId, 1, "2026-09-10T17:00:00Z"), marketMargin, generatedAt: new Date("2026-09-09T00:00:00Z") });
+  const entry = (gameId: string, marketMargin: number | null) => ({ ...game(gameId, 1, "2026-09-10T17:00:00Z"), marketMargin, generatedAt: new Date("2026-09-09T00:00:00Z"), lockedAt: new Date("2026-09-09T00:00:00Z") });
   const finals = new Map([["a", { home: 20, away: 10, week: 1 }], ["b", { home: 20, away: 10, week: 1 }], ["c", { home: 7, away: 7, week: 1 }]]);
   const record = favoriteRecord([entry("a", 3), entry("b", -3), entry("c", 1), entry("d", 2)], finals);
   assert.deepEqual(record, { wins: 1, losses: 1, pushes: 1 });
+});
+
+test("a run received after kickoff doesn't count, whatever time it says it was made", () => {
+  const backdated = { generatedAt: new Date("2026-10-04T12:00:00Z"), receivedAt: new Date("2026-10-04T18:00:00Z"), games: [game("sun", -9, "2026-10-04T17:00:00Z")] };
+  assert.equal(lockedAt(backdated).toISOString(), "2026-10-04T18:00:00.000Z");
+  const byGame = projectionsBeforeKickoff([
+    { generatedAt: new Date("2026-09-29T14:00:00Z"), receivedAt: new Date("2026-09-29T14:00:05Z"), games: [game("sun", 2, "2026-10-04T17:00:00Z")] },
+    backdated,
+  ]);
+  assert.equal(byGame.get("sun")?.projectedMargin, 2);
+  assert.equal(byGame.get("sun")?.lockedAt.toISOString(), "2026-09-29T14:00:05.000Z");
+});
+
+test("watch list: 4+ points off the opener, graded at the opener, when we published, and the close", () => {
+  // Opener home -1 Sunday night; Gridline (home by 6) published Tuesday when the line was -2.5; it closed -4.
+  const runs = [
+    { generatedAt: new Date("2026-09-29T14:00:00Z"), games: [game("w", 6, "2026-10-04T17:00:00Z"), game("n", 2, "2026-10-04T17:00:00Z")] },
+    { generatedAt: new Date("2026-10-03T14:00:00Z"), games: [game("w", -10, "2026-10-04T17:00:00Z")] }, // later runs don't change the flag
+  ];
+  const quotes = new Map([
+    ["w", [quote("DraftKings", "2026-09-28T03:07:00Z", -1), quote("DraftKings", "2026-09-29T10:00:00Z", -2.5), quote("DraftKings", "2026-10-04T16:22:00Z", -4)]],
+    ["n", [quote("DraftKings", "2026-09-28T03:07:00Z", -1)]],
+  ]);
+  const finals = new Map([["w", { home: 23, away: 20, week: 4 }]]);
+  const watch = openerWatch(runs, quotes, finals, new Date("2026-10-05T00:00:00Z"));
+  assert.equal(watch.length, 1); // "n" is only 1 point off
+  const [row] = watch;
+  assert.equal(row.gap, 5);
+  assert.equal(row.side, "home");
+  assert.equal(row.publishedLine, -2.5);
+  assert.equal(row.movedToward, 3);
+  assert.deepEqual([row.atsOpen, row.atsPublished, row.atsClose], ["win", "win", "loss"]);
+  const summary = openerWatchSummary(watch);
+  assert.equal(summary.flagged, 1);
+  assert.deepEqual(summary.atsClose, { wins: 0, losses: 1, pushes: 0 });
+  assert.equal(summary.movedToward, 1);
+});
+
+test("watch alerts: new flags and moves of a point or more since a time", () => {
+  const runs = [{ generatedAt: new Date("2026-09-29T14:00:00Z"), games: [game("w", -6, "2026-10-04T17:00:00Z")] }];
+  const quotes = new Map([["w", [
+    quote("DraftKings", "2026-09-28T03:07:00Z", -1), quote("DraftKings", "2026-10-01T14:07:00Z", 1),
+  ]]]);
+  const watch = openerWatch(runs, quotes, new Map(), new Date("2026-10-01T15:00:00Z"))
+    .map((item) => ({ ...item, homeTeam: "KC", awayTeam: "BUF" }));
+  const recent = watchAlerts(watch, quotes, new Date("2026-10-01T12:00:00Z"));
+  assert.deepEqual(recent.map((alert) => alert.kind), ["moved-toward"]);
+  assert.match(recent[0].message, /from KC -1 to BUF -1/);
+  const all = watchAlerts(watch, quotes, new Date("2026-09-28T00:00:00Z"));
+  assert.deepEqual(all.map((alert) => alert.kind), ["moved-toward", "flagged"]);
+  assert.match(all[1].message, /Gridline has BUF -6, the opener is KC -1 at DraftKings/);
 });

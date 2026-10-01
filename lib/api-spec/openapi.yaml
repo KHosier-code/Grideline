@@ -1346,6 +1346,51 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerGameProjections" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/receipts:
+    get:
+      operationId: getConsumerReceipts
+      tags: [nfl]
+      summary: Read every projection and top-5 touchdown pick as locked in before kickoff
+      description: >
+        Each game's last projection received before kickoff and each week's top
+        five touchdown picks, with the time the site received them and the
+        result. Runs are append-only; payloads are also committed to the
+        public receipts branch of the repository.
+      parameters:
+        - name: season
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Receipts or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerReceipts" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/watch-alerts:
+    get:
+      operationId: getConsumerWatchAlerts
+      tags: [nfl]
+      summary: Read recent opener-gap watch-list alerts
+      parameters:
+        - name: hours
+          in: query
+          required: false
+          description: Window in hours (default 3); ignored when since is given
+          schema: { type: integer, minimum: 1, maximum: 336 }
+        - name: since
+          in: query
+          required: false
+          description: Alerts at or after this time (at most two weeks back)
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Alerts in the window, newest first
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerWatchAlerts" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
   /consumer/power-ratings:
     get:
       operationId: getConsumerPowerRatings
@@ -1492,9 +1537,146 @@ components:
             restDiff: { type: ["number", "null"] }
             neutralSite: { type: boolean }
         projectedAt: { type: string, format: date-time }
+        lockedAt: { type: string, format: date-time, description: "When the site received this projection (it only counts for games that start after this)" }
+        books: { type: array, items: { $ref: "#/components/schemas/ConsumerBookLines" } }
+    ConsumerBookQuote:
+      type: ["object", "null"]
+      required: [point, price]
+      properties:
+        point: { type: ["number", "null"] }
+        price: { type: integer }
+    ConsumerBookLines:
+      type: object
+      description: One sportsbook's latest saved lines for a game
+      required: [sportsbook, capturedAt, homeSpread, awaySpread, homeMoneyline, awayMoneyline, over, under]
+      properties:
+        sportsbook: { type: string }
+        capturedAt: { type: string, format: date-time }
+        homeSpread: { $ref: "#/components/schemas/ConsumerBookQuote" }
+        awaySpread: { $ref: "#/components/schemas/ConsumerBookQuote" }
+        homeMoneyline: { type: ["integer", "null"] }
+        awayMoneyline: { type: ["integer", "null"] }
+        over: { $ref: "#/components/schemas/ConsumerBookQuote" }
+        under: { $ref: "#/components/schemas/ConsumerBookQuote" }
+    ConsumerWatchGame:
+      type: object
+      required: [gameId, homeTeam, awayTeam, kickoff, sportsbook, gridlineMargin, lockedAt, openLine, openedAt, publishedLine, currentLine, currentAt, started, gap, side, movedToward, atsOpen, atsPublished, atsClose]
+      properties:
+        gameId: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        kickoff: { type: string, format: date-time }
+        sportsbook: { type: string }
+        gridlineMargin: { type: number, description: "Gridline's expected home margin in its first projection before kickoff" }
+        lockedAt: { type: string, format: date-time }
+        openLine: { type: number, description: "Opening home spread (negative when home is favored)" }
+        openedAt: { type: string, format: date-time }
+        publishedLine: { type: number, description: "Home spread when Gridline's projection went up" }
+        currentLine: { type: number, description: "Latest home spread before kickoff (the closing line once started)" }
+        currentAt: { type: string, format: date-time }
+        started: { type: boolean }
+        gap: { type: number }
+        side: { type: string, enum: [home, away] }
+        movedToward: { type: number, description: "Points the line moved toward Gridline's side since the opener" }
+        atsOpen: { type: ["string", "null"], enum: [win, loss, push, null] }
+        atsPublished: { type: ["string", "null"], enum: [win, loss, push, null] }
+        atsClose: { type: ["string", "null"], enum: [win, loss, push, null] }
+    ConsumerWatchList:
+      type: object
+      description: Games where Gridline's first pregame line is `threshold`+ points off the opening spread
+      required: [threshold, flagged, graded, movedToward, movedAway, atsOpen, atsPublished, atsClose, games]
+      properties:
+        threshold: { type: number }
+        flagged: { type: integer }
+        graded: { type: integer }
+        movedToward: { type: integer }
+        movedAway: { type: integer }
+        atsOpen: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        atsPublished: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        atsClose: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        games: { type: array, items: { $ref: "#/components/schemas/ConsumerWatchGame" } }
+    ConsumerWatchAlerts:
+      type: object
+      required: [alerts, ntfyTopic]
+      properties:
+        ntfyTopic: { type: ["string", "null"], description: "ntfy.sh topic that receives these alerts as phone notifications, when configured" }
+        alerts:
+          type: array
+          items:
+            type: object
+            required: [kind, gameId, at, message]
+            properties:
+              kind: { type: string, enum: [flagged, moved-toward, moved-away] }
+              gameId: { type: string }
+              at: { type: string, format: date-time }
+              message: { type: string }
+    ConsumerReceipts:
+      type: object
+      required: [status, season, seasons, games, touchdowns, runs]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"] }
+        seasons: { type: array, items: { type: integer } }
+        games:
+          type: array
+          items:
+            type: object
+            required: [week, gameId, homeTeam, awayTeam, kickoff, lockedAt, projectedMargin, projectedTotal, homeWinProbability, line, final, winner]
+            properties:
+              week: { type: ["integer", "null"] }
+              gameId: { type: string }
+              homeTeam: { type: string }
+              awayTeam: { type: string }
+              kickoff: { type: ["string", "null"], format: date-time }
+              lockedAt: { type: string, format: date-time }
+              projectedMargin: { type: number }
+              projectedTotal: { type: number }
+              homeWinProbability: { type: number }
+              line:
+                type: ["object", "null"]
+                description: The sportsbook spread saved at or before the lock time
+                required: [sportsbook, homeLine, capturedAt]
+                properties:
+                  sportsbook: { type: string }
+                  homeLine: { type: number }
+                  capturedAt: { type: string, format: date-time }
+              final:
+                type: ["object", "null"]
+                required: [home, away]
+                properties:
+                  home: { type: integer }
+                  away: { type: integer }
+              winner: { type: ["string", "null"], enum: [win, loss, push, null] }
+        touchdowns:
+          type: array
+          items:
+            type: object
+            required: [week, rank, playerId, name, position, team, opponent, kickoff, probability, lockedAt, scored]
+            properties:
+              week: { type: integer }
+              rank: { type: integer }
+              playerId: { type: string }
+              name: { type: string }
+              position: { type: string }
+              team: { type: string }
+              opponent: { type: string }
+              kickoff: { type: ["string", "null"], format: date-time }
+              probability: { type: number }
+              lockedAt: { type: string, format: date-time }
+              scored: { type: ["boolean", "null"] }
+        runs:
+          type: array
+          items:
+            type: object
+            required: [kind, week, generatedAt, receivedAt]
+            properties:
+              kind: { type: string, enum: [games, touchdowns] }
+              week: { type: integer }
+              generatedAt: { type: string, format: date-time }
+              receivedAt: { type: string, format: date-time }
     ConsumerGameProjections:
       type: object
-      required: [status, season, modelVersion, generatedAt, evaluation, games, record, favoriteRecord, lineValue, weeks]
+      required: [status, season, modelVersion, generatedAt, evaluation, games, record, favoriteRecord, lineValue, watch, weeks]
       properties:
         status: { type: string, enum: [available, unavailable] }
         season: { type: ["integer", "null"] }
@@ -1536,6 +1718,7 @@ components:
           description: Straight-up record of the betting favorite on the same games, for comparison with `record`.
           $ref: "#/components/schemas/ConsumerRecordLine"
         lineValue: { $ref: "#/components/schemas/ConsumerLineValue" }
+        watch: { $ref: "#/components/schemas/ConsumerWatchList" }
         weeks:
           type: array
           items:
@@ -1679,7 +1862,7 @@ components:
               hits: { type: integer }
     ConsumerTouchdowns:
       type: object
-      required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record, valueRecord]
+      required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record, valueRecord, bookComparison]
       properties:
         status: { type: string, enum: [available, unavailable] }
         season: { type: ["integer", "null"] }
@@ -1704,6 +1887,25 @@ components:
               week: { type: integer }
         record: { $ref: "#/components/schemas/ConsumerTouchdownRecord" }
         valueRecord: { $ref: "#/components/schemas/ConsumerTouchdownValueRecord" }
+        bookComparison: { $ref: "#/components/schemas/ConsumerTouchdownBookComparison" }
+    ConsumerTouchdownBookComparison:
+      type: object
+      description: >-
+        Our probability against the books' (best-effort de-vig: average implied
+        chance across DraftKings and FanDuel divided by 1 + hold) on every graded
+        board player both priced. Lower Brier score and log loss are better.
+      required: [players, weeks, scored, modelAverage, bookAverage, modelBrier, bookBrier, modelLogLoss, bookLogLoss, hold]
+      properties:
+        players: { type: integer }
+        weeks: { type: integer }
+        scored: { type: integer }
+        modelAverage: { type: ["number", "null"] }
+        bookAverage: { type: ["number", "null"] }
+        modelBrier: { type: ["number", "null"] }
+        bookBrier: { type: ["number", "null"] }
+        modelLogLoss: { type: ["number", "null"] }
+        bookLogLoss: { type: ["number", "null"] }
+        hold: { type: number }
     InitialLineAudit:
       type: object
       required: [season, week, selection, games]

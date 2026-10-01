@@ -135,6 +135,31 @@ export type ConsumerGameProjectionFactors = {
   neutralSite: boolean;
 };
 
+/**
+ * @nullable
+ */
+export type ConsumerBookQuote = {
+  /** @nullable */
+  point: number | null;
+  price: number;
+} | null;
+
+/**
+ * One sportsbook's latest saved lines for a game
+ */
+export interface ConsumerBookLines {
+  sportsbook: string;
+  capturedAt: string;
+  homeSpread: ConsumerBookQuote | null;
+  awaySpread: ConsumerBookQuote | null;
+  /** @nullable */
+  homeMoneyline: number | null;
+  /** @nullable */
+  awayMoneyline: number | null;
+  over: ConsumerBookQuote | null;
+  under: ConsumerBookQuote | null;
+}
+
 export interface ConsumerGameProjection {
   gameId: string;
   nflverseGameId: string;
@@ -160,6 +185,231 @@ export interface ConsumerGameProjection {
   awayQb: ConsumerProjectionQb;
   factors: ConsumerGameProjectionFactors;
   projectedAt: string;
+  /** When the site received this projection (it only counts for games that start after this) */
+  lockedAt?: string;
+  books?: ConsumerBookLines[];
+}
+
+export type ConsumerWatchGameSide = typeof ConsumerWatchGameSide[keyof typeof ConsumerWatchGameSide];
+
+
+export const ConsumerWatchGameSide = {
+  home: 'home',
+  away: 'away',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerWatchGameAtsOpen = typeof ConsumerWatchGameAtsOpen[keyof typeof ConsumerWatchGameAtsOpen] | null;
+
+
+export const ConsumerWatchGameAtsOpen = {
+  win: 'win',
+  loss: 'loss',
+  push: 'push',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerWatchGameAtsPublished = typeof ConsumerWatchGameAtsPublished[keyof typeof ConsumerWatchGameAtsPublished] | null;
+
+
+export const ConsumerWatchGameAtsPublished = {
+  win: 'win',
+  loss: 'loss',
+  push: 'push',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerWatchGameAtsClose = typeof ConsumerWatchGameAtsClose[keyof typeof ConsumerWatchGameAtsClose] | null;
+
+
+export const ConsumerWatchGameAtsClose = {
+  win: 'win',
+  loss: 'loss',
+  push: 'push',
+} as const;
+
+export interface ConsumerWatchGame {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  kickoff: string;
+  sportsbook: string;
+  /** Gridline's expected home margin in its first projection before kickoff */
+  gridlineMargin: number;
+  lockedAt: string;
+  /** Opening home spread (negative when home is favored) */
+  openLine: number;
+  openedAt: string;
+  /** Home spread when Gridline's projection went up */
+  publishedLine: number;
+  /** Latest home spread before kickoff (the closing line once started) */
+  currentLine: number;
+  currentAt: string;
+  started: boolean;
+  gap: number;
+  side: ConsumerWatchGameSide;
+  /** Points the line moved toward Gridline's side since the opener */
+  movedToward: number;
+  /** @nullable */
+  atsOpen: ConsumerWatchGameAtsOpen;
+  /** @nullable */
+  atsPublished: ConsumerWatchGameAtsPublished;
+  /** @nullable */
+  atsClose: ConsumerWatchGameAtsClose;
+}
+
+export interface ConsumerRecordLine {
+  wins: number;
+  losses: number;
+  pushes: number;
+}
+
+/**
+ * Games where Gridline's first pregame line is `threshold`+ points off the opening spread
+ */
+export interface ConsumerWatchList {
+  threshold: number;
+  flagged: number;
+  graded: number;
+  movedToward: number;
+  movedAway: number;
+  atsOpen: ConsumerRecordLine;
+  atsPublished: ConsumerRecordLine;
+  atsClose: ConsumerRecordLine;
+  games: ConsumerWatchGame[];
+}
+
+export type ConsumerWatchAlertsAlertsItemKind = typeof ConsumerWatchAlertsAlertsItemKind[keyof typeof ConsumerWatchAlertsAlertsItemKind];
+
+
+export const ConsumerWatchAlertsAlertsItemKind = {
+  flagged: 'flagged',
+  'moved-toward': 'moved-toward',
+  'moved-away': 'moved-away',
+} as const;
+
+export type ConsumerWatchAlertsAlertsItem = {
+  kind: ConsumerWatchAlertsAlertsItemKind;
+  gameId: string;
+  at: string;
+  message: string;
+};
+
+export interface ConsumerWatchAlerts {
+  /**
+     * ntfy.sh topic that receives these alerts as phone notifications, when configured
+     * @nullable
+     */
+  ntfyTopic: string | null;
+  alerts: ConsumerWatchAlertsAlertsItem[];
+}
+
+export type ConsumerReceiptsStatus = typeof ConsumerReceiptsStatus[keyof typeof ConsumerReceiptsStatus];
+
+
+export const ConsumerReceiptsStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+/**
+ * The sportsbook spread saved at or before the lock time
+ * @nullable
+ */
+export type ConsumerReceiptsGamesItemLine = {
+  sportsbook: string;
+  homeLine: number;
+  capturedAt: string;
+} | null;
+
+/**
+ * @nullable
+ */
+export type ConsumerReceiptsGamesItemFinal = {
+  home: number;
+  away: number;
+} | null;
+
+/**
+ * @nullable
+ */
+export type ConsumerReceiptsGamesItemWinner = typeof ConsumerReceiptsGamesItemWinner[keyof typeof ConsumerReceiptsGamesItemWinner] | null;
+
+
+export const ConsumerReceiptsGamesItemWinner = {
+  win: 'win',
+  loss: 'loss',
+  push: 'push',
+} as const;
+
+export type ConsumerReceiptsGamesItem = {
+  /** @nullable */
+  week: number | null;
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  /** @nullable */
+  kickoff: string | null;
+  lockedAt: string;
+  projectedMargin: number;
+  projectedTotal: number;
+  homeWinProbability: number;
+  /**
+     * The sportsbook spread saved at or before the lock time
+     * @nullable
+     */
+  line: ConsumerReceiptsGamesItemLine;
+  /** @nullable */
+  final: ConsumerReceiptsGamesItemFinal;
+  /** @nullable */
+  winner: ConsumerReceiptsGamesItemWinner;
+};
+
+export type ConsumerReceiptsTouchdownsItem = {
+  week: number;
+  rank: number;
+  playerId: string;
+  name: string;
+  position: string;
+  team: string;
+  opponent: string;
+  /** @nullable */
+  kickoff: string | null;
+  probability: number;
+  lockedAt: string;
+  /** @nullable */
+  scored: boolean | null;
+};
+
+export type ConsumerReceiptsRunsItemKind = typeof ConsumerReceiptsRunsItemKind[keyof typeof ConsumerReceiptsRunsItemKind];
+
+
+export const ConsumerReceiptsRunsItemKind = {
+  games: 'games',
+  touchdowns: 'touchdowns',
+} as const;
+
+export type ConsumerReceiptsRunsItem = {
+  kind: ConsumerReceiptsRunsItemKind;
+  week: number;
+  generatedAt: string;
+  receivedAt: string;
+};
+
+export interface ConsumerReceipts {
+  status: ConsumerReceiptsStatus;
+  /** @nullable */
+  season: number | null;
+  seasons: number[];
+  games: ConsumerReceiptsGamesItem[];
+  touchdowns: ConsumerReceiptsTouchdownsItem[];
+  runs: ConsumerReceiptsRunsItem[];
 }
 
 export type ConsumerGameProjectionsStatus = typeof ConsumerGameProjectionsStatus[keyof typeof ConsumerGameProjectionsStatus];
@@ -206,12 +456,6 @@ export type ConsumerGameProjectionsWeeksItem = {
   pushes: number;
 };
 
-export interface ConsumerRecordLine {
-  wins: number;
-  losses: number;
-  pushes: number;
-}
-
 /**
  * Closing line value. For each game with a saved opening and closing spread at one book, Gridline's line when the opener was captured is compared with the opener; a lean is Gridline disagreeing by at least `threshold` points.
  */
@@ -246,6 +490,7 @@ export interface ConsumerGameProjections {
   /** Straight-up record of the betting favorite on the same games, for comparison with `record`. */
   favoriteRecord: ConsumerRecordLine;
   lineValue: ConsumerLineValue;
+  watch: ConsumerWatchList;
   weeks: ConsumerGameProjectionsWeeksItem[];
 }
 
@@ -404,6 +649,28 @@ export type ConsumerTouchdownsWeeksItem = {
   week: number;
 };
 
+/**
+ * Our probability against the books' (best-effort de-vig: average implied chance across DraftKings and FanDuel divided by 1 + hold) on every graded board player both priced. Lower Brier score and log loss are better.
+ */
+export interface ConsumerTouchdownBookComparison {
+  players: number;
+  weeks: number;
+  scored: number;
+  /** @nullable */
+  modelAverage: number | null;
+  /** @nullable */
+  bookAverage: number | null;
+  /** @nullable */
+  modelBrier: number | null;
+  /** @nullable */
+  bookBrier: number | null;
+  /** @nullable */
+  modelLogLoss: number | null;
+  /** @nullable */
+  bookLogLoss: number | null;
+  hold: number;
+}
+
 export interface ConsumerTouchdowns {
   status: ConsumerTouchdownsStatus;
   /** @nullable */
@@ -419,6 +686,7 @@ export interface ConsumerTouchdowns {
   weeks: ConsumerTouchdownsWeeksItem[];
   record: ConsumerTouchdownRecord;
   valueRecord: ConsumerTouchdownValueRecord;
+  bookComparison: ConsumerTouchdownBookComparison;
 }
 
 export type InitialLineAuditSelection = {
@@ -4520,6 +4788,23 @@ week?: number;
 
 export type GetConsumerGameProjectionsParams = {
 season?: number;
+};
+
+export type GetConsumerReceiptsParams = {
+season?: number;
+};
+
+export type GetConsumerWatchAlertsParams = {
+/**
+ * Window in hours (default 3); ignored when since is given
+ * @minimum 1
+ * @maximum 336
+ */
+hours?: number;
+/**
+ * Alerts at or after this time (at most two weeks back)
+ */
+since?: string;
 };
 
 export type GetConsumerPowerRatingsParams = {

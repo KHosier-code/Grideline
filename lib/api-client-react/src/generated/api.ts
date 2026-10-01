@@ -45,6 +45,7 @@ import type {
   ConsumerPlayerUsageGames,
   ConsumerPowerRatings,
   ConsumerPropsAvailability,
+  ConsumerReceipts,
   ConsumerRecord,
   ConsumerRedZoneOpportunities,
   ConsumerScheduleSelection,
@@ -53,6 +54,7 @@ import type {
   ConsumerTrends,
   ConsumerUpcomingPlayerProjections,
   ConsumerUsageReport,
+  ConsumerWatchAlerts,
   ConsumerWeeklyPickArchive,
   DashboardSummary,
   DataHealth,
@@ -64,10 +66,12 @@ import type {
   GetConsumerPlayerPositionMatchupParams,
   GetConsumerPlayerUsageParams,
   GetConsumerPowerRatingsParams,
+  GetConsumerReceiptsParams,
   GetConsumerRecordParams,
   GetConsumerRedZoneOpportunitiesParams,
   GetConsumerTeamAnalyticsParams,
   GetConsumerTouchdownsParams,
+  GetConsumerWatchAlertsParams,
   GetConsumerWeeklyPicksParams,
   GetImageryCandidatePreviewParams,
   GetInitialLineAuditParams,
@@ -5446,6 +5450,175 @@ export function useGetConsumerGameProjections<TData = Awaited<ReturnType<typeof 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerGameProjectionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerReceiptsUrl = (params?: GetConsumerReceiptsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/receipts?${stringifiedParams}` : `/api/consumer/receipts`
+}
+
+/**
+ * Each game's last projection received before kickoff and each week's top five touchdown picks, with the time the site received them and the result. Runs are append-only; payloads are also committed to the public receipts branch of the repository.
+ * @summary Read every projection and top-5 touchdown pick as locked in before kickoff
+ */
+export const getConsumerReceipts = async (params?: GetConsumerReceiptsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerReceipts> => {
+
+  return customFetch<ConsumerReceipts>(getGetConsumerReceiptsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerReceiptsQueryKey = (params?: GetConsumerReceiptsParams,) => {
+    return [
+    `/api/consumer/receipts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerReceiptsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerReceipts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerReceiptsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerReceipts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerReceiptsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerReceipts>>> = ({ signal }) => getConsumerReceipts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerReceipts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerReceiptsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerReceipts>>>
+export type GetConsumerReceiptsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read every projection and top-5 touchdown pick as locked in before kickoff
+ */
+
+export function useGetConsumerReceipts<TData = Awaited<ReturnType<typeof getConsumerReceipts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerReceiptsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerReceipts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerReceiptsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerWatchAlertsUrl = (params?: GetConsumerWatchAlertsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/watch-alerts?${stringifiedParams}` : `/api/consumer/watch-alerts`
+}
+
+/**
+ * @summary Read recent opener-gap watch-list alerts
+ */
+export const getConsumerWatchAlerts = async (params?: GetConsumerWatchAlertsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerWatchAlerts> => {
+
+  return customFetch<ConsumerWatchAlerts>(getGetConsumerWatchAlertsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerWatchAlertsQueryKey = (params?: GetConsumerWatchAlertsParams,) => {
+    return [
+    `/api/consumer/watch-alerts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerWatchAlertsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerWatchAlertsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerWatchAlertsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerWatchAlerts>>> = ({ signal }) => getConsumerWatchAlerts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerWatchAlertsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerWatchAlerts>>>
+export type GetConsumerWatchAlertsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read recent opener-gap watch-list alerts
+ */
+
+export function useGetConsumerWatchAlerts<TData = Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerWatchAlertsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerWatchAlertsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

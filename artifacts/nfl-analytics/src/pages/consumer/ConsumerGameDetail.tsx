@@ -13,6 +13,7 @@ import { DeferredDetailDisclosure } from '../../components/DeferredDetailDisclos
 import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
 import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
 import { GameAlerts } from './GameAlerts';
+import { BookTable } from '@/components/BookLines';
 import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useConsumerNow } from './consumer-ui';
 import { useEffect } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
@@ -105,6 +106,7 @@ export default function ConsumerGameDetail() {
     </header>
 
     <GameProjectionPanel view={view} projection={qbProjection} />
+    {beforeKickoff && <BookTable books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />}
     <HundredGames view={view} />
     <MatchupRanks home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
     <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />

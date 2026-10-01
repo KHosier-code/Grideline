@@ -1,4 +1,4 @@
-import type { ConsumerGame, ConsumerGameProjection, ConsumerProjectionQb } from '@workspace/api-client-react';
+import type { ConsumerBookLines, ConsumerGame, ConsumerGameProjection, ConsumerProjectionQb } from '@workspace/api-client-react';
 
 /**
  * Game projections for the weekly page. These are projections, not picks:
@@ -32,6 +32,8 @@ export type GameView = {
    */
   market: { homeMargin: number; total: number | null; source: 'sportsbook' | 'consensus' } | null;
   result: 'win' | 'loss' | 'push' | null;
+  /** Each sportsbook's latest lines, for line shopping. */
+  books: ConsumerBookLines[];
 };
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -69,7 +71,7 @@ export function buildGameView(game: ConsumerGame, qbModel?: ConsumerGameProjecti
     : qbModel && finite(qbModel.marketMargin)
       ? { homeMargin: qbModel.marketMargin, total: finite(qbModel.marketTotal) ? qbModel.marketTotal : null, source: 'consensus' }
       : null;
-  return { game, projection, winner, vegas: { homeLine, total: vegasTotal, favorite }, market, result };
+  return { game, projection, winner, vegas: { homeLine, total: vegasTotal, favorite }, market, result, books: qbModel?.books ?? [] };
 }
 
 /** "BUF -7.5" style line for the team a margin favors (home-minus-away margin). */

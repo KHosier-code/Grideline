@@ -3744,7 +3744,19 @@ export const GetConsumerTouchdownsResponse = zod.object({
   "hits": zod.number().int(),
   "units": zod.number()
 }))
-}).describe('Graded value picks this season, 1 unit each at the captured price')
+}).describe('Graded value picks this season, 1 unit each at the captured price'),
+  "bookComparison": zod.object({
+  "players": zod.number().int(),
+  "weeks": zod.number().int(),
+  "scored": zod.number().int(),
+  "modelAverage": zod.number().nullable(),
+  "bookAverage": zod.number().nullable(),
+  "modelBrier": zod.number().nullable(),
+  "bookBrier": zod.number().nullable(),
+  "modelLogLoss": zod.number().nullable(),
+  "bookLogLoss": zod.number().nullable(),
+  "hold": zod.number()
+}).describe('Our probability against the books\' (best-effort de-vig: average implied chance across DraftKings and FanDuel divided by 1 + hold) on every graded board player both priced. Lower Brier score and log loss are better.')
 })
 
 
@@ -3820,7 +3832,30 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "restDiff": zod.number().nullable(),
   "neutralSite": zod.boolean()
 }),
-  "projectedAt": zod.coerce.date()
+  "projectedAt": zod.coerce.date(),
+  "lockedAt": zod.coerce.date().optional().describe('When the site received this projection (it only counts for games that start after this)'),
+  "books": zod.array(zod.object({
+  "sportsbook": zod.string(),
+  "capturedAt": zod.coerce.date(),
+  "homeSpread": zod.object({
+  "point": zod.number().nullable(),
+  "price": zod.number().int()
+}).nullable(),
+  "awaySpread": zod.object({
+  "point": zod.number().nullable(),
+  "price": zod.number().int()
+}).nullable(),
+  "homeMoneyline": zod.number().int().nullable(),
+  "awayMoneyline": zod.number().int().nullable(),
+  "over": zod.object({
+  "point": zod.number().nullable(),
+  "price": zod.number().int()
+}).nullable(),
+  "under": zod.object({
+  "point": zod.number().nullable(),
+  "price": zod.number().int()
+}).nullable()
+}).describe('One sportsbook\'s latest saved lines for a game')).optional()
 })),
   "record": zod.object({
   "wins": zod.number().int(),
@@ -3851,11 +3886,132 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "pushes": zod.number().int()
 })
 }).describe('Closing line value. For each game with a saved opening and closing spread at one book, Gridline\'s line when the opener was captured is compared with the opener; a lean is Gridline disagreeing by at least `threshold` points.'),
+  "watch": zod.object({
+  "threshold": zod.number(),
+  "flagged": zod.number().int(),
+  "graded": zod.number().int(),
+  "movedToward": zod.number().int(),
+  "movedAway": zod.number().int(),
+  "atsOpen": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "atsPublished": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "atsClose": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "homeTeam": zod.string(),
+  "awayTeam": zod.string(),
+  "kickoff": zod.coerce.date(),
+  "sportsbook": zod.string(),
+  "gridlineMargin": zod.number().describe('Gridline\'s expected home margin in its first projection before kickoff'),
+  "lockedAt": zod.coerce.date(),
+  "openLine": zod.number().describe('Opening home spread (negative when home is favored)'),
+  "openedAt": zod.coerce.date(),
+  "publishedLine": zod.number().describe('Home spread when Gridline\'s projection went up'),
+  "currentLine": zod.number().describe('Latest home spread before kickoff (the closing line once started)'),
+  "currentAt": zod.coerce.date(),
+  "started": zod.boolean(),
+  "gap": zod.number(),
+  "side": zod.enum(['home', 'away']),
+  "movedToward": zod.number().describe('Points the line moved toward Gridline\'s side since the opener'),
+  "atsOpen": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable(),
+  "atsPublished": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable(),
+  "atsClose": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable()
+}))
+}).describe('Games where Gridline\'s first pregame line is `threshold`+ points off the opening spread'),
   "weeks": zod.array(zod.object({
   "week": zod.number().int(),
   "wins": zod.number().int(),
   "losses": zod.number().int(),
   "pushes": zod.number().int()
+}))
+})
+
+
+/**
+ * Each game's last projection received before kickoff and each week's top five touchdown picks, with the time the site received them and the result. Runs are append-only; payloads are also committed to the public receipts branch of the repository.
+ * @summary Read every projection and top-5 touchdown pick as locked in before kickoff
+ */
+export const GetConsumerReceiptsQueryParams = zod.object({
+  "season": zod.coerce.number().int().optional()
+})
+
+export const GetConsumerReceiptsResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "season": zod.number().int().nullable(),
+  "seasons": zod.array(zod.number().int()),
+  "games": zod.array(zod.object({
+  "week": zod.number().int().nullable(),
+  "gameId": zod.string(),
+  "homeTeam": zod.string(),
+  "awayTeam": zod.string(),
+  "kickoff": zod.coerce.date().nullable(),
+  "lockedAt": zod.coerce.date(),
+  "projectedMargin": zod.number(),
+  "projectedTotal": zod.number(),
+  "homeWinProbability": zod.number(),
+  "line": zod.object({
+  "sportsbook": zod.string(),
+  "homeLine": zod.number(),
+  "capturedAt": zod.coerce.date()
+}).nullable().describe('The sportsbook spread saved at or before the lock time'),
+  "final": zod.object({
+  "home": zod.number().int(),
+  "away": zod.number().int()
+}).nullable(),
+  "winner": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable()
+})),
+  "touchdowns": zod.array(zod.object({
+  "week": zod.number().int(),
+  "rank": zod.number().int(),
+  "playerId": zod.string(),
+  "name": zod.string(),
+  "position": zod.string(),
+  "team": zod.string(),
+  "opponent": zod.string(),
+  "kickoff": zod.coerce.date().nullable(),
+  "probability": zod.number(),
+  "lockedAt": zod.coerce.date(),
+  "scored": zod.boolean().nullable()
+})),
+  "runs": zod.array(zod.object({
+  "kind": zod.enum(['games', 'touchdowns']),
+  "week": zod.number().int(),
+  "generatedAt": zod.coerce.date(),
+  "receivedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Read recent opener-gap watch-list alerts
+ */
+export const getConsumerWatchAlertsQueryHoursMax = 336;
+
+
+
+export const GetConsumerWatchAlertsQueryParams = zod.object({
+  "hours": zod.coerce.number().int().min(1).max(getConsumerWatchAlertsQueryHoursMax).optional().describe('Window in hours (default 3); ignored when since is given'),
+  "since": zod.date().optional().describe('Alerts at or after this time (at most two weeks back)')
+})
+
+export const GetConsumerWatchAlertsResponse = zod.object({
+  "ntfyTopic": zod.string().nullable().describe('ntfy.sh topic that receives these alerts as phone notifications, when configured'),
+  "alerts": zod.array(zod.object({
+  "kind": zod.enum(['flagged', 'moved-toward', 'moved-away']),
+  "gameId": zod.string(),
+  "at": zod.coerce.date(),
+  "message": zod.string()
 }))
 })
 

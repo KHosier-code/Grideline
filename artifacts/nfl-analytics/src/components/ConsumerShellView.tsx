@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  BarChart3, BookOpen, Bookmark, CalendarDays, Crosshair, Gauge, Grid3x3, Layers, ListOrdered, Menu, ShieldHalf, Star, Trophy, UserRound, Users, X,
+  BarChart3, BookOpen, Bookmark, CalendarDays, Crosshair, Gauge, Grid3x3, Layers, ListOrdered, Menu, Receipt, ShieldHalf, Star, Trophy, UserRound, Users, X,
 } from 'lucide-react';
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from './ConsumerAccountNavigation';
 import type { consumerAccountState } from '@/lib/consumer-account-state';
@@ -24,6 +24,7 @@ export const consumerNavGroups: NavGroup[] = [
     { href: '/power-ratings', label: 'Power Ratings', icon: ListOrdered },
     { href: '/qb-rankings', label: 'QB Rankings', icon: UserRound },
     { href: '/performance', label: 'Model Performance', icon: BarChart3 },
+    { href: '/receipts', label: 'Receipts', icon: Receipt, newUntil: '2026-10-21' },
   ] },
   { label: 'Teams & players', items: [
     { href: '/teams', label: 'Team Charts', icon: Gauge },
