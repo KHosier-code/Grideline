@@ -47,3 +47,17 @@ python sweep.py data builds out && python report.py out results.html
 `out/survivors.json` has the opener-gap signal by season, with and without QB
 changes. Opening lines from nfelo use OAK/LAR in game ids; `sweep.py` maps them
 to LV/LA (the earlier `followups.py` missed those ~35 games a season).
+
+## Filter search for a 60% spread rule
+
+`filter_search.py` adds filters (gap size, underdog/favourite, home/road,
+spread size, QB change, week, division) to the opener-gap rule: 3,360
+combinations, graded at the opening spread over 2021 through 2026 week 3.
+40 combinations with 100+ bets reach 60%. The broadest is a gap of 4+ points,
+betting the underdog, spread 7 or less: 107-63 (62.9%). It had a losing 2024
+(13-18) and is 1-4 in 2026.
+
+To see how much of that is fitting, the same search run on 2021-2024 only found
+90 combinations at 60%+. On 2025-2026, games they were not tuned on, the top 20
+went 212-164 (56.4%). So expect roughly 55-57% going forward, not 60%+.
+Results are in `out/filter_search.json`.
