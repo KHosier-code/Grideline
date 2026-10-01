@@ -137,7 +137,7 @@ export default function TouchdownPicks() {
 
     <footer className="gl-card" style={{ padding: 18 }}>
       <div className="gl-footer-inner" style={{ padding: 0 }}>
-        <p><b>Fair odds</b>The price that matches our probability. In testing on 2023 through 2026, our top 5 players each week scored 62% of the time, and our percentages matched how often players actually scored.</p>
+        <p><b>Fair odds</b>The price that matches our probability. In testing on 2021 through 2026, our top 5 players each week scored 56% of the time (46% to 62% depending on the season), and our percentages matched how often players actually scored.</p>
         <p><b>Book</b>The best anytime-TD price at DraftKings or FanDuel when we last checked. Books keep a cut of roughly 20% on these bets, so compare our chance with the book&apos;s chance after the cut, not the raw price.</p>
         <p><b>Value</b>A top-5 pick whose best book price pays more than our probability says it should, so it returns money on average if our numbers are right. We haven&apos;t been able to test this against past prices, so we track every value pick here at the price we captured, 1 unit each. Prices move; check your book before betting.</p>
         <p><b>Red-zone touches</b>Targets plus carries inside the opponent&apos;s 20-yard line, per game over the player&apos;s last 8 games.</p>

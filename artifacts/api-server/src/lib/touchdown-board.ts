@@ -58,7 +58,7 @@ export function topTenRecord(
   return { weeksGraded, topTenPicks, topTenHits, weeks: byWeek.sort((a, b) => a.week - b.week) };
 }
 
-/** Picks this high on the weekly board can be flagged as value. In testing on 2023-2026 the top 5 scored 62% of the time. */
+/** Picks this high on the weekly board can be flagged as value. In testing on 2021-2026 the top 5 scored 56% of the time. */
 export const VALUE_TOP_N = 5;
 
 /** Total return per 1 staked (stake included) at American odds. */
