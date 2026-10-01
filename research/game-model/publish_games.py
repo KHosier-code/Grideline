@@ -1,9 +1,9 @@
-"""Project the next week's games with the QB-adjusted rating and send them to the site.
+"""Project the upcoming week's games (and next week's once this one is under way) with the QB-adjusted rating and send them to the site.
 
 Usage: publish_games.py <games.parquet> <metrics.json> [team_stats.parquet]
 Environment: GRIDLINE_INGEST_URL (site origin, e.g. https://gridelineanalytics.com)
              GRIDLINE_INGEST_TOKEN
-Without both, the payload is written to games_payload.json instead.
+Payloads are always written to games_payload_week<N>.json; without both variables they are not sent.
 """
 import json
 import os
@@ -41,7 +41,16 @@ if upcoming.empty:
     print("No upcoming regular-season games; nothing to publish.")
     sys.exit(0)
 week = int(upcoming.week.min())
-slate = upcoming[upcoming.week == week].dropna(subset=RATING + TOTAL).copy()
+# Once Sunday's games are final and only Monday night is left, next week's
+# opening lines are already up, so project next week too: the opener-gap watch
+# list compares our line with the opener, and the sooner we publish the closer
+# the bettable line still is to it. Waiting for Sunday's results keeps the
+# ratings as complete as the ones the watch list was back-tested with.
+this_week = df[(df.season == current) & (df.week == week)]
+left = this_week[~this_week.played]
+in_progress = bool(this_week.played.any()) and bool(pd.to_datetime(left.kickoff).dt.dayofweek.isin([0, 1]).all())
+weeks = [week] + ([week + 1] if in_progress and (upcoming.week == week + 1).any() else [])
+slate = upcoming[upcoming.week.isin(weeks)].dropna(subset=RATING + TOTAL).copy()
 slate["margin_pred"] = rating.predict(slate[RATING])
 slate["total_pred"] = totals.predict(slate[TOTAL])
 slate["home_win"] = winner.predict_proba(slate.margin_pred.values.reshape(-1, 1))[:, 1]
@@ -63,6 +72,7 @@ def qb(row, side):
 games = []
 for _, row in slate.iterrows():
     games.append({
+        "week": int(row.week),
         "gameId": str(int(row.espn)) if pd.notna(row.espn) else row.game_id,
         "nflverseGameId": row.game_id,
         "homeTeam": row.home_team, "awayTeam": row.away_team,
@@ -140,27 +150,34 @@ metrics["seasons"] = [{key: value for key, value in row.items() if not key.start
 for row in metrics["seasons"]:
     wins, losses, pushes, rate = row.pop("ats_rating")
     row.update({"ats_wins": wins, "ats_losses": losses, "ats_pushes": pushes})
-payload = {"season": int(current), "week": week, "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-           "modelVersion": MODEL_VERSION, "evaluation": metrics, "games": games, "teams": team_payload}
-print(f"{current} week {week}: {len(games)} games projected, {len(team_payload)} teams rated")
+generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+payloads = [{"season": int(current), "week": w, "generatedAt": generated_at, "modelVersion": MODEL_VERSION,
+             "evaluation": metrics, "games": [{key: value for key, value in game.items() if key != "week"}
+                                              for game in games if game["week"] == w],
+             # Power ratings go with the current week only, so rank changes compare with last week.
+             "teams": team_payload if w == week else []} for w in weeks]
 for team in team_payload[:8]:
     print(f"  #{team['ratingRank']:>2} {team['team']:<3} {team['rating']:+.1f} (off {team['offense']:+.1f}, def {team['defense']:+.1f}, QB {team['qbName']} {team['qb']:+.1f})")
-for game in games:
-    fav = game["homeTeam"] if game["projectedMargin"] > 0 else game["awayTeam"]
-    print(f"  {game['awayTeam']} ({game['awayQb']['name']}) at {game['homeTeam']} ({game['homeQb']['name']}): "
-          f"{fav} by {abs(game['projectedMargin']):.1f}, total {game['projectedTotal']:.1f}")
+for payload in payloads:
+    print(f"{current} week {payload['week']}: {len(payload['games'])} games projected, {len(team_payload)} teams rated")
+    for game in payload["games"]:
+        fav = game["homeTeam"] if game["projectedMargin"] > 0 else game["awayTeam"]
+        print(f"  {game['awayTeam']} ({game['awayQb']['name']}) at {game['homeTeam']} ({game['homeQb']['name']}): "
+              f"{fav} by {abs(game['projectedMargin']):.1f}, total {game['projectedTotal']:.1f}")
+    # Kept for the receipts branch (see .github/workflows/weekly-picks.yml) and for inspecting a run.
+    json.dump(payload, open(f"games_payload_week{payload['week']}.json", "w"), indent=1)
 
 origin, token = os.environ.get("GRIDLINE_INGEST_URL"), os.environ.get("GRIDLINE_INGEST_TOKEN")
 if not origin or not token:
-    json.dump(payload, open("games_payload.json", "w"), indent=1)
-    print("GRIDLINE_INGEST_URL/TOKEN not set: wrote games_payload.json instead of sending.")
+    print("GRIDLINE_INGEST_URL/TOKEN not set: wrote games_payload_week*.json instead of sending.")
     sys.exit(0)
-request = urllib.request.Request(f"{origin.rstrip('/')}/api/games/projections/ingest", data=json.dumps(payload).encode(),
-                                 method="POST", headers={"Content-Type": "application/json",
-                                                         "Authorization": f"Bearer {token}", "User-Agent": "gridline-game-model"})
-try:
-    with urllib.request.urlopen(request, timeout=60) as response:
-        print("Sent:", response.status, response.read().decode()[:200])
-except urllib.error.HTTPError as error:
-    print(f"Upload failed: HTTP {error.code} {error.read().decode(errors='replace')[:500]}")
-    sys.exit(1)
+for payload in payloads:
+    request = urllib.request.Request(f"{origin.rstrip('/')}/api/games/projections/ingest", data=json.dumps(payload).encode(),
+                                     method="POST", headers={"Content-Type": "application/json",
+                                                             "Authorization": f"Bearer {token}", "User-Agent": "gridline-game-model"})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            print(f"Sent week {payload['week']}:", response.status, response.read().decode()[:200])
+    except urllib.error.HTTPError as error:
+        print(f"Upload failed: HTTP {error.code} {error.read().decode(errors='replace')[:500]}")
+        sys.exit(1)
