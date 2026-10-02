@@ -18,7 +18,7 @@ export const NFL_STADIUMS: StadiumMetadata[] = [
   ["CAR","Bank of America Stadium",["Bank of America Stadium"],35.2258,-80.8528,"outdoor","none"],
   ["CHI","Soldier Field",["Soldier Field"],41.8623,-87.6167,"outdoor","none"],
   ["CIN","Paycor Stadium",["Paycor Stadium","Paul Brown Stadium"],39.0954,-84.5160,"outdoor","none"],
-  ["CLE","Cleveland Browns Stadium",["Cleveland Browns Stadium","FirstEnergy Stadium"],41.5061,-81.6995,"outdoor","none"],
+  ["CLE","Cleveland Browns Stadium",["Huntington Bank Field","Cleveland Browns Stadium","FirstEnergy Stadium"],41.5061,-81.6995,"outdoor","none"],
   ["DAL","AT&T Stadium",["AT&T Stadium","Cowboys Stadium"],32.7473,-97.0945,"indoor","retractable"],
   ["DEN","Empower Field at Mile High",["Empower Field at Mile High","Sports Authority Field"],39.7439,-105.0201,"outdoor","none"],
   ["DET","Ford Field",["Ford Field"],42.3400,-83.0456,"indoor","none"],

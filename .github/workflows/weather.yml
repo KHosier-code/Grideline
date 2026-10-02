@@ -1,0 +1,32 @@
+name: Weather
+
+# Asks the site to save National Weather Service kickoff forecasts for every
+# game in the next 7 days. The forecast is free and needs no key. Game pages
+# show the newest forecast saved before kickoff, so this runs every 6 hours
+# plus once on Sunday morning shortly before the early games.
+# Times are UTC (ET + 4 during daylight time, + 5 after early November).
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+    - cron: "47 15 * * 0"   # Sun 11:47 ET - before the 1:00 games
+  workflow_dispatch: {}
+
+concurrency:
+  group: weather
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Capture kickoff forecasts
+        env:
+          GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+          GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+        run: |
+          status=$(curl -sS -o response.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $GRIDLINE_INGEST_TOKEN" \
+            "${GRIDLINE_INGEST_URL%/}/api/weather/scheduled-capture")
+          cat response.json; echo
+          [ "$status" -lt 400 ]

@@ -14,6 +14,8 @@ import { addResult, emptyRecordLine, gradePicks, picksForProjection } from "../l
 import { boardForWeek, fairAmericanOdds, topTenRecord } from "../lib/touchdown-board";
 import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecision } from "../lib/odds";
 import { bestBookPrice, captureTouchdownProps, latestTouchdownProps } from "../lib/td-props";
+import { syncNwsWeather } from "../lib/weather";
+import { withFeedLock } from "../lib/feed-lock";
 
 const router: IRouter = Router();
 
@@ -535,6 +537,31 @@ router.post("/odds/td-props-capture", async (req, res): Promise<void> => {
   } catch (error) {
     const reason = describeError(error);
     req.log.error({ error: reason }, "TD props capture failed");
+    res.status(502).json({ status: "failed", reason });
+  }
+});
+
+/**
+ * Kickoff forecasts from the National Weather Service (free, keyless), called
+ * by the GitHub "Weather" workflow. Without this, forecasts only refresh when
+ * the data worker runs. Shares the worker's weather lock, so the two never
+ * overlap.
+ */
+router.post("/weather/scheduled-capture", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  try {
+    const result = await withFeedLock("weather", () => syncNwsWeather({ jobKey: "github-weather" }));
+    if (!result) {
+      res.json({ status: "skipped", reason: "A weather sync is already running" });
+      return;
+    }
+    res.status(result.status === "failed" ? 502 : 200).json({
+      status: result.status, inserted: result.inserted, requests: result.requests,
+      failures: result.failures.slice(0, 20), horizon: result.horizon,
+    });
+  } catch (error) {
+    const reason = describeError(error);
+    req.log.error({ error: reason }, "Scheduled weather capture failed");
     res.status(502).json({ status: "failed", reason });
   }
 });
