@@ -6,7 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "test:pregame-leakage": "tsx ./src/pregame-leakage.test.ts",
-    "test:model-promotion": "tsx ../artifacts/api-server/src/lib/model-promotion-validation.test.ts && tsx ../artifacts/api-server/src/routes/models-promotion-failure.test.ts",
+    "test:model-promotion": "tsx ../artifacts/api-server/src/lib/model-promotion-validation.test.ts",
     "test:prediction-safety": "tsx ../artifacts/api-server/src/lib/prediction-validation.test.ts && tsx ./src/pregame-leakage.test.ts",
     "test:auth-hardening": "tsx ../artifacts/api-server/src/middlewares/admin.test.ts && tsx ../artifacts/api-server/src/routes/authorization.test.ts",
     "test:usage-analytics": "tsx ../artifacts/api-server/src/routes/usage-analytics.test.ts",

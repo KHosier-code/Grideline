@@ -22,7 +22,6 @@ export type EspnGame = {
   finalAwayScore: number | null;
   gameStatus: string;
   broadcast: string | null;
-  modelStatus: "not_trained" | "available";
 };
 
 type EspnResponse = {
@@ -102,7 +101,6 @@ function parseGame(eventValue: unknown, season: number, requestedWeek: number): 
     finalAwayScore: Number.isFinite(awayScore) ? awayScore : null,
     gameStatus: asString(status.name) ?? "STATUS_UNKNOWN",
     broadcast: asString(broadcastNames[0]),
-    modelStatus: "not_trained",
   };
 }
 

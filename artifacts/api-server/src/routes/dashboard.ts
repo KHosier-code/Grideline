@@ -20,10 +20,8 @@ import { getPregameFeatureHealth } from "../lib/features";
 import { getRecentScheduledRuns } from "../lib/sync-runs";
 import { nextFeedUpdate } from "../lib/feed-schedule";
 import { getFeedGameDays } from "../lib/feed-game-days";
-import { getProductionModelStatus } from "../lib/live-predictions";
 import { weatherHealth } from "../lib/weather";
 import { requireAdmin } from "../middlewares/admin";
-import { getModelArtifactImmutabilityStatus } from "../lib/phase61-release";
 import { getUsageAnalyticsRetentionHealth } from "../lib/usage-analytics-retention";
 import { getPlayerRecoveryReceiptCleanupHealth } from "../lib/player-recovery-receipts";
 import { logger } from "../lib/logger";
@@ -44,7 +42,6 @@ type DataHealthDependencies = {
   getOddsApiHealth: typeof getOddsApiHealth;
   getSchedulerHealth: typeof getSchedulerHealth;
   getPregameFeatureHealth: typeof getPregameFeatureHealth;
-  getModelArtifactImmutabilityStatus: typeof getModelArtifactImmutabilityStatus;
   getUsageAnalyticsRetentionHealth: typeof getUsageAnalyticsRetentionHealth;
   getPlayerRecoveryReceiptCleanupHealth: typeof getPlayerRecoveryReceiptCleanupHealth;
   getFeedGameDays: typeof getFeedGameDays;
@@ -63,7 +60,6 @@ const defaultDataHealthDependencies: DataHealthDependencies = {
   getOddsApiHealth,
   getSchedulerHealth,
   getPregameFeatureHealth,
-  getModelArtifactImmutabilityStatus,
   getUsageAnalyticsRetentionHealth,
   getPlayerRecoveryReceiptCleanupHealth,
   getFeedGameDays,
@@ -141,7 +137,6 @@ router.get(
   requireAdmin,
   async (req, res): Promise<void> => {
     const { season, week } = await resolveCurrentSeasonWeek();
-    const modelStatus = await getProductionModelStatus();
     let gamesThisWeek = 0;
     try {
       gamesThisWeek = (await fetchSchedule(season, week)).length;
@@ -155,12 +150,6 @@ router.get(
         season,
         currentWeek: week,
         gamesThisWeek,
-        modelStatus,
-        ats: { record: "—", winRate: null, units: null, roi: null },
-        moneyline: { record: "—", winRate: null, units: null, roi: null },
-        totals: { record: "—", winRate: null, units: null, roi: null },
-        averageClv: null,
-        topEdges: [],
       }),
     );
   },
@@ -334,20 +323,6 @@ export function createDataHealthHandler(
         latestGeneratedAt: null,
       } as Awaited<ReturnType<typeof getPregameFeatureHealth>>,
     );
-    const modelImmutabilityCheck = bounded(
-      "model artifact immutability health",
-      dependencies.getModelArtifactImmutabilityStatus,
-      {
-        status: "application_only",
-        mechanism: "unavailable",
-        applicationUpdateDeleteBlocked: false,
-        productionFittingBlocked: false,
-        databaseTriggerActive: false,
-        databaseTriggerSupport: "unavailable",
-        verification: "unavailable",
-        note: healthCheckUnavailable("model artifact immutability"),
-      } as Awaited<ReturnType<typeof getModelArtifactImmutabilityStatus>>,
-    );
     const usageAnalyticsRetentionCheck = bounded(
       "Usage Lab retention health",
       dependencies.getUsageAnalyticsRetentionHealth,
@@ -419,7 +394,6 @@ export function createDataHealthHandler(
       oddsResult,
       schedulerResult,
       featuresResult,
-      modelImmutabilityResult,
       usageAnalyticsRetentionResult,
       playerReceiptCleanupResult,
       gameDaysResult,
@@ -436,7 +410,6 @@ export function createDataHealthHandler(
       oddsCheck,
       schedulerCheck,
       featuresCheck,
-      modelImmutabilityCheck,
       usageAnalyticsRetentionCheck,
       playerReceiptCleanupCheck,
       gameDaysCheck,
@@ -459,7 +432,6 @@ export function createDataHealthHandler(
       ["Odds API", oddsResult.unavailable],
       ["scheduler", schedulerResult.unavailable],
       ["pregame features", featuresResult.unavailable],
-      ["model artifact immutability", modelImmutabilityResult.unavailable],
       ["Usage Lab retention", usageAnalyticsRetentionResult.unavailable],
       ["player receipt cleanup", playerReceiptCleanupResult.unavailable],
       ["ESPN game calendar", gameDaysResult.unavailable],
@@ -527,7 +499,6 @@ export function createDataHealthHandler(
     const odds = oddsResult.value;
     const scheduler = schedulerResult.value;
     const features = featuresResult.value;
-    const modelImmutability = modelImmutabilityResult.value;
     const usageAnalyticsRetention = usageAnalyticsRetentionResult.value;
     const playerReceiptCleanup = playerReceiptCleanupResult.value;
     const gameDays = gameDaysResult.value;
@@ -615,31 +586,6 @@ export function createDataHealthHandler(
               : "The first injury synchronization is pending.";
       res.json(
         GetDataHealthResponse.parse([
-        {
-          provider: "model-artifact-immutability",
-          label: "Model artifact immutability",
-          status: modelImmutabilityResult.unavailable
-            ? "unavailable"
-            : ["application_only", "database_and_application"].includes(
-                  modelImmutability.status,
-                )
-              ? "current"
-              : "unavailable",
-          detail: modelImmutabilityResult.unavailable
-            ? healthCheckUnavailable("model artifact immutability")
-            : modelImmutability.note,
-          lastUpdated: now,
-          nextUpdate: null,
-          requestsToday: 0,
-          requestsThisMonth: 0,
-          remainingQuota: null,
-          metadata: {
-            ...modelImmutability,
-            ...(modelImmutabilityResult.unavailable
-              ? { healthCheck: "failed" }
-              : {}),
-          },
-        },
         {
           provider: "scheduler",
           label: "Recurring synchronization",

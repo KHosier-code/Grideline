@@ -396,68 +396,6 @@ export interface ConsumerTouchdowns {
   record: ConsumerTouchdownRecord;
 }
 
-export type InitialLineAuditSelection = {
-  gameId: string;
-  selectedAt: string;
-} | null;
-
-export type InitialLineAuditGameStatus = typeof InitialLineAuditGameStatus[keyof typeof InitialLineAuditGameStatus];
-
-
-export const InitialLineAuditGameStatus = {
-  awaiting_first_observation: 'awaiting_first_observation',
-  locked: 'locked',
-  no_line: 'no_line',
-  incomplete_market: 'incomplete_market',
-  missing_input: 'missing_input',
-  invalid_model: 'invalid_model',
-  legacy_unattributed: 'legacy_unattributed',
-} as const;
-
-export type InitialLineAuditGameFirstRequest = {
-  id: number;
-  status: string;
-  requestedAt: string;
-  observedAt: string;
-} | null;
-
-export type InitialLineAuditGameQuotes = null | ({
-  market: string;
-  selection: string;
-  /** @nullable */
-  point: number | null;
-  price: number;
-  /** @nullable */
-  sourceTimestamp: string | null;
-})[];
-
-export interface InitialLineAuditGame {
-  gameId: string;
-  homeTeam: string;
-  awayTeam: string;
-  /** @nullable */
-  kickoffTime: string | null;
-  status: InitialLineAuditGameStatus;
-  /** @nullable */
-  reason: string | null;
-  firstRequest: InitialLineAuditGameFirstRequest;
-  /** @nullable */
-  winner: string | null;
-  /** @nullable */
-  winnerProbability: number | null;
-  /** @nullable */
-  sportsbook: string | null;
-  quotes: InitialLineAuditGameQuotes;
-  selected: boolean;
-}
-
-export interface InitialLineAudit {
-  season: number;
-  week: number;
-  selection: InitialLineAuditSelection;
-  games: InitialLineAuditGame[];
-}
-
 export type ScheduleStatusHealthExamplesItem = {
   /** @maxLength 48 */
   status: string;
@@ -1152,26 +1090,6 @@ export interface ConsumerConfidence {
   markets: ConsumerConfidenceMarketsItem[];
 }
 
-export type ConfidenceAuditWeights = {[key: string]: number};
-
-export type ConfidenceAuditThresholds = {[key: string]: number};
-
-export type ConfidenceAuditNormalizationRules = {[key: string]: string};
-
-export type ConfidenceAuditHistoricalEvidence = { [key: string]: unknown };
-
-export type ConfidenceAuditResultsItem = { [key: string]: unknown };
-
-export interface ConfidenceAudit {
-  version: string;
-  checksum: string;
-  weights: ConfidenceAuditWeights;
-  thresholds: ConfidenceAuditThresholds;
-  normalizationRules: ConfidenceAuditNormalizationRules;
-  historicalEvidence: ConfidenceAuditHistoricalEvidence;
-  results: ConfidenceAuditResultsItem[];
-}
-
 export type ConsumerGameGameState = typeof ConsumerGameGameState[keyof typeof ConsumerGameGameState];
 
 
@@ -1443,54 +1361,6 @@ export interface ConsumerWeeklyPickArchive {
   /** @nullable */
   season: number | null;
   weeks: ConsumerArchivedWeeklyPick[];
-}
-
-export type RetrospectiveWeeklyReviewCandidate = {
-  gameId: string;
-  teamId: string;
-  teamName: string;
-  matchup: string;
-  probability: number;
-  cutoffAt: string;
-  evidenceId: string;
-} | null;
-
-export type RetrospectiveWeeklyReviewReviewStatus = typeof RetrospectiveWeeklyReviewReviewStatus[keyof typeof RetrospectiveWeeklyReviewReviewStatus];
-
-
-export const RetrospectiveWeeklyReviewReviewStatus = {
-  unavailable: 'unavailable',
-  reviewed: 'reviewed',
-  published: 'published',
-} as const;
-
-export type RetrospectiveWeeklyReviewReview = {
-  status: RetrospectiveWeeklyReviewReviewStatus;
-  /** @nullable */
-  reason: string | null;
-  /** @nullable */
-  gameId: string | null;
-  /** @nullable */
-  teamId: string | null;
-  /** @nullable */
-  probability: number | null;
-  /** @nullable */
-  cutoffAt: string | null;
-  /** @nullable */
-  evidenceId: string | null;
-  reviewedAt: string;
-  /** @nullable */
-  publishedAt: string | null;
-} | null;
-
-export interface RetrospectiveWeeklyReview {
-  season: number;
-  week: number;
-  /** @nullable */
-  reason: string | null;
-  officialExists: boolean;
-  candidate: RetrospectiveWeeklyReviewCandidate;
-  review: RetrospectiveWeeklyReviewReview;
 }
 
 export type ConsumerFirstLinesSportsbook = typeof ConsumerFirstLinesSportsbook[keyof typeof ConsumerFirstLinesSportsbook];
@@ -3223,14 +3093,6 @@ export interface TeamBrief {
   logoUrl?: string | null;
 }
 
-export type GameModelStatus = typeof GameModelStatus[keyof typeof GameModelStatus];
-
-
-export const GameModelStatus = {
-  not_trained: 'not_trained',
-  available: 'available',
-} as const;
-
 export interface OddsQuote {
   sportsbook: string;
   market: string;
@@ -3262,7 +3124,6 @@ export interface Game {
   gameStatus: string;
   /** @nullable */
   broadcast?: string | null;
-  modelStatus: GameModelStatus;
   /** @nullable */
   latestOdds?: OddsQuote[] | null;
 }
@@ -3611,35 +3472,11 @@ export interface SleeperIdentityReport {
   safety: SleeperIdentityReportSafety;
 }
 
-export interface PerformanceSummary {
-  record: string;
-  /** @nullable */
-  winRate: number | null;
-  /** @nullable */
-  units: number | null;
-  /** @nullable */
-  roi: number | null;
-}
-
-export interface ModelEdge {
-  gameId: string;
-  label: string;
-  detail: string;
-  modelStatus?: string;
-}
-
 export interface DashboardSummary {
   season: number;
   /** @nullable */
   currentWeek: number | null;
   gamesThisWeek: number;
-  modelStatus: string;
-  ats: PerformanceSummary;
-  moneyline: PerformanceSummary;
-  totals: PerformanceSummary;
-  /** @nullable */
-  averageClv: number | null;
-  topEdges?: ModelEdge[];
 }
 
 export type AppSettingsSportsbooksItem = typeof AppSettingsSportsbooksItem[keyof typeof AppSettingsSportsbooksItem];
@@ -3753,91 +3590,6 @@ export interface PregameFeatureAuditRow {
   quality: PregameFeatureAuditRowQuality;
   /** @nullable */
   unavailableReason?: string | null;
-}
-
-export type LiveModelInputIntegrityAuditModelSchemaStatus = typeof LiveModelInputIntegrityAuditModelSchemaStatus[keyof typeof LiveModelInputIntegrityAuditModelSchemaStatus];
-
-
-export const LiveModelInputIntegrityAuditModelSchemaStatus = {
-  valid: 'valid',
-  invalid: 'invalid',
-} as const;
-
-export type LiveModelInputIntegrityAuditProductionModelsItem = { [key: string]: unknown };
-
-export type LiveModelInputIntegrityAuditModelLifecycleEvidenceItem = {
-  family: string;
-  modelVersion: string;
-  trainedAt: string;
-  promotedAt: string;
-  immutableArtifactAvailable: boolean;
-};
-
-export type LiveModelInputIntegrityRecordInputQualityStatus = typeof LiveModelInputIntegrityRecordInputQualityStatus[keyof typeof LiveModelInputIntegrityRecordInputQualityStatus];
-
-
-export const LiveModelInputIntegrityRecordInputQualityStatus = {
-  ready: 'ready',
-  incomplete: 'incomplete',
-} as const;
-
-export type LiveModelInputIntegrityRecordModelsItem = { [key: string]: unknown };
-
-export type LiveModelInputIntegrityRecordMissingInputsItem = { [key: string]: unknown };
-
-export type LiveModelInputIntegrityRecordSourceEvidenceItem = { [key: string]: unknown };
-
-export type LiveModelInputIntegrityRecordTeamsItem = { [key: string]: unknown };
-
-export interface LiveModelInputIntegrityRecord {
-  gameId: string;
-  season: number;
-  week: number;
-  kickoffTime: string;
-  homeTeamId: string;
-  awayTeamId: string;
-  /** @nullable */
-  snapshotId: number | null;
-  featureVersion: string;
-  models: LiveModelInputIntegrityRecordModelsItem[];
-  vectorFeatureNames: string[];
-  /** @nullable */
-  vector: (number | null)[] | null;
-  requiredCount: number;
-  populatedCount: number;
-  missingCount: number;
-  legitimateZeroCount: number;
-  formerlyMissingZeroCount: number;
-  missingInputs: LiveModelInputIntegrityRecordMissingInputsItem[];
-  rowIdentityValid: boolean;
-  sourceEvidence: LiveModelInputIntegrityRecordSourceEvidenceItem[];
-  teams: LiveModelInputIntegrityRecordTeamsItem[];
-  inputQualityStatus: LiveModelInputIntegrityRecordInputQualityStatus;
-  predictionEligibility: boolean;
-  /** @nullable */
-  consumerAvailability: string | null;
-  causes: string[];
-  phase7UsedForValidationOnly: boolean;
-  [key: string]: unknown;
- }
-
-export interface LiveModelInputIntegrityAudit {
-  generatedAt: string;
-  featureVersion: string;
-  modelSchemaStatus: LiveModelInputIntegrityAuditModelSchemaStatus;
-  productionModels: LiveModelInputIntegrityAuditProductionModelsItem[];
-  selectedFeatureNames: string[];
-  vectorFeatureNames: string[];
-  upcomingGames: number;
-  trustworthyUpcomingPredictions: boolean;
-  inputReadyGames: number;
-  eligibleGames: number;
-  incompleteGames: number;
-  distinctEligibleVectors: number;
-  /** @nullable */
-  vectorsDiffer: boolean | null;
-  modelLifecycleEvidence: LiveModelInputIntegrityAuditModelLifecycleEvidenceItem[];
-  records: LiveModelInputIntegrityRecord[];
 }
 
 export type PersonnelContextVersion = typeof PersonnelContextVersion[keyof typeof PersonnelContextVersion];
@@ -4125,26 +3877,6 @@ export type ReviewImageryCandidate201 = {
   decision: string;
 };
 
-export type AppendConfidenceEvidenceParams = {
-/**
- * @minimum 2000
- * @maximum 2100
- */
-season?: number;
-/**
- * @minimum 1
- * @maximum 25
- */
-week?: number;
-};
-
-export type AppendConfidenceEvidence200 = {
-  gamesEvaluated: number;
-  marketResultsCalculated: number;
-  marketResultsPersisted: number;
-  version: string;
-};
-
 export type GetUsageAnalyticsSummaryParams = {
 /**
  * Bounded reporting period ending today (UTC)
@@ -4160,60 +3892,6 @@ export const GetUsageAnalyticsSummaryPeriod = {
   '14d': '14d',
   '30d': '30d',
 } as const;
-
-export type GetInitialLineAuditParams = {
-/**
- * @minimum 2020
- */
-season: number;
-/**
- * @minimum 1
- * @maximum 22
- */
-week: number;
-};
-
-export type GetRetrospectiveWeeklyReviewParams = {
-season: GetRetrospectiveWeeklyReviewSeason;
-/**
- * @minimum 1
- * @maximum 3
- */
-week: number;
-};
-
-export type GetRetrospectiveWeeklyReviewSeason = typeof GetRetrospectiveWeeklyReviewSeason[keyof typeof GetRetrospectiveWeeklyReviewSeason];
-
-
-export const GetRetrospectiveWeeklyReviewSeason = {
-  NUMBER_2026: 2026,
-} as const;
-
-export type RecordRetrospectiveWeeklyReviewBodySeason = typeof RecordRetrospectiveWeeklyReviewBodySeason[keyof typeof RecordRetrospectiveWeeklyReviewBodySeason];
-
-
-export const RecordRetrospectiveWeeklyReviewBodySeason = {
-  NUMBER_2026: 2026,
-} as const;
-
-export type RecordRetrospectiveWeeklyReviewBodyConfirm = typeof RecordRetrospectiveWeeklyReviewBodyConfirm[keyof typeof RecordRetrospectiveWeeklyReviewBodyConfirm];
-
-
-export const RecordRetrospectiveWeeklyReviewBodyConfirm = {
-  'I_confirm_this_is_retrospective,_not_an_official_first-line_pick': 'I confirm this is retrospective, not an official first-line pick',
-} as const;
-
-export type RecordRetrospectiveWeeklyReviewBody = {
-  season: RecordRetrospectiveWeeklyReviewBodySeason;
-  /**
-     * @minimum 1
-     * @maximum 3
-     */
-  week: number;
-  /** @nullable */
-  evidenceId: string | null;
-  confirm: RecordRetrospectiveWeeklyReviewBodyConfirm;
-};
 
 export type ListGamesParams = {
 /**

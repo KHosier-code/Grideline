@@ -126,51 +126,6 @@ paths:
           content:
             image/jpeg: { schema: { type: string, format: binary } }
         "404": { description: No current approved image }
-  /admin/confidence/audit:
-    get:
-      operationId: getConfidenceAudit
-      tags: [dashboard]
-      summary: Inspect confidence methodology and calculated evidence
-      security: [{ clerk: [] }]
-      responses:
-        "200":
-          description: Confidence audit
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ConfidenceAudit" }
-        "401": { description: Authentication required }
-        "403": { description: Administrator access required }
-  /admin/confidence/calculate:
-    post:
-      operationId: appendConfidenceEvidence
-      tags: [dashboard]
-      summary: Calculate and append confidence evidence for a season and week
-      security: [{ clerk: [] }]
-      parameters:
-        - name: season
-          in: query
-          required: false
-          schema: { type: integer, minimum: 2000, maximum: 2100 }
-        - name: week
-          in: query
-          required: false
-          schema: { type: integer, minimum: 1, maximum: 25 }
-      responses:
-        "200":
-          description: Confidence calculation summary
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [gamesEvaluated, marketResultsCalculated, marketResultsPersisted, version]
-                properties:
-                  gamesEvaluated: { type: integer }
-                  marketResultsCalculated: { type: integer }
-                  marketResultsPersisted: { type: integer }
-                  version: { type: string }
-        "400": { description: Invalid season or week }
-        "401": { description: Authentication required }
-        "403": { description: Administrator access required }
   /healthz:
     get:
       operationId: healthCheck
@@ -265,75 +220,6 @@ paths:
         "401": { description: Authentication required }
         "403": { description: Administrator access required }
         "503": { description: Schedule status audit unavailable }
-  /admin/initial-line-audit:
-    get:
-      operationId: getInitialLineAudit
-      tags: [nfl]
-      summary: Inspect persisted first-observation outcomes for a scheduled slate
-      parameters:
-        - name: season
-          in: query
-          required: true
-          schema: { type: integer, minimum: 2020 }
-        - name: week
-          in: query
-          required: true
-          schema: { type: integer, minimum: 1, maximum: 22 }
-      responses:
-        "200":
-          description: Read-only request-bound first-line evidence and saved weekly selection
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InitialLineAudit"
-        "400": { description: Invalid slate }
-        "401": { description: Authentication required }
-        "403": { description: Administrator access required }
-        "503": { description: First-line audit unavailable }
-  /admin/retrospective-weekly-review:
-    get:
-      operationId: getRetrospectiveWeeklyReview
-      tags: [nfl]
-      security: [{ clerk: [] }]
-      summary: Preview saved 2026 retrospective evidence without publishing
-      parameters:
-        - { in: query, name: season, required: true, schema: { type: integer, enum: [2026] } }
-        - { in: query, name: week, required: true, schema: { type: integer, minimum: 1, maximum: 3 } }
-      responses:
-        "200":
-          description: Evidence assessment and immutable review if recorded
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/RetrospectiveWeeklyReview" }
-        "401": { description: Sign in required }
-        "403": { description: Administrator access required }
-    post:
-      operationId: recordRetrospectiveWeeklyReview
-      tags: [nfl]
-      security: [{ clerk: [] }]
-      summary: Record an unavailable review or manually publish the verified Week 3 choice once
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [season, week, evidenceId, confirm]
-              properties:
-                season: { type: integer, enum: [2026] }
-                week: { type: integer, minimum: 1, maximum: 3 }
-                evidenceId: { type: ["string", "null"] }
-                confirm: { type: string, enum: ["I confirm this is retrospective, not an official first-line pick"] }
-      responses:
-        "201":
-          description: Append-only review recorded
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/RetrospectiveWeeklyReview" }
-        "400": { description: Invalid confirmation or scope }
-        "401": { description: Sign in required }
-        "403": { description: Administrator access required }
-        "409": { description: "Duplicate, changed, or inadequate evidence" }
   /admin/sleeper-identity-report:
     get:
       operationId: getSleeperIdentityReport
@@ -603,17 +489,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PregameFeatureAuditRow"
-  /features/live-input-integrity:
-    get:
-      operationId: getLiveModelInputIntegrity
-      summary: Audit exact upcoming-game inputs for active production models
-      responses:
-        "200":
-          description: Upcoming live model input integrity
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LiveModelInputIntegrityAudit"
   /features/pregame/build:
     post:
       operationId: buildPregameFeatures
@@ -1679,62 +1554,6 @@ components:
               season: { type: integer }
               week: { type: integer }
         record: { $ref: "#/components/schemas/ConsumerTouchdownRecord" }
-    InitialLineAudit:
-      type: object
-      required: [season, week, selection, games]
-      properties:
-        season: { type: integer }
-        week: { type: integer }
-        selection:
-          oneOf:
-            - type: "null"
-            - type: object
-              required: [gameId, selectedAt]
-              properties:
-                gameId: { type: string }
-                selectedAt: { type: string, format: date-time }
-        games:
-          type: array
-          items: { $ref: "#/components/schemas/InitialLineAuditGame" }
-    InitialLineAuditGame:
-      type: object
-      required: [gameId, homeTeam, awayTeam, kickoffTime, status, reason, firstRequest, winner, winnerProbability, sportsbook, quotes, selected]
-      properties:
-        gameId: { type: string }
-        homeTeam: { type: string }
-        awayTeam: { type: string }
-        kickoffTime: { type: ["string", "null"], format: date-time }
-        status: { type: string, enum: [awaiting_first_observation, locked, no_line, incomplete_market, missing_input, invalid_model, legacy_unattributed] }
-        reason: { type: ["string", "null"] }
-        firstRequest:
-          oneOf:
-            - type: "null"
-            - type: object
-              required: [id, status, requestedAt, observedAt]
-              properties:
-                id: { type: integer }
-                status: { type: string }
-                requestedAt: { type: string, format: date-time }
-                observedAt: { type: string, format: date-time }
-        winner: { type: ["string", "null"] }
-        winnerProbability: { type: ["number", "null"] }
-        sportsbook: { type: ["string", "null"] }
-        quotes:
-          oneOf:
-            - type: "null"
-            - type: array
-              minItems: 4
-              maxItems: 4
-              items:
-                type: object
-                required: [market, selection, point, price, sourceTimestamp]
-                properties:
-                  market: { type: string }
-                  selection: { type: string }
-                  point: { type: ["number", "null"] }
-                  price: { type: integer }
-                  sourceTimestamp: { type: ["string", "null"], format: date-time }
-        selected: { type: boolean }
     ScheduleStatusHealth:
       type: object
       required: [unknownCount, examples, recentSlates, supportedCategories, guidance]
@@ -2141,17 +1960,6 @@ components:
               evidence: { type: object, additionalProperties: true }
               downgradeReasons: { type: array, items: { type: string } }
               calculatedAt: { type: string, format: date-time }
-    ConfidenceAudit:
-      type: object
-      required: [version, checksum, weights, thresholds, normalizationRules, historicalEvidence, results]
-      properties:
-        version: { type: string }
-        checksum: { type: string }
-        weights: { type: object, additionalProperties: { type: number } }
-        thresholds: { type: object, additionalProperties: { type: number } }
-        normalizationRules: { type: object, additionalProperties: { type: string } }
-        historicalEvidence: { type: object, additionalProperties: true }
-        results: { type: array, items: { type: object, additionalProperties: true } }
     ConsumerGame:
       type: object
       required: [gameId, season, week, kickoffTime, gameStatus, gameState, venue, matchup, finalScore, prediction, initialMarkets, market, marketBoard, recommendation, dataConfidence, confidence, availability]
@@ -2339,42 +2147,6 @@ components:
         evidenceId: { type: string }
         reviewedAt: { type: string, format: date-time }
         publishedAt: { type: ["string", "null"], format: date-time }
-    RetrospectiveWeeklyReview:
-      type: object
-      required: [season, week, reason, candidate, officialExists, review]
-      properties:
-        season: { type: integer }
-        week: { type: integer }
-        reason: { type: ["string", "null"] }
-        officialExists: { type: boolean }
-        candidate:
-          oneOf:
-            - type: "null"
-            - type: object
-              required: [gameId, teamId, teamName, matchup, probability, cutoffAt, evidenceId]
-              properties:
-                gameId: { type: string }
-                teamId: { type: string }
-                teamName: { type: string }
-                matchup: { type: string }
-                probability: { type: number }
-                cutoffAt: { type: string, format: date-time }
-                evidenceId: { type: string }
-        review:
-          oneOf:
-            - type: "null"
-            - type: object
-              required: [status, reason, gameId, teamId, probability, cutoffAt, evidenceId, reviewedAt, publishedAt]
-              properties:
-                status: { type: string, enum: [unavailable, reviewed, published] }
-                reason: { type: ["string", "null"] }
-                gameId: { type: ["string", "null"] }
-                teamId: { type: ["string", "null"] }
-                probability: { type: ["number", "null"] }
-                cutoffAt: { type: ["string", "null"], format: date-time }
-                evidenceId: { type: ["string", "null"] }
-                reviewedAt: { type: string, format: date-time }
-                publishedAt: { type: ["string", "null"], format: date-time }
     ConsumerFirstLines:
       type: object
       description: Original quotes saved with the verified weekly selection, not current odds or betting advice.
@@ -3481,7 +3253,7 @@ components:
     Game:
       type: object
       required:
-        [gameId, season, week, gameDate, kickoffTime, homeTeam, awayTeam, gameStatus, venue, modelStatus]
+        [gameId, season, week, gameDate, kickoffTime, homeTeam, awayTeam, gameStatus, venue]
       properties:
         gameId: { type: string }
         season: { type: integer }
@@ -3495,7 +3267,6 @@ components:
         finalAwayScore: { type: ["integer", "null"] }
         gameStatus: { type: string }
         broadcast: { type: ["string", "null"] }
-        modelStatus: { type: string, enum: [not_trained, available] }
         latestOdds: { type: ["array", "null"], items: { $ref: "#/components/schemas/OddsQuote" } }
     OddsQuote:
       type: object
@@ -3809,38 +3580,13 @@ components:
         error: { type: ["string", "null"] }
         startedAt: { type: string, format: date-time }
         completedAt: { type: ["string", "null"], format: date-time }
-    PerformanceSummary:
-      type: object
-      required: [record, winRate, units, roi]
-      properties:
-        record: { type: string }
-        winRate: { type: ["number", "null"] }
-        units: { type: ["number", "null"] }
-        roi: { type: ["number", "null"] }
     DashboardSummary:
       type: object
-      required: [season, currentWeek, gamesThisWeek, modelStatus, ats, moneyline, totals, averageClv]
+      required: [season, currentWeek, gamesThisWeek]
       properties:
         season: { type: integer }
         currentWeek: { type: ["integer", "null"] }
         gamesThisWeek: { type: integer }
-        modelStatus: { type: string }
-        ats: { $ref: "#/components/schemas/PerformanceSummary" }
-        moneyline: { $ref: "#/components/schemas/PerformanceSummary" }
-        totals: { $ref: "#/components/schemas/PerformanceSummary" }
-        averageClv: { type: ["number", "null"] }
-        topEdges:
-          type: array
-          items:
-            $ref: "#/components/schemas/ModelEdge"
-    ModelEdge:
-      type: object
-      required: [gameId, label, detail]
-      properties:
-        gameId: { type: string }
-        label: { type: string }
-        detail: { type: string }
-        modelStatus: { type: string }
     AppSettings:
       type: object
       required: [sportsbooks, minimumEdge, minimumConfidence, unitSize, kellyEnabled, oddsApiConfigured]
@@ -3912,86 +3658,6 @@ components:
         sampleSize: { type: integer }
         quality: { type: string, enum: [high, low_sample, unavailable] }
         unavailableReason: { type: ["string", "null"] }
-    LiveModelInputIntegrityAudit:
-      type: object
-      required:
-        [generatedAt, featureVersion, modelSchemaStatus, productionModels,
-         selectedFeatureNames, vectorFeatureNames, upcomingGames,
-         trustworthyUpcomingPredictions, inputReadyGames, eligibleGames, incompleteGames,
-         distinctEligibleVectors, vectorsDiffer, modelLifecycleEvidence,
-         records]
-      properties:
-        generatedAt: { type: string, format: date-time }
-        featureVersion: { type: string }
-        modelSchemaStatus: { type: string, enum: [valid, invalid] }
-        productionModels:
-          type: array
-          items: { type: object, additionalProperties: true }
-        selectedFeatureNames:
-          type: array
-          items: { type: string }
-        vectorFeatureNames:
-          type: array
-          items: { type: string }
-        upcomingGames: { type: integer }
-        trustworthyUpcomingPredictions: { type: boolean }
-        inputReadyGames: { type: integer }
-        eligibleGames: { type: integer }
-        incompleteGames: { type: integer }
-        distinctEligibleVectors: { type: integer }
-        vectorsDiffer: { type: ["boolean", "null"] }
-        modelLifecycleEvidence:
-          type: array
-          items:
-            type: object
-            required: [family, modelVersion, trainedAt, promotedAt, immutableArtifactAvailable]
-            properties:
-              family: { type: string }
-              modelVersion: { type: string }
-              trainedAt: { type: string, format: date-time }
-              promotedAt: { type: string, format: date-time }
-              immutableArtifactAvailable: { type: boolean }
-        records:
-          type: array
-          items: { $ref: "#/components/schemas/LiveModelInputIntegrityRecord" }
-    LiveModelInputIntegrityRecord:
-      type: object
-      additionalProperties: true
-      required:
-        [gameId, season, week, kickoffTime, homeTeamId, awayTeamId,
-         snapshotId, featureVersion, models, vectorFeatureNames, vector,
-         requiredCount, populatedCount, missingCount, legitimateZeroCount,
-         formerlyMissingZeroCount, missingInputs, rowIdentityValid,
-         sourceEvidence, teams, inputQualityStatus, predictionEligibility,
-         consumerAvailability, causes, phase7UsedForValidationOnly]
-      properties:
-        gameId: { type: string }
-        season: { type: integer }
-        week: { type: integer }
-        kickoffTime: { type: string, format: date-time }
-        homeTeamId: { type: string }
-        awayTeamId: { type: string }
-        snapshotId: { type: ["integer", "null"] }
-        featureVersion: { type: string }
-        models: { type: array, items: { type: object, additionalProperties: true } }
-        vectorFeatureNames: { type: array, items: { type: string } }
-        vector:
-          type: ["array", "null"]
-          items: { type: ["number", "null"] }
-        requiredCount: { type: integer }
-        populatedCount: { type: integer }
-        missingCount: { type: integer }
-        legitimateZeroCount: { type: integer }
-        formerlyMissingZeroCount: { type: integer }
-        missingInputs: { type: array, items: { type: object, additionalProperties: true } }
-        rowIdentityValid: { type: boolean }
-        sourceEvidence: { type: array, items: { type: object, additionalProperties: true } }
-        teams: { type: array, items: { type: object, additionalProperties: true } }
-        inputQualityStatus: { type: string, enum: [ready, incomplete] }
-        predictionEligibility: { type: boolean }
-        consumerAvailability: { type: ["string", "null"] }
-        causes: { type: array, items: { type: string } }
-        phase7UsedForValidationOnly: { type: boolean }
     PersonnelContext:
       type: object
       required: [version, gameId, kickoffTime, sourceCutoff, teams, matchup, weather, market, dataConfidence, sources, limitations]

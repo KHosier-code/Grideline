@@ -148,43 +148,6 @@ export const GetReviewedPlayerImageResponse = zod.unknown()
 
 
 /**
- * @summary Inspect confidence methodology and calculated evidence
- */
-export const GetConfidenceAuditResponse = zod.object({
-  "version": zod.string(),
-  "checksum": zod.string(),
-  "weights": zod.record(zod.string(), zod.number()),
-  "thresholds": zod.record(zod.string(), zod.number()),
-  "normalizationRules": zod.record(zod.string(), zod.string()),
-  "historicalEvidence": zod.record(zod.string(), zod.unknown()),
-  "results": zod.array(zod.record(zod.string(), zod.unknown()))
-})
-
-
-/**
- * @summary Calculate and append confidence evidence for a season and week
- */
-export const appendConfidenceEvidenceQuerySeasonMin = 2000;
-export const appendConfidenceEvidenceQuerySeasonMax = 2100;
-
-export const appendConfidenceEvidenceQueryWeekMax = 25;
-
-
-
-export const AppendConfidenceEvidenceQueryParams = zod.object({
-  "season": zod.coerce.number().int().min(appendConfidenceEvidenceQuerySeasonMin).max(appendConfidenceEvidenceQuerySeasonMax).optional(),
-  "week": zod.coerce.number().int().min(1).max(appendConfidenceEvidenceQueryWeekMax).optional()
-})
-
-export const AppendConfidenceEvidenceResponse = zod.object({
-  "gamesEvaluated": zod.number().int(),
-  "marketResultsCalculated": zod.number().int(),
-  "marketResultsPersisted": zod.number().int(),
-  "version": zod.string()
-})
-
-
-/**
  * Returns server health status
  * @summary Health check
  */
@@ -199,33 +162,7 @@ export const HealthCheckResponse = zod.object({
 export const GetDashboardSummaryResponse = zod.object({
   "season": zod.number().int(),
   "currentWeek": zod.number().int().nullable(),
-  "gamesThisWeek": zod.number().int(),
-  "modelStatus": zod.string(),
-  "ats": zod.object({
-  "record": zod.string(),
-  "winRate": zod.number().nullable(),
-  "units": zod.number().nullable(),
-  "roi": zod.number().nullable()
-}),
-  "moneyline": zod.object({
-  "record": zod.string(),
-  "winRate": zod.number().nullable(),
-  "units": zod.number().nullable(),
-  "roi": zod.number().nullable()
-}),
-  "totals": zod.object({
-  "record": zod.string(),
-  "winRate": zod.number().nullable(),
-  "units": zod.number().nullable(),
-  "roi": zod.number().nullable()
-}),
-  "averageClv": zod.number().nullable(),
-  "topEdges": zod.array(zod.object({
-  "gameId": zod.string(),
-  "label": zod.string(),
-  "detail": zod.string(),
-  "modelStatus": zod.string().optional()
-})).optional()
+  "gamesThisWeek": zod.number().int()
 })
 
 
@@ -360,142 +297,6 @@ export const GetScheduleStatusHealthResponse = zod.object({
 })).max(getScheduleStatusHealthResponseRecentSlatesMax),
   "supportedCategories": zod.array(zod.enum(['scheduled', 'live', 'terminal'])),
   "guidance": zod.string()
-})
-
-
-/**
- * @summary Inspect persisted first-observation outcomes for a scheduled slate
- */
-export const getInitialLineAuditQuerySeasonMin = 2020;
-
-export const getInitialLineAuditQueryWeekMax = 22;
-
-
-
-export const GetInitialLineAuditQueryParams = zod.object({
-  "season": zod.coerce.number().int().min(getInitialLineAuditQuerySeasonMin),
-  "week": zod.coerce.number().int().min(1).max(getInitialLineAuditQueryWeekMax)
-})
-
-export const getInitialLineAuditResponseGamesItemQuotesTwoMin = 4;
-export const getInitialLineAuditResponseGamesItemQuotesTwoMax = 4;
-
-
-
-export const GetInitialLineAuditResponse = zod.object({
-  "season": zod.number().int(),
-  "week": zod.number().int(),
-  "selection": zod.union([zod.null(),zod.object({
-  "gameId": zod.string(),
-  "selectedAt": zod.coerce.date()
-})]),
-  "games": zod.array(zod.object({
-  "gameId": zod.string(),
-  "homeTeam": zod.string(),
-  "awayTeam": zod.string(),
-  "kickoffTime": zod.coerce.date().nullable(),
-  "status": zod.enum(['awaiting_first_observation', 'locked', 'no_line', 'incomplete_market', 'missing_input', 'invalid_model', 'legacy_unattributed']),
-  "reason": zod.string().nullable(),
-  "firstRequest": zod.union([zod.null(),zod.object({
-  "id": zod.number().int(),
-  "status": zod.string(),
-  "requestedAt": zod.coerce.date(),
-  "observedAt": zod.coerce.date()
-})]),
-  "winner": zod.string().nullable(),
-  "winnerProbability": zod.number().nullable(),
-  "sportsbook": zod.string().nullable(),
-  "quotes": zod.union([zod.null(),zod.array(zod.object({
-  "market": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number().int(),
-  "sourceTimestamp": zod.coerce.date().nullable()
-})).min(getInitialLineAuditResponseGamesItemQuotesTwoMin).max(getInitialLineAuditResponseGamesItemQuotesTwoMax)]),
-  "selected": zod.boolean()
-}))
-})
-
-
-/**
- * @summary Preview saved 2026 retrospective evidence without publishing
- */
-export const getRetrospectiveWeeklyReviewQueryWeekMax = 3;
-
-
-
-export const GetRetrospectiveWeeklyReviewQueryParams = zod.object({
-  "season": zod.literal(2026),
-  "week": zod.coerce.number().int().min(1).max(getRetrospectiveWeeklyReviewQueryWeekMax)
-})
-
-export const GetRetrospectiveWeeklyReviewResponse = zod.object({
-  "season": zod.number().int(),
-  "week": zod.number().int(),
-  "reason": zod.string().nullable(),
-  "officialExists": zod.boolean(),
-  "candidate": zod.union([zod.null(),zod.object({
-  "gameId": zod.string(),
-  "teamId": zod.string(),
-  "teamName": zod.string(),
-  "matchup": zod.string(),
-  "probability": zod.number(),
-  "cutoffAt": zod.coerce.date(),
-  "evidenceId": zod.string()
-})]),
-  "review": zod.union([zod.null(),zod.object({
-  "status": zod.enum(['unavailable', 'reviewed', 'published']),
-  "reason": zod.string().nullable(),
-  "gameId": zod.string().nullable(),
-  "teamId": zod.string().nullable(),
-  "probability": zod.number().nullable(),
-  "cutoffAt": zod.coerce.date().nullable(),
-  "evidenceId": zod.string().nullable(),
-  "reviewedAt": zod.coerce.date(),
-  "publishedAt": zod.coerce.date().nullable()
-})])
-})
-
-
-/**
- * @summary Record an unavailable review or manually publish the verified Week 3 choice once
- */
-export const recordRetrospectiveWeeklyReviewBodyWeekMax = 3;
-
-
-
-export const RecordRetrospectiveWeeklyReviewBody = zod.object({
-  "season": zod.literal(2026),
-  "week": zod.number().int().min(1).max(recordRetrospectiveWeeklyReviewBodyWeekMax),
-  "evidenceId": zod.string().nullable(),
-  "confirm": zod.enum(['I confirm this is retrospective, not an official first-line pick'])
-})
-
-export const RecordRetrospectiveWeeklyReviewResponse = zod.object({
-  "season": zod.number().int(),
-  "week": zod.number().int(),
-  "reason": zod.string().nullable(),
-  "officialExists": zod.boolean(),
-  "candidate": zod.union([zod.null(),zod.object({
-  "gameId": zod.string(),
-  "teamId": zod.string(),
-  "teamName": zod.string(),
-  "matchup": zod.string(),
-  "probability": zod.number(),
-  "cutoffAt": zod.coerce.date(),
-  "evidenceId": zod.string()
-})]),
-  "review": zod.union([zod.null(),zod.object({
-  "status": zod.enum(['unavailable', 'reviewed', 'published']),
-  "reason": zod.string().nullable(),
-  "gameId": zod.string().nullable(),
-  "teamId": zod.string().nullable(),
-  "probability": zod.number().nullable(),
-  "cutoffAt": zod.coerce.date().nullable(),
-  "evidenceId": zod.string().nullable(),
-  "reviewedAt": zod.coerce.date(),
-  "publishedAt": zod.coerce.date().nullable()
-})])
 })
 
 
@@ -638,7 +439,6 @@ export const ListGamesResponseItem = zod.object({
   "finalAwayScore": zod.number().int().nullish(),
   "gameStatus": zod.string(),
   "broadcast": zod.string().nullish(),
-  "modelStatus": zod.enum(['not_trained', 'available']),
   "latestOdds": zod.array(zod.object({
   "sportsbook": zod.string(),
   "market": zod.string(),
@@ -681,7 +481,6 @@ export const GetGameResponse = zod.object({
   "finalAwayScore": zod.number().int().nullish(),
   "gameStatus": zod.string(),
   "broadcast": zod.string().nullish(),
-  "modelStatus": zod.enum(['not_trained', 'available']),
   "latestOdds": zod.array(zod.object({
   "sportsbook": zod.string(),
   "market": zod.string(),
@@ -987,60 +786,6 @@ export const ListPregameFeatureAuditResponseItem = zod.object({
   "unavailableReason": zod.string().nullish()
 })
 export const ListPregameFeatureAuditResponse = zod.array(ListPregameFeatureAuditResponseItem)
-
-
-/**
- * @summary Audit exact upcoming-game inputs for active production models
- */
-export const GetLiveModelInputIntegrityResponse = zod.object({
-  "generatedAt": zod.coerce.date(),
-  "featureVersion": zod.string(),
-  "modelSchemaStatus": zod.enum(['valid', 'invalid']),
-  "productionModels": zod.array(zod.record(zod.string(), zod.unknown())),
-  "selectedFeatureNames": zod.array(zod.string()),
-  "vectorFeatureNames": zod.array(zod.string()),
-  "upcomingGames": zod.number().int(),
-  "trustworthyUpcomingPredictions": zod.boolean(),
-  "inputReadyGames": zod.number().int(),
-  "eligibleGames": zod.number().int(),
-  "incompleteGames": zod.number().int(),
-  "distinctEligibleVectors": zod.number().int(),
-  "vectorsDiffer": zod.boolean().nullable(),
-  "modelLifecycleEvidence": zod.array(zod.object({
-  "family": zod.string(),
-  "modelVersion": zod.string(),
-  "trainedAt": zod.coerce.date(),
-  "promotedAt": zod.coerce.date(),
-  "immutableArtifactAvailable": zod.boolean()
-})),
-  "records": zod.array(zod.object({
-  "gameId": zod.string(),
-  "season": zod.number().int(),
-  "week": zod.number().int(),
-  "kickoffTime": zod.coerce.date(),
-  "homeTeamId": zod.string(),
-  "awayTeamId": zod.string(),
-  "snapshotId": zod.number().int().nullable(),
-  "featureVersion": zod.string(),
-  "models": zod.array(zod.record(zod.string(), zod.unknown())),
-  "vectorFeatureNames": zod.array(zod.string()),
-  "vector": zod.array(zod.number().nullable()).nullable(),
-  "requiredCount": zod.number().int(),
-  "populatedCount": zod.number().int(),
-  "missingCount": zod.number().int(),
-  "legitimateZeroCount": zod.number().int(),
-  "formerlyMissingZeroCount": zod.number().int(),
-  "missingInputs": zod.array(zod.record(zod.string(), zod.unknown())),
-  "rowIdentityValid": zod.boolean(),
-  "sourceEvidence": zod.array(zod.record(zod.string(), zod.unknown())),
-  "teams": zod.array(zod.record(zod.string(), zod.unknown())),
-  "inputQualityStatus": zod.enum(['ready', 'incomplete']),
-  "predictionEligibility": zod.boolean(),
-  "consumerAvailability": zod.string().nullable(),
-  "causes": zod.array(zod.string()),
-  "phase7UsedForValidationOnly": zod.boolean()
-}))
-})
 
 
 /**
