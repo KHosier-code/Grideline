@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import {
   getGetConsumerDashboardQueryKey, getGetConsumerGameProjectionsQueryKey, getGetConsumerPowerRatingsQueryKey,
@@ -12,7 +12,12 @@ import { HundredGrid, Simulator, TeamSide, abbr, other, toPoolGame, type PoolGam
 import { buildGameView, currentWeek } from '@/lib/pick-sheet';
 import { groupBySlate, slateFor } from '@/lib/slates';
 import { matchupAccents } from '@/lib/team-colors';
+import { LinePicks } from '@/components/LinePicks';
+import { Seg } from '@/components/UsageBits';
 import { ConsumerLoading, useConsumerNow } from './consumer-ui';
+
+type Mode = 'winners' | 'spread' | 'total';
+const MODE_PARAM: Record<string, Mode> = { spread: 'spread', total: 'total', 'over-under': 'total' };
 
 function PoolRow({ game, points, records, now }: { game: PoolGame; points: number; records: Map<string, string>; now: number }) {
   const started = game.view.game.kickoffTime ? Date.parse(game.view.game.kickoffTime) <= now : false;
@@ -51,6 +56,13 @@ export default function Pickem() {
   const projections = useGetConsumerGameProjections(params, { query: { queryKey: getGetConsumerGameProjectionsQueryKey(params), enabled: week !== null } });
   const ratings = useGetConsumerPowerRatings(undefined, { query: { queryKey: getGetConsumerPowerRatingsQueryKey(), staleTime: 5 * 60_000 } });
   const [slate, setSlate] = useState('all');
+  const [mode, setMode] = useState<Mode>(() => typeof window === 'undefined' ? 'winners'
+    : MODE_PARAM[new URLSearchParams(window.location.search).get('pool') ?? ''] ?? 'winners');
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (mode === 'winners') url.searchParams.delete('pool'); else url.searchParams.set('pool', mode);
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}`);
+  }, [mode]);
   const [copied, setCopied] = useState(false);
 
   const records = useMemo(() => {
@@ -63,11 +75,11 @@ export default function Pickem() {
     return map;
   }, [ratings.data]);
 
-  const all = useMemo(() => {
+  const views = useMemo(() => {
     const byGame = new Map((projections.data?.games ?? []).map(projection => [projection.gameId, projection]));
-    return (week?.games ?? []).map(game => toPoolGame(buildGameView(game, byGame.get(game.gameId))))
-      .filter((game): game is PoolGame => game !== null);
+    return (week?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId)));
   }, [week, projections.data]);
+  const all = useMemo(() => views.map(toPoolGame).filter((game): game is PoolGame => game !== null), [views]);
   const teamRatings = useMemo(() => new Map((ratings.data?.teams ?? []).map(team => [normalizeTeam(team.team), team.rating])), [ratings.data]);
   const slates = groupBySlate(all, game => game.view.game.kickoffTime);
   const selected = slate === 'all' ? all : all.filter(game => slateFor(game.view.game.kickoffTime).key === slate);
@@ -87,16 +99,30 @@ export default function Pickem() {
   return <div className="gl-page">
     <header className="gl-hero">
       <div>
-        <p className="gl-label">{week ? `${week.season} season · Week ${week.week}` : 'Pick’em'}</p>
-        <h1 className="gl-title">Pick&apos;em &amp; <span>Confidence Pool</span></h1>
-        <p className="gl-lede">Every game ranked from surest thing to coin flip, as wins out of 100. Open any game to see how 100 matchups would play out, then run them yourself.</p>
+        <p className="gl-label">{week ? `${week.season} season · Week ${week.week}` : 'Pool Picks'}</p>
+        <h1 className="gl-title">Pool <span>Picks</span></h1>
+        <p className="gl-lede">Every game ranked for your office pool: straight-up winners from surest thing to coin flip, plus Gridline&apos;s side of every spread and total.</p>
       </div>
     </header>
 
     {(dashboard.isLoading || projections.isLoading) && <ConsumerLoading label="Loading this week's games…" />}
     {!dashboard.isLoading && !all.length && <div className="gl-empty"><strong>No games with lines yet.</strong>They appear once the week&apos;s lines post, usually Sunday night or Monday.</div>}
 
-    {all.length > 0 && <>
+    {all.length > 0 && <div className="gl-controls">
+      <Seg label="Pool" value={mode} onChange={setMode} options={[['winners', 'Winners'], ['spread', 'Against the spread'], ['total', 'Over/under']]} />
+    </div>}
+
+    {all.length > 0 && mode !== 'winners' && <>
+      <div className="gl-pool-controls">
+        <div className="gl-filters" role="group" aria-label="Slate">
+          <button type="button" aria-pressed={slate === 'all'} onClick={() => setSlate('all')}>All games</button>
+          {slates.map(({ slate: item }) => <button key={item.key} type="button" aria-pressed={slate === item.key} onClick={() => setSlate(item.key)}>{item.label}</button>)}
+        </div>
+      </div>
+      <LinePicks market={mode} views={all.map(game => game.view)} visible={slate === 'all' ? undefined : new Set(selected.map(game => game.view.game.gameId))} now={now} label={slateLabel} season={week?.season} />
+    </>}
+
+    {all.length > 0 && mode === 'winners' && <>
       <div className="gl-pool-summary">
         <div className="gl-card"><span className="gl-label">Safest picks</span>
           {safest.map(game => <p key={game.view.game.gameId}><TeamLogo team={abbr(game, game.pick)} size={22} /><b>{abbr(game, game.pick)}</b> over {abbr(game, other(game.pick))}<span className="gl-pool-sum-value">{game.wins}</span></p>)}

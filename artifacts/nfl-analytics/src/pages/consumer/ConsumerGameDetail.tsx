@@ -10,7 +10,7 @@ import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
 import { ConsumerPregameComparisonChart } from '../../components/ConsumerPregameComparisonChart';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { DeferredDetailDisclosure } from '../../components/DeferredDetailDisclosure';
-import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
+import { GameDvp } from '../../components/GameDvp';
 import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
 import { GameAlerts } from './GameAlerts';
 import { BookTable } from '@/components/BookLines';
@@ -109,6 +109,7 @@ export default function ConsumerGameDetail() {
     {beforeKickoff && <BookTable books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />}
     <HundredGames view={view} />
     <MatchupRanks home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
+    <GameDvp home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
     <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />
     <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
     <DeferredDetailDisclosure key={`${game.gameId}-matchups`} testId="disclosure-matchups" title="Team matchup details" status="Offense vs defense, category by category">
@@ -116,7 +117,7 @@ export default function ConsumerGameDetail() {
       <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
     </DeferredDetailDisclosure>
     <DeferredDetailDisclosure key={`${game.gameId}-personnel`} testId="disclosure-personnel" title="Players and depth chart" status="Depth, usage and position matchups">
-      {beforeKickoff && <><GameDefenseVsPosition gameId={game.gameId} season={game.season} away={game.matchup.away} home={game.matchup.home} /><PlayerPositionMatchup gameId={game.gameId} /></>}
+      {beforeKickoff && <PlayerPositionMatchup gameId={game.gameId} />}
       <ConsumerDepthChart context={game.context} />
       <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
       <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />

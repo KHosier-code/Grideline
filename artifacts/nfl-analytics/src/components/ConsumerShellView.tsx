@@ -16,7 +16,7 @@ export const consumerNavGroups: NavGroup[] = [
   { label: 'Picks', items: [
     { href: '/', label: 'This week', icon: Star },
     { href: '/touchdowns', label: 'TD Picks', icon: Trophy },
-    { href: '/pickem', label: 'Pick\'em Pool', icon: Grid3x3, newUntil: '2026-10-14' },
+    { href: '/pickem', label: 'Pool Picks', icon: Grid3x3, newUntil: '2026-10-14' },
     { href: '/parlays', label: 'Parlay Builder', icon: Layers, newUntil: '2026-10-14' },
   ] },
   { label: 'Model', items: [

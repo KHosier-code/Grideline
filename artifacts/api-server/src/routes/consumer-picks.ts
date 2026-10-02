@@ -3,7 +3,7 @@ import { Router, type IRouter } from "express";
 import { asc, desc, eq } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
-  db, gameProjectionRunsTable, touchdownPickResultsTable,
+  dataSyncRunsTable, db, gameProjectionRunsTable, touchdownPickResultsTable,
   touchdownPickRunsTable, weeklyReportsTable,
 } from "@workspace/db";
 import {
@@ -17,6 +17,8 @@ import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecisio
 import { bestBookPrice, captureTouchdownProps, touchdownPropsForSeason } from "../lib/td-props";
 import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
+import { footballTime } from "../lib/feed-schedule";
+import { syncNflverseHistory } from "../lib/nflverse";
 
 const router: IRouter = Router();
 
@@ -497,6 +499,42 @@ router.post("/weather/scheduled-capture", async (req, res): Promise<void> => {
     req.log.error({ error: reason }, "Scheduled weather capture failed");
     res.status(502).json({ status: "failed", reason });
   }
+});
+
+/**
+ * This season's nflverse play-by-play, player stats, snaps and depth charts,
+ * called by the GitHub "Stats" workflow. Team charts only count a week once
+ * every game has team stats, and without this those stats only load when the
+ * data worker runs. The import takes minutes, so it runs in the background;
+ * the workflow follows it with GET /nflverse/refresh-status.
+ */
+router.post("/nflverse/scheduled-refresh", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const season = footballTime(new Date()).season;
+  let signalStart: () => void = () => undefined;
+  const startedSignal = new Promise<"started">((resolve) => { signalStart = () => resolve("started"); });
+  const job = withFeedLock("nflverse", async () => {
+    signalStart();
+    return syncNflverseHistory([season], { jobKey: "github-stats", refresh: true });
+  });
+  job.catch((error) => req.log.error({ error: describeError(error) }, "Scheduled nflverse refresh failed"));
+  // withFeedLock resolves null at once when another import holds the lock.
+  const outcome = await Promise.race([startedSignal, job.then(() => "busy" as const, () => "error" as const)]);
+  if (outcome === "started") res.status(202).json({ status: "started", season });
+  else if (outcome === "busy") res.json({ status: "skipped", reason: "An nflverse import is already running", season });
+  else res.status(502).json({ status: "failed", reason: "Could not start the nflverse import", season });
+});
+
+router.get("/nflverse/refresh-status", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const [latest] = await db.select().from(dataSyncRunsTable)
+    .where(eq(dataSyncRunsTable.provider, "nflverse"))
+    .orderBy(desc(dataSyncRunsTable.startedAt)).limit(1);
+  res.json(latest ? {
+    status: latest.status, startedAt: latest.startedAt.toISOString(),
+    completedAt: latest.completedAt?.toISOString() ?? null,
+    recordsProcessed: latest.recordsProcessed, error: latest.errorMessage?.slice(0, 600) ?? null,
+  } : { status: "none" });
 });
 
 /** This week's TD picks card (research/td-model/share_card.py), the TD Picks link preview. */

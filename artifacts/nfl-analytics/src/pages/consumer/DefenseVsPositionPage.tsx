@@ -1,12 +1,46 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { TeamLogo } from '@/components/TeamLogo';
 import { ReportMeta, Seg } from '@/components/UsageBits';
 import { rankCellStyle, teamName } from '@/lib/team-colors';
-import { fixed, useUsageReport, type DefenseLine } from '@/lib/usage-report';
+import { fixed, useUsageReport, type DefenseLine, type UsageReport } from '@/lib/usage-report';
 import { ConsumerLoading } from './consumer-ui';
 
 type Position = 'QB' | 'RB' | 'WR' | 'TE';
+type PositionView = Position | 'ALL';
+const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+
+/** ?position=WR opens one position; otherwise the page starts on all four. */
+function initialPosition(): PositionView {
+  const value = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('position')?.toUpperCase();
+  return POSITIONS.includes(value as Position) ? value as Position : 'ALL';
+}
+
+/** Every defense's PPR points allowed to each position, ranked. */
+function AllPositions({ report, win }: { report: UsageReport; win: Win }) {
+  const [sort, setSort] = useState<Position>('WR');
+  const rows = report.defenses
+    .map(defense => ({ team: defense.team, lines: defense[win] }))
+    .filter(row => row.lines[sort])
+    .sort((a, b) => a.lines[sort]!.pprRank - b.lines[sort]!.pprRank);
+  return <div className="gl-card gl-table-wrap">
+    <table className="gl-table gl-ratings gl-dvp gl-dvp-all">
+      <caption className="sr-only">PPR points per game each defense allows to quarterbacks, running backs, receivers and tight ends</caption>
+      <thead><tr>
+        <th scope="col">Defense</th>
+        {POSITIONS.map(position => <th key={position} scope="col" aria-sort={sort === position ? 'ascending' : 'none'}>
+          <button type="button" onClick={() => setSort(position)}>{position} PPR / g{sort === position ? ' ↓' : ''}</button>
+        </th>)}
+      </tr></thead>
+      <tbody>{rows.map(({ team, lines }) => <tr key={team}>
+        <td className="gl-team-cell"><TeamLogo team={team} /><span><b>{teamName(team)}</b><small>{lines[sort]?.games ?? 0} {lines[sort]?.games === 1 ? 'game' : 'games'}</small></span></td>
+        {POSITIONS.map(position => { const line = lines[position]; return <td key={position} className="gl-rank-cell">
+          {line ? <span style={rankCellStyle(line.pprRank)}><b>{fixed(line.pprPerGame)}</b><small>#{line.pprRank}</small></span> : '—'}
+        </td>; })}
+      </tr>)}</tbody>
+    </table>
+  </div>;
+}
 type Win = 'season' | 'last4';
 type SortKey = 'pprRank' | 'yardsRank' | 'tdsRank' | 'receptionsRank' | 'targetsRank' | 'redZoneOppsRank';
 
@@ -21,11 +55,17 @@ const COLUMNS: Array<{ key: SortKey; label: string; value: (line: DefenseLine) =
 
 export default function DefenseVsPositionPage() {
   const { query, report } = useUsageReport();
-  const [position, setPosition] = useState<Position>('WR');
+  const [position, setPosition] = useState<PositionView>(initialPosition);
   const [win, setWin] = useState<Win>('season');
   const [sort, setSort] = useState<SortKey>('pprRank');
-  const columns = COLUMNS.filter(column => !column.hideFor?.includes(position));
-  const rows = useMemo(() => (report?.defenses ?? [])
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (position === 'ALL') url.searchParams.delete('position');
+    else url.searchParams.set('position', position);
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}`);
+  }, [position]);
+  const columns = position === 'ALL' ? [] : COLUMNS.filter(column => !column.hideFor?.includes(position));
+  const rows = useMemo(() => position === 'ALL' ? [] : (report?.defenses ?? [])
     .map(defense => ({ team: defense.team, line: defense[win][position] }))
     .filter((row): row is { team: string; line: DefenseLine } => Boolean(row.line))
     .sort((a, b) => a.line[sort] - b.line[sort] || a.line.pprRank - b.line.pprRank), [report, win, position, sort]);
@@ -46,11 +86,13 @@ export default function DefenseVsPositionPage() {
     {report && <>
       <div className="gl-controls">
         <Seg label="Position" value={position} onChange={value => { setPosition(value); if (value === 'QB' && (sort === 'receptionsRank' || sort === 'targetsRank')) setSort('pprRank'); }}
-          options={[['QB', 'Quarterbacks'], ['RB', 'Running backs'], ['WR', 'Wide receivers'], ['TE', 'Tight ends']]} />
+          options={[['ALL', 'All positions'], ['QB', 'Quarterbacks'], ['RB', 'Running backs'], ['WR', 'Wide receivers'], ['TE', 'Tight ends']]} />
         <Seg label="Games" value={win} onChange={setWin} options={[['season', 'Season'], ['last4', 'Last 4 games']]} />
       </div>
 
-      <div className="gl-card gl-table-wrap">
+      {position === 'ALL' && <AllPositions report={report} win={win} />}
+
+      {position !== 'ALL' && <div className="gl-card gl-table-wrap">
         <table className="gl-table gl-ratings gl-dvp">
           <caption className="sr-only">Points and production allowed to {position}s by each defense</caption>
           <thead><tr>
@@ -72,7 +114,7 @@ export default function DefenseVsPositionPage() {
             </td>
           </tr>)}</tbody>
         </table>
-      </div>
+      </div>}
 
       <p className="gl-note">Totals are everything the defense allowed to that position in a game, averaged per game. PPR points use standard full-point-per-catch scoring. &ldquo;vs average&rdquo; compares PPR points allowed with the league average for the position. Early in the season a single big game moves these numbers a lot. See who gets the ball on <Link href="/usage" className="gl-link">Player Usage</Link>.</p>
     </>}
