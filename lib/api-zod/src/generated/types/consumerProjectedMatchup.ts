@@ -5,9 +5,17 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerProjectedMatchupBasis } from './consumerProjectedMatchupBasis';
+import type { ConsumerProjectedMatchupConfidence } from './consumerProjectedMatchupConfidence';
 
 export interface ConsumerProjectedMatchup {
+  team?: string;
+  opponent?: string;
   receiverName: string;
+  receiverRole?: string;
   defenderName: string;
+  defenderRole?: string;
+  basis?: ConsumerProjectedMatchupBasis;
+  confidence?: ConsumerProjectedMatchupConfidence;
   summary: string;
 }

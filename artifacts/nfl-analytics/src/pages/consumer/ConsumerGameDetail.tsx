@@ -2,25 +2,23 @@ import {
   getGetConsumerGameProjectionsQueryKey, getGetConsumerGameQueryKey, useGetConsumerGame, useGetConsumerGameProjections,
   useGetConsumerTouchdowns, type ConsumerGameProjection, type ConsumerProjectionQb,
 } from '@workspace/api-client-react';
-import { ChevronLeft, CloudRain, ShieldCheck } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useSearch, useParams, Link } from 'wouter';
 import { ConsumerDepthChart } from '../../components/ConsumerDepthChart';
 import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
-import { ConsumerPregameComparisonChart } from '../../components/ConsumerPregameComparisonChart';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
-import { DeferredDetailDisclosure } from '../../components/DeferredDetailDisclosure';
+import { GameTabs } from '../../components/GameTabs';
+import { GameWeather } from '../../components/GameWeather';
 import { GameDvp } from '../../components/GameDvp';
 import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
 import { GameAlerts } from './GameAlerts';
 import { BookTable } from '@/components/BookLines';
 import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useConsumerNow } from './consumer-ui';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
 import { TeamChip } from '../../components/GameBoard';
 import { MatchupRanks } from '../../components/MatchupRanks';
-import { HundredGrid, Simulator, abbr, toPoolGame } from '../../components/GameSim';
-import { matchupAccents } from '../../lib/team-colors';
 import { buildGameView, formatPrice, lineText, vegasLineText, type GameView } from '../../lib/pick-sheet';
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;
@@ -81,13 +79,6 @@ export default function ConsumerGameDetail() {
   const game = query.data;
   const beforeKickoff = Boolean(game.kickoffTime && new Date(game.kickoffTime).getTime() > now
     && (game.gameState === 'pregame' || game.gameState === 'scheduled'));
-  const weather = game.weather as { summary?: unknown; temperature?: unknown; sustainedWind?: unknown; precipitationProbability?: unknown } | null;
-  const weatherParts = weather ? [
-    typeof weather.summary === 'string' ? weather.summary : null,
-    typeof weather.temperature === 'number' ? `${weather.temperature.toFixed(0)}°F` : null,
-    typeof weather.sustainedWind === 'number' ? `${weather.sustainedWind.toFixed(0)} mph wind` : null,
-    typeof weather.precipitationProbability === 'number' ? `${weather.precipitationProbability.toFixed(0)}% precipitation` : null,
-  ].filter(Boolean) : [];
   const view = buildGameView(game, qbProjection);
 
   return <div className="gl-page consumer-detail">
@@ -101,39 +92,40 @@ export default function ConsumerGameDetail() {
           <TeamChip team={game.matchup.home.abbreviation} large /> {game.matchup.home.name}
         </h1>
         {game.finalScore && <p className="gl-lede gl-final-line">Final: {game.matchup.away.abbreviation} {game.finalScore.away}, {game.matchup.home.abbreviation} {game.finalScore.home}</p>}
+        <GameWeather weather={game.weather} />
       </div>
       <SaveGameButton gameId={game.gameId} />
     </header>
 
-    <GameProjectionPanel view={view} projection={qbProjection} />
-    {beforeKickoff && <BookTable books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />}
-    <HundredGames view={view} />
-    <MatchupRanks home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
-    <GameDvp home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
-    <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />
-    <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
-    <DeferredDetailDisclosure key={`${game.gameId}-matchups`} testId="disclosure-matchups" title="Team matchup details" status="Offense vs defense, category by category">
-      <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
-      <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
-    </DeferredDetailDisclosure>
-    <DeferredDetailDisclosure key={`${game.gameId}-personnel`} testId="disclosure-personnel" title="Players and depth chart" status="Depth, usage and position matchups">
-      {beforeKickoff && <PlayerPositionMatchup gameId={game.gameId} />}
-      <ConsumerDepthChart context={game.context} />
-      <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
-      <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
-    </DeferredDetailDisclosure>
-    <DeferredDetailDisclosure key={`${game.gameId}-sources`} testId="disclosure-sources" title="Weather" status="Forecast for kickoff">
-      <div className="premium-weather" data-testid="game-weather"><CloudRain className="h-4 w-4" aria-hidden="true" /><span>{weatherParts.length > 0 ? weatherParts.join(' · ') : game.analysis.availability.weather ?? 'Weather unavailable'}</span></div>
-    </DeferredDetailDisclosure>
+    <GameProjectionPanel view={view} />
+    <GameTabs key={game.gameId} tabs={[
+      { id: 'overview', label: 'Overview', content: <>
+        <GameWhy view={view} projection={qbProjection} />
+        <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
+        <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />
+        <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
+      </> },
+      { id: 'matchups', label: 'Matchups', content: <>
+        <GameDvp home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
+        <MatchupRanks home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
+        <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
+      </> },
+      { id: 'players', label: 'Players', content: <>
+        <ConsumerDepthChart context={game.context} />
+        <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
+        {beforeKickoff && <MoreDetail title="Compare a player with this defense"><PlayerPositionMatchup gameId={game.gameId} /></MoreDetail>}
+      </> },
+      ...(beforeKickoff && view.books.length ? [{ id: 'lines', label: 'Lines', content:
+        <BookTable books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} /> }] : []),
+    ]} />
   </div>;
 }
 
-function GameProjectionPanel({ view, projection }: { view: GameView; projection: ConsumerGameProjection | undefined }) {
+function GameProjectionPanel({ view }: { view: GameView }) {
   const { game, projection: p, vegas } = view;
   const home = game.matchup.home.abbreviation;
   const away = game.matchup.away.abbreviation;
   if (!p) return <div className="gl-empty"><strong>Our projection for this game is being prepared.</strong>It usually posts by Tuesday morning.</div>;
-  const reasons = drivers(view, projection);
   return <section className="gl-section" aria-labelledby="projection-heading">
     <div className="gl-section-head"><h2 id="projection-heading">Gridline projection</h2>
       <p>Adjusted for the starting quarterbacks{game.finalScore ? '' : ' · updates through the week'}</p></div>
@@ -153,10 +145,25 @@ function GameProjectionPanel({ view, projection }: { view: GameView; projection:
       </div>
       {view.result && <p className="gl-note">Our projected winner was {view.result === 'win' ? 'right' : view.result === 'loss' ? 'wrong' : 'tied'}.</p>}
     </div>
-    <div className="gl-why gl-card"><QbCard team={away} qb={p.awayQb} /><QbCard team={home} qb={p.homeQb} /></div>
-    {reasons.length > 0 && <div className="gl-card gl-reasons"><h3 className="gl-label">What drives the projection</h3><ul>{reasons.map(reason => <li key={reason}>{reason}</li>)}</ul></div>}
+  </section>;
+}
+
+/** Quarterbacks and the factors behind the projection (Overview tab). */
+function GameWhy({ view, projection }: { view: GameView; projection: ConsumerGameProjection | undefined }) {
+  const p = view.projection;
+  if (!p) return null;
+  const reasons = drivers(view, projection);
+  return <section className="gl-section" aria-labelledby="why-heading">
+    <div className="gl-section-head"><h2 id="why-heading">Why we project it this way</h2></div>
+    <div className="gl-why gl-card"><QbCard team={view.game.matchup.away.abbreviation} qb={p.awayQb} /><QbCard team={view.game.matchup.home.abbreviation} qb={p.homeQb} /></div>
+    {reasons.length > 0 && <div className="gl-card gl-reasons"><ul>{reasons.map(reason => <li key={reason}>{reason}</li>)}</ul></div>}
     <p className="gl-note">This is a projection, not a pick. Our lines haven&apos;t beaten Vegas closing lines in testing, so use them as a second opinion. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
   </section>;
+}
+
+/** A tool most visitors skip, folded away until asked for. */
+function MoreDetail({ title, children }: { title: string; children: ReactNode }) {
+  return <details className="gl-more-detail"><summary>{title}</summary>{children}</details>;
 }
 
 function GameTouchdowns({ teams }: { teams: string[] }) {
@@ -172,25 +179,5 @@ function GameTouchdowns({ teams }: { teams: string[] }) {
         <span className="gl-td-card-odds"><b className="gl-pct">{pct(pick.probability)}</b><small>Fair {formatPrice(pick.fairOdds)}</small></span>
       </Link></li>)}
     </ol>
-  </section>;
-}
-
-/** The same 100-game view as Pick'em, for this matchup. */
-function HundredGames({ view }: { view: GameView }) {
-  const game = toPoolGame(view);
-  if (!game) return null;
-  const pick = abbr(game, game.pick);
-  const [winColor, lossColor] = matchupAccents(pick, abbr(game, game.pick === 'home' ? 'away' : 'home'));
-  return <section className="gl-section" aria-labelledby="hundred-heading">
-    <div className="gl-section-head"><h2 id="hundred-heading">If they played 100 times</h2><Link href="/pickem" className="gl-link">Every game this week ›</Link></div>
-    <div className="gl-card gl-hundred-card">
-      <div className="gl-hundred-top">
-        <HundredGrid wins={game.wins} winColor={winColor} lossColor={lossColor} label={`${pick} wins ${game.wins} of 100`} />
-        <p><b>{pick} wins {game.wins} of 100.</b> {game.source === 'gridline'
-          ? 'From our model; the betting line is not posted yet.'
-          : 'From the current betting line, the most accurate source in our testing. Our model\'s view is above.'}</p>
-      </div>
-      <Simulator game={game} showLink={false} title="How they'd finish" />
-    </div>
   </section>;
 }

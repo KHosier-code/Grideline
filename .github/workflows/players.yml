@@ -1,0 +1,43 @@
+name: Players
+
+# Asks the site to refresh depth charts (Sleeper, matched to nflverse player
+# IDs) and the ESPN injury report. Game pages build likely offensive roles,
+# defensive personnel and player matchups from these. Free, no key. Sleeper
+# asks for at most one players download a day, so this runs once a day.
+# Times are UTC (ET + 4 during daylight time).
+on:
+  schedule:
+    - cron: "17 12 * * *"   # every day 8:17 ET
+  workflow_dispatch: {}
+
+concurrency:
+  group: players
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Refresh depth charts and injuries
+        env:
+          GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+          GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+        run: |
+          base="${GRIDLINE_INGEST_URL%/}/api/personnel"
+          auth="Authorization: Bearer $GRIDLINE_INGEST_TOKEN"
+          status=$(curl -sS -o start.json -w '%{http_code}' -X POST -H "$auth" "$base/scheduled-refresh")
+          cat start.json; echo
+          [ "$status" -lt 400 ] || exit 1
+          # The refresh runs on the site; follow it until it finishes.
+          for i in $(seq 1 50); do
+            sleep 30
+            curl -sS -H "$auth" "$base/refresh-status" -o run.json || continue
+            state=$(jq -r .status run.json)
+            echo "$(date -u +%H:%M:%S) $state"
+            case "$state" in
+              success) cat run.json; echo; exit 0 ;;
+              failed|partial) cat run.json; echo; exit 1 ;;
+            esac
+          done
+          echo "Refresh still running after 25 minutes"; exit 1

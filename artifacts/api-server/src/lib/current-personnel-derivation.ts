@@ -119,6 +119,11 @@ const DEFENSE = new Set(["DL", "DE", "DT", "NT", "EDGE", "LB", "ILB", "OLB", "ML
 const SPECIAL_TEAMS = new Set(["K", "P", "LS", "KR", "PR"]);
 const REQUIRED = ["QB", "RB", "WR", "TE", "OT", "OG", "C", "EDGE", "DT", "LB", "CB", "S"];
 const CURRENT_INJURY_EVIDENCE_MS = 7 * 86_400_000;
+/** How many players recent snaps can name per position when no depth chart is published. */
+const INFERRED_DEPTH_PER_SLOT: Record<string, number> = {
+  QB: 1, RB: 2, FB: 1, WR: 3, TE: 2, EDGE: 2, DT: 2, LB: 3, CB: 3, S: 2,
+};
+const MIN_INFERRED_SNAP_SHARE = 0.2;
 
 function timestamp(value: DateLike) {
   if (value instanceof Date) return value.getTime();
@@ -293,19 +298,23 @@ export function deriveCurrentTeamDepth(input: {
   for (const [position, candidates] of recentByPosition) {
     const byPlayer = new Map<string, PersonnelSnapRow[]>();
     for (const row of candidates) byPlayer.set(row.playerId, [...(byPlayer.get(row.playerId) ?? []), row]);
-    const winner = [...byPlayer.entries()]
+    // Without a published depth chart, rank the position by recent snap share
+    // so WR2, CB2 and the rest of a unit still have a name.
+    const ranked = [...byPlayer.entries()]
       .map(([playerId, playerRows]) => ({ playerId, playerRows, evidence: recentParticipation(input.snaps, input.teamId, playerId, cutoffTime) }))
-      .sort((a, b) => (b.evidence.share ?? -1) - (a.evidence.share ?? -1))[0];
-    if (winner) {
-      const row = winner.playerRows[0]!;
+      .sort((a, b) => (b.evidence.share ?? -1) - (a.evidence.share ?? -1))
+      .filter((candidate, index) => index === 0 || (candidate.evidence.share ?? 0) >= MIN_INFERRED_SNAP_SHARE)
+      .slice(0, INFERRED_DEPTH_PER_SLOT[position] ?? 2);
+    ranked.forEach((candidate, index) => {
+      const row = candidate.playerRows[0]!;
       rows.push({
-        playerId: winner.playerId, playerName: row.playerName, teamId: input.teamId,
-        sourceTeamId: row.sourceTeamId ?? null, position, role: null, depthOrder: 1,
+        playerId: candidate.playerId, playerName: row.playerName, teamId: input.teamId,
+        sourceTeamId: row.sourceTeamId ?? null, position, role: null, depthOrder: index + 1,
         source: "sleeper", classification: "published_secondary",
         capturedAt: row.sourceUpdatedAt, sourceUpdatedAt: row.sourceUpdatedAt,
         mappingStatus: "participation_inference", mappingConfidence: null,
       });
-    }
+    });
   }
 
   const inferredSlots = new Set(rows.map((row) => normalizedSlot(row.position ?? row.role)).filter(Boolean));

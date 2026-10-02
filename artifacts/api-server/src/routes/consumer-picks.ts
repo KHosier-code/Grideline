@@ -19,6 +19,7 @@ import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
 import { footballTime } from "../lib/feed-schedule";
 import { syncNflverseHistory } from "../lib/nflverse";
+import { personnelRefreshStatus, startPersonnelRefresh } from "../lib/personnel-refresh";
 
 const router: IRouter = Router();
 
@@ -535,6 +536,23 @@ router.get("/nflverse/refresh-status", async (req, res): Promise<void> => {
     completedAt: latest.completedAt?.toISOString() ?? null,
     recordsProcessed: latest.recordsProcessed, error: latest.errorMessage?.slice(0, 600) ?? null,
   } : { status: "none" });
+});
+
+/**
+ * Depth charts (Sleeper, mapped to nflverse IDs) and the ESPN injury report,
+ * called by the GitHub "Players" workflow. Game pages' likely roles, defensive
+ * personnel and player matchups come from these. Runs in the background; the
+ * workflow follows it with GET /personnel/refresh-status.
+ */
+router.post("/personnel/scheduled-refresh", (req, res): void => {
+  if (!authorizeIngest(req, res)) return;
+  if (startPersonnelRefresh()) res.status(202).json({ status: "started" });
+  else res.json({ status: "skipped", reason: "A personnel refresh is already running" });
+});
+
+router.get("/personnel/refresh-status", (req, res): void => {
+  if (!authorizeIngest(req, res)) return;
+  res.json(personnelRefreshStatus() ?? { status: "none" });
 });
 
 /** This week's TD picks card (research/td-model/share_card.py), the TD Picks link preview. */

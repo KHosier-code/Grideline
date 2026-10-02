@@ -1709,8 +1709,14 @@ export const GetConsumerGameResponse = zod.object({
 })).max(getConsumerGameResponseTwoContextTeamsMax),
   "drivers": zod.array(zod.string()).max(getConsumerGameResponseTwoContextDriversMax),
   "projectedMatchups": zod.array(zod.object({
+  "team": zod.string().optional(),
+  "opponent": zod.string().optional(),
   "receiverName": zod.string(),
+  "receiverRole": zod.string().optional(),
   "defenderName": zod.string(),
+  "defenderRole": zod.string().optional(),
+  "basis": zod.enum(['verified', 'inferred']).optional(),
+  "confidence": zod.enum(['high', 'medium', 'low']).optional(),
   "summary": zod.string()
 })).max(getConsumerGameResponseTwoContextProjectedMatchupsMax),
   "matchupMessage": zod.string().nullable(),
