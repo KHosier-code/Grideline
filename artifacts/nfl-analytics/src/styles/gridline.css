@@ -952,8 +952,12 @@
 .gl-best-cell { background: hsl(var(--gl-good-bg)); color: hsl(var(--status-good)); font-weight: 700; }
 
 /* Watch list and receipts */
+.gl-record-grid.gl-four { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .gl-watch-table td, .gl-watch-table th { white-space: nowrap; }
+.gl-watch-table th small { display: block; font-weight: 500; letter-spacing: 0; text-transform: none; }
 .gl-receipt-meta { color: hsl(var(--muted-foreground)); font-size: 12px; }
-.gl-receipt-weeks { display: grid; gap: 12px; }
+.gl-receipts { min-width: 0; }
+.gl-receipt-weeks { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.gl-receipt-week { min-width: 0; }
 .gl-receipt-week summary { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; padding: 14px 16px; cursor: pointer; }
 .gl-receipt-week summary a { margin-left: auto; }

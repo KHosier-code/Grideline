@@ -98,7 +98,7 @@ export default function Receipts() {
       </select>
     </label>}
 
-    {data?.status === 'available' && data.season !== null && <section className="gl-section" aria-labelledby="receipts-weeks">
+    {data?.status === 'available' && data.season !== null && <section className="gl-section gl-receipts" aria-labelledby="receipts-weeks">
       <div className="gl-section-head"><h2 id="receipts-weeks">{data.season} season</h2><p>Newest week first. Open a week to see each pick.</p></div>
       <div className="gl-receipt-weeks">{ordered.map(week => <WeekReceipts key={week.week} season={data.season!} week={week} />)}</div>
     </section>}

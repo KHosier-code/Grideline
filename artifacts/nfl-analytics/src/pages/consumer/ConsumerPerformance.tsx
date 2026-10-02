@@ -121,7 +121,7 @@ function WatchListSection({ watch, topic }: { watch: ConsumerWatchList; topic: s
       but only 53.7% against the closing line, and 2022 was a losing season (46%). So we list them as they happen and grade each one at three
       numbers: the opener, the line when our projection went up (the one you could actually bet), and the close.
     </div>
-    <div className="gl-record-grid">
+    <div className="gl-record-grid gl-four">
       <div className="gl-card gl-record-card"><span className="gl-label">At the opener</span><b>{recordText(watch.atsOpen)}</b><p>{coverRate(watch.atsOpen)}</p></div>
       <div className="gl-card gl-record-card"><span className="gl-label">When we posted</span><b>{recordText(watch.atsPublished)}</b><p>{coverRate(watch.atsPublished)}. The honest record: the line you could bet when the game joined the list.</p></div>
       <div className="gl-card gl-record-card"><span className="gl-label">At the close</span><b>{recordText(watch.atsClose)}</b><p>{coverRate(watch.atsClose)}. Break-even at -110 is 52.4%.</p></div>
@@ -131,7 +131,8 @@ function WatchListSection({ watch, topic }: { watch: ConsumerWatchList; topic: s
       <table className="gl-table gl-watch-table">
         <thead><tr>
           <th scope="col">Game</th><th scope="col">Gridline</th><th scope="col">Our side</th><th scope="col">Opener</th>
-          <th scope="col">When posted</th><th scope="col">Now / close</th><th scope="col">Moved our way</th><th scope="col">Covered: open · posted · close</th>
+          <th scope="col">Posted<small>line when we flagged it</small></th><th scope="col">Now<small>or the close</small></th>
+          <th scope="col">Moved<small>toward us</small></th><th scope="col">Covered<small>open · posted · close</small></th>
         </tr></thead>
         <tbody>{watch.games.map(game => {
           const side = game.side === 'home' ? game.homeTeam : game.awayTeam;
@@ -141,8 +142,8 @@ function WatchListSection({ watch, topic }: { watch: ConsumerWatchList; topic: s
             <td><span className="gl-inline-team"><TeamLogo team={side} size={18} />{side}</span></td>
             <td>{vegasLineText(game.openLine, game.homeTeam, game.awayTeam)} <small className="gl-muted">{bookShort(game.sportsbook)}</small></td>
             <td>{vegasLineText(game.publishedLine, game.homeTeam, game.awayTeam)}</td>
-            <td>{vegasLineText(game.currentLine, game.homeTeam, game.awayTeam)}{!game.started && <small className="gl-muted"> now</small>}</td>
-            <td><span className={game.movedToward > 0 ? 'gl-good' : game.movedToward < 0 ? 'gl-bad' : 'gl-muted'}>{game.movedToward > 0 ? '+' : ''}{game.movedToward} pts</span></td>
+            <td>{vegasLineText(game.currentLine, game.homeTeam, game.awayTeam)}</td>
+            <td><span className={game.movedToward > 0 ? 'gl-good' : game.movedToward < 0 ? 'gl-bad' : 'gl-muted'}>{game.movedToward > 0 ? '+' : ''}{game.movedToward}</span></td>
             <td>{game.started ? <><Cover value={game.atsOpen} /> · <Cover value={game.atsPublished} /> · <Cover value={game.atsClose} /></> : <span className="gl-muted">Upcoming</span>}</td>
           </tr>;
         })}</tbody>
@@ -278,8 +279,8 @@ export default function ConsumerPerformance() {
           {tdRecord && tdRecord.weeksGraded > 0 ? <><b>{tdRecord.topTenHits}/{tdRecord.topTenPicks}</b><p>{pct(tdRecord.topTenHits / tdRecord.topTenPicks)} scored over {tdRecord.weeksGraded} {tdRecord.weeksGraded === 1 ? 'week' : 'weeks'}.</p></>
             : <><b>—</b><p>The first graded week appears after this week&apos;s games.</p></>}
         </div>
-        <BookComparisonCard comparison={td?.bookComparison} />
       </div>
+      <BookComparisonCard comparison={td?.bookComparison} />
       {(tdRecord?.weeks?.length ?? 0) > 0 && <div className="gl-card gl-table-wrap">
         <table className="gl-table">
           <thead><tr><th scope="col">Week</th><th scope="col">Top-10 TD picks that scored</th><th scope="col">Game winners right</th></tr></thead>
