@@ -105,6 +105,7 @@ export function ConsumerShellView({
           {trail.map((crumb, index) => <li key={crumb} aria-current={index === trail.length - 1 ? 'page' : undefined}>{crumb}</li>)}
         </ol>
       </header>
+      {open && <div className="gl-mobile-nav-backdrop" aria-hidden="true" onClick={() => setOpen(false)} />}
       {open && <nav id="consumer-mobile-navigation" className="gl-mobile-nav" aria-label="Mobile navigation"
         onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); } }}>
         {nav(() => setOpen(false))}

@@ -337,3 +337,18 @@ test("unseasoned stale historical identity cannot be promoted into current depth
   assert.equal(result.qbStarter.player, null);
   assert.equal(result.depth.offense.some((player) => player.playerId === "stale-qb"), false);
 });
+test("without a published depth chart, recent snaps rank more than one player per position", () => {
+  const snap = (playerId: string, position: string, share: number, defense = false) => ({
+    gameId: "g1", season: 2026, week: 2, playerId, playerName: playerId.toUpperCase(), position, teamId: "team",
+    ...(defense ? { defensePct: share } : { offensePct: share }),
+    kickoffTime: "2026-09-14T17:00:00.000Z", sourceUpdatedAt: "2026-09-15T10:00:00.000Z",
+  });
+  const result = derive([], { snaps: [
+    snap("wr-a", "WR", 0.92), snap("wr-b", "WR", 0.81), snap("wr-c", "WR", 0.6), snap("wr-d", "WR", 0.1),
+    snap("cb-a", "CB", 0.99, true), snap("cb-b", "CB", 0.95, true),
+  ] });
+  const wrs = result.depth.offense.filter((row) => row.position === "WR");
+  assert.deepEqual(wrs.map((row) => [row.playerId, row.rank]), [["wr-a", 1], ["wr-b", 2], ["wr-c", 3]]);
+  assert.ok(wrs.every((row) => row.sourceClassification === "inferred"));
+  assert.deepEqual(result.depth.defense.filter((row) => row.position === "CB").map((row) => row.playerId), ["cb-a", "cb-b"]);
+});

@@ -2496,8 +2496,14 @@ components:
       type: object
       required: [receiverName, defenderName, summary]
       properties:
+        team: { type: string }
+        opponent: { type: string }
         receiverName: { type: string }
+        receiverRole: { type: string }
         defenderName: { type: string }
+        defenderRole: { type: string }
+        basis: { type: string, enum: [verified, inferred] }
+        confidence: { type: string, enum: [high, medium, low] }
         summary: { type: string }
     ConsumerContext:
       type: object

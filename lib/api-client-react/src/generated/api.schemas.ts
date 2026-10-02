@@ -1787,9 +1787,32 @@ export interface ConsumerContextTeam {
   depth: ConsumerDepthPlayer[];
 }
 
+export type ConsumerProjectedMatchupBasis = typeof ConsumerProjectedMatchupBasis[keyof typeof ConsumerProjectedMatchupBasis];
+
+
+export const ConsumerProjectedMatchupBasis = {
+  verified: 'verified',
+  inferred: 'inferred',
+} as const;
+
+export type ConsumerProjectedMatchupConfidence = typeof ConsumerProjectedMatchupConfidence[keyof typeof ConsumerProjectedMatchupConfidence];
+
+
+export const ConsumerProjectedMatchupConfidence = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
 export interface ConsumerProjectedMatchup {
+  team?: string;
+  opponent?: string;
   receiverName: string;
+  receiverRole?: string;
   defenderName: string;
+  defenderRole?: string;
+  basis?: ConsumerProjectedMatchupBasis;
+  confidence?: ConsumerProjectedMatchupConfidence;
   summary: string;
 }
 

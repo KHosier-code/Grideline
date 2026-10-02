@@ -144,6 +144,8 @@ export * from './consumerPlayerUsageStatus';
 export * from './consumerPowerRatings';
 export * from './consumerPowerRatingsStatus';
 export * from './consumerProjectedMatchup';
+export * from './consumerProjectedMatchupBasis';
+export * from './consumerProjectedMatchupConfidence';
 export * from './consumerProjectionQb';
 export * from './consumerPropsAvailability';
 export * from './consumerReceipts';

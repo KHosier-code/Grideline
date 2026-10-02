@@ -647,9 +647,21 @@ type SerializedContext = {
     }>;
   }>;
   drivers: string[];
-  projectedMatchups: [];
+  projectedMatchups: ProjectedMatchup[];
   matchupMessage: string;
   message: string | null;
+};
+
+type ProjectedMatchup = {
+  team: string;
+  opponent: string;
+  receiverName: string;
+  receiverRole: string;
+  defenderName: string;
+  defenderRole: string;
+  basis: "inferred";
+  confidence: "medium" | "low";
+  summary: string;
 };
 
 type CurrentRoleEntry = {
@@ -862,144 +874,192 @@ export function applyCurrentPersonnelToConsumerContext(
   });
   const currentAvailable = Object.values(current.teams).some((team) =>
     Boolean(team && (team.depth.offense.length || team.depth.defense.length || team.injuryReport.length)));
+  const teams = baseTeams.map((team) => {
+    const source = current.teams[team.side];
+    if (!source) return {
+      ...team, expectedQb: {
+        name: null, status: "unconfirmed" as const, availability: "unknown" as const,
+        confidence: null, asOf: current.asOf, confirmed: false,
+      },
+      currentOffenseRoles: {
+        runningBackCommittee: { status: "unconfirmed" as const, players: [] },
+        primaryTe: emptyCurrentRole(), wr1: emptyCurrentRole(), wr2: emptyCurrentRole(),
+      },
+      defensiveGroupings: { front: [], linebackers: [], corners: [], safeties: [] },
+      depth: [], injuries: [], depthFreshness: "unavailable" as const,
+      injuryReportStatus: "unavailable" as const, asOf: current.asOf,
+    };
+    const players = [...source.depth.offense, ...source.depth.defense]
+      .filter((player) => player.starter || (player.rank ?? 99) <= 2)
+      .slice(0, 30);
+    const depth = players.map((player) => {
+      const published = player.sourceClassification === "official" || player.sourceClassification === "published_secondary";
+      const offense = ["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"]
+        .includes(player.position ?? "");
+      const role = published
+        ? player.rank === 1 ? "published_starter" as const : "published_backup" as const
+        : player.rank === 1 ? "projected_starter" as const : "uncertain" as const;
+      const normalizedRole = player.role?.toUpperCase() ?? null;
+      return {
+        name: player.playerName ?? "Player name unavailable",
+        position: player.position ?? "Unknown",
+        unit: offense ? "offense" as const : "defense" as const,
+        depthRank: player.rank,
+        role,
+        sourceLabel: published ? "Published depth" as const
+          : player.sourceClassification === "inferred" ? "Projected from recent participation" as const
+          : "Evidence uncertain" as const,
+        recentSnapShare: player.recentSnapShare,
+        injuryStatus: player.injuryState.gameStatus,
+        practiceStatus: player.injuryState.practiceStatus,
+        starterConfidence: player.confidence,
+        evidenceSummary: player.explanation[0] ?? null,
+        lineupSlot: player.position === "WR" && ["LWR", "RWR", "SWR"].includes(normalizedRole ?? "")
+          ? normalizedRole : player.position,
+        freshness: source.freshness === "current" ? "fresh" as const
+          : source.freshness === "stale" ? "stale" as const : "unavailable" as const,
+        asOf: player.providerEvidence.map((evidence) => evidence.capturedAt).filter(Boolean).sort().at(-1) ?? null,
+      };
+    });
+    const injuries = source.injuryReport.flatMap((injury) => {
+      if (!injury.playerName) return [];
+      return [{
+        name: injury.playerName,
+        position: injury.position,
+        injury: injury.injury,
+        gameStatus: injury.gameStatus,
+        practiceStatus: injury.practiceStatus,
+        asOf: injury.asOf,
+        sourceLabel: "ESPN injury report" as const,
+      }];
+    });
+    const injuryReportStatus = source.injuryReport.length === 0 ? "unavailable" as const
+      : injuries.length < source.injuryReport.length ? "partial" as const
+      : injuries.some((player) =>
+        !player.position || !player.injury || !player.gameStatus || !player.practiceStatus || !player.asOf)
+        ? "partial" as const : "available" as const;
+    const qbPlayer = source.qbStarter.player;
+    const qbRoleStatus = !qbPlayer ? "unconfirmed" as const
+      : source.qbStarter.status !== "available" || currentRoleEntry(qbPlayer, source).availability === "unavailable"
+        ? "unavailable" as const : "available" as const;
+    const confirmedQbRoleStatus = source.freshness !== "current" && qbRoleStatus === "available"
+      ? "unconfirmed" as const : qbRoleStatus;
+    const qbAvailability = qbPlayer ? currentRoleEntry(qbPlayer, source).availability : "unknown" as const;
+    const runningBackCandidates = source.depth.offense
+      .filter((player) => player.position === "RB" && (player.rank ?? 99) <= 2)
+      .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)
+        || (b.recentSnapShare ?? -1) - (a.recentSnapShare ?? -1)
+        || a.playerId.localeCompare(b.playerId))
+      .filter((player) => currentRoleEntry(player, source).availability !== "unavailable");
+    const leadBack = runningBackCandidates[0];
+    const committeeBacks = leadBack ? runningBackCandidates.slice(1, 3).filter((player) =>
+      player.rank === 1 || (
+        leadBack.recentSnapShare !== null && player.recentSnapShare !== null
+        && leadBack.recentSnapShare >= 0.25 && player.recentSnapShare >= 0.25
+        && player.recentSnapShare >= leadBack.recentSnapShare * 0.55
+      )) : [];
+    const runningBacks = [leadBack, ...committeeBacks]
+      .filter((player): player is NonNullable<typeof player> => Boolean(player))
+      .map((player) => currentRoleEntry(player, source));
+    const receivers = source.depth.offense.filter((player) => player.position === "WR")
+      .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)
+        || (b.recentSnapShare ?? -1) - (a.recentSnapShare ?? -1)
+        || a.playerId.localeCompare(b.playerId));
+    const primaryTe = source.depth.offense.find((player) => player.position === "TE" && (player.rank ?? 99) <= 1);
+    const defensive = source.depth.defense;
+    const group = (predicate: (position: string) => boolean) => defensive
+      .filter((player) => predicate(player.position ?? ""))
+      .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)
+        || (b.recentSnapShare ?? -1) - (a.recentSnapShare ?? -1)
+        || a.playerId.localeCompare(b.playerId))
+      .map((player) => currentDefenseEntry(player, source));
+    return {
+      ...team,
+      name: source.teamName ?? team.name,
+      abbreviation: source.abbreviation ?? team.abbreviation,
+      expectedQb: {
+        name: qbPlayer?.playerName ?? null,
+        status: confirmedQbRoleStatus,
+        availability: qbAvailability,
+        confidence: qbPlayer ? source.qbStarter.confidence : null,
+        asOf: qbPlayer ? currentRoleEntry(qbPlayer, source).asOf : source.asOf,
+        confirmed: Boolean(qbPlayer && confirmedQbRoleStatus === "available" && currentRoleEntry(qbPlayer, source).confirmed),
+      },
+      currentOffenseRoles: {
+        runningBackCommittee: {
+          status: runningBacks.some((player) => player.confirmed) ? "confirmed" as const : "unconfirmed" as const,
+          players: runningBacks,
+        },
+        primaryTe: currentRoleEntry(primaryTe, source),
+        wr1: currentRoleEntry(receivers[0], source),
+        wr2: currentRoleEntry(receivers[1], source),
+      },
+      defensiveGroupings: {
+        front: group((position) => ["DL", "DE", "DT", "NT", "EDGE"].includes(position)),
+        linebackers: group((position) => ["LB", "ILB", "OLB", "MLB"].includes(position)),
+        corners: group((position) => ["CB"].includes(position)),
+        safeties: group((position) => ["S", "FS", "SS"].includes(position)),
+      },
+      asOf: source.asOf,
+      depthFreshness: source.freshness === "current" ? "current" as const
+        : source.freshness === "stale" ? "stale" as const : "unavailable" as const,
+      depth,
+      injuries,
+      injuryEvidenceAvailable: injuries.length > 0,
+      injuryReportStatus,
+    };
+  });
+  const projectedMatchups = projectPlayerMatchups(teams);
   return {
     ...context,
     available: context.available || currentAvailable,
     message: context.message && !currentAvailable ? context.message : null,
-    teams: baseTeams.map((team) => {
-      const source = current.teams[team.side];
-      if (!source) return {
-        ...team, expectedQb: {
-          name: null, status: "unconfirmed" as const, availability: "unknown" as const,
-          confidence: null, asOf: current.asOf, confirmed: false,
-        },
-        currentOffenseRoles: {
-          runningBackCommittee: { status: "unconfirmed" as const, players: [] },
-          primaryTe: emptyCurrentRole(), wr1: emptyCurrentRole(), wr2: emptyCurrentRole(),
-        },
-        defensiveGroupings: { front: [], linebackers: [], corners: [], safeties: [] },
-        depth: [], injuries: [], depthFreshness: "unavailable" as const,
-        injuryReportStatus: "unavailable" as const, asOf: current.asOf,
-      };
-      const players = [...source.depth.offense, ...source.depth.defense]
-        .filter((player) => player.starter || (player.rank ?? 99) <= 2)
-        .slice(0, 30);
-      const depth = players.map((player) => {
-        const published = player.sourceClassification === "official" || player.sourceClassification === "published_secondary";
-        const offense = ["QB", "RB", "FB", "WR", "TE", "OL", "OT", "T", "LT", "RT", "G", "LG", "RG", "C"]
-          .includes(player.position ?? "");
-        const role = published
-          ? player.rank === 1 ? "published_starter" as const : "published_backup" as const
-          : player.rank === 1 ? "projected_starter" as const : "uncertain" as const;
-        const normalizedRole = player.role?.toUpperCase() ?? null;
-        return {
-          name: player.playerName ?? "Player name unavailable",
-          position: player.position ?? "Unknown",
-          unit: offense ? "offense" as const : "defense" as const,
-          depthRank: player.rank,
-          role,
-          sourceLabel: published ? "Published depth" as const
-            : player.sourceClassification === "inferred" ? "Projected from recent participation" as const
-            : "Evidence uncertain" as const,
-          recentSnapShare: player.recentSnapShare,
-          injuryStatus: player.injuryState.gameStatus,
-          practiceStatus: player.injuryState.practiceStatus,
-          starterConfidence: player.confidence,
-          evidenceSummary: player.explanation[0] ?? null,
-          lineupSlot: player.position === "WR" && ["LWR", "RWR", "SWR"].includes(normalizedRole ?? "")
-            ? normalizedRole : player.position,
-          freshness: source.freshness === "current" ? "fresh" as const
-            : source.freshness === "stale" ? "stale" as const : "unavailable" as const,
-          asOf: player.providerEvidence.map((evidence) => evidence.capturedAt).filter(Boolean).sort().at(-1) ?? null,
-        };
-      });
-      const injuries = source.injuryReport.flatMap((injury) => {
-        if (!injury.playerName) return [];
-        return [{
-          name: injury.playerName,
-          position: injury.position,
-          injury: injury.injury,
-          gameStatus: injury.gameStatus,
-          practiceStatus: injury.practiceStatus,
-          asOf: injury.asOf,
-          sourceLabel: "ESPN injury report" as const,
-        }];
-      });
-      const injuryReportStatus = source.injuryReport.length === 0 ? "unavailable" as const
-        : injuries.length < source.injuryReport.length ? "partial" as const
-        : injuries.some((player) =>
-          !player.position || !player.injury || !player.gameStatus || !player.practiceStatus || !player.asOf)
-          ? "partial" as const : "available" as const;
-      const qbPlayer = source.qbStarter.player;
-      const qbRoleStatus = !qbPlayer ? "unconfirmed" as const
-        : source.qbStarter.status !== "available" || currentRoleEntry(qbPlayer, source).availability === "unavailable"
-          ? "unavailable" as const : "available" as const;
-      const confirmedQbRoleStatus = source.freshness !== "current" && qbRoleStatus === "available"
-        ? "unconfirmed" as const : qbRoleStatus;
-      const qbAvailability = qbPlayer ? currentRoleEntry(qbPlayer, source).availability : "unknown" as const;
-      const runningBackCandidates = source.depth.offense
-        .filter((player) => player.position === "RB" && (player.rank ?? 99) <= 2)
-        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)
-          || (b.recentSnapShare ?? -1) - (a.recentSnapShare ?? -1)
-          || a.playerId.localeCompare(b.playerId))
-        .filter((player) => currentRoleEntry(player, source).availability !== "unavailable");
-      const leadBack = runningBackCandidates[0];
-      const committeeBacks = leadBack ? runningBackCandidates.slice(1, 3).filter((player) =>
-        player.rank === 1 || (
-          leadBack.recentSnapShare !== null && player.recentSnapShare !== null
-          && leadBack.recentSnapShare >= 0.25 && player.recentSnapShare >= 0.25
-          && player.recentSnapShare >= leadBack.recentSnapShare * 0.55
-        )) : [];
-      const runningBacks = [leadBack, ...committeeBacks]
-        .filter((player): player is NonNullable<typeof player> => Boolean(player))
-        .map((player) => currentRoleEntry(player, source));
-      const receivers = source.depth.offense.filter((player) => player.position === "WR")
-        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)
-          || (b.recentSnapShare ?? -1) - (a.recentSnapShare ?? -1)
-          || a.playerId.localeCompare(b.playerId));
-      const primaryTe = source.depth.offense.find((player) => player.position === "TE" && (player.rank ?? 99) <= 1);
-      const defensive = source.depth.defense;
-      const group = (predicate: (position: string) => boolean) => defensive
-        .filter((player) => predicate(player.position ?? ""))
-        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || a.playerId.localeCompare(b.playerId))
-        .map((player) => currentDefenseEntry(player, source));
-      return {
-        ...team,
-        name: source.teamName ?? team.name,
-        abbreviation: source.abbreviation ?? team.abbreviation,
-        expectedQb: {
-          name: qbPlayer?.playerName ?? null,
-          status: confirmedQbRoleStatus,
-          availability: qbAvailability,
-          confidence: qbPlayer ? source.qbStarter.confidence : null,
-          asOf: qbPlayer ? currentRoleEntry(qbPlayer, source).asOf : source.asOf,
-          confirmed: Boolean(qbPlayer && confirmedQbRoleStatus === "available" && currentRoleEntry(qbPlayer, source).confirmed),
-        },
-        currentOffenseRoles: {
-          runningBackCommittee: {
-            status: runningBacks.some((player) => player.confirmed) ? "confirmed" as const : "unconfirmed" as const,
-            players: runningBacks,
-          },
-          primaryTe: currentRoleEntry(primaryTe, source),
-          wr1: currentRoleEntry(receivers[0], source),
-          wr2: currentRoleEntry(receivers[1], source),
-        },
-        defensiveGroupings: {
-          front: group((position) => ["DL", "DE", "DT", "NT", "EDGE"].includes(position)),
-          linebackers: group((position) => ["LB", "ILB", "OLB", "MLB"].includes(position)),
-          corners: group((position) => ["CB"].includes(position)),
-          safeties: group((position) => ["S", "FS", "SS"].includes(position)),
-        },
-        asOf: source.asOf,
-        depthFreshness: source.freshness === "current" ? "current" as const
-          : source.freshness === "stale" ? "stale" as const : "unavailable" as const,
-        depth,
-        injuries,
-        injuryEvidenceAvailable: injuries.length > 0,
-        injuryReportStatus,
-      };
-    }),
+    teams,
+    projectedMatchups,
+    matchupMessage: projectedMatchups.length ? "Likely matchups from each team's depth chart." : "Matchup projection not yet available.",
   };
+}
+
+/**
+ * Likely receiver-vs-defender pairings from depth order: WR1 against the top
+ * corner, WR2 against the next, the primary tight end against the top safety.
+ * Corners travel or switch sides, so these are labeled likely, never certain.
+ */
+export function projectPlayerMatchups(teams: SerializedContext["teams"]): ProjectedMatchup[] {
+  const playing = <T extends { name: string | null; availability: string }>(player: T | null | undefined) =>
+    player?.name && player.availability !== "unavailable" ? player as T & { name: string } : null;
+  const matchups: ProjectedMatchup[] = [];
+  for (const offense of teams) {
+    const defense = teams.find((team) => team.side !== offense.side);
+    if (!defense) continue;
+    const corners = defense.defensiveGroupings.corners.filter((player) => playing(player));
+    const safeties = defense.defensiveGroupings.safeties.filter((player) => playing(player));
+    const pairs = [
+      { receiver: playing(offense.currentOffenseRoles.wr1), receiverRole: "WR1", defender: corners[0], defenderRole: "CB1" },
+      { receiver: playing(offense.currentOffenseRoles.wr2), receiverRole: "WR2", defender: corners[1], defenderRole: "CB2" },
+      { receiver: playing(offense.currentOffenseRoles.primaryTe), receiverRole: "TE", defender: safeties[0], defenderRole: "S" },
+    ];
+    for (const { receiver, receiverRole, defender, defenderRole } of pairs) {
+      if (!receiver || !defender?.name) continue;
+      const both = receiver.confirmed && defender.confirmed;
+      const who = receiverRole === "TE" ? `${offense.abbreviation} tight end ${receiver.name}` : `${offense.abbreviation} ${receiverRole} ${receiver.name}`;
+      const against = defenderRole === "S"
+        ? `${defense.abbreviation}'s top safety, ${defender.name}, along with linebackers`
+        : `${defense.abbreviation}'s ${defenderRole === "CB1" ? "top" : "second"} corner, ${defender.name}`;
+      matchups.push({
+        team: offense.abbreviation,
+        opponent: defense.abbreviation,
+        receiverName: receiver.name,
+        receiverRole,
+        defenderName: defender.name,
+        defenderRole,
+        basis: "inferred",
+        confidence: both ? "medium" : "low",
+        summary: `${who} should see the most of ${against}. ${both ? "Both are listed on this week's depth charts." : "Based on recent snaps; this week's depth chart hasn't confirmed both players."} Defenses move players around, so treat this as likely, not certain.`,
+      });
+    }
+  }
+  return matchups.slice(0, 12);
 }
 
 export async function consumerGames(filters: ConsumerFilters = {}) {
