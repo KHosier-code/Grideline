@@ -6,31 +6,12 @@ import {
   formatUsageMetric,
   usagePeriodLabel,
   USAGE_METRIC_LABELS,
-  eligibleMarketComparisons,
   supportedAssessments,
   preKickoffMovementLabel,
   partitionMetricCoverage,
 } from './consumer-presentation.ts';
 
 describe('consumer-presentation', () => {
-  test('only fresh, complete and eligible comparisons are displayed as usable', () => {
-    const game = {
-      recommendation: { markets: { spread: false, total: true, moneyline: false } },
-      marketBoard: { comparisons: [
-        { market: 'spread', state: 'available', modelValue: 1, marketValue: 1 },
-        { market: 'total', state: 'available', modelValue: 44, marketValue: 43 },
-        { market: 'moneyline', state: 'stale', modelValue: 0.5, marketValue: 0.4 },
-      ] },
-    } as any;
-    assert.deepStrictEqual(eligibleMarketComparisons(game, true).map((c) => c.market), ['total']);
-    assert.deepStrictEqual(eligibleMarketComparisons(game, false), []);
-    game.recommendation.markets.total = false;
-    assert.deepStrictEqual(eligibleMarketComparisons(game, true), []);
-    game.recommendation.markets.total = true;
-    game.marketBoard.comparisons[1].modelValue = null;
-    assert.deepStrictEqual(eligibleMarketComparisons(game, true), []);
-  });
-
   test('unsupported categories are omitted, and future games cannot show pre-kickoff finality', () => {
     assert.deepStrictEqual(supportedAssessments([{ edge: 'insufficient' }, { edge: 'home' }] as any).map((a) => a.edge), ['home']);
     assert.equal(preKickoffMovementLabel(true), null);

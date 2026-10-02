@@ -1,7 +1,7 @@
 import { lazy, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { UserButton, useAuth } from '@clerk/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, BarChart3, Bell, CalendarDays, Check, ChevronRight, Clock3, Database, Gauge, FileSearch, ChartNoAxesColumnIncreasing, History, LayoutDashboard, LineChart, ListFilter, Loader2, LockKeyhole, Menu, Microscope, RefreshCw, Save, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, TrendingUp, UserRound, X } from 'lucide-react';
+import { Activity, AlertTriangle, Bell, CalendarDays, Check, ChevronRight, Clock3, Database, FileSearch, ChartNoAxesColumnIncreasing, LayoutDashboard, LineChart, ListFilter, Loader2, LockKeyhole, Menu, RefreshCw, Save, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, TrendingUp, UserRound, X } from 'lucide-react';
 import {
   getGetDashboardSummaryQueryKey,
   getGetDataHealthQueryKey,
@@ -42,7 +42,6 @@ import { ConsumerLoadingFallback, ConsumerShell, ThemeToggle } from '@/component
 const UsageAnalytics = lazy(() => import('@/pages/admin/UsageAnalytics'));
 
 const ImageryReview = lazy(() => import('@/pages/admin/ImageryReview'));
-const InitialLineAudit = lazy(() => import('@/pages/admin/InitialLineAudit'));
 const AdminDepthChart = lazy(() => import('@/components/AdminDepthChart').then(module => ({ default: module.AdminDepthChart })));
 const AdminPlayerStatsImport = lazy(() => import('@/components/AdminPlayerStatsImport').then(module => ({ default: module.AdminPlayerStatsImport })));
 
@@ -55,10 +54,8 @@ const navGroups = [
     items: [
       { href: '/', label: 'Overview', icon: LayoutDashboard },
       { href: '/this-week', label: 'This week', icon: CalendarDays },
-      { href: '/live-predictions', label: 'Live predictions', icon: Target },
       { href: '/odds', label: 'Odds board', icon: SlidersHorizontal },
       { href: '/line-movement', label: 'Line movement', icon: LineChart },
-      { href: '/initial-line-audit', label: 'First-line picks', icon: FileSearch },
     ],
   },
   {
@@ -66,8 +63,6 @@ const navGroups = [
     items: [
       { href: '/injuries', label: 'Injuries', icon: Activity },
       { href: '/depth-charts', label: 'Depth charts', icon: ListFilter },
-      { href: '/backtesting', label: 'Backtesting', icon: History },
-      { href: '/model-lab', label: 'Model lab', icon: Sparkles },
     ],
   },
   {
@@ -76,10 +71,8 @@ const navGroups = [
       { href: '/data-health', label: 'Data health', icon: Database },
       { href: '/imagery-review', label: 'Image review', icon: UserRound },
       { href: '/feature-audit', label: 'Feature audit', icon: FileSearch },
-      { href: '/evaluation-audit', label: 'Evaluation audit', icon: Microscope },
       { href: '/personnel-context', label: 'Personnel & context', icon: UserRound },
       { href: '/usage-analytics', label: 'Usage analytics', icon: ChartNoAxesColumnIncreasing },
-      { href: '/performance', label: 'Performance', icon: BarChart3 },
       { href: '/settings', label: 'Settings', icon: Settings2 },
     ],
   },
@@ -98,14 +91,6 @@ function formatDate(value?: string | null, includeTime = false) {
     day: 'numeric',
     ...(includeTime ? { hour: 'numeric', minute: '2-digit' } : {}),
   }).format(date);
-}
-
-function formatPercent(value?: number | null) {
-  return value === null || value === undefined ? '—' : `${value.toFixed(1)}%`;
-}
-
-function formatUnits(value?: number | null) {
-  return value === null || value === undefined ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(1)}u`;
 }
 
 function formatPrice(price?: number | null) {
@@ -439,36 +424,17 @@ function Dashboard() {
   if (summary.isLoading) return <><PageHeader eyebrow="Overview" title="The weekly read" detail="A clear view of the current market before you make a decision." /><div className="grid gap-4 md:grid-cols-3"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div><div className="mt-5"><LoadingPanel /></div></>;
   if (summary.isError || !summary.data) return <><PageHeader eyebrow="Overview" title="The weekly read" detail="A clear view of the current market before you make a decision." /><ErrorPanel /></>;
   const data = summary.data;
-  const topEdges = data.topEdges ?? [];
-  const ledger = [{ label: 'ATS', metric: data.ats, icon: Target }, { label: 'Moneyline', metric: data.moneyline, icon: TrendingUp }, { label: 'Totals', metric: data.totals, icon: Gauge }];
   return (
     <>
       <PageHeader eyebrow={`Season ${data.season} / Week ${data.currentWeek ?? '—'}`} title="The weekly read" detail="A clear view of the current market before you make a decision." actions={<Link href="/admin/this-week" className="button button-primary" data-testid="link-view-week"><CalendarDays className="h-4 w-4" /> View this week</Link>} />
-      <div className="overview-banner">
-        <div><p className="eyebrow text-accent">MODEL OPERATING STATUS</p><h2 className="banner-title">{data.modelStatus === 'not_trained' ? 'Model not yet trained' : 'Production model online'}</h2><p className="banner-copy">{data.modelStatus === 'not_trained' ? 'No probabilities or edges will be shown until a trained model is promoted. This is intentional.' : 'Current production signals are available for review.'}</p></div>
-        <div className="banner-side"><StatusPill status={data.modelStatus}>{data.modelStatus === 'not_trained' ? 'Not trained' : 'Available'}</StatusPill><span className="font-mono text-[10px] text-white/45">LAST CHECK {formatDate(new Date().toISOString(), true).toUpperCase()}</span></div>
-      </div>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Games this week" value={String(data.gamesThisWeek)} detail={`Week ${data.currentWeek ?? '—'} schedule`} icon={CalendarDays} accent />
-        <MetricCard label="ATS record" value={data.ats.record || '—'} detail={`${formatPercent(data.ats.winRate)} win rate · ${formatUnits(data.ats.units)}`} icon={Target} />
-        <MetricCard label="Average CLV" value={formatPercent(data.averageClv)} detail="Closing line value" icon={TrendingUp} />
-        <MetricCard label="Model gate" value={data.modelStatus === 'not_trained' ? 'Locked' : 'Open'} detail="No fabricated probabilities" icon={ShieldCheck} />
       </div>
       <Panel eyebrow="Schedule" title="Upcoming matchups" className="mt-5" action={<Link href="/admin/this-week" className="text-xs font-semibold text-accent hover:underline" data-testid="link-full-schedule">View full schedule</Link>}>
         {upcoming.isLoading ? <div className="space-y-3"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : upcoming.isError ? <ErrorPanel message="The current week schedule is temporarily unavailable." /> : upcoming.data?.length ? <div className="game-list">{upcoming.data.slice(0, 4).map((game) => <GameRow key={game.gameId} game={game} />)}</div> : <EmptyPanel title="No upcoming matchups available" detail="The schedule will appear here when current-week games are available from the data service." icon={CalendarDays} />}
       </Panel>
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
-        <Panel eyebrow="Signal queue" title="Top edges" action={<span className="section-meta">{topEdges.length} surfaced</span>}>
-          {topEdges.length > 0 ? <div className="divide-y divide-border">{topEdges.map((edge, index) => <Link href={`/admin/games/${edge.gameId}`} key={edge.gameId} className="edge-row" data-testid={`link-edge-${edge.gameId}`}><div className="edge-index">0{index + 1}</div><div className="min-w-0 flex-1"><p className="font-semibold text-ink">{edge.label}</p><p className="mt-1 truncate text-xs text-muted-foreground">{edge.detail}</p></div><ChevronRight className="h-4 w-4 text-muted-foreground" /></Link>)}</div> : <EmptyPanel title="No edges are being surfaced" detail="The model gate is closed. Once training completes, qualifying edges will appear here with a direct path to the game." icon={Target} />}
-        </Panel>
-        <Panel eyebrow="Data observability" title="Freshness" action={<Link href="/admin/data-health" className="text-xs font-semibold text-accent hover:underline" data-testid="link-data-health">View health</Link>}>
-          {health.isLoading ? <div className="space-y-3"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : health.isError ? <ErrorPanel message="Provider health is temporarily unavailable." /> : health.data?.length ? <div className="space-y-3">{health.data.slice(0, 4).map((item) => <FreshnessCard key={item.provider} item={item} />)}</div> : <EmptyPanel title="No provider checks yet" detail="Health records will appear when the first provider sync is captured." icon={Database} />}
-        </Panel>
-      </div>
-      <Panel eyebrow="Season ledger" title="Performance snapshot" className="mt-5">
-        <div className="grid gap-3 md:grid-cols-3">
-          {ledger.map(({ label, metric, icon: Icon }) => <div className="ledger-card" key={label}><div className="flex items-center justify-between"><span className="metric-label">{label}</span><Icon className="h-4 w-4 text-muted-foreground" /></div><div className="mt-3 flex items-end justify-between"><span className="font-display text-2xl font-semibold text-ink">{metric.record || '—'}</span><span className="font-mono text-xs text-muted-foreground">{formatUnits(metric.units)}</span></div><div className="mt-3 h-1 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(0, Math.min(100, metric.winRate ?? 0))}%` }} /></div><p className="mt-2 text-xs text-muted-foreground">{formatPercent(metric.winRate)} win rate · {formatPercent(metric.roi)} ROI</p></div>)}
-        </div>
+      <Panel eyebrow="Data observability" title="Freshness" className="mt-5" action={<Link href="/admin/data-health" className="text-xs font-semibold text-accent hover:underline" data-testid="link-data-health">View health</Link>}>
+        {health.isLoading ? <div className="space-y-3"><Skeleton className="h-16" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : health.isError ? <ErrorPanel message="Provider health is temporarily unavailable." /> : health.data?.length ? <div className="space-y-3">{health.data.slice(0, 4).map((item) => <FreshnessCard key={item.provider} item={item} />)}</div> : <EmptyPanel title="No provider checks yet" detail="Health records will appear when the first provider sync is captured." icon={Database} />}
       </Panel>
     </>
   );
@@ -481,7 +447,7 @@ function GameRow({ game }: { game: any }) {
       <div className="game-date"><span>{formatDate(game.gameDate)}</span><small>{game.kickoffTime ? formatDate(game.kickoffTime, true) : 'Time TBD'}</small></div>
       <div className="matchup"><div className="team-side"><span className="team-abbr">{game.awayTeam.abbreviation}</span><span>{game.awayTeam.teamName}</span></div><span className="at-mark">@</span><div className="team-side team-home"><span className="team-abbr">{game.homeTeam.abbreviation}</span><span>{game.homeTeam.teamName}</span></div></div>
       <div className="hidden text-xs text-muted-foreground lg:block">{game.venue || 'Venue pending'}{game.broadcast ? <><br /><span className="font-mono text-[10px]">{game.broadcast}</span></> : null}</div>
-      <div className="game-score">{isFinal ? <><span>{game.finalAwayScore ?? '—'} — {game.finalHomeScore ?? '—'}</span><small>FINAL</small></> : <><StatusPill status={game.modelStatus}>{game.modelStatus === 'not_trained' ? 'Model not trained' : 'Ready'}</StatusPill><small>{game.latestOdds?.length ?? 0} quotes</small></>}</div>
+      <div className="game-score">{isFinal ? <><span>{game.finalAwayScore ?? '—'} — {game.finalHomeScore ?? '—'}</span><small>FINAL</small></> : <><span>{game.latestOdds?.length ?? 0}</span><small>QUOTES</small></>}</div>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </Link>
   );
@@ -498,11 +464,10 @@ function ThisWeek() {
   return (
     <>
       <PageHeader eyebrow={`Season ${season} / Week ${week}`} title="This week" detail="Browse preserved regular-season and postseason slates. The current week follows ESPN automatically after the Monday game window closes." actions={<><select className="week-select" aria-label="Select NFL week" value={week} onChange={(event) => setSelectedWeek(Number(event.target.value))} data-testid="select-week">{Array.from({ length: 22 }, (_, index) => index + 1).map((value) => <option value={value} key={value}>{value <= 18 ? `Week ${value}` : `Postseason ${value - 18}`}</option>)}</select><button type="button" className="button button-subtle" onClick={() => games.refetch()} data-testid="button-refresh-games"><RefreshCw className={cx('h-4 w-4', games.isFetching && 'animate-spin')} /> Refresh</button></>} />
-      <div className="signal-strip"><div><span className="strip-label">SCHEDULE COVERAGE</span><strong>{games.data?.length ?? '—'} games</strong></div><div><span className="strip-label">TEAM INDEX</span><strong>{teams.data?.length ?? '—'} teams</strong></div><div><span className="strip-label">MODEL STATE</span><StatusPill status={summary.data?.modelStatus}>{summary.data?.modelStatus === 'not_trained' ? 'Not trained' : summary.data?.modelStatus ?? 'Checking'}</StatusPill></div><div className="hidden md:block"><span className="strip-label">CAPTURE WINDOW</span><strong>Current quotes</strong></div></div>
+      <div className="signal-strip"><div><span className="strip-label">SCHEDULE COVERAGE</span><strong>{games.data?.length ?? '—'} games</strong></div><div><span className="strip-label">TEAM INDEX</span><strong>{teams.data?.length ?? '—'} teams</strong></div><div className="hidden md:block"><span className="strip-label">CAPTURE WINDOW</span><strong>Current quotes</strong></div></div>
       <Panel className="mt-5" title="Current-week slate" eyebrow="Market board" action={<span className="section-meta">Click a game for detail</span>}>
         {games.isLoading ? <div className="space-y-2"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : games.isError ? <ErrorPanel /> : games.data?.length ? <div className="game-list">{games.data.map((game) => <GameRow key={game.gameId} game={game} />)}</div> : <EmptyPanel title="No games returned for this week" detail="The live schedule is empty for the current season and week. Check the API connection or return when the schedule is published." icon={CalendarDays} />}
       </Panel>
-      {summary.data?.modelStatus === 'not_trained' && <div className="callout callout-warn mt-5"><AlertTriangle className="h-4 w-4 shrink-0" /><div><strong>Model outputs are intentionally withheld.</strong><p>Odds and schedule data can be reviewed now. No probability, pick, or edge is inferred until a trained model is available.</p></div></div>}
     </>
   );
 }
@@ -643,61 +608,17 @@ function LineHistory({ gameId }: { gameId: string }) {
 function GameDetail() {
   const { gameId = '' } = useParams<{ gameId: string }>();
   const game = useGetGame(gameId, { query: { queryKey: getGetGameQueryKey(gameId), staleTime: 30000 } });
-  const predictionDetail = useQuery({
-    queryKey: ['game-prediction', gameId],
-    queryFn: async () => {
-      const response = await fetch(`/api/predictions/games/${encodeURIComponent(gameId)}`, { credentials: 'include' });
-      if (!response.ok) throw new Error('Game prediction unavailable');
-      return response.json() as Promise<any>;
-    },
-    staleTime: 30000,
-  });
   if (game.isLoading) return <><PageHeader eyebrow="Game detail" title="Loading game" detail="Resolving the latest game record." /><LoadingPanel /></>;
   if (game.isError || !game.data) return <><PageHeader eyebrow="Game detail" title="Game unavailable" detail={`Could not resolve ${gameId}.`} /><ErrorPanel /></>;
   const item = game.data;
   const odds = item.latestOdds ?? [];
-  const detail = predictionDetail.data;
-  const prediction = detail?.prediction;
-  const model = detail?.model;
-  const market = detail?.market;
-  const modelAvailable = Boolean(prediction && model);
-  const number = (value: unknown, digits = 1) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'Unavailable';
-  const probability = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : 'Unavailable';
-  const marketLine = (quote: any) => quote && typeof quote.point === 'number' ? `${quote.point > 0 ? '+' : ''}${quote.point} (${quote.sportsbook})` : 'Unavailable';
   return (
     <>
       <PageHeader eyebrow={`Week ${item.week} / ${formatDate(item.gameDate)}`} title={`${item.awayTeam.abbreviation} at ${item.homeTeam.abbreviation}`} detail={`${item.awayTeam.teamName} at ${item.homeTeam.teamName}${item.venue ? ` · ${item.venue}` : ''}`} actions={<Link href="/admin/this-week" className="button button-subtle" data-testid="link-back-week"><ChevronRight className="h-4 w-4 rotate-180" /> Back to slate</Link>} />
       <div className="game-hero"><div className="hero-team"><span className="hero-abbr">{item.awayTeam.abbreviation}</span><span>{item.awayTeam.teamName}</span><small>AWAY</small></div><div className="hero-center"><span className="hero-at">@</span><StatusPill status={item.gameStatus}>{item.gameStatus}</StatusPill><span className="text-xs text-sidebar-foreground/55">{item.kickoffTime ? formatDate(item.kickoffTime, true) : 'Kickoff TBD'}</span></div><div className="hero-team hero-team-right"><span className="hero-abbr">{item.homeTeam.abbreviation}</span><span>{item.homeTeam.teamName}</span><small>HOME</small></div></div>
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+      <div className="mt-5">
         <Panel eyebrow="Current market" title="Latest odds" action={<span className="section-meta">{odds.length} quotes</span>}>
           {odds.length ? <div className="odds-table"><div className="odds-head"><span>Book</span><span>Market</span><span>Selection</span><span>Point</span><span>Price</span></div>{odds.map((quote, index) => <div className="odds-row" key={`${quote.sportsbook}-${quote.market}-${quote.selection}-${index}`}><span className="font-semibold text-ink">{quote.sportsbook}</span><span>{quote.market}</span><span>{quote.selection}</span><span>{quote.point ?? '—'}</span><span className="font-mono font-medium text-ink">{quote.price > 0 ? `+${quote.price}` : quote.price}</span></div>)}</div> : <EmptyPanel title="No odds captured yet" detail="This game has a schedule record, but no current sportsbook quotes are attached to it." icon={SlidersHorizontal} />}
-        </Panel>
-        <Panel eyebrow="Production snapshot" title="Model read">
-          {predictionDetail.isLoading ? <LoadingPanel label="Loading production prediction" /> : predictionDetail.isError ? <ErrorPanel message="The production prediction could not be loaded." /> : modelAvailable ? <div className="space-y-4">
-            <div className="readiness-block"><div className="readiness-icon"><ShieldCheck className="h-5 w-5" /></div><div><StatusPill status="available">Phase 6 prediction available</StatusPill><p className="mt-3 text-sm leading-6 text-muted-foreground">Football-model outputs remain valid even when an individual sportsbook market is unavailable.</p></div></div>
-            <div className="grid grid-cols-2 gap-3">
-              <MetricCard label={`${item.homeTeam.abbreviation} projected`} value={number(prediction.projectedHomeScore)} detail={`${probability(prediction.homeWinProbability)} win probability`} icon={TrendingUp} />
-              <MetricCard label={`${item.awayTeam.abbreviation} projected`} value={number(prediction.projectedAwayScore)} detail={`${probability(prediction.awayWinProbability)} win probability`} icon={TrendingUp} />
-              <MetricCard label="Projected margin" value={number(prediction.projectedMargin)} detail={`${item.homeTeam.abbreviation} minus ${item.awayTeam.abbreviation}`} icon={Target} />
-              <MetricCard label="Projected total" value={number(prediction.projectedTotal)} detail="Combined points" icon={Gauge} />
-            </div>
-            <div className="rounded-xl border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
-              <p><strong className="text-ink">Spread:</strong> {marketLine(market?.spread)}</p>
-              <p className="mt-1"><strong className="text-ink">Total:</strong> {marketLine(market?.total)}</p>
-              <p className="mt-1"><strong className="text-ink">Moneyline:</strong> {market?.moneyline ? `${market.moneyline.price > 0 ? '+' : ''}${market.moneyline.price} (${market.moneyline.sportsbook})` : 'Unavailable'}</p>
-            </div>
-            <dl className="space-y-2 break-all text-xs text-muted-foreground">
-              <div><dt className="font-semibold text-ink">Spread model</dt><dd className="font-mono">{model.spreadModelVersion}</dd></div>
-              <div><dt className="font-semibold text-ink">Moneyline model</dt><dd className="font-mono">{model.moneylineModelVersion}</dd></div>
-              <div><dt className="font-semibold text-ink">Totals model</dt><dd className="font-mono">{model.totalsModelVersion}</dd></div>
-              <div><dt className="font-semibold text-ink">Feature version</dt><dd className="font-mono">{model.featureVersion}</dd></div>
-              <div><dt className="font-semibold text-ink">Prediction revision</dt><dd className="font-mono">#{model.snapshotId} · {model.snapshotLabel}</dd></div>
-              <div><dt className="font-semibold text-ink">Prediction timestamp</dt><dd>{formatDate(model.predictionTimestamp, true)}</dd></div>
-              <div><dt className="font-semibold text-ink">Sportsbook timestamp</dt><dd>{model.sportsbookSnapshotTimestamp ? formatDate(model.sportsbookSnapshotTimestamp, true) : 'Unavailable'}</dd></div>
-              <div><dt className="font-semibold text-ink">QB confidence</dt><dd>{probability(prediction.qbConfidence)}</dd></div>
-              <div><dt className="font-semibold text-ink">Sample quality</dt><dd>{prediction.lowSample ? 'Low sample' : 'Standard sample'}</dd></div>
-            </dl>
-          </div> : <div className="readiness-block"><div className="readiness-icon"><ShieldCheck className="h-5 w-5" /></div><div><StatusPill status="not_trained">Prediction unavailable</StatusPill><p className="mt-3 text-sm leading-6 text-muted-foreground">No valid production prediction snapshot exists for this game. Sportsbook availability does not change this football-model status.</p></div></div>}
         </Panel>
       </div>
       <div className="mt-5"><LineHistory gameId={gameId} /></div>
@@ -798,84 +719,10 @@ function FeatureAuditPage() {
     },
     staleTime: 30000,
   });
-  const liveInputs = useQuery({
-    queryKey: ['live-model-input-integrity'],
-    queryFn: async () => {
-      const response = await fetch('/api/features/live-input-integrity', { credentials: 'include' });
-      if (!response.ok) throw new Error('Live input integrity unavailable');
-      return response.json() as Promise<{
-        generatedAt: string;
-        modelSchemaStatus: 'valid' | 'invalid';
-        trustworthyUpcomingPredictions: boolean;
-        eligibleGames: number;
-        incompleteGames: number;
-        distinctEligibleVectors: number;
-        vectorsDiffer: boolean | null;
-        modelLifecycleEvidence: Array<{ family: string; modelVersion: string; trainedAt: string; promotedAt: string; immutableArtifactAvailable: boolean }>;
-        records: Array<{
-          gameId: string;
-          kickoffTime: string;
-          inputQualityStatus: 'ready' | 'incomplete';
-          requiredCount: number;
-          populatedCount: number;
-          missingCount: number;
-          legitimateZeroCount: number;
-          formerlyMissingZeroCount: number;
-          snapshotId: number | null;
-          causes: string[];
-          teams: Array<{
-            side: string;
-            abbreviation: string | null;
-            teamName: string | null;
-            phase6QbConfidence: number | null;
-            phase6QbUnavailableReason: string | null;
-            projectedStarter: { playerName: string | null; classification: string } | null;
-            phase7QbCertainty: number | null;
-            phase7QbUnavailableReason: string | null;
-            personnelCompleteness: number | null;
-            sampleQuality: number | null;
-          }>;
-        }>;
-      }>;
-    },
-    staleTime: 30000,
-  });
   const rows = audit.data ?? [];
   return (
     <>
-      <PageHeader eyebrow="Model data / Feature audit" title="Feature audit" detail="Audit exact active-model inputs for upcoming games, then inspect the cutoff-safe historical evidence beneath them." />
-      <Panel eyebrow="Active Phase 6 production vectors" title="Upcoming input integrity" className="mb-5" action={<button type="button" className="button button-subtle" onClick={() => liveInputs.refetch()}><RefreshCw className={cx('h-4 w-4', liveInputs.isFetching && 'animate-spin')} /> Refresh</button>}>
-        {liveInputs.isLoading ? <LoadingPanel label="Auditing upcoming model inputs" /> : liveInputs.isError || !liveInputs.data ? <ErrorPanel message="The live model input audit could not be loaded." /> : (
-          <div>
-            <div className="grid gap-3 md:grid-cols-4">
-              {[
-                { title: 'Model schema', value: liveInputs.data.modelSchemaStatus, good: liveInputs.data.modelSchemaStatus === 'valid', detail: liveInputs.data.modelSchemaStatus === 'valid' ? 'Exact schema and fitted artifacts verified.' : 'Immutable fitted artifacts are unavailable.' },
-                { title: 'Eligible games', value: String(liveInputs.data.eligibleGames), good: liveInputs.data.incompleteGames === 0, detail: `${liveInputs.data.incompleteGames} incomplete.` },
-                { title: 'Vector identity', value: String(liveInputs.data.distinctEligibleVectors), good: liveInputs.data.vectorsDiffer !== false, detail: liveInputs.data.vectorsDiffer === false ? 'Duplicate vectors require review.' : 'Distinct eligible vectors.' },
-                { title: 'Trust status', value: liveInputs.data.trustworthyUpcomingPredictions ? 'Trustworthy' : 'Review required', good: liveInputs.data.trustworthyUpcomingPredictions, detail: liveInputs.data.trustworthyUpcomingPredictions ? 'All upcoming inputs are complete.' : 'Incomplete games remain pending.' },
-              ].map((item) => <div className="readiness-tile" key={item.title}><p className="text-xs font-semibold text-muted-foreground">{item.title}</p><div className="mt-3"><StatusPill status={item.good ? 'success' : 'bad'}>{item.value}</StatusPill></div><p className="mt-3 text-xs leading-5 text-muted-foreground">{item.detail}</p></div>)}
-            </div>
-            <div className="mt-5 space-y-3">
-              {liveInputs.data.records.map((record) => (
-                <div key={record.gameId} className="rounded-xl border border-border bg-secondary/20 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div><p className="font-semibold text-ink">{record.teams.map((team) => team.abbreviation ?? team.teamName ?? team.side).join(' at ')}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(record.kickoffTime, true)} · {record.gameId} · snapshot {record.snapshotId ?? 'none'}</p></div>
-                    <StatusPill status={record.inputQualityStatus === 'ready' ? 'success' : 'bad'}>{record.inputQualityStatus}</StatusPill>
-                  </div>
-                  <div className="mt-3 grid gap-2 text-xs md:grid-cols-5">
-                    <span>Required <strong>{record.requiredCount}</strong></span><span>Populated <strong>{record.populatedCount}</strong></span><span>Missing <strong>{record.missingCount}</strong></span><span>Observed zeroes <strong>{record.legitimateZeroCount}</strong></span><span>Prevented zero fallbacks <strong>{record.formerlyMissingZeroCount}</strong></span>
-                  </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {record.teams.map((team) => <div key={team.side} className="rounded-lg border border-border/70 p-3 text-xs"><p className="font-semibold text-ink">{team.side.toUpperCase()} · {team.teamName ?? team.abbreviation}</p><p className="mt-1 text-muted-foreground">Phase 6 QB confidence: {team.phase6QbConfidence ?? 'unavailable'} · Phase 7 certainty: {team.phase7QbCertainty ?? 'unavailable'} · personnel: {team.personnelCompleteness === null ? 'unavailable' : `${team.personnelCompleteness}%`} · sample: {team.sampleQuality === null ? 'unavailable' : `${team.sampleQuality}%`}</p><p className="mt-1 text-muted-foreground">Projected QB: {team.projectedStarter?.playerName ?? 'unavailable'} ({team.projectedStarter?.classification ?? 'no evidence'})</p>{(team.phase6QbUnavailableReason || team.phase7QbUnavailableReason) && <p className="mt-1 text-danger">{team.phase6QbUnavailableReason ?? team.phase7QbUnavailableReason}</p>}</div>)}
-                  </div>
-                  {!!record.causes.length && <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-danger">{record.causes.map((cause) => <li key={cause}>{cause}</li>)}</ul>}
-                </div>
-              ))}
-              {!liveInputs.data.records.length && <EmptyPanel title="No upcoming games" detail="There are no future scheduled NFL games to audit at this time." icon={CalendarDays} />}
-            </div>
-          </div>
-        )}
-      </Panel>
+      <PageHeader eyebrow="Model data / Feature audit" title="Feature audit" detail="Inspect the cutoff-safe pregame feature evidence recorded before each kickoff." />
       <Panel eyebrow="Historical point-in-time filters" title="Choose an observation" className="mb-5">
         <div className="grid gap-3 md:grid-cols-5">
           <label className="field-label">Season<input className="field-input mt-2" inputMode="numeric" placeholder="2021" value={season} onChange={(event) => setSeason(event.target.value)} /></label>
@@ -1282,306 +1129,6 @@ function PersonnelContextPage() {
   );
 }
 
-function Backtesting() {
-  return <ReadinessPage eyebrow="Research" title="Backtesting" detail="Walk-forward evaluation without hindsight or invented results." icon={History} blocks={['Walk-forward windows', 'Out-of-sample record', 'Calibration by segment']} />;
-}
-
-function ModelLab() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
-  const authHeaders = async (): Promise<Record<string, string>> => {
-    const token = await getToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-  const lab = useQuery({
-    queryKey: ['model-lab'],
-    queryFn: async () => {
-      const response = await fetch('/api/models/lab', { credentials: 'include' });
-      if (!response.ok) throw new Error('Model Lab unavailable');
-      return response.json() as Promise<any>;
-    },
-    staleTime: 30000,
-  });
-  const runs = (lab.data?.runs ?? []) as any[];
-  const promotions = useQuery({
-    queryKey: ['model-promotions'],
-    queryFn: async () => {
-      const response = await fetch('/api/models/promotions', { credentials: 'include', headers: await authHeaders() });
-      if (!response.ok) throw new Error('Promotion history unavailable');
-      return response.json() as Promise<any>;
-    },
-    staleTime: 30000,
-  });
-  const adminStatus = useQuery({
-    queryKey: ['admin-status', isSignedIn ? 'signed-in' : 'signed-out'],
-    queryFn: async () => {
-      const response = await fetch('/api/auth/admin-status', { credentials: 'include', headers: await authHeaders() });
-      if (!response.ok) throw new Error('Admin status unavailable');
-      return response.json() as Promise<any>;
-    },
-    staleTime: 30000,
-    enabled: isLoaded,
-  });
-  const drift = useQuery({
-    queryKey: ['model-drift'],
-    queryFn: async () => {
-      const response = await fetch('/api/models/drift', { credentials: 'include' });
-      if (!response.ok) throw new Error('Model drift unavailable');
-      return response.json() as Promise<any>;
-    },
-    staleTime: 30000,
-  });
-  const validationAudit = useQuery({
-    queryKey: ['prediction-validation-failures'],
-    queryFn: async () => {
-      const response = await fetch('/api/predictions/validation-failures?limit=25', { credentials: 'include' });
-      if (!response.ok) throw new Error('Prediction validation audit unavailable');
-      return response.json() as Promise<any>;
-    },
-    staleTime: 30000,
-  });
-  const [promoting, setPromoting] = useState<string | null>(null);
-  const [promotionMessage, setPromotionMessage] = useState<string | null>(null);
-  const [promotionSafetyResult, setPromotionSafetyResult] = useState<any>(null);
-  const [refitting, setRefitting] = useState(false);
-  const [importingRelease, setImportingRelease] = useState(false);
-  const importPhase61Release = async () => {
-    setImportingRelease(true);
-    setPromotionMessage(null);
-    try {
-      const response = await fetch('/api/admin/releases/phase6-1/import', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ confirmation: 'IMPORT_EXACT_PHASE6_1_ARTIFACTS' }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? 'Phase 6.1 release import was rejected');
-      const inserted = (body.candidates ?? []).filter((candidate: any) => candidate.outcome === 'inserted').length;
-      const existing = (body.candidates ?? []).filter((candidate: any) => candidate.outcome === 'already_present').length;
-      let status = body;
-      for (let attempt = 0; attempt < 24 && !status.featureRecovery?.complete; attempt += 1) {
-        await new Promise((resolve) => window.setTimeout(resolve, 5000));
-        const statusResponse = await fetch('/api/admin/releases/phase6-1/status', {
-          credentials: 'include',
-          headers: await authHeaders(),
-        });
-        status = await statusResponse.json().catch(() => ({}));
-        if (!statusResponse.ok) throw new Error(status.error ?? 'Phase 6.1 worker recovery status unavailable');
-      }
-      setPromotionMessage(
-        status.featureRecovery?.complete
-          ? `Verified Phase 6.1 artifacts: ${inserted} inserted, ${existing} already present. All 16 Week 2 inputs are ready and ${status.shadowInference?.returned ?? 0} shadow inferences completed. No model was promoted.`
-          : `Verified Phase 6.1 artifacts: ${inserted} inserted, ${existing} already present. Worker recovery is still pending (${status.featureRecovery?.gamesReady ?? 0}/16 Week 2 games ready). Promotion remains blocked.`,
-      );
-      await Promise.all([lab.refetch(), promotions.refetch()]);
-    } catch (error) {
-      setPromotionMessage(error instanceof Error ? error.message : 'Phase 6.1 release import was rejected');
-    } finally {
-      setImportingRelease(false);
-    }
-  };
-  const refit = async () => {
-    setRefitting(true);
-    setPromotionMessage(null);
-    try {
-      const response = await fetch('/api/models/refit-production', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({}),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? 'Production refit was rejected');
-      setPromotionMessage(`Phase 6 refit created ${body.runsCreated ?? 0} administrator-review candidates using ${body.trainingSeasons?.join(', ') ?? '2021–2025'} only. 2026 was excluded.`);
-      await lab.refetch();
-    } catch (error) {
-      setPromotionMessage(error instanceof Error ? error.message : 'Production refit was rejected');
-    } finally {
-      setRefitting(false);
-    }
-  };
-  const promote = async (run: any) => {
-    setPromoting(run.modelVersion);
-    setPromotionMessage(null);
-    setPromotionSafetyResult({
-      status: 'running',
-      checkedAt: null,
-      candidateModelVersion: run.modelVersion,
-      predictionValidation: { passed: 0, total: 0 },
-      leakage: { passed: 0, total: 0 },
-      failureDetails: [],
-    });
-    try {
-      const response = await fetch('/api/models/promote', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-        body: JSON.stringify({ modelVersion: run.modelVersion, notes: 'Explicit administrator review from Model Lab.' }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (body.safetyGate && typeof body.safetyGate === 'object') setPromotionSafetyResult(body.safetyGate);
-      if (!response.ok) {
-        setPromotionMessage(body.error ?? 'Promotion was rejected');
-        return;
-      }
-      setPromotionMessage(`${run.family} production model promoted. New live snapshots will use this version.`);
-      await Promise.all([promotions.refetch(), lab.refetch()]);
-    } catch (error) {
-      setPromotionMessage(error instanceof Error ? error.message : 'Promotion was rejected');
-    } finally {
-      setPromoting(null);
-    }
-  };
-  const families = [
-    { key: 'spread', label: 'Spread / ATS', description: 'Projected home margin. Cover probability remains unavailable without a legitimate historical sportsbook spread.', primary: 'mae', secondary: 'rmse' },
-    { key: 'moneyline', label: 'Moneyline', description: 'Home-win probability evaluated with accuracy, log loss, Brier score, and calibration.', primary: 'logLoss', secondary: 'brierScore' },
-    { key: 'totals', label: 'Game totals', description: 'Projected combined score. Over/Under probability is derived only when a pre-prediction market total exists.', primary: 'mae', secondary: 'rmse' },
-  ];
-  const metric = (run: any, key: string) => typeof run?.metrics?.[key] === 'number' ? Number(run.metrics[key]).toFixed(3) : '—';
-  const percentMetric = (run: any, key: string) => typeof run?.metrics?.[key] === 'number' ? `${(Number(run.metrics[key]) * 100).toFixed(1)}%` : '—';
-  const topFeatures = (run: any) => Object.entries(run?.featureImportance ?? {}).sort((left: any, right: any) => Number(right[1]) - Number(left[1])).slice(0, 6);
-  return (
-    <>
-       <PageHeader eyebrow="Research / Phase 6" title="Model lab" detail="Chronological validation plus explicit administrator-controlled artifact import and promotion." actions={<div className="flex gap-2"><button type="button" className="button button-subtle" onClick={() => lab.refetch()}><RefreshCw className={cx('h-4 w-4', lab.isFetching && 'animate-spin')} /> Refresh results</button><button type="button" className="button button-primary" disabled={importingRelease || !adminStatus.data?.isAdmin} onClick={importPhase61Release}>{importingRelease ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />} Import verified Phase 6.1 artifacts</button></div>} />
-       <div className="readiness-header">
-        <div className="readiness-header-icon"><ShieldCheck className="h-5 w-5" /></div>
-        <div>
-          <p className="eyebrow text-accent">PHASE 5 / CONTROLLED PROMOTION</p>
-          <h2 className="text-lg font-semibold text-ink">{Object.keys(promotions.data?.current ?? {}).length ? 'Production models are explicitly selected.' : 'No production model is active.'}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Feature version <span className="font-mono text-ink">{lab.data?.featureVersion ?? 'pregame-v3'}</span>. Phase 4 validation and prior promotions are append-only. {promotionMessage ?? 'No automatic promotion occurs.'}</p>
-        </div>
-       <Panel eyebrow="Phase 6.1 / Verified release artifacts" title="Candidates fitted through 2025" className="mt-5">
-         <p className="text-xs leading-5 text-muted-foreground">The release action imports only the three checksum-verified already-fitted artifacts. It is idempotent, append-only, creates no consumer prediction, and never promotes automatically.</p>
-         {lab.data?.refitCandidates?.length ? <div className="mt-4 grid gap-3 md:grid-cols-3">{lab.data.refitCandidates.map((candidate: any) => { const isActive = promotions.data?.current?.[candidate.family]?.modelVersion === candidate.modelVersion; return <div className="rounded-lg border border-border bg-secondary/30 p-3" key={candidate.modelVersion}><div className="flex items-center justify-between gap-2"><p className="eyebrow">{candidate.family} · Phase 6</p><StatusPill status={isActive ? 'success' : 'not_configured'}>{isActive ? 'Active' : 'Awaiting promotion'}</StatusPill></div><p className="mt-2 font-semibold capitalize text-ink">{String(candidate.algorithm).replaceAll('_', ' ')}</p><p className="mt-1 text-xs text-muted-foreground">Training cutoff {candidate.trainingCutoff} · {candidate.sampleSize} rows</p><button type="button" className="button button-subtle mt-3 w-full" disabled={isActive || promoting === candidate.modelVersion} onClick={() => promote(candidate)}>{isActive ? 'Phase 6 is active' : promoting === candidate.modelVersion ? 'Promoting…' : `Promote ${candidate.family} Phase 6`}</button></div>; })}</div> : <EmptyPanel title="No Phase 6 candidates yet" detail="Use the verified artifact import action above. Production fitting and automatic promotion are disabled." icon={History} />}
-       </Panel>
-        <Panel eyebrow="Promotion safety gate" title={promotionSafetyResult?.status === 'passed' ? 'PASS' : promotionSafetyResult?.status === 'failed' ? 'FAIL' : promotionSafetyResult?.status === 'running' ? 'Running checks' : 'No promotion attempt in this session'} className="mt-5" action={promotionSafetyResult ? <StatusPill status={promotionSafetyResult.status === 'passed' ? 'success' : promotionSafetyResult.status === 'failed' ? 'warning' : 'not_configured'}>{String(promotionSafetyResult.status).toUpperCase()}</StatusPill> : null}>
-          {promotionSafetyResult ? <div className="grid gap-3 text-xs md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Prediction validation</p><p className="mt-2 font-semibold text-ink">{promotionSafetyResult.status === 'running' ? 'Running…' : `${promotionSafetyResult.predictionValidation?.passed ?? 0} / ${promotionSafetyResult.predictionValidation?.total ?? 0} passed`}</p></div>
-            <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Pregame leakage</p><p className="mt-2 font-semibold text-ink">{promotionSafetyResult.status === 'running' ? 'Waiting…' : `${promotionSafetyResult.leakage?.passed ?? 0} / ${promotionSafetyResult.leakage?.total ?? 0} passed`}</p></div>
-            <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Checked</p><p className="mt-2 text-ink">{promotionSafetyResult.checkedAt ? formatDate(promotionSafetyResult.checkedAt, true) : 'In progress'}</p></div>
-            <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Candidate model</p><p className="mt-2 font-semibold text-ink">Selected candidate</p></div>
-            {promotionSafetyResult.failureDetails?.length ? <div className="rounded-lg border border-border bg-secondary/30 p-3 md:col-span-2 xl:col-span-4"><p className="eyebrow">Failure details</p><ul className="mt-2 space-y-1 text-muted-foreground">{promotionSafetyResult.failureDetails.map((detail: string, index: number) => <li key={`${detail}-${index}`}>{detail}</li>)}</ul></div> : null}
-          </div> : <p className="text-sm text-muted-foreground">The prediction-validation and pregame-leakage suites run before every administrator promotion. Results appear here without exposing command output or secrets.</p>}
-        </Panel>
-      </div>
-       <Panel eyebrow="Authorization audit" title={adminStatus.data?.isAdmin ? 'Administrator recognized' : 'Administrator access not recognized'} className="mt-5">
-         {!isLoaded || adminStatus.isLoading ? <LoadingPanel label="Checking Clerk session" /> : adminStatus.isError ? <ErrorPanel message="The current Clerk authorization could not be checked." /> : <div className="grid gap-3 text-xs md:grid-cols-3"><div><p className="eyebrow">Clerk user ID</p><p className="mt-1 break-all font-mono text-ink">{adminStatus.data?.userId ?? 'Not signed in'}</p></div><div><p className="eyebrow">Session role</p><p className="mt-1 font-mono text-ink">{adminStatus.data?.sessionRole ?? 'Not present'}{adminStatus.data?.clerkRoleAdmin ? ' · admin' : ''}</p></div><div><p className="eyebrow">ADMIN_USER_IDS</p><p className="mt-1 text-ink">{adminStatus.data?.adminUserIdsConfigured ? 'Configured' : 'Not configured'}</p></div><div className="md:col-span-3"><p className="text-muted-foreground">{adminStatus.data?.isAdmin ? 'This session may use the protected promotion endpoint.' : adminStatus.data?.requiredAdminUserId ? `Add this exact Clerk user ID to ADMIN_USER_IDS: ${adminStatus.data.requiredAdminUserId}` : isSignedIn ? 'Clerk shows you as signed in, but the API did not receive a usable session. Sign out and back in from this preview.' : 'Sign in with Clerk before attempting promotion.'}</p></div></div>}
-       </Panel>
-      {Object.keys(promotions.data?.current ?? {}).length ? <Panel eyebrow="Current production" title="Active model by market" className="mt-5"><div className="grid gap-3 md:grid-cols-3">{families.map((family) => { const active = promotions.data?.current?.[family.key]; const phase = active?.modelVersion?.startsWith('phase6-refit-') ? 'Phase 6' : active?.modelVersion?.startsWith('phase4-') ? 'Phase 4' : 'No active phase'; return <div className="rounded-lg border border-border bg-secondary/30 p-3" key={family.key}><div className="flex items-center justify-between gap-2"><p className="eyebrow">{family.label}</p><StatusPill status={phase === 'Phase 6' ? 'success' : 'not_configured'}>{phase}</StatusPill></div><p className="mt-2 font-semibold text-ink">{active?.algorithm?.replaceAll('_', ' ') ?? 'Not configured'}</p><p className="mt-1 text-xs text-muted-foreground">{phase} production model</p><p className="mt-2 text-[11px] text-muted-foreground">Promoted {active ? formatDate(active.promotedAt, true) : '—'}</p></div>; })}</div></Panel> : null}
-       <Panel eyebrow="Monitoring" title="Model drift" className="mt-5" action={<span className="section-meta">No automatic promotion</span>}>{drift.data?.results?.length ? <div className="grid gap-3 md:grid-cols-3">{drift.data.results.map((item: any) => <div className="rounded-lg border border-border bg-secondary/30 p-3" key={`${item.family}-${item.modelVersion}`}><div className="flex items-center justify-between gap-3"><p className="eyebrow">{item.family}</p><StatusPill status={item.status === 'elevated' ? 'warning' : item.status === 'stable' ? 'success' : 'not_configured'}>{item.status.replaceAll('_', ' ')}</StatusPill></div><p className="mt-2 text-xs font-semibold capitalize text-ink">{String(item.family).replaceAll('_', ' ')} production model</p><p className="mt-2 text-xs text-muted-foreground">Recent {item.recentMetric === null ? '—' : item.recentMetric.toFixed(3)} vs baseline {item.baselineMetric === null ? '—' : item.baselineMetric.toFixed(3)} · {item.completedPredictions} completed</p></div>)}</div> : <p className="text-sm text-muted-foreground">Drift monitoring becomes measurable after official production predictions are graded across more than one chronological window.</p>}</Panel>
-       <Panel eyebrow="Validation audit" title="Rejected prediction outputs" className="mt-5" action={<span className="section-meta">{validationAudit.data?.failures?.length ?? 0} recent</span>}>{validationAudit.isLoading ? <LoadingPanel label="Loading validation audit" /> : validationAudit.isError ? <ErrorPanel message="The validation audit could not be loaded." /> : validationAudit.data?.failures?.length ? <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Time</th><th className="px-3 py-3">Game</th><th className="px-3 py-3">Field</th><th className="px-3 py-3">Value / type</th><th className="px-3 py-3">Reason</th><th className="px-3 py-3">Model records</th></tr></thead><tbody>{validationAudit.data.failures.map((failure: any) => <tr className="border-b border-border/70 align-top" key={failure.id}><td className="px-3 py-3">{formatDate(failure.predictionTimestamp, true)}</td><td className="px-3 py-3 font-mono">{failure.gameId}</td><td className="px-3 py-3 font-semibold text-ink">{failure.failedField}</td><td className="px-3 py-3 font-mono">{failure.invalidValue ?? '—'} / {failure.invalidType ?? '—'}</td><td className="px-3 py-3 text-muted-foreground">{failure.failureReason}</td><td className="max-w-[280px] px-3 py-3 text-muted-foreground">{failure.spreadModelVersion ? 'Spread recorded' : 'Spread unavailable'}<br />{failure.moneylineModelVersion ? 'Moneyline recorded' : 'Moneyline unavailable'}<br />{failure.totalsModelVersion ? 'Totals recorded' : 'Totals unavailable'}</td></tr>)}</tbody></table></div> : <p className="text-sm text-muted-foreground">{validationAudit.data?.note ?? 'No rejected prediction outputs have been recorded.'}</p>}</Panel>
-      {lab.isLoading ? <LoadingPanel label="Loading walk-forward results" /> : lab.isError ? <ErrorPanel message="The model comparison could not be loaded." /> : (
-        <>
-          <div className="mt-5 grid gap-5 xl:grid-cols-3">
-            {families.map((family) => {
-              const recommendation = lab.data?.recommendations?.[family.key];
-              const active = promotions.data?.current?.[family.key]?.modelVersion === recommendation?.modelVersion;
-              return (
-                <Panel key={family.key} eyebrow={family.label} title={recommendation ? `${recommendation.algorithm.replaceAll('_', ' ')} candidate` : 'No candidate'} action={<StatusPill status={active ? 'success' : 'not_configured'}>{active ? 'Production' : 'Challenger'}</StatusPill>}>
-                  <p className="text-xs leading-5 text-muted-foreground">{family.description}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">{family.primary}</p><p className="mt-2 font-display text-2xl font-semibold text-ink">{recommendation ? metric(recommendation, family.primary) : '—'}</p></div>
-                    <div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">{family.secondary}</p><p className="mt-2 font-display text-2xl font-semibold text-ink">{recommendation ? metric(recommendation, family.secondary) : '—'}</p></div>
-                  </div>
-                  <p className="mt-3 text-[11px] leading-5 text-muted-foreground">{recommendation ? `Selected for review by lowest ${family.primary}; this is not an activation decision.` : 'No evaluated candidate is available.'}</p>
-                  {recommendation && <div className="mt-4">{active ? <span className="text-xs font-semibold text-accent">Active production model</span> : <button type="button" className="button button-subtle w-full" disabled={promoting === recommendation.modelVersion} onClick={() => promote(recommendation)}>{promoting === recommendation.modelVersion ? 'Promoting…' : 'Promote this candidate'}</button>}</div>}
-                </Panel>
-              );
-            })}
-          </div>
-          {families.map((family) => {
-            const familyRuns = runs.filter((run) => run.family === family.key);
-            return (
-                   <Panel key={family.key} eyebrow={family.label} title="Candidate comparison" className="mt-5" action={<span className="section-meta">{familyRuns.length} walk-forward records</span>}>
-                <div className="overflow-x-auto">
-                   <table className="w-full min-w-[1450px] text-left text-xs">
-                     <thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Algorithm</th><th className="px-3 py-3">Sample policy</th><th className="px-3 py-3">Train → test</th><th className="px-3 py-3">Feature version</th><th className="px-3 py-3">Sample</th><th className="px-3 py-3">{family.primary}</th><th className="px-3 py-3">{family.secondary}</th><th className="px-3 py-3">Calibration</th><th className="px-3 py-3">Trained</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Action</th></tr></thead>
-                     <tbody>{familyRuns.map((run) => { const active = promotions.data?.current?.[family.key]?.modelVersion === run.modelVersion; return <tr className="border-b border-border/70 align-top" key={run.modelVersion}><td className="px-3 py-3 font-semibold capitalize text-ink">{String(run.algorithm).replaceAll('_', ' ')}</td><td className="px-3 py-3">{String(run.samplePolicy).replaceAll('_', ' ')}</td><td className="px-3 py-3">{(run.trainingSeasons ?? []).join(', ')} <span className="text-muted-foreground">→ {run.testSeason}</span></td><td className="px-3 py-3 font-mono">{run.featureVersion}</td><td className="px-3 py-3">{run.sampleSize}</td><td className="px-3 py-3 font-mono">{family.key === 'moneyline' ? percentMetric(run, family.primary) : metric(run, family.primary)}</td><td className="px-3 py-3 font-mono">{family.key === 'moneyline' ? metric(run, family.secondary) : metric(run, family.secondary)}</td><td className="px-3 py-3">{Array.isArray(run.calibration) ? `${run.calibration.filter((bucket: any) => bucket.predictions > 0).length} populated buckets` : 'Not applicable'}</td><td className="px-3 py-3 text-muted-foreground">{formatDate(String(run.trainedAt), true)}</td><td className="px-3 py-3">{active ? <StatusPill status="success">Production</StatusPill> : <StatusPill status="not_configured">Challenger</StatusPill>}</td><td className="px-3 py-3">{active ? <span className="text-[11px] text-muted-foreground">Active</span> : <button type="button" className="button button-subtle whitespace-nowrap" disabled={promoting === run.modelVersion} onClick={() => promote(run)}>{promoting === run.modelVersion ? 'Promoting…' : 'Promote model'}</button>}</td></tr>; })}</tbody>
-                  </table>
-                </div>
-              </Panel>
-            );
-          })}
-          <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-            <Panel eyebrow="Probability quality" title="Moneyline calibration">
-              {(() => {
-                const run = lab.data?.recommendations?.moneyline;
-                const buckets = Array.isArray(run?.calibration) ? run.calibration.filter((bucket: any) => bucket.predictions > 0) : [];
-                return buckets.length ? <div className="odds-table"><div className="odds-head"><span>Bucket</span><span>Predicted</span><span>Actual</span><span>Predictions</span><span>Gap</span></div>{buckets.map((bucket: any) => <div className="odds-row" key={bucket.bucket}><span>{bucket.bucket}</span><span>{formatPercent(bucket.predictedProbability * 100)}</span><span>{formatPercent(bucket.actualRate * 100)}</span><span>{bucket.predictions}</span><span>{formatPercent(Math.abs(bucket.predictedProbability - bucket.actualRate) * 100)}</span></div>)}</div> : <EmptyPanel title="No populated calibration buckets" detail="Calibration is calculated out of sample and remains empty when no candidate has test predictions in a bucket." icon={BarChart3} />;
-              })()}
-            </Panel>
-            <Panel eyebrow="Research notes" title="Market and promotion gates">
-              <div className="space-y-3 text-xs leading-5 text-muted-foreground">
-                <p><strong className="text-ink">Sportsbook evaluation:</strong> {lab.data?.marketEvaluation?.reason ?? 'Unavailable.'}</p>
-                <p><strong className="text-ink">Low-sample comparison:</strong> Each family is evaluated with low-sample games included and with low-sample games restricted. Early-season rows are not silently dropped.</p>
-                <p><strong className="text-ink">QB uncertainty:</strong> QB confidence, continuity, and starter-change inputs remain in the feature vector. Low-confidence rows are measured separately in the stored metrics.</p>
-                <p><strong className="text-ink">Not added:</strong> No subjective AI override, confidence score, bet sizing, Kelly staking, player props, or automated wagering.</p>
-              </div>
-            </Panel>
-          </div>
-          <Panel eyebrow="Interpretability" title="Most influential features" className="mt-5">
-            <div className="grid gap-5 md:grid-cols-3">{families.map((family) => {
-              const run = lab.data?.recommendations?.[family.key];
-              return <div key={family.key}><p className="text-sm font-semibold text-ink">{family.label}</p><div className="mt-3 space-y-2">{topFeatures(run).map(([name, value]: any) => <div key={name} className="flex items-center justify-between gap-3 text-xs"><span className="truncate text-muted-foreground">{name}</span><span className="font-mono text-ink">{(Number(value) * 100).toFixed(1)}%</span></div>)}{!run && <p className="text-xs text-muted-foreground">No feature importance available.</p>}</div></div>;
-            })}</div>
-          </Panel>
-        </>
-      )}
-    </>
-  );
-}
-
-function CurrentWeekReport() {
-  const report = useQuery({ queryKey: ['current-week-validation'], queryFn: async () => { const response = await fetch('/api/predictions/current-week', { credentials: 'include' }); if (!response.ok) throw new Error('Current-week report unavailable'); return response.json() as Promise<any>; }, staleTime: 30000 });
-  const data = report.data;
-  const formatDiff = (value: number | null | undefined, percent = false) => value === null || value === undefined ? 'Unavailable' : percent ? formatPercent(value * 100) : value.toFixed(2);
-  const rankingGroups = [{ key: 'spread', label: 'Absolute spread differential', value: (row: any) => row.difference?.spread, suffix: 'pts' }, { key: 'moneyline', label: 'Moneyline probability differential', value: (row: any) => row.difference?.moneyline, suffix: '%' }, { key: 'totals', label: 'Absolute totals differential', value: (row: any) => row.difference?.total, suffix: 'pts' }];
-  const reportStatus = data?.status === 'measured' ? 'Football model valid' : 'No valid football model';
-  return <Panel eyebrow="Current week / Analysis only" title={data?.season && data?.week ? `${data.season} · Week ${data.week}` : 'Current NFL week'} className="mt-5" action={<span className="section-meta">{reportStatus}</span>}>{report.isLoading ? <LoadingPanel label="Loading current-week rankings" /> : report.isError ? <ErrorPanel message="The current-week report could not be loaded." /> : <><p className="text-xs leading-5 text-muted-foreground">{data?.note ?? 'Independent rankings only. Missing values are never imputed.'}</p><div className="mt-4 grid gap-4 xl:grid-cols-3">{rankingGroups.map((group) => <div className="rounded-lg border border-border bg-secondary/20 p-3" key={group.key}><p className="eyebrow">{group.label}</p><div className="mt-2 space-y-2">{(data?.rankings?.[group.key === 'total' ? 'totals' : group.key] ?? []).map((row: any) => <div className="flex items-center justify-between gap-3 text-xs" key={row.gameId}><span className="truncate text-ink">{row.awayTeam} @ {row.homeTeam}</span><span className="shrink-0 font-mono text-ink">{group.value(row) === null || group.value(row) === undefined ? 'Unavailable' : `${formatDiff(group.value(row), group.key === 'moneyline')} ${group.suffix}`}</span></div>)}{!(data?.rankings?.[group.key === 'total' ? 'totals' : group.key] ?? []).length && <p className="text-xs text-muted-foreground">No upcoming games.</p>}</div></div>)}</div><div className="mt-5 overflow-x-auto"><table className="w-full min-w-[1200px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Game</th><th className="px-3 py-3">Projected score / margin / total</th><th className="px-3 py-3">Market spread / total</th><th className="px-3 py-3">Win probability / no-vig</th><th className="px-3 py-3">Differences</th><th className="px-3 py-3">Previous vs current</th></tr></thead><tbody>{(data?.games ?? []).map((row: any) => <tr className="border-b border-border/70 align-top" key={row.gameId}><td className="px-3 py-3"><p className="font-semibold text-ink">{row.awayTeam} @ {row.homeTeam}</p><p className="mt-1 text-muted-foreground">{formatDate(row.kickoffTime, true)} · {row.status === 'measured' ? 'Measured' : row.status === 'partial_market_data' ? 'Football model valid; market comparisons partial' : `Missing: ${row.missing.join(', ')}`}</p><p className="mt-1 text-[10px] text-muted-foreground">Model: {row.componentStatus?.modelData ?? 'unknown'} · spread {row.componentStatus?.spreadComparison ?? 'unknown'} · ML {row.componentStatus?.moneylineComparison ?? 'unknown'} · total {row.componentStatus?.totalsComparison ?? 'unknown'}</p></td><td className="px-3 py-3 font-mono">{row.prediction ? `${row.prediction.projectedHomeScore?.toFixed(1)}–${row.prediction.projectedAwayScore?.toFixed(1)} / ${row.prediction.projectedMargin?.toFixed(1)} / ${row.prediction.projectedTotal?.toFixed(1)}` : 'Unavailable'}</td><td className="px-3 py-3 font-mono">{row.market ? `${row.market.spread?.point ?? '—'} / ${row.market.total?.point ?? '—'}` : 'Unavailable'}</td><td className="px-3 py-3 font-mono">{row.prediction ? `${formatPercent(row.prediction.homeWinProbability * 100)} / ${formatPercent(row.prediction.awayWinProbability * 100)} · ${row.market?.noVigHomeProbability === null || row.market?.noVigHomeProbability === undefined ? '—' : formatPercent(row.market.noVigHomeProbability * 100)} / ${row.market?.noVigAwayProbability === null || row.market?.noVigAwayProbability === undefined ? '—' : formatPercent(row.market.noVigAwayProbability * 100)}` : 'Unavailable'}</td><td className="px-3 py-3 font-mono">{row.difference ? `${formatDiff(row.difference.spread)} / ${formatDiff(row.difference.moneyline, true)} / ${formatDiff(row.difference.total)}` : 'Unavailable'}</td><td className="px-3 py-3 font-mono">{row.previousPrediction ? <span>Prior {formatDate(row.previousPrediction.predictionTimestamp, true)}: {row.previousPrediction.projectedMargin?.toFixed(1)} margin / {row.previousPrediction.projectedTotal?.toFixed(1)} total / {formatPercent(row.previousPrediction.homeWinProbability * 100)} home</span> : 'No prior revision'}</td></tr>)}</tbody></table></div></>}</Panel>;
-}
-
-function LivePredictions() {
-  const { getToken } = useAuth();
-  const board = useQuery({ queryKey: ['live-predictions'], queryFn: async () => { const response = await fetch('/api/predictions/live', { credentials: 'include' }); if (!response.ok) throw new Error('Live predictions unavailable'); return response.json() as Promise<any>; }, staleTime: 30000 });
-  const predictions = board.data?.predictions ?? [];
-  const [generating, setGenerating] = useState(false);
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null);
-  const generate = async () => {
-    setGenerating(true);
-    setGenerationMessage(null);
-    try {
-      const token = await getToken();
-      const response = await fetch('/api/predictions/generate', { method: 'POST', credentials: 'include', headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? 'Official snapshot generation was rejected');
-      const skipped = (body.skippedNoVector ?? 0) + (body.skippedNoHomeTeam ?? 0) + (body.skippedNonFinite ?? 0);
-      const diagnostic = body.firstNonFinite ? ` Diagnostic: ${JSON.stringify(body.firstNonFinite)}` : '';
-      setGenerationMessage(`${body.snapshotsCreated ?? 0} immutable snapshot${body.snapshotsCreated === 1 ? '' : 's'} created across ${body.gamesConsidered ?? 0} upcoming games.${skipped ? ` ${skipped} game${skipped === 1 ? '' : 's'} skipped.${diagnostic}` : ''}`);
-      await board.refetch();
-    } catch (error) {
-      setGenerationMessage(error instanceof Error ? error.message : 'Official snapshot generation failed');
-    } finally {
-      setGenerating(false);
-    }
-  };
-  return <><PageHeader eyebrow="Production / Phase 5" title="Live predictions" detail="Immutable pre-kickoff snapshots generated only from explicitly promoted production models." actions={<div className="flex flex-wrap gap-2"><button type="button" className="button button-subtle" onClick={() => board.refetch()}><RefreshCw className={cx('h-4 w-4', board.isFetching && 'animate-spin')} /> Refresh</button><button type="button" className="button button-primary" onClick={generate} disabled={generating}>{generating ? 'Generating…' : 'Generate official snapshots'}</button></div>} /><div className="readiness-header"><div className="readiness-header-icon"><ShieldCheck className="h-5 w-5" /></div><div><p className="eyebrow text-accent">AUDIT RULES</p><h2 className="text-lg font-semibold text-ink">No recommendation layer is attached.</h2><p className="mt-1 text-sm text-muted-foreground">Model-versus-market edges, no-vig probabilities, and CLV are displayed as measured fields. Gridline does not choose a side, size a wager, or automate wagering.</p>{generationMessage && <p className="mt-2 text-xs font-semibold text-accent">{generationMessage}</p>}</div></div><CurrentWeekReport />{board.isLoading ? <LoadingPanel label="Loading production snapshots" /> : board.isError ? <ErrorPanel message="The production prediction board could not be loaded." /> : predictions.length ? <div className="mt-5 grid gap-4 xl:grid-cols-2">{predictions.map((prediction: any) => { const comparison = prediction.marketComparison ?? {}; const market = prediction.marketSnapshot?.markets ?? {}; const quoteLabel = (quote: any) => quote ? `${quote.point ?? 'ML'} ${quote.price > 0 ? `+${quote.price}` : quote.price}` : '—'; return <Panel key={prediction.id} eyebrow={prediction.snapshotLabel} title={prediction.gameId} action={<StatusPill status="success">Pre-kickoff</StatusPill>}><div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4"><div><p className="eyebrow">Kickoff</p><p className="mt-1 text-ink">{formatDate(prediction.kickoffTime, true)}</p></div><div><p className="eyebrow">Projected score</p><p className="mt-1 font-mono text-ink">{prediction.projectedHomeScore?.toFixed(1)}–{prediction.projectedAwayScore?.toFixed(1)}</p></div><div><p className="eyebrow">Margin / total</p><p className="mt-1 font-mono text-ink">{prediction.projectedMargin?.toFixed(1)} / {prediction.projectedTotal?.toFixed(1)}</p></div><div><p className="eyebrow">Home win probability</p><p className="mt-1 font-mono text-ink">{formatPercent((prediction.homeWinProbability ?? 0) * 100)}</p></div></div><div className="mt-4 grid gap-3 md:grid-cols-3"><div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Spread edge</p><p className="mt-1 font-mono text-ink">{comparison.spread?.pointEdge === null || comparison.spread?.pointEdge === undefined ? 'Unavailable' : `${comparison.spread.pointEdge.toFixed(2)} pts`}</p></div><div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Moneyline edge</p><p className="mt-1 font-mono text-ink">{comparison.moneyline?.homeProbabilityEdge === null || comparison.moneyline?.homeProbabilityEdge === undefined ? 'Unavailable' : formatPercent(comparison.moneyline.homeProbabilityEdge * 100)}</p></div><div className="rounded-lg border border-border bg-secondary/30 p-3"><p className="eyebrow">Total edge</p><p className="mt-1 font-mono text-ink">{comparison.totals?.pointEdge === null || comparison.totals?.pointEdge === undefined ? 'Unavailable' : `${comparison.totals.pointEdge.toFixed(2)} pts`}</p></div></div><div className="mt-4 rounded-lg border border-border bg-secondary/20 p-3"><p className="eyebrow">DraftKings / FanDuel comparison</p><div className="mt-2 grid grid-cols-3 gap-2 text-[11px]"><div><span className="text-muted-foreground">Spread</span><p className="font-mono text-ink">{quoteLabel(market.spread?.draftKings)} / {quoteLabel(market.spread?.fanDuel)}</p></div><div><span className="text-muted-foreground">Moneyline</span><p className="font-mono text-ink">{quoteLabel(market.moneyline?.draftKings)} / {quoteLabel(market.moneyline?.fanDuel)}</p></div><div><span className="text-muted-foreground">Total</span><p className="font-mono text-ink">{quoteLabel(market.total?.draftKings)} / {quoteLabel(market.total?.fanDuel)}</p></div></div><p className="mt-2 text-[11px] text-muted-foreground">No-vig home probability: {typeof market.moneyline?.noVigHomeProbability === 'number' ? formatPercent(market.moneyline.noVigHomeProbability * 100) : 'Unavailable'}</p></div><p className="mt-4 text-[11px] text-muted-foreground">Feature {prediction.featureVersion} · training {prediction.trainingCutoff} · {prediction.lowSample ? 'low-sample feature row' : 'standard sample row'} · QB confidence {prediction.qbConfidence === null ? 'unavailable' : prediction.qbConfidence.toFixed(2)}</p></Panel>; })}</div> : <Panel eyebrow="Production / Phase 5" title="No live snapshots yet"><EmptyPanel title="No official production snapshots are available" detail="Promote one spread, moneyline, and totals model in Model Lab, then run the worker or the protected generation endpoint. Challenger results never appear here." icon={Target} /></Panel>}</>;
-}
-
-function Performance() {
-  const summary = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey(), staleTime: 30000 } });
-  const phase5 = useQuery({ queryKey: ['prediction-performance'], queryFn: async () => { const response = await fetch('/api/predictions/performance', { credentials: 'include' }); if (!response.ok) throw new Error('Prediction performance unavailable'); return response.json() as Promise<any>; }, staleTime: 30000 });
-  const data = summary.data;
-  const cards = [{ name: 'ATS', value: data?.ats, icon: Target }, { name: 'Moneyline', value: data?.moneyline, icon: TrendingUp }, { name: 'Totals', value: data?.totals, icon: Gauge }, { name: 'CLV', value: data?.averageClv, icon: LineChart }];
-  const phase5Family = phase5.data?.byFamily ?? {};
-  const breakdown = phase5.data?.breakdowns?.season ?? [];
-  const phase5Breakdowns = phase5.data?.breakdowns ?? {};
-  return <><PageHeader eyebrow="Review" title="Performance" detail="Track official prediction snapshots by market. Empty means unmeasured, not zero." /><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{cards.map(({ name, value, icon: Icon }) => <div className="performance-card" key={name}><div className="flex items-center justify-between"><span className="eyebrow">{name}</span><Icon className="h-4 w-4 text-accent" /></div>{name === 'CLV' ? <><div className="mt-5 font-display text-3xl font-semibold text-ink">{formatPercent(value as number | null | undefined)}</div><p className="mt-2 text-xs text-muted-foreground">Legacy ledger field</p></> : <><div className="mt-5 font-display text-3xl font-semibold text-ink">{summary.isLoading ? '—' : (value as any)?.record || '—'}</div><p className="mt-2 text-xs text-muted-foreground">{formatPercent((value as any)?.winRate)} win rate</p></>}</div>)}</div><Panel eyebrow="Phase 5 / Official snapshots" title="Model performance" className="mt-5"><div className="grid gap-4 md:grid-cols-3">{[{ key: 'spread', label: 'Spread', metric: phase5Family.spread?.mae, suffix: 'MAE pts' }, { key: 'moneyline', label: 'Moneyline', metric: typeof phase5Family.moneyline?.accuracy === 'number' ? phase5Family.moneyline.accuracy * 100 : null, suffix: 'accuracy' }, { key: 'totals', label: 'Totals', metric: phase5Family.totals?.mae, suffix: 'MAE pts' }].map((item) => <div className="rounded-lg border border-border bg-secondary/30 p-4" key={item.key}><p className="eyebrow">{item.label}</p><p className="mt-2 font-display text-2xl font-semibold text-ink">{item.metric === null || item.metric === undefined ? '—' : item.metric.toFixed(2)}</p><p className="mt-1 text-xs text-muted-foreground">{item.suffix} · {phase5Family[item.key]?.predictions ?? 0} graded</p></div>)}</div><p className="mt-4 text-xs leading-5 text-muted-foreground">{phase5.data?.note ?? 'Market metrics are only measured when legitimate pre-prediction and closing Gridline quotes exist. No synthetic lines or betting units are added.'}</p></Panel><Panel eyebrow="Breakdowns" title="By season" className="mt-5"><div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Season</th><th className="px-3 py-3">Predictions</th><th className="px-3 py-3">Spread MAE</th><th className="px-3 py-3">Totals MAE</th><th className="px-3 py-3">Moneyline accuracy</th><th className="px-3 py-3">Avg CLV</th></tr></thead><tbody>{breakdown.map((row: any) => <tr className="border-b border-border/70" key={row.group}><td className="px-3 py-3 font-semibold text-ink">{row.group}</td><td className="px-3 py-3">{row.predictions}</td><td className="px-3 py-3 font-mono">{row.spreadMae === null ? '—' : row.spreadMae.toFixed(2)}</td><td className="px-3 py-3 font-mono">{row.totalsMae === null ? '—' : row.totalsMae.toFixed(2)}</td><td className="px-3 py-3 font-mono">{typeof row.moneylineAccuracy === 'number' ? formatPercent(row.moneylineAccuracy * 100) : '—'}</td><td className="px-3 py-3 font-mono">{row.avgClv === null ? '—' : row.avgClv.toFixed(2)}</td></tr>)}</tbody></table>{!breakdown.length && <EmptyPanel title="No graded production snapshots" detail="Official final predictions are frozen at kickoff and graded only after a persisted final score is available." icon={BarChart3} />}</div></Panel><div className="mt-5 grid gap-5 xl:grid-cols-2">{[['Home / away', 'homeAway'], ['Favorite / underdog', 'favoriteUnderdog'], ['Edge bucket', 'edge'], ['Sample quality', 'sampleQuality'], ['QB confidence', 'qbConfidence'], ['Model version', 'model']].map(([label, key]) => <Panel key={key} eyebrow="Coverage" title={label}><div className="space-y-2">{(phase5Breakdowns[key] ?? []).map((row: any) => <div className="flex items-center justify-between gap-3 border-b border-border/70 py-2 text-xs last:border-0"><span className="font-semibold text-ink">{row.group}</span><span className="text-muted-foreground">{row.predictions} graded · {row.spreadMae === null ? '—' : `${row.spreadMae.toFixed(2)} spread MAE`}</span></div>)}{!(phase5Breakdowns[key] ?? []).length && <p className="text-xs text-muted-foreground">No graded snapshots yet.</p>}</div></Panel>)}</div></>;
-}
-
-function ReadinessPage({ eyebrow, title, detail, icon: Icon, blocks }: { eyebrow: string; title: string; detail: string; icon: IconType; blocks: string[] }) {
-  return <><PageHeader eyebrow={eyebrow} title={title} detail={detail} /><div className="feature-intro"><div className="feature-intro-icon"><Icon className="h-6 w-6" /></div><div><p className="eyebrow text-accent">STATUS / NOT TRAINED</p><h2 className="text-xl font-semibold text-ink">The workspace is ready. The evidence is not here yet.</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">No records are invented while the pipeline is being wired. This page reserves the workflow and makes the missing capture visible.</p></div></div><div className="mt-5 grid gap-4 md:grid-cols-3">{blocks.map((block, index) => <div className="feature-block" key={block}><span className="feature-number">0{index + 1}</span><h3>{block}</h3><StatusPill status="not_configured">Not populated</StatusPill><p>Awaiting the corresponding API surface and a verified capture.</p></div>)}</div><Panel eyebrow="Next checkpoint" title="What unlocks this page" className="mt-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent"><LockKeyhole className="h-5 w-5" /></div><p className="text-sm leading-6 text-muted-foreground">A trained model and historical records must exist before this view can publish an interpretation. The empty state is deliberate so a bettor can distinguish a missing feed from a weak signal.</p></div></Panel></>;
-}
-
 function SettingsPage() {
   const settings = useGetSettings({ query: { queryKey: getGetSettingsQueryKey(), staleTime: 60000 } });
   const update = useUpdateSettings();
@@ -1609,370 +1156,17 @@ function SettingsPage() {
   return <><PageHeader eyebrow="Configuration" title="Settings" detail="Control what the workspace considers actionable." actions={<button type="button" className="button button-primary" onClick={save} disabled={update.isPending} data-testid="button-save-settings">{update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}{saved ? 'Saved' : 'Save settings'}</button>} /><div className="settings-layout"><Panel eyebrow="Market inputs" title="Sportsbooks" action={<span className="section-meta">{sportsbooks.length} selected</span>}><p className="mb-4 text-sm leading-6 text-muted-foreground">Select the books that should be considered when a market snapshot is assembled.</p><div className="book-grid">{['DraftKings', 'FanDuel'].map((book) => <button type="button" key={book} onClick={() => toggleBook(book)} className={cx('book-toggle', sportsbooks.includes(book) && 'book-toggle-active')} data-testid={`button-toggle-${book.toLowerCase()}`}><span className="book-logo">{book === 'DraftKings' ? 'DK' : 'FD'}</span><span>{book}</span>{sportsbooks.includes(book) ? <Check className="ml-auto h-4 w-4 text-accent" /> : <span className="ml-auto h-4 w-4 rounded-full border border-border" />}</button>)}</div><div className="settings-divider" /><div className="flex items-start gap-3"><div className="provider-mark provider-neutral"><LockKeyhole className="h-4 w-4" /></div><div><p className="text-sm font-semibold text-ink">Odds API connection</p><p className="mt-1 text-xs text-muted-foreground">Secrets stay server-side. Configuration status is the only value exposed here.</p></div><StatusPill status={settings.data.oddsApiConfigured ? 'current' : 'not_configured'}>{settings.data.oddsApiConfigured ? 'Configured' : 'Not configured'}</StatusPill></div></Panel><Panel eyebrow="Decision rules" title="Thresholds"><div className="settings-form"><label className="field-label" htmlFor="minimum-edge">Minimum edge<span>percentage points</span></label><input id="minimum-edge" data-testid="input-minimum-edge" className="field-input" type="number" min="0" step="0.1" value={minimumEdge} onChange={(event) => setMinimumEdge(event.target.value)} /><p className="field-help">Only edges at or above this threshold can be surfaced.</p><label className="field-label" htmlFor="minimum-confidence">Minimum confidence<span>0–100</span></label><input id="minimum-confidence" data-testid="input-minimum-confidence" className="field-input" type="number" min="0" max="100" step="1" value={minimumConfidence} onChange={(event) => setMinimumConfidence(event.target.value)} /><p className="field-help">Sets the minimum confidence gate for any future model output.</p><label className="field-label" htmlFor="unit-size">Unit size<span>accounting unit</span></label><input id="unit-size" data-testid="input-unit-size" className="field-input" type="number" min="0.1" step="0.1" value={unitSize} onChange={(event) => setUnitSize(event.target.value)} /><p className="field-help">Used for ledger display, never treated as bankroll advice.</p><div className="toggle-line"><div><p className="text-sm font-semibold text-ink">Kelly sizing</p><p className="mt-1 text-xs text-muted-foreground">Keep disabled until model calibration and bankroll policy are verified.</p></div><button type="button" role="switch" aria-checked={kellyEnabled} onClick={() => setKellyEnabled((value) => !value)} className={cx('switch', kellyEnabled && 'switch-on')} data-testid="button-toggle-kelly"><span /></button></div></div></Panel></div><div className="callout callout-neutral mt-5"><ShieldCheck className="h-4 w-4 shrink-0 text-accent" /><p><strong>Configuration is not a prediction.</strong> These values shape future model gates and market selection; they do not create an edge while the model is untrained.</p></div></>;
 }
 
-function AuditSummary({ rows, total }: { rows: any[]; total: number }) {
-  if (!rows.length) return null;
-
-  const familySummary = (family: 'spread' | 'moneyline' | 'totals') => {
-    const familyRows = rows.filter((row) => row.family === family && typeof row.predictedValue === 'number' && typeof row.actualValue === 'number');
-    const weekly = new Map<string, { season: number; week: number; sum: number; count: number }>();
-    let absoluteError = 0;
-    let squaredError = 0;
-    let logLoss = 0;
-    let correct = 0;
-    for (const row of familyRows) {
-      const probability = family === 'moneyline' ? Math.min(1 - 1e-15, Math.max(1e-15, row.predictedValue)) : row.predictedValue;
-      const error = family === 'moneyline' ? (probability - row.actualValue) ** 2 : Math.abs(row.predictedValue - row.actualValue);
-      absoluteError += Math.abs(row.predictedValue - row.actualValue);
-      squaredError += (row.predictedValue - row.actualValue) ** 2;
-      if (family === 'moneyline') {
-        logLoss += -(row.actualValue * Math.log(probability) + (1 - row.actualValue) * Math.log(1 - probability));
-        correct += (probability >= 0.5 ? 1 : 0) === row.actualValue ? 1 : 0;
-      }
-      const key = `${row.testSeason}-${row.week}`;
-      const current = weekly.get(key) || { season: row.testSeason, week: row.week, sum: 0, count: 0 };
-      current.sum += error;
-      current.count++;
-      weekly.set(key, current);
-    }
-    const rankedWeeks = [...weekly.values()]
-      .map((item) => ({ ...item, metric: item.sum / item.count }))
-      .sort((left, right) => left.metric - right.metric);
-    return {
-      family,
-      rows: familyRows,
-      count: familyRows.length,
-      primary: family === 'moneyline'
-        ? familyRows.length ? squaredError / familyRows.length : null
-        : familyRows.length ? absoluteError / familyRows.length : null,
-      secondary: family === 'moneyline'
-        ? familyRows.length ? logLoss / familyRows.length : null
-        : familyRows.length ? Math.sqrt(squaredError / familyRows.length) : null,
-      accuracy: family === 'moneyline' && familyRows.length ? correct / familyRows.length : null,
-      best: rankedWeeks[0] ?? null,
-      worst: rankedWeeks.at(-1) ?? null,
-    };
-  };
-  const summaries = (['spread', 'moneyline', 'totals'] as const).map(familySummary).filter((item) => item.count);
-  const moneylineRows = rows.filter((row) => row.family === 'moneyline' && typeof row.predictedValue === 'number' && typeof row.actualValue === 'number');
-  const calibration = Array.from({ length: 10 }, (_, index) => {
-    const bucketRows = moneylineRows.filter((row) => Math.min(9, Math.floor(Math.max(0, Math.min(1, row.predictedValue)) * 10)) === index);
-    return {
-      label: `${index * 10}–${(index + 1) * 10}%`,
-      count: bucketRows.length,
-      predicted: bucketRows.length ? bucketRows.reduce((sum, row) => sum + row.predictedValue, 0) / bucketRows.length : null,
-      observed: bucketRows.length ? bucketRows.reduce((sum, row) => sum + row.actualValue, 0) / bucketRows.length : null,
-    };
-  });
-  const populatedCalibration = calibration.filter((bucket) => bucket.count);
-  const marketCount = rows.filter((row) => row.marketObservedAt).length;
-
-  return (
-    <div className="mb-6 space-y-5">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Cumulative evidence" value={String(rows.length)} detail={`${total} filtered immutable records`} icon={FileSearch} />
-        {summaries.map((summary) => (
-          <MetricCard
-            key={summary.family}
-            label={`${summary.family} cumulative`}
-            value={summary.primary === null ? '—' : summary.primary.toFixed(3)}
-            detail={summary.family === 'moneyline'
-              ? `Brier · log loss ${summary.secondary?.toFixed(3)} · ${((summary.accuracy ?? 0) * 100).toFixed(1)}% accuracy`
-              : `MAE · RMSE ${summary.secondary?.toFixed(3)}`}
-            icon={summary.family === 'moneyline' ? BarChart3 : Target}
-          />
-        ))}
-      </div>
-      <Panel eyebrow="Weekly error by family" title="Best and worst weeks">
-        <div className="grid gap-3 md:grid-cols-3">
-          {summaries.map((summary) => (
-            <div data-testid={`summary-weekly-${summary.family}`} className="rounded-xl border border-border bg-secondary/20 p-4" key={summary.family}>
-              <p className="eyebrow">{summary.family} · {summary.family === 'moneyline' ? 'Brier' : 'MAE'}</p>
-              <div className="mt-3 flex items-center justify-between gap-3 text-xs">
-                <div><p className="text-muted-foreground">Best</p><p className="mt-1 font-mono font-semibold text-ink">{summary.best ? `${summary.best.season} W${summary.best.week} · ${summary.best.metric.toFixed(3)}` : '—'}</p></div>
-                <div className="text-right"><p className="text-muted-foreground">Worst</p><p className="mt-1 font-mono font-semibold text-ink">{summary.worst ? `${summary.worst.season} W${summary.worst.week} · ${summary.worst.metric.toFixed(3)}` : '—'}</p></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Panel>
-      <Panel eyebrow="Moneyline probability quality" title="Calibration completeness" action={<span className="section-meta">{populatedCalibration.length} / 10 populated bins</span>}>
-        {moneylineRows.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left text-xs">
-              <thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Probability bin</th><th className="px-3 py-3">Mean predicted</th><th className="px-3 py-3">Observed home wins</th><th className="px-3 py-3">Gap</th><th className="px-3 py-3">Games</th></tr></thead>
-              <tbody>{calibration.map((bucket) => <tr className="border-b border-border/70" key={bucket.label}><td className="px-3 py-3 font-mono text-ink">{bucket.label}</td><td className="px-3 py-3 font-mono">{bucket.predicted === null ? 'Unavailable' : formatPercent(bucket.predicted * 100)}</td><td className="px-3 py-3 font-mono">{bucket.observed === null ? 'Unavailable' : formatPercent(bucket.observed * 100)}</td><td className="px-3 py-3 font-mono">{bucket.predicted === null || bucket.observed === null ? 'Unavailable' : formatPercent(Math.abs(bucket.predicted - bucket.observed) * 100)}</td><td className="px-3 py-3">{bucket.count}</td></tr>)}</tbody>
-            </table>
-          </div>
-        ) : <p className="text-sm text-muted-foreground">Not applicable: the filtered evidence contains no moneyline probability evaluations.</p>}
-        <p className="mt-4 text-[11px] leading-5 text-muted-foreground">Market history is independently available for {marketCount} of {rows.length} evaluations. Missing sportsbook observations are never inferred.</p>
-      </Panel>
-    </div>
-  );
-}
-
-function AuditRow({ row }: { row: any }) {
-  const delta = (typeof row.predictedValue === 'number' && typeof row.actualValue === 'number')
-    ? (row.predictedValue - row.actualValue).toFixed(2)
-    : '—';
-
-  const deltaColor = typeof row.predictedValue === 'number' && typeof row.actualValue === 'number'
-    ? (Math.abs(row.predictedValue - row.actualValue) < 1.0 ? 'text-emerald-500' : 'text-amber-500')
-    : 'text-muted-foreground';
-  const valueLabel = row.family === 'moneyline' ? 'Home win probability' : row.family === 'spread' ? 'Home margin' : 'Game total';
-  const predictedDisplay = typeof row.predictedValue !== 'number' ? '—' : row.family === 'moneyline' ? formatPercent(row.predictedValue * 100) : row.predictedValue.toFixed(1);
-  const actualDisplay = typeof row.actualValue !== 'number' ? '—' : row.family === 'moneyline' ? (row.actualValue === 1 ? 'Home win' : 'Away win') : row.actualValue.toFixed(1);
-
-  return (
-    <div className="audit-row" data-testid={`audit-row-${row.id}`}>
-      <div>
-        <div className="font-semibold text-ink">{row.gameId || 'Unknown Game'}</div>
-        <div className="mt-1 text-[9px] font-mono text-muted-foreground uppercase tracking-widest">{formatDate(row.kickoffTime, true)} · W{row.week || '?'}</div>
-      </div>
-
-      <div>
-        <StatusPill status={row.family}>{row.family}</StatusPill>
-        <div className="mt-1 text-[10px] font-mono text-muted-foreground">{row.modelVersion || 'v?'}</div>
-      </div>
-
-      <div>
-        <span className="font-mono text-[11px] font-medium text-ink">{row.evaluationStage || '—'}</span>
-        {row.lowSample && <span className="mt-1 block text-[9px] font-bold text-amber-600 uppercase">Low Sample</span>}
-      </div>
-
-      <div className="text-[11px] text-muted-foreground">
-        {row.marketSportsbook ? (
-          <>
-            <span className="block font-semibold text-ink">{row.marketSportsbook}</span>
-            <span className="mt-0.5 block font-mono">{row.marketSelection || '—'} {formatPoint(row.marketPoint)}</span>
-          </>
-        ) : (
-          <span className="italic text-muted-foreground/50">Market unavailable</span>
-        )}
-      </div>
-
-      <div className="text-right font-mono text-[11px] font-semibold text-ink">
-        <span className="block">{predictedDisplay}</span>
-        <span className="mt-1 block text-[9px] font-normal text-muted-foreground">{valueLabel}</span>
-      </div>
-
-      <div className="text-right font-mono text-[11px] text-ink">
-        <span className="block">{actualDisplay}</span>
-        <span className="mt-1 block text-[9px] text-muted-foreground">{row.actualAwayScore}–{row.actualHomeScore} · margin {formatPoint(row.actualMargin)} · total {row.actualTotal}</span>
-      </div>
-
-      <div className={cx('text-right font-mono text-[11px] font-semibold', delta !== '—' && deltaColor)}>
-        {delta !== '—' && Number(delta) > 0 ? `+${delta}` : delta}
-      </div>
-    </div>
-  );
-}
-
-function EvaluationAudit() {
-  const [testSeason, setTestSeason] = useState<string>('');
-  const [week, setWeek] = useState<string>('');
-  const [family, setFamily] = useState<string>('');
-  const [modelVersion, setModelVersion] = useState<string>('');
-  const [limit] = useState<number>(50);
-
-  const [cursorStack, setCursorStack] = useState<number[]>([]);
-  const [currentCursor, setCurrentCursor] = useState<number | null>(null);
-
-  const resetPagination = () => {
-    setCursorStack([]);
-    setCurrentCursor(null);
-  };
-
-  const handleFilterChange = (setter: (value: string) => void, value: string) => {
-    setter(value);
-    resetPagination();
-  };
-
-  const auditSearch = (cursor: number | null, pageLimit: number) => {
-    const search = new URLSearchParams();
-    if (testSeason) search.set('testSeason', testSeason);
-    if (week) search.set('week', week);
-    if (family) search.set('family', family);
-    if (modelVersion) search.set('modelVersion', modelVersion.trim());
-    search.set('limit', String(pageLimit));
-    if (cursor !== null) search.set('cursor', String(cursor));
-    return search;
-  };
-
-  const query = useQuery({
-    queryKey: ['evaluation-audit', testSeason, week, family, modelVersion, limit, currentCursor],
-    queryFn: async () => {
-      const search = auditSearch(currentCursor, limit);
-      const res = await fetch(`/api/models/evaluations/audit?${search.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch evaluation audit');
-      return res.json();
-    },
-    staleTime: 30000,
-  });
-
-  const cumulative = useQuery({
-    queryKey: ['evaluation-audit-cumulative', testSeason, week, family, modelVersion],
-    queryFn: async () => {
-      const rows: any[] = [];
-      let cursor: number | null = null;
-      let total = 0;
-      do {
-        const response: Response = await fetch(`/api/models/evaluations/audit?${auditSearch(cursor, 1000).toString()}`);
-        if (!response.ok) throw new Error('Failed to fetch cumulative evaluation audit');
-        const page: { rows?: any[]; total?: number; hasMore?: boolean; nextCursor?: number | null } = await response.json();
-        rows.push(...(page.rows ?? []));
-        total = page.total ?? rows.length;
-        cursor = page.hasMore && typeof page.nextCursor === 'number' ? page.nextCursor : null;
-      } while (cursor !== null);
-      return { rows, total };
-    },
-    staleTime: 30000,
-  });
-
-  const goNext = (nextCursor: number) => {
-    setCursorStack(prev => [...prev, currentCursor ?? 0]);
-    setCurrentCursor(nextCursor);
-  };
-
-  const goPrev = () => {
-    const prev = [...cursorStack];
-    const prevCursor = prev.pop();
-    setCursorStack(prev);
-    setCurrentCursor(prevCursor && prevCursor > 0 ? prevCursor : null);
-  };
-
-  return (
-    <>
-      <PageHeader
-        eyebrow="Review / Validation"
-        title="Evaluation Audit"
-        detail="Immutable evidence of model performance. Inspect game-level predictions, actual results, and market alignment boundaries."
-      />
-
-      <div className="mb-6 flex flex-wrap items-end gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Season</label>
-          <input type="number" min="2000" max="2100" className="input-text w-28" placeholder="All seasons" value={testSeason} onChange={e => handleFilterChange(setTestSeason, e.target.value)} data-testid="filter-season" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Week</label>
-          <select className="input-select" value={week} onChange={e => handleFilterChange(setWeek, e.target.value)} data-testid="filter-week">
-            <option value="">All Weeks</option>
-            {Array.from({ length: 22 }, (_, i) => i + 1).map(w => (
-              <option key={w} value={w}>Week {w}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Family</label>
-          <select className="input-select" value={family} onChange={e => handleFilterChange(setFamily, e.target.value)} data-testid="filter-family">
-            <option value="">All Families</option>
-            <option value="spread">Spread</option>
-            <option value="moneyline">Moneyline</option>
-            <option value="totals">Totals</option>
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Model Version</label>
-          <input type="text" className="input-text w-32" placeholder="e.g. v1.2" value={modelVersion} onChange={e => handleFilterChange(setModelVersion, e.target.value)} data-testid="filter-model" />
-        </div>
-
-        <button type="button" className="button button-subtle ml-auto h-[32px]" onClick={() => query.refetch()} data-testid="button-refresh-audit">
-          <RefreshCw className={cx('h-4 w-4', query.isFetching && 'animate-spin')} /> Refresh
-        </button>
-      </div>
-
-      <div data-testid="status-market-history-boundary" className="callout callout-neutral mb-6">
-        <LineChart className="h-4 w-4 shrink-0 text-accent" />
-        <p><strong>Historical market boundary:</strong> sportsbook history is shown only when an immutable pre-prediction observation exists. Missing market history remains unavailable and is never inferred.</p>
-      </div>
-
-      {cumulative.isLoading ? <div className="mb-6"><LoadingPanel label="Calculating cumulative audit metrics" /></div> : cumulative.data?.rows?.length ? <AuditSummary rows={cumulative.data.rows} total={cumulative.data.total} /> : null}
-
-      <Panel className="overflow-x-auto p-0" title="" eyebrow="">
-        <div className="min-w-[840px]">
-        <div className="audit-head hidden md:grid">
-          <span>Game & Stage</span>
-          <span>Model</span>
-          <span>Evaluation</span>
-          <span>Market</span>
-          <span className="text-right">Prediction</span>
-          <span className="text-right">Actual</span>
-          <span className="text-right">Delta</span>
-        </div>
-
-        <div>
-          {query.isLoading ? (
-            <div className="space-y-4 p-8">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : query.isError ? (
-            <div className="p-8">
-              <ErrorPanel message="Could not load evaluation audit records." />
-            </div>
-          ) : query.data?.rows?.length ? (
-            query.data.rows.map((row: any) => (
-              <AuditRow key={row.id} row={row} />
-            ))
-          ) : (
-            <div className="p-8">
-              <EmptyPanel title="No evaluations found" detail={query.data?.note ?? 'Adjust your filters to see more results.'} icon={Microscope} />
-            </div>
-          )}
-        </div>
-
-        {query.data?.rows?.length ? (
-          <div data-testid="text-evaluation-audit-note" className="border-t border-border bg-secondary/10 px-6 py-3 text-[11px] leading-5 text-muted-foreground">
-            {query.data.note}
-          </div>
-        ) : null}
-
-        {query.data && (
-          <div className="flex items-center justify-between border-t border-border bg-secondary/20 px-6 py-4">
-            <span className="font-mono text-xs text-muted-foreground">
-              Page {cursorStack.length + 1} · showing {query.data.rows?.length || 0} of {query.data.total || 0} records
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="button button-subtle"
-                disabled={cursorStack.length === 0}
-                onClick={goPrev}
-                data-testid="button-audit-prev"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                className="button button-subtle"
-                disabled={!query.data.hasMore}
-                onClick={() => goNext(Number(query.data.nextCursor))}
-                data-testid="button-audit-next"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-        </div>
-      </Panel>
-    </>
-  );
-}
-
 /** The administrator workspace, loaded only when an admin opens /admin. */
 export default function AdminRoutes() {
   return <AdminOnly><Switch>
-    <Route path="/admin" component={Dashboard} /><Route path="/admin/this-week" component={ThisWeek} /><Route path="/admin/games/:gameId" component={GameDetail} /><Route path="/admin/live-predictions" component={LivePredictions} />
+    <Route path="/admin" component={Dashboard} /><Route path="/admin/this-week" component={ThisWeek} /><Route path="/admin/games/:gameId" component={GameDetail} />
     <Route path="/admin/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route>
     <Route path="/admin/imagery-review" component={ImageryReview} />
-    <Route path="/admin/initial-line-audit" component={InitialLineAudit} />
-    <Route path="/admin/feature-audit" component={FeatureAuditPage} /><Route path="/admin/evaluation-audit" component={EvaluationAudit} /><Route path="/admin/personnel-context" component={PersonnelContextPage} /><Route path="/admin/usage-analytics" component={UsageAnalytics} /><Route path="/admin/odds" component={OddsBoard} />
+    <Route path="/admin/feature-audit" component={FeatureAuditPage} /><Route path="/admin/personnel-context" component={PersonnelContextPage} /><Route path="/admin/usage-analytics" component={UsageAnalytics} /><Route path="/admin/odds" component={OddsBoard} />
     <Route path="/admin/line-movement"><HealthPage kind="line-movement" eyebrow="Workspace / Market data" title="Line movement" detail="Historical capture for open, current, and closing prices." preferred="odds" /></Route>
     <Route path="/admin/injuries"><HealthPage kind="injuries" eyebrow="Signals / Availability" title="Injuries" detail="Freshness and meaningful availability readiness for each slate." preferred="injur" /></Route>
     <Route path="/admin/depth-charts"><HealthPage kind="depth-charts" eyebrow="Signals / Availability" title="Depth charts" detail="Snapshot readiness for role and personnel context." preferred="depth" /></Route>
-    <Route path="/admin/backtesting" component={Backtesting} /><Route path="/admin/model-lab" component={ModelLab} /><Route path="/admin/performance" component={Performance} /><Route path="/admin/settings" component={SettingsPage} /><Route component={NotFound} />
+    <Route path="/admin/settings" component={SettingsPage} /><Route component={NotFound} />
   </Switch></AdminOnly>;
 }
 

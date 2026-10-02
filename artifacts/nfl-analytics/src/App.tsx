@@ -19,8 +19,8 @@ const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
 const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
 const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
 const ConsumerPerformance = lazy(() => import('@/pages/consumer/ConsumerPerformance'));
+const Receipts = lazy(() => import('@/pages/consumer/Receipts'));
 const ConsumerMethodology = lazy(() => import('@/pages/consumer/ConsumerMethodology'));
-const ConsumerTrends = lazy(() => import('@/pages/consumer/ConsumerTrends'));
 const ConsumerUsage = lazy(() => import('@/pages/consumer/PlayerUsage'));
 const ConsumerRedZone = lazy(() => import('@/pages/consumer/RedZone'));
 const DefenseVsPositionLeague = lazy(() => import('@/pages/consumer/DefenseVsPositionPage'));
@@ -122,7 +122,7 @@ function Router() {
   // Public pages can render while Clerk initializes. Admin and account routes
   // still wait for a definitive identity before making an access decision.
   const publicRoute = location === '/' || location === '/games' || location.startsWith('/games/')
-    || location === '/performance' || location === '/methodology'
+    || location === '/performance' || location === '/receipts' || location === '/methodology'
     || location === '/defense-vs-position' || location === '/teams' || location === '/usage'
     || location === '/saved-games' || location === '/touchdowns' || location === '/props'
     || location === '/power-ratings' || location === '/qb-rankings'
@@ -138,6 +138,7 @@ function Router() {
     <Route path="/methodology"><ConsumerShell><ConsumerMethodology /></ConsumerShell></Route>
     <Route path="/weekly-picks"><Redirect to="/performance" replace /></Route>
     <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
+    <Route path="/receipts"><ConsumerShell><Receipts /></ConsumerShell></Route>
     <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
     <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
@@ -165,7 +166,7 @@ function Router() {
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
       <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
       <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
-      <Route path="/trends"><ConsumerShell><ConsumerTrends /></ConsumerShell></Route>
+      <Route path="/receipts"><ConsumerShell><Receipts /></ConsumerShell></Route>
       <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>

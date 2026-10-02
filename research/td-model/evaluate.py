@@ -2,12 +2,14 @@ import json
 import sys
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
+
+sys.path.insert(0, __file__.rsplit("/", 1)[0] if "/" in __file__ else ".")
+from features import SeedAveragedGBM  # noqa: E402
 
 df = pd.read_parquet(sys.argv[1] if len(sys.argv) > 1 else "td_dataset.parquet")
 df = df[(df.prior_games >= 1) & df.implied.notna() & (df.upcoming == 0)].copy()
@@ -36,8 +38,7 @@ def logit_model():
 
 
 def gbm_model():
-    return HistGradientBoostingClassifier(max_iter=400, learning_rate=0.03, max_leaf_nodes=15, min_samples_leaf=80,
-                                          l2_regularization=1.0, random_state=7)
+    return SeedAveragedGBM()
 
 
 def top_n_hit(frame, prob, n):

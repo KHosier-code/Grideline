@@ -10,7 +10,6 @@ function game(overrides: { gameId?: string; week?: number; kickoffTime?: string;
     gameStatus: 'STATUS_SCHEDULED', gameState: 'pregame', venue: null,
     matchup: { home: { name: 'Buffalo Bills', abbreviation: 'BUF', logoUrl: null }, away: { name: 'New England Patriots', abbreviation: 'NE', logoUrl: null } },
     finalScore: overrides.finalScore ?? null,
-    prediction: { modelLabel: 'Gridline Production Model', projectedHomeScore: 23, projectedAwayScore: 21, projectedMargin: 2, projectedTotal: 44, homeWinProbability: 0.55, awayWinProbability: 0.45 },
     market: { spread: quote(overrides.homeLine ?? -7, -110), moneyline: quote(null, -300), awayMoneyline: quote(null, 240), total: quote(48.5, -110),
       evidence: { available: true, capturedAt: null, message: null } },
   } as unknown as ConsumerGame;
@@ -22,9 +21,8 @@ const projection: ConsumerGameProjection = {
   factors: { qbEdge: 0.06, teamEdge: 0.1, passEdge: 0.1, rushEdge: 0.02, restDiff: 0, neutralSite: false }, projectedAt: '2026-09-30T00:00:00Z',
 };
 
-test('QB model projection wins over the legacy prediction and splits into scores', () => {
+test('QB model projection splits into scores', () => {
   const view = buildGameView(game(), projection);
-  assert.equal(view.projection?.source, 'qb-model');
   assert.equal(view.projection?.home.toFixed(1), '28.3');
   assert.equal(view.projection?.away.toFixed(1), '20.5');
   assert.equal(view.projection?.homeQb?.name, 'Josh Allen');
@@ -32,10 +30,12 @@ test('QB model projection wins over the legacy prediction and splits into scores
   assert.equal(view.vegas.favorite, 'home');
 });
 
-test('falls back to the legacy prediction when the QB model has no row', () => {
+test('a game without a QB model row is projection pending', () => {
   const view = buildGameView(game());
-  assert.equal(view.projection?.source, 'legacy');
-  assert.equal(view.projection?.margin, 2);
+  assert.equal(view.projection, null);
+  assert.equal(view.winner, null);
+  assert.equal(view.result, null);
+  assert.deepEqual(view.market, { homeMargin: 7, total: 48.5, source: 'sportsbook' });
 });
 
 test('grades the projected winner once final', () => {

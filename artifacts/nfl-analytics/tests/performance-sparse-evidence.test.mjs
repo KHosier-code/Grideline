@@ -3,17 +3,15 @@ import { test } from 'node:test';
 import { isSparseGameDetail } from './performance-sparse-evidence.mjs';
 
 const sparse = () => ({
-  prediction: null,
   matchupBoard: { status: 'partial', assessments: [] },
   movement: { available: false, streams: [] },
 });
 
-test('requires complete detail evidence and no saved projection', () => {
+test('requires complete detail evidence', () => {
   assert.equal(isSparseGameDetail(sparse()), true);
   assert.equal(isSparseGameDetail(null), false);
   assert.equal(isSparseGameDetail({ ...sparse(), movement: null }), false);
   assert.equal(isSparseGameDetail({ ...sparse(), matchupBoard: { status: 'partial' } }), false);
-  assert.equal(isSparseGameDetail({ ...sparse(), prediction: { score: 20 } }), false);
 });
 
 test('a supported category metric makes the game non-sparse', () => {

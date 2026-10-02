@@ -1,7 +1,9 @@
 import type { TouchdownPickRow } from "@workspace/db";
+import { lockedAt } from "./game-projections";
 
-export type TouchdownRun = { generatedAt: Date; picks: TouchdownPickRow[] };
-export type BoardEntry = TouchdownPickRow & { generatedAt: Date };
+/** `receivedAt` is the server's clock; a run counts from the later of the two (see lockedAt). */
+export type TouchdownRun = { generatedAt: Date; receivedAt?: Date; picks: TouchdownPickRow[] };
+export type BoardEntry = TouchdownPickRow & { generatedAt: Date; lockedAt: Date };
 
 /**
  * One entry per player for a week. A player's entry comes from the latest run
@@ -10,14 +12,15 @@ export type BoardEntry = TouchdownPickRow & { generatedAt: Date };
  * started before every run that includes them is left out.
  */
 export function boardForWeek(runs: TouchdownRun[], now: Date): BoardEntry[] {
-  const ordered = [...runs].sort((a, b) => a.generatedAt.getTime() - b.generatedAt.getTime());
+  const ordered = [...runs].sort((a, b) => lockedAt(a).getTime() - lockedAt(b).getTime());
   const byPlayer = new Map<string, BoardEntry>();
   for (const run of ordered) {
+    const locked = lockedAt(run);
     for (const pick of run.picks) {
       const kickoff = pick.kickoff ? new Date(pick.kickoff) : null;
-      const beforeKickoff = !kickoff || Number.isNaN(kickoff.getTime()) || run.generatedAt < kickoff;
+      const beforeKickoff = !kickoff || Number.isNaN(kickoff.getTime()) || locked < kickoff;
       if (!beforeKickoff) continue;
-      byPlayer.set(pick.playerId, { ...pick, generatedAt: run.generatedAt });
+      byPlayer.set(pick.playerId, { ...pick, generatedAt: run.generatedAt, lockedAt: locked });
     }
   }
   const latestRun = ordered.at(-1);
@@ -27,7 +30,7 @@ export function boardForWeek(runs: TouchdownRun[], now: Date): BoardEntry[] {
   return [...byPlayer.values()].filter((entry) => {
     const kickoff = entry.kickoff ? new Date(entry.kickoff) : null;
     const started = kickoff !== null && !Number.isNaN(kickoff.getTime()) && kickoff <= now;
-    const coveredByLatest = latestRun !== undefined && kickoff !== null && latestRun.generatedAt < kickoff;
+    const coveredByLatest = latestRun !== undefined && kickoff !== null && lockedAt(latestRun) < kickoff;
     return started || !coveredByLatest || latestIds.has(entry.playerId);
   }).sort((a, b) => b.probability - a.probability || a.name.localeCompare(b.name));
 }
@@ -58,7 +61,7 @@ export function topTenRecord(
   return { weeksGraded, topTenPicks, topTenHits, weeks: byWeek.sort((a, b) => a.week - b.week) };
 }
 
-/** Picks this high on the weekly board can be flagged as value. In testing on 2021-2026 the top 5 scored 56% of the time. */
+/** Picks this high on the weekly board can be flagged as value. In testing on 2021-2026 the top 5 scored 55% of the time. */
 export const VALUE_TOP_N = 5;
 
 /** Total return per 1 staked (stake included) at American odds. */
@@ -105,4 +108,48 @@ export function valueRecord(
     byWeek.push({ ...line, units: Math.round(line.units * 100) / 100 });
   }
   return { picks, hits, units: Math.round(units * 100) / 100, weeks: byWeek.sort((a, b) => a.week - b.week) };
+}
+
+/**
+ * Typical anytime-TD hold at DraftKings and FanDuel (the books post only the
+ * Yes side). Same value as TD_PROP_HOLD in the site's lib/market.ts.
+ */
+export const TD_PROP_HOLD = 0.2;
+
+/** The book's chance with its cut taken out, averaged over the books that priced the player. */
+export function bookFairProbability(prices: number[]) {
+  const usable = prices.filter((price) => Number.isFinite(price) && price !== 0 && Math.abs(price) >= 100);
+  if (!usable.length) return null;
+  const implied = usable.map((price) => (price < 0 ? -price / (-price + 100) : 100 / (price + 100)));
+  return Math.min(0.99, implied.reduce((sum, value) => sum + value, 0) / implied.length / (1 + TD_PROP_HOLD));
+}
+
+/**
+ * Our chances against the books' on every graded player both of us priced.
+ * Lower Brier score and log loss are better. Until ours is lower over a full
+ * season, a "value" flag means only that the price beats our own number.
+ */
+export function bookComparison(rows: Array<{ week: number; probability: number; bookProbability: number; scored: boolean }>) {
+  const clip = (p: number) => Math.min(Math.max(p, 0.001), 0.999);
+  const score = (pick: (row: (typeof rows)[number]) => number) => {
+    if (!rows.length) return { brier: null, logLoss: null };
+    let brier = 0; let logLoss = 0;
+    for (const row of rows) {
+      const p = clip(pick(row)); const y = row.scored ? 1 : 0;
+      brier += (p - y) ** 2;
+      logLoss -= y * Math.log(p) + (1 - y) * Math.log(1 - p);
+    }
+    return { brier: Math.round((brier / rows.length) * 10000) / 10000, logLoss: Math.round((logLoss / rows.length) * 10000) / 10000 };
+  };
+  const model = score((row) => row.probability);
+  const book = score((row) => row.bookProbability);
+  return {
+    players: rows.length,
+    weeks: new Set(rows.map((row) => row.week)).size,
+    scored: rows.filter((row) => row.scored).length,
+    modelAverage: rows.length ? Math.round((rows.reduce((sum, row) => sum + row.probability, 0) / rows.length) * 1000) / 1000 : null,
+    bookAverage: rows.length ? Math.round((rows.reduce((sum, row) => sum + row.bookProbability, 0) / rows.length) * 1000) / 1000 : null,
+    modelBrier: model.brier, bookBrier: book.brier, modelLogLoss: model.logLoss, bookLogLoss: book.logLoss,
+    hold: TD_PROP_HOLD,
+  };
 }

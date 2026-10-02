@@ -2,10 +2,13 @@ import { Link } from 'wouter';
 import { CircleCheck, Crosshair, Target, Trophy } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
-  getGetConsumerGameProjectionsQueryKey, getGetConsumerReplayQueryKey, useGetConsumerGameProjections, useGetConsumerReplay,
-  useGetConsumerTouchdowns,
+  getGetConsumerGameProjectionsQueryKey, getGetConsumerReplayQueryKey, getGetConsumerWatchAlertsQueryKey, useGetConsumerGameProjections,
+  useGetConsumerReplay, useGetConsumerTouchdowns, useGetConsumerWatchAlerts,
+  type ConsumerTouchdownBookComparison, type ConsumerWatchList,
 } from '@workspace/api-client-react';
 import { TeamLogo } from '@/components/TeamLogo';
+import { bookShort } from '@/lib/line-shopping';
+import { lineText, vegasLineText } from '@/lib/pick-sheet';
 import { ConsumerLoading } from './consumer-ui';
 
 const pct = (value: number, digits = 1) => `${(value * 100).toFixed(digits)}%`;
@@ -96,11 +99,84 @@ function ReplaySection({ replay }: { replay: Replay }) {
   </section>;
 }
 
+type Ats = 'win' | 'loss' | 'push' | null;
+const recordText = (line: { wins: number; losses: number; pushes: number }) =>
+  line.wins + line.losses ? `${line.wins}-${line.losses}${line.pushes ? `-${line.pushes}` : ''}` : '—';
+const coverRate = (line: { wins: number; losses: number }) => (line.wins + line.losses ? pct(line.wins / (line.wins + line.losses)) : 'No games graded yet');
+
+function Cover({ value }: { value: Ats }) {
+  if (value === null) return <span className="gl-muted">—</span>;
+  if (value === 'push') return <span className="gl-muted">Push</span>;
+  return <Mark ok={value === 'win'} />;
+}
+
+/** The 4+ point opener gap, tracked live: the one rule that held up in back-testing, graded at three numbers. */
+function WatchListSection({ watch, topic }: { watch: ConsumerWatchList; topic: string | null }) {
+  const moved = watch.movedToward + watch.movedAway;
+  const date = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return <section className="gl-section" id="watch-list" aria-labelledby="watch-list-head">
+    <div className="gl-section-head"><h2 id="watch-list-head">Watch list</h2><p>Games where our line is {watch.threshold}+ points off the opening line</p></div>
+    <div className="gl-replay-banner">
+      <b>Tracked, not a pick.</b> From 2021 through week 3 of 2026, our side of these games covered the opening line 58.8% of the time,
+      but only 53.7% against the closing line, and 2022 was a losing season (46%). So we list them as they happen and grade each one at three
+      numbers: the opener, the line when our projection went up (the one you could actually bet), and the close.
+    </div>
+    <div className="gl-record-grid gl-four">
+      <div className="gl-card gl-record-card"><span className="gl-label">At the opener</span><b>{recordText(watch.atsOpen)}</b><p>{coverRate(watch.atsOpen)}</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">When we posted</span><b>{recordText(watch.atsPublished)}</b><p>{coverRate(watch.atsPublished)}. The honest record: the line you could bet when the game joined the list.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">At the close</span><b>{recordText(watch.atsClose)}</b><p>{coverRate(watch.atsClose)}. Break-even at -110 is 52.4%.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">Line moved our way</span><b>{moved ? `${watch.movedToward}/${moved}` : '—'}</b><p>Of {watch.flagged} {watch.flagged === 1 ? 'game' : 'games'} flagged, how often the line moved toward our side by kickoff, the earliest sign of a real edge.</p></div>
+    </div>
+    {watch.games.length > 0 ? <div className="gl-card gl-table-wrap">
+      <table className="gl-table gl-watch-table">
+        <thead><tr>
+          <th scope="col">Game</th><th scope="col">Gridline</th><th scope="col">Our side</th><th scope="col">Opener</th>
+          <th scope="col">Posted<small>line when we flagged it</small></th><th scope="col">Now<small>or the close</small></th>
+          <th scope="col">Moved<small>toward us</small></th><th scope="col">Covered<small>open · posted · close</small></th>
+        </tr></thead>
+        <tbody>{watch.games.map(game => {
+          const side = game.side === 'home' ? game.homeTeam : game.awayTeam;
+          return <tr key={game.gameId}>
+            <td>{game.awayTeam} at {game.homeTeam} <small className="gl-muted">{date(game.kickoff)}</small></td>
+            <td><b>{lineText(game.gridlineMargin, game.homeTeam, game.awayTeam)}</b></td>
+            <td><span className="gl-inline-team"><TeamLogo team={side} size={18} />{side}</span></td>
+            <td>{vegasLineText(game.openLine, game.homeTeam, game.awayTeam)} <small className="gl-muted">{bookShort(game.sportsbook)}</small></td>
+            <td>{vegasLineText(game.publishedLine, game.homeTeam, game.awayTeam)}</td>
+            <td>{vegasLineText(game.currentLine, game.homeTeam, game.awayTeam)}</td>
+            <td><span className={game.movedToward > 0 ? 'gl-good' : game.movedToward < 0 ? 'gl-bad' : 'gl-muted'}>{game.movedToward > 0 ? '+' : ''}{game.movedToward}</span></td>
+            <td>{game.started ? <><Cover value={game.atsOpen} /> · <Cover value={game.atsPublished} /> · <Cover value={game.atsClose} /></> : <span className="gl-muted">Upcoming</span>}</td>
+          </tr>;
+        })}</tbody>
+      </table>
+    </div> : <div className="gl-empty"><strong>No games on the list yet this season.</strong>Games join once the opening line and our projection are both in.</div>}
+    <p className="gl-note">
+      Get an alert when a game joins the list or its line moves a point or more:{' '}
+      {topic && <>install the free <a href="https://ntfy.sh" target="_blank" rel="noreferrer">ntfy</a> app and subscribe to <a href={`https://ntfy.sh/${topic}`} target="_blank" rel="noreferrer"><b>{topic}</b></a>, or </>}
+      add the <a href="/api/feeds/watch-list.xml">watch-list RSS feed</a> to any feed reader. Games usually join on Monday evening, once Sunday&apos;s results are in and next week&apos;s projections post.
+    </p>
+  </section>;
+}
+
+function BookComparisonCard({ comparison }: { comparison: ConsumerTouchdownBookComparison | undefined }) {
+  const ready = comparison && comparison.players > 0 && comparison.modelBrier !== null && comparison.bookBrier !== null;
+  return <div className="gl-card gl-record-card">
+    <span className="gl-label">Touchdown model vs the books</span>
+    {ready ? <>
+      <b>{comparison.modelBrier! < comparison.bookBrier! ? 'Ahead' : comparison.modelBrier! > comparison.bookBrier! ? 'Behind' : 'Even'}</b>
+      <p>On {comparison.players} graded players with a DraftKings or FanDuel price ({comparison.weeks} {comparison.weeks === 1 ? 'week' : 'weeks'}),
+        we gave them {pct(comparison.modelAverage ?? 0, 0)} on average, the books&apos; prices (with their roughly {Math.round(comparison.hold * 100)}% cut removed)
+        implied {pct(comparison.bookAverage ?? 0, 0)}, and {pct(comparison.scored / comparison.players, 0)} scored.
+        Prediction error, lower is better: ours {comparison.modelBrier!.toFixed(3)}, the books {comparison.bookBrier!.toFixed(3)}.</p>
+    </> : <><b>—</b><p>Appears once a week with saved DraftKings or FanDuel touchdown prices has been graded.</p></>}
+  </div>;
+}
+
 export default function ConsumerPerformance() {
   const replayQuery = useGetConsumerReplay({ query: { queryKey: getGetConsumerReplayQueryKey(), staleTime: 5 * 60_000 } });
   const replay = replayQuery.data?.status === 'available' ? replayQuery.data.report as unknown as Replay : null;
   const touchdowns = useGetConsumerTouchdowns();
   const games = useGetConsumerGameProjections(undefined, { query: { queryKey: getGetConsumerGameProjectionsQueryKey() } });
+  const alerts = useGetConsumerWatchAlerts(undefined, { query: { queryKey: getGetConsumerWatchAlertsQueryKey(), staleTime: 10 * 60_000 } });
   const td = touchdowns.data;
   const game = games.data;
   const e = game?.evaluation ?? {};
@@ -204,6 +280,7 @@ export default function ConsumerPerformance() {
             : <><b>—</b><p>The first graded week appears after this week&apos;s games.</p></>}
         </div>
       </div>
+      <BookComparisonCard comparison={td?.bookComparison} />
       {(tdRecord?.weeks?.length ?? 0) > 0 && <div className="gl-card gl-table-wrap">
         <table className="gl-table">
           <thead><tr><th scope="col">Week</th><th scope="col">Top-10 TD picks that scored</th><th scope="col">Game winners right</th></tr></thead>
@@ -214,6 +291,10 @@ export default function ConsumerPerformance() {
         </table>
       </div>}
     </section>
+
+    <p className="gl-note">Every pick counted here was locked in before kickoff. <Link href="/receipts" className="gl-link">See the receipts</Link>, with the time each one was posted.</p>
+
+    {game?.watch && <WatchListSection watch={game.watch} topic={alerts.data?.ntfyTopic ?? null} />}
 
     {replay && replay.weeks.length > 0 && <ReplaySection replay={replay} />}
 

@@ -1,10 +1,4 @@
-import type { ConsumerProjectedMatchup, ConsumerGameDetail, ConsumerMatchupAssessment, DefensePositionMetric } from '@workspace/api-client-react';
-
-export function eligibleMarketComparisons(game: Pick<ConsumerGameDetail, 'marketBoard' | 'recommendation'>, beforeKickoff: boolean) {
-  return game.marketBoard.comparisons.filter((comparison) =>
-    beforeKickoff && game.recommendation.markets[comparison.market] && comparison.state === 'available'
-    && comparison.modelValue !== null && comparison.marketValue !== null);
-}
+import type { ConsumerProjectedMatchup, ConsumerMatchupAssessment, DefensePositionMetric } from '@workspace/api-client-react';
 
 export function supportedAssessments(assessments: ConsumerMatchupAssessment[]) {
   return assessments.filter((assessment) => assessment.edge !== 'insufficient');

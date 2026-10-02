@@ -1,17 +1,18 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Router, type IRouter } from "express";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
-  db, gameProjectionRunsTable, gamesTable, predictionSnapshotsTable, sportsbookOddsTable, teamsTable, touchdownPickResultsTable,
+  db, gameProjectionRunsTable, touchdownPickResultsTable,
   touchdownPickRunsTable, weeklyReportsTable,
 } from "@workspace/db";
 import {
-  favoriteRecord, lineValueGames, lineValueSummary, projectionsBeforeKickoff, winnerRecord, type SpreadQuote,
+  favoriteRecord, lineValueGames, lineValueSummary, openerWatch, openerWatchSummary, projectionsBeforeKickoff, winnerRecord,
 } from "../lib/game-projections";
-import { isEligiblePredictionSnapshot } from "../lib/live-predictions";
-import { addResult, emptyRecordLine, gradePicks, picksForProjection } from "../lib/pick-grading";
-import { boardForWeek, expectedValue, fairAmericanOdds, isValuePick, topTenRecord, valueRecord } from "../lib/touchdown-board";
+import { loadSeasonProjectionData } from "../lib/projection-data";
+import {
+  bookComparison, bookFairProbability, boardForWeek, expectedValue, fairAmericanOdds, isValuePick, topTenRecord, valueRecord,
+} from "../lib/touchdown-board";
 import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecision } from "../lib/odds";
 import { bestBookPrice, captureTouchdownProps, touchdownPropsForSeason } from "../lib/td-props";
 
@@ -23,65 +24,6 @@ function parseInteger(value: unknown, min: number, max: number) {
   const number = Number(value);
   return number >= min && number <= max ? number : null;
 }
-
-const isFinal = (status: string | null) => /final|completed/i.test(status ?? "");
-
-router.get("/consumer/record", async (req, res): Promise<void> => {
-  const requested = parseInteger(req.query.season, 1990, 2200);
-  if (requested === null) {
-    res.status(400).json({ error: "Invalid season" });
-    return;
-  }
-  try {
-    const rows = await db.select({ snapshot: predictionSnapshotsTable, game: gamesTable })
-      .from(predictionSnapshotsTable)
-      .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
-      .where(eq(predictionSnapshotsTable.officialFinalPrediction, true))
-      .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id));
-    const latestPerGame = new Map<string, (typeof rows)[number]>();
-    for (const row of rows) {
-      if (!latestPerGame.has(row.game.gameId) && isEligiblePredictionSnapshot(row.snapshot)) latestPerGame.set(row.game.gameId, row);
-    }
-    const graded = [...latestPerGame.values()].filter(({ game }) =>
-      isFinal(game.gameStatus) && game.finalHomeScore !== null && game.finalAwayScore !== null);
-    const seasons = [...new Set(graded.map(({ game }) => game.season))].sort((a, b) => b - a);
-    const season = requested ?? seasons[0] ?? null;
-    const winners = emptyRecordLine();
-    const spread = emptyRecordLine();
-    const total = emptyRecordLine();
-    const weeks = new Map<number, { week: number; winners: ReturnType<typeof emptyRecordLine>; spread: ReturnType<typeof emptyRecordLine>; total: ReturnType<typeof emptyRecordLine> }>();
-    let count = 0;
-    let lastGradedAt: Date | null = null;
-    for (const { snapshot, game } of graded) {
-      if (game.season !== season) continue;
-      const comparison = (snapshot.marketComparison ?? {}) as Record<string, any>;
-      const projection = {
-        margin: snapshot.projectedMargin,
-        total: snapshot.projectedTotal,
-        homeWinProbability: snapshot.homeWinProbability,
-        spreadLine: typeof comparison.spread?.marketLine === "number" ? comparison.spread.marketLine : null,
-        totalLine: typeof comparison.totals?.marketTotal === "number" ? comparison.totals.marketTotal : null,
-      };
-      const result = gradePicks(picksForProjection(projection), projection, game.finalHomeScore!, game.finalAwayScore!);
-      const week = weeks.get(game.week) ?? { week: game.week, winners: emptyRecordLine(), spread: emptyRecordLine(), total: emptyRecordLine() };
-      weeks.set(game.week, week);
-      addResult(winners, result.winner); addResult(week.winners, result.winner);
-      addResult(spread, result.spread); addResult(week.spread, result.spread);
-      addResult(total, result.total); addResult(week.total, result.total);
-      count += 1;
-      const played = game.kickoffTime ?? game.gameDate;
-      if (!lastGradedAt || played > lastGradedAt) lastGradedAt = played;
-    }
-    res.json({
-      season, seasons, graded: count, winners, spread, total,
-      weeks: [...weeks.values()].sort((a, b) => a.week - b.week),
-      lastGradedAt: lastGradedAt?.toISOString() ?? null,
-    });
-  } catch (error) {
-    req.log.error({ error }, "Consumer record read failed");
-    res.status(503).json({ error: "Record is being refreshed", code: "consumer_data_unavailable" });
-  }
-});
 
 router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
   const season = parseInteger(req.query.season, 1990, 2200);
@@ -102,6 +44,7 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
       generatedAt: null, modelVersion: null, evaluation: { topTenHitRate: null, auc: null, testedOn: null },
       picks: [], weeks: available, record: { weeksGraded: 0, topTenPicks: 0, topTenHits: 0, weeks: [] },
       valueRecord: { picks: 0, hits: 0, units: 0, weeks: [] },
+      bookComparison: bookComparison([]),
     };
     if (!selected) {
       res.json(empty);
@@ -169,6 +112,15 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
         week: weekNumber, board: weekBoard, results: resultsByWeek.get(weekNumber) ?? new Map(),
         price: (entry) => bestBookPrice(propsByWeek.get(weekNumber) ?? null, entry.name, entry.team)?.price ?? null,
       }))),
+      bookComparison: bookComparison([...boards.entries()].flatMap(([weekNumber, weekBoard]) => {
+        const weekResults = resultsByWeek.get(weekNumber);
+        return weekBoard.flatMap((entry) => {
+          const prices = bestBookPrice(propsByWeek.get(weekNumber) ?? null, entry.name, entry.team)?.books.map((item) => item.price) ?? [];
+          const bookProbability = bookFairProbability(prices);
+          return bookProbability !== null && weekResults?.has(entry.playerId)
+            ? [{ week: weekNumber, probability: entry.probability, bookProbability, scored: weekResults.get(entry.playerId)! }] : [];
+        });
+      })),
     });
   } catch (error) {
     req.log.error({ error }, "Consumer touchdown picks read failed");
@@ -322,15 +274,6 @@ router.post("/games/projections/ingest", async (req, res): Promise<void> => {
   }
 });
 
-const squash = (value: string | null | undefined) => (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
-
-/** Whether a sportsbook selection ("Kansas City Chiefs") names this team. */
-function spreadSide(selection: string, team: { teamName: string; abbreviation: string } | undefined) {
-  if (!team) return false;
-  const value = squash(selection);
-  return value === squash(team.teamName) || value === squash(team.abbreviation);
-}
-
 router.get("/consumer/game-projections", async (req, res): Promise<void> => {
   const season = parseInteger(req.query.season, 1990, 2200);
   if (season === null) {
@@ -344,43 +287,14 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
     if (selectedSeason === undefined) {
       res.json({ status: "unavailable", season: null, modelVersion: null, generatedAt: null, evaluation: {}, games: [],
         record: { wins: 0, losses: 0, pushes: 0 }, favoriteRecord: { wins: 0, losses: 0, pushes: 0 },
-        lineValue: lineValueSummary([]), weeks: [] });
+        lineValue: lineValueSummary([]), watch: { ...openerWatchSummary([]), games: [] }, weeks: [] });
       return;
     }
-    const runs = await db.select().from(gameProjectionRunsTable)
-      .where(eq(gameProjectionRunsTable.season, selectedSeason)).orderBy(asc(gameProjectionRunsTable.generatedAt));
+    const { runs, finals, quotesByGame, booksByGame } = await loadSeasonProjectionData(selectedSeason);
     const projections = projectionsBeforeKickoff(runs);
-    const ids = [...projections.keys()];
-    const finals = new Map<string, { home: number; away: number; week: number }>();
-    const quotesByGame = new Map<string, SpreadQuote[]>();
-    if (ids.length) {
-      const rows = await db.select().from(gamesTable).where(eq(gamesTable.season, selectedSeason));
-      for (const row of rows) {
-        if (ids.includes(row.gameId) && isFinal(row.gameStatus) && row.finalHomeScore !== null && row.finalAwayScore !== null) {
-          finals.set(row.gameId, { home: row.finalHomeScore, away: row.finalAwayScore, week: row.week });
-        }
-      }
-      const teams = new Map((await db.select().from(teamsTable)).map((team) => [team.teamId, team]));
-      const sides = new Map(rows.filter((row) => ids.includes(row.gameId)).map((row) => [row.gameId, {
-        home: teams.get(row.homeTeamId), away: teams.get(row.awayTeamId),
-      }]));
-      const odds = await db.select({
-        gameId: sportsbookOddsTable.gameId, sportsbook: sportsbookOddsTable.sportsbook, selection: sportsbookOddsTable.selection,
-        point: sportsbookOddsTable.point, capturedAt: sportsbookOddsTable.capturedAt,
-      }).from(sportsbookOddsTable)
-        .where(and(eq(sportsbookOddsTable.market, "spread"), inArray(sportsbookOddsTable.gameId, [...sides.keys()])));
-      for (const row of odds) {
-        const side = sides.get(row.gameId);
-        if (row.point === null || !side) continue;
-        const homeLine = spreadSide(row.selection, side.home) ? row.point : spreadSide(row.selection, side.away) ? -row.point : null;
-        if (homeLine === null) continue;
-        const list = quotesByGame.get(row.gameId) ?? [];
-        list.push({ sportsbook: row.sportsbook, capturedAt: row.capturedAt, homeLine });
-        quotesByGame.set(row.gameId, list);
-      }
-    }
     const record = winnerRecord(projections.values(), finals);
     const lineValue = lineValueSummary(lineValueGames(runs, quotesByGame, finals));
+    const watchGames = openerWatch(runs, quotesByGame, finals, new Date());
     const newest = runs.at(-1);
     res.json({
       status: runs.length ? "available" : "unavailable",
@@ -388,10 +302,18 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
       modelVersion: newest?.modelVersion ?? null,
       generatedAt: newest?.generatedAt.toISOString() ?? null,
       evaluation: newest?.evaluation ?? {},
-      games: [...projections.values()].map(({ generatedAt, ...game }) => ({ ...game, projectedAt: generatedAt.toISOString() })),
+      games: [...projections.values()].map(({ generatedAt, lockedAt, ...game }) => ({
+        ...game, projectedAt: generatedAt.toISOString(), lockedAt: lockedAt.toISOString(), books: booksByGame.get(game.gameId) ?? [],
+      })),
       record: record.total,
       favoriteRecord: favoriteRecord(projections.values(), finals),
       lineValue,
+      watch: {
+        ...openerWatchSummary(watchGames),
+        games: watchGames.map((game) => ({
+          ...game, lockedAt: game.lockedAt.toISOString(), openedAt: game.openedAt.toISOString(), currentAt: game.currentAt.toISOString(),
+        })),
+      },
       weeks: [...record.weeks.entries()].sort(([a], [b]) => a - b).map(([week, line]) => ({ week, ...line })),
     });
   } catch (error) {

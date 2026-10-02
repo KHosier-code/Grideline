@@ -21,12 +21,8 @@ const games = pairs.map(([away, home], index) => ({
     away: { teamId: away, abbreviation: away, name: `${away} Away` },
     home: { teamId: home, abbreviation: home, name: `${home} Home` },
   },
-  finalScore: null, prediction: null, market: {},
-  marketBoard: { comparisons: [] },
-  recommendation: { status: 'partial', reason: 'No eligible saved evidence', markets: { spread: false, total: false, moneyline: false } },
-  dataConfidence: { label: 'Limited', score: 0, reason: 'Synthetic performance fixture' },
-  confidence: { markets: [] },
-  availability: { prediction: 'No eligible saved prediction', market: null },
+  finalScore: null, market: {}, initialMarkets: { capturedAt: null, moneyline: null, spread: null, total: null },
+  availability: { market: null },
 }));
 const coverage = [1, 2].map(weekNumber => ({
   week: weekNumber, scheduledGames: 16, expectedGames: 16, missingMatchups: [],
@@ -63,8 +59,7 @@ export const fixtureExpected = Object.freeze({ heading: `${season} · Week ${wee
 export function homePerformanceResponse(url) {
   const { pathname, searchParams } = new URL(url);
   if (pathname === '/api/consumer/dashboard' && !searchParams.size)
-    return { status: 'available', games, note: 'Synthetic performance fixture', sourceHealth: health,
-      initialWeeklyPick: { pick: null, reason: 'No official frozen weekly pick in this synthetic slate' } };
+    return { status: 'available', games, note: 'Synthetic performance fixture', sourceHealth: health };
   if (pathname === `/api/consumer/games/${games[0].gameId}` && !searchParams.size) return detail;
   if (pathname === '/api/consumer/team-analytics'
     && searchParams.get('season') === String(season) && searchParams.get('window') === 'season'

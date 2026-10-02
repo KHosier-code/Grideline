@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerTouchdownBookComparison } from './consumerTouchdownBookComparison';
 import type { ConsumerTouchdownPick } from './consumerTouchdownPick';
 import type { ConsumerTouchdownRecord } from './consumerTouchdownRecord';
 import type { ConsumerTouchdownsEvaluation } from './consumerTouchdownsEvaluation';
@@ -27,4 +28,5 @@ export interface ConsumerTouchdowns {
   weeks: ConsumerTouchdownsWeeksItem[];
   record: ConsumerTouchdownRecord;
   valueRecord: ConsumerTouchdownValueRecord;
+  bookComparison: ConsumerTouchdownBookComparison;
 }

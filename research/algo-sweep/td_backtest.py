@@ -20,7 +20,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, __file__.rsplit("/", 2)[0] + "/td-model")
-from features import ALL  # noqa: E402
+from features import ALL, SeedAveragedGBM  # noqa: E402
 
 df = pd.read_parquet(sys.argv[1])
 df = df[(df.prior_games >= 1) & df.implied.notna() & (df.upcoming == 0)].copy()
@@ -28,13 +28,14 @@ for p in ["QB", "RB", "WR", "TE"]:
     df[f"pos_{p}"] = (df.position == p).astype(int)
 
 MODELS = {
-    "Gridline TD model (live)": lambda: HistGradientBoostingClassifier(
+    "Gridline TD model (live)": SeedAveragedGBM,
+    "Single seed (7), the live model before October 2026": lambda: HistGradientBoostingClassifier(
         max_iter=400, learning_rate=0.03, max_leaf_nodes=15, min_samples_leaf=80, l2_regularization=1.0, random_state=7),
     "Logistic regression": lambda: make_pipeline(SimpleImputer(strategy="median"), StandardScaler(),
                                                  LogisticRegression(C=0.3, max_iter=3000)),
 }
 TOP_N = [1, 3, 5, 10, 20]
-TEST = [2023, 2024, 2025, 2026]
+TEST = [2021, 2022, 2023, 2024, 2025, 2026]
 
 preds = []
 for season in TEST:
