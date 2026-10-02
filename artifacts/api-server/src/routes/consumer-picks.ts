@@ -1,10 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Router, type IRouter } from "express";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
   dataSyncRunsTable, db, gameProjectionRunsTable, touchdownPickResultsTable,
-  touchdownPickRunsTable, weeklyReportsTable,
+  touchdownPickRunsTable, weeklyReportsTable, gamesTable, weatherForecastSnapshotsTable,
 } from "@workspace/db";
 import {
   favoriteRecord, lineValueGames, lineValueSummary, openerWatch, openerWatchSummary, projectionsBeforeKickoff, winnerRecord,
@@ -503,6 +503,59 @@ router.post("/weather/scheduled-capture", async (req, res): Promise<void> => {
     req.log.error({ error: reason }, "Scheduled weather capture failed");
     res.status(502).json({ status: "failed", reason });
   }
+});
+
+/**
+ * When each feed last updated, for the "Updated" line on the home page. A
+ * stale time there is the first sign a scheduled workflow stopped running.
+ */
+const FRESHNESS_FEEDS = { scores: "espn-schedule", injuries: "espn-injuries", weather: "nws-weather", stats: "nflverse" } as const;
+router.get("/consumer/freshness", async (_req, res): Promise<void> => {
+  const entries = await Promise.all(Object.entries(FRESHNESS_FEEDS).map(async ([feed, provider]) => {
+    const [latest] = await db.select({ completedAt: dataSyncRunsTable.completedAt }).from(dataSyncRunsTable)
+      .where(and(eq(dataSyncRunsTable.provider, provider), inArray(dataSyncRunsTable.status, ["success", "partial"]), isNotNull(dataSyncRunsTable.completedAt)))
+      .orderBy(desc(dataSyncRunsTable.completedAt)).limit(1);
+    return [feed, latest?.completedAt?.toISOString() ?? null] as const;
+  }));
+  res.set("Cache-Control", "public, max-age=120");
+  res.json(Object.fromEntries(entries));
+});
+
+/**
+ * The latest kickoff-hour forecast for each game in the next ten days, read by
+ * the weekly picks workflow so projected totals use the forecast wind and
+ * temperature instead of calm 65F. Indoor games come back with nulls.
+ */
+const finite = (value: number | null) => (value !== null && Number.isFinite(value) ? value : null);
+
+router.get("/weather/kickoff-forecasts", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const now = new Date();
+  const games = await db.select({ gameId: gamesTable.gameId, kickoff: gamesTable.kickoffTime }).from(gamesTable)
+    .where(and(gte(gamesTable.kickoffTime, new Date(now.getTime() - 6 * 3_600_000)),
+      lte(gamesTable.kickoffTime, new Date(now.getTime() + 10 * 86_400_000))));
+  const kickoffs = new Map(games.flatMap(game => game.kickoff ? [[game.gameId, game.kickoff.getTime()] as const] : []));
+  const rows = kickoffs.size === 0 ? [] : await db.select().from(weatherForecastSnapshotsTable)
+    .where(inArray(weatherForecastSnapshotsTable.gameId, [...kickoffs.keys()]))
+    .orderBy(desc(weatherForecastSnapshotsTable.fetchedAt));
+  // Newest capture first; within it, the forecast hour nearest kickoff.
+  const best = new Map<string, typeof rows[number]>();
+  for (const row of rows) {
+    const kickoff = kickoffs.get(row.gameId)!;
+    const gap = Math.abs(row.validTime.getTime() - kickoff);
+    if (gap > 2 * 3_600_000) continue;
+    const current = best.get(row.gameId);
+    if (!current) { best.set(row.gameId, row); continue; }
+    if (current.fetchedAt.getTime() !== row.fetchedAt.getTime()) continue;
+    if (gap < Math.abs(current.validTime.getTime() - kickoff)) best.set(row.gameId, row);
+  }
+  res.set("Cache-Control", "no-store");
+  res.json({
+    forecasts: [...best.values()].map(row => ({
+      gameId: row.gameId, indoorOutdoor: row.indoorOutdoor, temperature: finite(row.temperature),
+      sustainedWind: finite(row.sustainedWind), validTime: row.validTime.toISOString(), fetchedAt: row.fetchedAt.toISOString(),
+    })),
+  });
 });
 
 /**

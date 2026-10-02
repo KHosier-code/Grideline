@@ -146,7 +146,7 @@ test('consumer palette and route hierarchy remain readable across themes and wid
       ['/', /Pick of the week/i],
       ['/teams', /The league, in context/i],
       ['/defense-vs-position', /Defense vs/i],
-      ['/saved-games', /Saved games/i],
+      ['/my-picks', /My picks/i],
     ] as const) {
       await page.goto(route);
       await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
@@ -179,7 +179,7 @@ test('signed-in Saved Games component states keep real cards and controls legibl
       for (const state of ['populated', 'empty', 'loading', 'error'] as const) {
         await page.goto(`/tests/saved-games.html?state=${state}`);
         await expectTheme(page, theme);
-        await expect(page.getByRole('heading', { level: 1, name: 'Saved games.' })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1, name: 'My picks.' })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Browse games' })).toHaveAttribute('href', '/games');
         if (state === 'populated') {
           const list = page.getByTestId('list-saved-games');

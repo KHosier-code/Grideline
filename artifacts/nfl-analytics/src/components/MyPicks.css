@@ -1,0 +1,52 @@
+/* Pick buttons, the record and the pick list, on My Picks and on game pages. */
+.my-scope {
+  --sv-ink: #141a29; --sv-orange: #ff7a2f; --sv-paper: #f7f5f0; --sv-surface: #fffdf8; --sv-line: #dededb; --sv-muted: #5e6674;
+}
+.dark .my-scope { --sv-paper: #171d2a; --sv-surface: #202838; --sv-line: #394253; --sv-muted: #aeb8c8; --sv-ink: #f1f1ed; }
+.my-picks-game { display: grid; gap: 6px; margin-bottom: 18px; }
+.my-picks-game .my-picks { margin-top: 0; }
+.my-picks-record-link, .my-picks-signin a { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.my-picks-record-link { justify-self: end; font-size: 13px; }
+.my-picks-signin { margin: 0 0 18px; padding: 12px 16px; border: 1px dashed hsl(var(--border)); border-radius: 10px; font-size: 14px; }
+.my-scope .my-picks-list { margin-top: 18px; padding: 18px 20px; border: 1px solid var(--sv-line); border-radius: 11px; background: var(--sv-surface); }
+.my-scope .my-picks-list h2 { margin: 0 0 10px; color: var(--sv-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.my-scope .my-picks-list ul { display: grid; margin: 0; padding: 0; list-style: none; }
+.my-scope .my-picks-list li { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto auto; align-items: center; gap: 4px 12px; padding: 8px 0; border-top: 1px solid var(--sv-line); font-size: 13px; font-variant-numeric: tabular-nums; }
+.my-scope .my-picks-list a { color: inherit; }
+.my-scope .my-picks-list-week, .my-scope .my-picks-list-pending { color: var(--sv-muted); font-size: 12px; }
+@media (max-width: 700px) {
+  .my-scope .my-picks-list li { grid-template-columns: 1fr auto; }
+  .my-scope .my-picks-list-week { grid-column: 1 / -1; }
+}
+
+.my-scope .my-picks { display: grid; gap: 8px; margin-top: 8px; padding: 14px 18px; border: 1px solid var(--sv-line); border-radius: 11px; background: var(--sv-surface); }
+.my-scope .my-picks-title { margin: 0; color: var(--sv-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.my-scope .my-picks-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 4px 10px; }
+.my-scope .my-picks-label { color: var(--sv-muted); font-size: 13px; }
+.my-scope .my-picks-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.my-scope .my-picks-buttons button { min-height: 36px; padding: 6px 8px; border: 1px solid var(--sv-line); border-radius: 8px; background: var(--sv-paper); color: var(--sv-ink); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+.my-scope .my-picks-buttons button:hover:not(:disabled) { border-color: var(--sv-orange); }
+.my-scope .my-picks-buttons button[aria-pressed="true"] { border-color: var(--sv-orange); background: var(--sv-orange); color: #141a29; }
+.my-scope .my-picks-buttons button:disabled { opacity: .6; cursor: wait; }
+.my-scope .my-picks-locked { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--sv-muted); font-size: 13px; }
+.my-scope .my-picks-locked b { color: var(--sv-ink); }
+.my-scope .my-picks-taken { grid-column: 2; color: var(--sv-muted); font-size: 11px; }
+.my-scope .my-picks-error { color: hsl(var(--status-bad)); font-size: 12px; }
+.my-scope .my-record { margin-top: 22px; padding: 18px 20px; border: 1px solid var(--sv-line); border-radius: 11px; background: var(--sv-surface); }
+.my-scope .my-record-empty p:not(.sv-overline) { margin: 0; color: var(--sv-muted); font-size: 13px; line-height: 1.6; }
+.my-scope .my-record-top { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.my-scope .my-record-top > div { display: grid; gap: 2px; }
+.my-scope .my-record-top .sv-overline { margin: 0; }
+.my-scope .my-record-top strong { font-family: var(--app-font-serif), sans-serif; font-size: 28px; font-variant-numeric: tabular-nums; }
+.my-scope .my-record-top span { color: var(--sv-muted); font-size: 12px; }
+.my-scope .my-record-weeks { width: 100%; margin-top: 16px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.my-scope .my-record-weeks caption { padding-bottom: 6px; color: var(--sv-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
+.my-scope .my-record-weeks :is(th, td) { padding: 7px 6px; border-top: 1px solid var(--sv-line); text-align: right; }
+.my-scope .my-record-weeks :is(th[scope="row"], thead th:first-child) { text-align: left; }
+.my-scope .my-record-weeks thead th { color: var(--sv-muted); font-weight: 600; }
+.my-scope .my-record-note { margin: 10px 0 0; color: var(--sv-muted); font-size: 12px; }
+@media (max-width: 700px) {
+  .my-scope .my-record-top { grid-template-columns: 1fr 1fr; }
+  .my-scope .my-picks-row { grid-template-columns: 1fr; }
+  .my-scope .my-picks-taken { grid-column: 1; }
+}

@@ -1,5 +1,7 @@
+import './MyPicks.css';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/react';
+import { Link } from 'wouter';
 import {
   getListMyPicksQueryKey, useListMyPicks, useRemoveMyPick, useSaveMyPick,
   type ConsumerGame, type ConsumerMyPick, type ConsumerMyPickRecord, type ConsumerMyPicks,
@@ -97,7 +99,7 @@ export function MyPicksRecord({ data }: { data: ConsumerMyPicks }) {
   const { overall, byMarket, byWeek } = data.record;
   if (!data.picks.length) return <div className="my-record my-record-empty">
     <p className="sv-overline">Your record</p>
-    <p>Make a moneyline, spread or over/under pick on any saved game below. Each pick locks at kickoff at the sportsbook number you took, and your record fills in as games finish.</p>
+    <p>Make a moneyline, spread or over/under pick from any game page or on a saved game below. Each pick locks at kickoff at the sportsbook number you took, and your record fills in as games finish.</p>
   </div>;
   return <div className="my-record">
     <div className="my-record-top">
@@ -113,4 +115,37 @@ export function MyPicksRecord({ data }: { data: ConsumerMyPicks }) {
     </table>
     <p className="my-record-note">Units are profit for 1 unit per pick at the price you took (-110 when no price was saved). Pushes don&apos;t count toward win %.</p>
   </div>;
+}
+
+
+/** Pick buttons on a game page, or a sign-in prompt. */
+export function GamePicks({ game }: { game: ConsumerGame }) {
+  const { isLoaded, isSignedIn } = useAuth();
+  const picks = useMyPicks();
+  if (!isLoaded) return null;
+  if (!isSignedIn) return <p className="my-picks-signin">
+    <Link href="/sign-in">Sign in</Link> to make your own moneyline, spread and over/under picks and track your record.
+  </p>;
+  if (picks.isError) return null;
+  const mine = (picks.data?.picks ?? []).filter(pick => pick.gameId === game.gameId);
+  return <div className="my-picks-game my-scope">
+    <PickControls game={game} picks={mine} />
+    <Link href="/my-picks" className="my-picks-record-link">See your record</Link>
+  </div>;
+}
+
+/** Every pick the user has made, newest week first, each linking to its game. */
+export function MyPicksList({ picks }: { picks: ConsumerMyPick[] }) {
+  if (!picks.length) return null;
+  const sorted = [...picks].sort((a, b) => b.season - a.season || b.week - a.week
+    || (Date.parse(b.kickoffTime ?? '') || 0) - (Date.parse(a.kickoffTime ?? '') || 0));
+  return <section className="my-picks-list" aria-labelledby="my-picks-list-title">
+    <h2 id="my-picks-list-title">All your picks</h2>
+    <ul>{sorted.map(pick => <li key={`${pick.gameId}-${pick.market}`}>
+      <span className="my-picks-list-week">Week {pick.week}</span>
+      <Link href={`/games/${pick.gameId}`}>{pick.away.abbreviation} at {pick.home.abbreviation}</Link>
+      <b>{lockedText(pick)}</b>
+      {pick.result ? <span className={`gl-pill ${RESULT[pick.result][0]}`}>{RESULT[pick.result][1]}</span> : <span className="my-picks-list-pending">Pending</span>}
+    </li>)}</ul>
+  </section>;
 }

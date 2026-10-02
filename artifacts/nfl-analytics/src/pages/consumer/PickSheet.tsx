@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import {
   getGetConsumerDashboardQueryKey, getGetConsumerGameProjectionsQueryKey, useGetConsumerDashboard,
@@ -9,6 +10,7 @@ import { GameBoard, TeamChip, openHomeLine } from '@/components/GameBoard';
 import { HundredGrid, abbr, toPoolGame } from '@/components/GameSim';
 import { matchupAccents } from '@/lib/team-colors';
 import { ConsumerLoading, useConsumerNow } from './consumer-ui';
+import { GameTabs } from '@/components/GameTabs';
 
 export { TeamChip };
 
@@ -18,7 +20,7 @@ function TopTouchdowns({ now }: { now: number }) {
   const touchdowns = useGetConsumerTouchdowns();
   const picks = (touchdowns.data?.picks ?? []).filter(pick => !pick.kickoff || Date.parse(pick.kickoff) > now).slice(0, 10);
   if (touchdowns.isLoading) return <ConsumerLoading label="Loading touchdown picks…" />;
-  if (!picks.length) return null;
+  if (!picks.length) return <div className="gl-empty"><strong>No touchdown picks for upcoming games yet.</strong>They post early in the week once lines are up. <Link href="/touchdowns" className="gl-link">See the touchdown page</Link>.</div>;
   return <section className="gl-section" aria-labelledby="td-heading">
     <div className="gl-section-head"><h2 id="td-heading">Top touchdown picks</h2><Link href="/touchdowns" className="gl-link">All players and the reasons behind each pick ›</Link></div>
     <ol className="gl-td-grid">
@@ -81,7 +83,7 @@ function BiggestGaps({ views, now }: { views: ReturnType<typeof buildGameView>[]
     .filter((item): item is { view: typeof item.view; gap: NonNullable<typeof item.gap> & { side: 'home' | 'away' } } => item.gap?.side != null)
     .sort((a, b) => b.gap.points - a.gap.points)
     .slice(0, 3);
-  if (!gaps.length) return null;
+  if (!gaps.length) return <div className="gl-empty"><strong>No gaps to show.</strong>This fills in once our projections and the opening lines are both posted for games that haven&apos;t started.</div>;
   return <section className="gl-section" aria-labelledby="gaps-heading">
     <div className="gl-section-head"><h2 id="gaps-heading">Where we disagree with Vegas</h2><p>Biggest gaps between our line and the current line. Not picks: we track whether the line moves our way.</p></div>
     <div className="gl-gap-list">{gaps.map(({ view, gap }) => {
@@ -93,6 +95,34 @@ function BiggestGaps({ views, now }: { views: ReturnType<typeof buildGameView>[]
       </Link>;
     })}</div>
   </section>;
+}
+
+type Freshness = Partial<Record<'scores' | 'injuries' | 'weather' | 'stats', string | null>>;
+
+const ago = (iso: string, now: number) => {
+  const minutes = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? `${hours} hr ago` : `${Math.round(hours / 24)} days ago`;
+};
+
+/** When each feed last updated, so a stalled feed is easy to spot. */
+function DataFreshness({ linesAt, now }: { linesAt: string | undefined; now: number }) {
+  const freshness = useQuery({
+    queryKey: ['consumer-freshness'],
+    queryFn: async (): Promise<Freshness> => {
+      const response = await fetch('/api/consumer/freshness');
+      if (!response.ok) throw new Error(`Freshness ${response.status}`);
+      return response.json();
+    },
+    staleTime: 120_000,
+  });
+  const items = [
+    ['Lines', linesAt], ['Scores', freshness.data?.scores], ['Injuries', freshness.data?.injuries],
+    ['Weather', freshness.data?.weather], ['Stats', freshness.data?.stats],
+  ].filter((item): item is [string, string] => typeof item[1] === 'string' && Number.isFinite(Date.parse(item[1])));
+  if (!items.length) return null;
+  return <p className="gl-freshness"><b>Updated</b>{items.map(([label, at]) => <span key={label}>{label} {ago(at, now)}</span>)}</p>;
 }
 
 export default function PickSheet() {
@@ -116,23 +146,24 @@ export default function PickSheet() {
       </div>
       <HeroStats season={week?.season} />
     </header>
-
-    <TopTouchdowns now={now} />
+    <DataFreshness linesAt={linesAt} now={now} />
 
     <PoolTeaser views={views} now={now} />
-
-    <BiggestGaps views={views} now={now} />
 
     {dashboard.isLoading && <ConsumerLoading label="Loading this week's games…" />}
     {dashboard.isError && <div className="gl-empty"><strong>We couldn&apos;t load this week&apos;s games.</strong>Refresh the page in a minute. If it keeps happening, the schedule feed may be updating.</div>}
 
-    {week && <section className="gl-section" aria-labelledby="board-heading">
-      <div className="gl-section-head">
-        <h2 id="board-heading">Every game</h2>
-        <p>Our projected score and line next to the sportsbook&apos;s{linesAt ? ` (lines as of ${new Date(linesAt).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })})` : ''}</p>
-      </div>
-      <GameBoard views={views} now={now} />
-    </section>}
+    {week && <GameTabs label="This week" tabs={[
+      { id: 'touchdowns', label: 'Touchdowns', content: <TopTouchdowns now={now} /> },
+      { id: 'games', label: 'Every game', content: <section className="gl-section" aria-labelledby="board-heading">
+        <div className="gl-section-head">
+          <h2 id="board-heading">Every game</h2>
+          <p>Our projected score and line next to the sportsbook&apos;s.</p>
+        </div>
+        <GameBoard views={views} now={now} />
+      </section> },
+      { id: 'vegas', label: 'Vs Vegas', content: <BiggestGaps views={views} now={now} /> },
+    ]} />}
 
     {!dashboard.isLoading && !dashboard.isError && !week && <div className="gl-empty"><strong>No games on the schedule right now.</strong>Picks return when the next week&apos;s schedule is posted. <Link href="/games" className="gl-link">Browse past games</Link>.</div>}
 

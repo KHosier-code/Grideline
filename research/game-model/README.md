@@ -141,3 +141,20 @@ forecast when you'd bet. Totals picks stay off.
 What changes on the site: nothing is presented as a pick. Closing line value
 on Model Performance and the "where we disagree with Vegas" list on the home
 page are the live test of the first result.
+
+## Kickoff forecasts in the totals model (October 2, 2026)
+
+nflverse fills in wind and temperature only after a game is played, so before
+kickoff every outdoor game used to be projected as calm and 65F.
+`publish_games.py` now reads the site's National Weather Service kickoff
+forecasts (`GET /api/weather/kickoff-forecasts`) and uses their wind and
+temperature for outdoor games. Walk-forward test, 2021 through 2026 week 3,
+using actual game-day conditions as a stand-in for the forecast:
+
+| Weather input | Avg total miss (pts) | O/U vs closing total |
+|---|---:|---:|
+| Calm 65F for every outdoor game (before) | 11.00 | 47.2% |
+| Game-day wind and temperature (after) | 10.77 | 49.0% |
+
+The projection gets closer to the final score, but it still doesn't beat the
+closing total, so over/under picks stay off.

@@ -334,35 +334,3 @@
 @media (prefers-reduced-motion: reduce) {
   .saved-view *, .saved-view *::before, .saved-view *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
-/* Your picks under each saved game, and the record above the list */
-.saved-view .my-picks { display: grid; gap: 8px; margin-top: 8px; padding: 14px 18px; border: 1px solid var(--sv-line); border-radius: 11px; background: var(--sv-surface); }
-.saved-view .my-picks-title { margin: 0; color: var(--sv-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.saved-view .my-picks-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: center; gap: 4px 10px; }
-.saved-view .my-picks-label { color: var(--sv-muted); font-size: 13px; }
-.saved-view .my-picks-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.saved-view .my-picks-buttons button { min-height: 36px; padding: 6px 8px; border: 1px solid var(--sv-line); border-radius: 8px; background: var(--sv-paper); color: var(--sv-ink); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
-.saved-view .my-picks-buttons button:hover:not(:disabled) { border-color: var(--sv-orange); }
-.saved-view .my-picks-buttons button[aria-pressed="true"] { border-color: var(--sv-orange); background: var(--sv-orange); color: #141a29; }
-.saved-view .my-picks-buttons button:disabled { opacity: .6; cursor: wait; }
-.saved-view .my-picks-locked { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--sv-muted); font-size: 13px; }
-.saved-view .my-picks-locked b { color: var(--sv-ink); }
-.saved-view .my-picks-taken { grid-column: 2; color: var(--sv-muted); font-size: 11px; }
-.saved-view .my-picks-error { color: hsl(var(--status-bad)); font-size: 12px; }
-.saved-view .my-record { margin-top: 22px; padding: 18px 20px; border: 1px solid var(--sv-line); border-radius: 11px; background: var(--sv-surface); }
-.saved-view .my-record-empty p:not(.sv-overline) { margin: 0; color: var(--sv-muted); font-size: 13px; line-height: 1.6; }
-.saved-view .my-record-top { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.saved-view .my-record-top > div { display: grid; gap: 2px; }
-.saved-view .my-record-top .sv-overline { margin: 0; }
-.saved-view .my-record-top strong { font-family: var(--app-font-serif), sans-serif; font-size: 28px; font-variant-numeric: tabular-nums; }
-.saved-view .my-record-top span { color: var(--sv-muted); font-size: 12px; }
-.saved-view .my-record-weeks { width: 100%; margin-top: 16px; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-.saved-view .my-record-weeks caption { padding-bottom: 6px; color: var(--sv-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
-.saved-view .my-record-weeks :is(th, td) { padding: 7px 6px; border-top: 1px solid var(--sv-line); text-align: right; }
-.saved-view .my-record-weeks :is(th[scope="row"], thead th:first-child) { text-align: left; }
-.saved-view .my-record-weeks thead th { color: var(--sv-muted); font-weight: 600; }
-.saved-view .my-record-note { margin: 10px 0 0; color: var(--sv-muted); font-size: 12px; }
-@media (max-width: 700px) {
-  .saved-view .my-record-top { grid-template-columns: 1fr 1fr; }
-  .saved-view .my-picks-row { grid-template-columns: 1fr; }
-  .saved-view .my-picks-taken { grid-column: 1; }
-}

@@ -1027,3 +1027,7 @@
   .consumer-detail .gl-projection-score b { font-size: 38px; }
   .gl-tabbar button { flex: 1 0 auto; }
 }
+
+/* Home page "Updated" line: when each feed last refreshed */
+.gl-freshness { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: -8px 0 4px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.gl-freshness b { color: hsl(var(--foreground)); font-weight: 700; }
