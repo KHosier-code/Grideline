@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const routeFiles = ["settings.ts", "data-sync.ts", "models.ts", "features.ts", "predictions.ts"];
+const routeFiles = ["settings.ts", "data-sync.ts", "features.ts"];
 
 const routesDirectory = path.join(fileURLToPath(new URL("../../", import.meta.url)), "src/routes");
 const routeSource = (routeFile: string) =>
@@ -36,17 +36,6 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     ["data-sync.ts", '/admin/player-recovery/receipts'],
     ["dashboard.ts", '/data-health'],
     ["dashboard.ts", '/admin/sleeper-identity-report'],
-    ["models.ts", '/models/lab'],
-    ["models.ts", '/models/evaluations/audit'],
-    ["models.ts", '/models/promotions'],
-    ["models.ts", '/models/drift'],
-    ["models.ts", '/admin/lifecycle-verification'],
-    ["predictions.ts", '/predictions/live'],
-    ["predictions.ts", '/predictions/current-week'],
-    ["predictions.ts", '/predictions/games/:gameId'],
-    ["predictions.ts", '/predictions/validation-failures'],
-    ["predictions.ts", '/predictions/performance'],
-    ["predictions.ts", '/predictions/reports'],
     ["features.ts", '/features/pregame/health'],
     ["features.ts", '/features/pregame/game/:gameId'],
     ["features.ts", '/features/audit'],
@@ -56,7 +45,6 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     ["features.ts", '/features/personnel-context/challenger-readiness'],
     ["features.ts", '/features/personnel/current/team/:teamId'],
     ["features.ts", '/features/personnel/current/game/:gameId'],
-    ["confidence.ts", '/admin/confidence/audit'],
     ["features.ts", '/features/personnel/current/team/:teamId/qb'],
     ["features.ts", '/features/personnel/current/team/:teamId/wr-cb'],
     ["features.ts", '/features/personnel/current/validation'],
@@ -79,8 +67,6 @@ test("consumer API is public and read-only", () => {
     "/consumer/schedule-selection",
     "/consumer/games",
     "/consumer/games/:gameId",
-    "/consumer/performance",
-    "/consumer/trends",
     "/consumer/props",
   ];
   for (const path of expected) {

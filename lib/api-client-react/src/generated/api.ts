@@ -22,22 +22,20 @@ import type {
 import type {
   AppSettings,
   AppSettingsUpdate,
-  AppendConfidenceEvidence200,
-  AppendConfidenceEvidenceParams,
   ChallengerReadinessReport,
-  ConfidenceAudit,
   ConsumerDashboard,
   ConsumerDataUnavailableResponse,
   ConsumerDefenseVsPosition,
+  ConsumerError,
   ConsumerGame,
   ConsumerGameAlerts,
   ConsumerGameDetail,
   ConsumerGameNotFoundResponse,
   ConsumerGameProjections,
   ConsumerGames,
-  ConsumerGradedCharts,
   ConsumerInvalidRequestResponse,
-  ConsumerPerformance,
+  ConsumerMyPick,
+  ConsumerMyPicks,
   ConsumerPlayerPositionMatchup,
   ConsumerPlayerProjections,
   ConsumerPlayerTdForecasts,
@@ -45,45 +43,38 @@ import type {
   ConsumerPlayerUsageGames,
   ConsumerPowerRatings,
   ConsumerPropsAvailability,
-  ConsumerRecord,
+  ConsumerReceipts,
   ConsumerRedZoneOpportunities,
   ConsumerScheduleSelection,
   ConsumerTeamAnalytics,
   ConsumerTouchdowns,
-  ConsumerTrends,
   ConsumerUpcomingPlayerProjections,
   ConsumerUsageReport,
-  ConsumerWeeklyPickArchive,
+  ConsumerWatchAlerts,
   DashboardSummary,
   DataHealth,
   Game,
   GetConsumerDefenseVsPositionParams,
   GetConsumerGameProjectionsParams,
-  GetConsumerGradedChartsParams,
-  GetConsumerPerformanceParams,
   GetConsumerPlayerPositionMatchupParams,
   GetConsumerPlayerUsageParams,
   GetConsumerPowerRatingsParams,
-  GetConsumerRecordParams,
+  GetConsumerReceiptsParams,
   GetConsumerRedZoneOpportunitiesParams,
   GetConsumerTeamAnalyticsParams,
   GetConsumerTouchdownsParams,
-  GetConsumerWeeklyPicksParams,
+  GetConsumerWatchAlertsParams,
   GetImageryCandidatePreviewParams,
-  GetInitialLineAuditParams,
   GetPlayerImageryReviewHistory200Item,
   GetPregameFeatureHealthParams,
-  GetRetrospectiveWeeklyReviewParams,
   GetUsageAnalyticsSummaryParams,
   HealthStatus,
-  InitialLineAudit,
   ListConsumerGamesParams,
   ListGamesParams,
   ListOddsAuditsParams,
   ListPersonnelContextAuditParams,
   ListPlayerRecoveryReceiptsParams,
   ListPregameFeatureAuditParams,
-  LiveModelInputIntegrityAudit,
   OddsCaptureResult,
   OddsEventAudit,
   OddsHistory,
@@ -96,10 +87,9 @@ import type {
   PregameFeatureBuildInput,
   PregameFeatureHealth,
   PregameFeatureRow,
-  RecordRetrospectiveWeeklyReviewBody,
-  RetrospectiveWeeklyReview,
   ReviewImageryCandidate201,
   ReviewImageryCandidateBody,
+  SaveMyPickBody,
   ScheduleStatusHealth,
   ScheduleSyncRequest,
   ScheduleSyncResult,
@@ -546,164 +536,6 @@ export function useGetReviewedPlayerImage<TData = Awaited<ReturnType<typeof getR
 
 
 
-
-export const getGetConfidenceAuditUrl = () => {
-
-
-
-
-  return `/api/admin/confidence/audit`
-}
-
-/**
- * @summary Inspect confidence methodology and calculated evidence
- */
-export const getConfidenceAudit = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConfidenceAudit> => {
-
-  return customFetch<ConfidenceAudit>(getGetConfidenceAuditUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetConfidenceAuditQueryKey = () => {
-    return [
-    `/api/admin/confidence/audit`
-    ] as const;
-    }
-
-
-export const getGetConfidenceAuditQueryOptions = <TData = Awaited<ReturnType<typeof getConfidenceAudit>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfidenceAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetConfidenceAuditQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfidenceAudit>>> = ({ signal }) => getConfidenceAudit({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfidenceAudit>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetConfidenceAuditQueryResult = NonNullable<Awaited<ReturnType<typeof getConfidenceAudit>>>
-export type GetConfidenceAuditQueryError = ErrorType<void>
-
-
-/**
- * @summary Inspect confidence methodology and calculated evidence
- */
-
-export function useGetConfidenceAudit<TData = Awaited<ReturnType<typeof getConfidenceAudit>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfidenceAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetConfidenceAuditQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getAppendConfidenceEvidenceUrl = (params?: AppendConfidenceEvidenceParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/admin/confidence/calculate?${stringifiedParams}` : `/api/admin/confidence/calculate`
-}
-
-/**
- * @summary Calculate and append confidence evidence for a season and week
- */
-export const appendConfidenceEvidence = async (params?: AppendConfidenceEvidenceParams, options?: Parameters<typeof customFetch>[1]): Promise<AppendConfidenceEvidence200> => {
-
-  return customFetch<AppendConfidenceEvidence200>(getAppendConfidenceEvidenceUrl(params),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getAppendConfidenceEvidenceMutationKey = () => ['appendConfidenceEvidence'] as const;
-
-export const getAppendConfidenceEvidenceMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof appendConfidenceEvidence>>, TError,AppendConfidenceEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof appendConfidenceEvidence>>, TError,AppendConfidenceEvidenceMutationVariables, TContext> => {
-
-const mutationKey = getAppendConfidenceEvidenceMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof appendConfidenceEvidence>>, AppendConfidenceEvidenceMutationVariables> = (props) => {
-          const {params} = props ?? {};
-
-          return  appendConfidenceEvidence(params,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AppendConfidenceEvidenceMutationResult = NonNullable<Awaited<ReturnType<typeof appendConfidenceEvidence>>>
-
-    export type AppendConfidenceEvidenceMutationError = ErrorType<void>
-    export type AppendConfidenceEvidenceMutationVariables = {params?: AppendConfidenceEvidenceParams}
-
-    /**
- * @summary Calculate and append confidence evidence for a season and week
- */
-export const useAppendConfidenceEvidence = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof appendConfidenceEvidence>>, TError,AppendConfidenceEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof appendConfidenceEvidence>>,
-        TError,
-        AppendConfidenceEvidenceMutationVariables,
-        TContext
-      > => {
-      return useMutation(getAppendConfidenceEvidenceMutationOptions(options));
-    }
 
 export const getHealthCheckUrl = () => {
 
@@ -1185,262 +1017,6 @@ export function useGetScheduleStatusHealth<TData = Awaited<ReturnType<typeof get
 
 
 
-
-export const getGetInitialLineAuditUrl = (params: GetInitialLineAuditParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/admin/initial-line-audit?${stringifiedParams}` : `/api/admin/initial-line-audit`
-}
-
-/**
- * @summary Inspect persisted first-observation outcomes for a scheduled slate
- */
-export const getInitialLineAudit = async (params: GetInitialLineAuditParams, options?: Parameters<typeof customFetch>[1]): Promise<InitialLineAudit> => {
-
-  return customFetch<InitialLineAudit>(getGetInitialLineAuditUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetInitialLineAuditQueryKey = (params?: GetInitialLineAuditParams,) => {
-    return [
-    `/api/admin/initial-line-audit`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetInitialLineAuditQueryOptions = <TData = Awaited<ReturnType<typeof getInitialLineAudit>>, TError = ErrorType<void>>(params: GetInitialLineAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInitialLineAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetInitialLineAuditQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInitialLineAudit>>> = ({ signal }) => getInitialLineAudit(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInitialLineAudit>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetInitialLineAuditQueryResult = NonNullable<Awaited<ReturnType<typeof getInitialLineAudit>>>
-export type GetInitialLineAuditQueryError = ErrorType<void>
-
-
-/**
- * @summary Inspect persisted first-observation outcomes for a scheduled slate
- */
-
-export function useGetInitialLineAudit<TData = Awaited<ReturnType<typeof getInitialLineAudit>>, TError = ErrorType<void>>(
- params: GetInitialLineAuditParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInitialLineAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetInitialLineAuditQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getGetRetrospectiveWeeklyReviewUrl = (params: GetRetrospectiveWeeklyReviewParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/admin/retrospective-weekly-review?${stringifiedParams}` : `/api/admin/retrospective-weekly-review`
-}
-
-/**
- * @summary Preview saved 2026 retrospective evidence without publishing
- */
-export const getRetrospectiveWeeklyReview = async (params: GetRetrospectiveWeeklyReviewParams, options?: Parameters<typeof customFetch>[1]): Promise<RetrospectiveWeeklyReview> => {
-
-  return customFetch<RetrospectiveWeeklyReview>(getGetRetrospectiveWeeklyReviewUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetRetrospectiveWeeklyReviewQueryKey = (params?: GetRetrospectiveWeeklyReviewParams,) => {
-    return [
-    `/api/admin/retrospective-weekly-review`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetRetrospectiveWeeklyReviewQueryOptions = <TData = Awaited<ReturnType<typeof getRetrospectiveWeeklyReview>>, TError = ErrorType<void>>(params: GetRetrospectiveWeeklyReviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRetrospectiveWeeklyReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetRetrospectiveWeeklyReviewQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRetrospectiveWeeklyReview>>> = ({ signal }) => getRetrospectiveWeeklyReview(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRetrospectiveWeeklyReview>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetRetrospectiveWeeklyReviewQueryResult = NonNullable<Awaited<ReturnType<typeof getRetrospectiveWeeklyReview>>>
-export type GetRetrospectiveWeeklyReviewQueryError = ErrorType<void>
-
-
-/**
- * @summary Preview saved 2026 retrospective evidence without publishing
- */
-
-export function useGetRetrospectiveWeeklyReview<TData = Awaited<ReturnType<typeof getRetrospectiveWeeklyReview>>, TError = ErrorType<void>>(
- params: GetRetrospectiveWeeklyReviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRetrospectiveWeeklyReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetRetrospectiveWeeklyReviewQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getRecordRetrospectiveWeeklyReviewUrl = () => {
-
-
-
-
-  return `/api/admin/retrospective-weekly-review`
-}
-
-/**
- * @summary Record an unavailable review or manually publish the verified Week 3 choice once
- */
-export const recordRetrospectiveWeeklyReview = async (recordRetrospectiveWeeklyReviewBody: RecordRetrospectiveWeeklyReviewBody, options?: Parameters<typeof customFetch>[1]): Promise<RetrospectiveWeeklyReview> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return customFetch<RetrospectiveWeeklyReview>(getRecordRetrospectiveWeeklyReviewUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(recordRetrospectiveWeeklyReviewBody)
-  }
-);}
-
-
-
-
-
-export const getRecordRetrospectiveWeeklyReviewMutationKey = () => ['recordRetrospectiveWeeklyReview'] as const;
-
-export const getRecordRetrospectiveWeeklyReviewMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordRetrospectiveWeeklyReview>>, TError,RecordRetrospectiveWeeklyReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof recordRetrospectiveWeeklyReview>>, TError,RecordRetrospectiveWeeklyReviewMutationVariables, TContext> => {
-
-const mutationKey = getRecordRetrospectiveWeeklyReviewMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordRetrospectiveWeeklyReview>>, RecordRetrospectiveWeeklyReviewMutationVariables> = (props) => {
-          const {data} = props ?? {};
-
-          return  recordRetrospectiveWeeklyReview(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RecordRetrospectiveWeeklyReviewMutationResult = NonNullable<Awaited<ReturnType<typeof recordRetrospectiveWeeklyReview>>>
-    export type RecordRetrospectiveWeeklyReviewMutationBody = BodyType<RecordRetrospectiveWeeklyReviewBody>
-    export type RecordRetrospectiveWeeklyReviewMutationError = ErrorType<void>
-    export type RecordRetrospectiveWeeklyReviewMutationVariables = {data: BodyType<RecordRetrospectiveWeeklyReviewBody>}
-
-    /**
- * @summary Record an unavailable review or manually publish the verified Week 3 choice once
- */
-export const useRecordRetrospectiveWeeklyReview = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordRetrospectiveWeeklyReview>>, TError,RecordRetrospectiveWeeklyReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof recordRetrospectiveWeeklyReview>>,
-        TError,
-        RecordRetrospectiveWeeklyReviewMutationVariables,
-        TContext
-      > => {
-      return useMutation(getRecordRetrospectiveWeeklyReviewMutationOptions(options));
-    }
 
 export const getGetSleeperIdentityReportUrl = () => {
 
@@ -2414,83 +1990,6 @@ export function useListPregameFeatureAudit<TData = Awaited<ReturnType<typeof lis
 
 
 
-export const getGetLiveModelInputIntegrityUrl = () => {
-
-
-
-
-  return `/api/features/live-input-integrity`
-}
-
-/**
- * @summary Audit exact upcoming-game inputs for active production models
- */
-export const getLiveModelInputIntegrity = async ( options?: Parameters<typeof customFetch>[1]): Promise<LiveModelInputIntegrityAudit> => {
-
-  return customFetch<LiveModelInputIntegrityAudit>(getGetLiveModelInputIntegrityUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetLiveModelInputIntegrityQueryKey = () => {
-    return [
-    `/api/features/live-input-integrity`
-    ] as const;
-    }
-
-
-export const getGetLiveModelInputIntegrityQueryOptions = <TData = Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetLiveModelInputIntegrityQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>> = ({ signal }) => getLiveModelInputIntegrity({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetLiveModelInputIntegrityQueryResult = NonNullable<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>>
-export type GetLiveModelInputIntegrityQueryError = ErrorType<unknown>
-
-
-/**
- * @summary Audit exact upcoming-game inputs for active production models
- */
-
-export function useGetLiveModelInputIntegrity<TData = Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLiveModelInputIntegrity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetLiveModelInputIntegrityQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
 export const getBuildPregameFeaturesUrl = () => {
 
 
@@ -3205,90 +2704,6 @@ export function useGetConsumerDashboard<TData = Awaited<ReturnType<typeof getCon
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerDashboardQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getGetConsumerWeeklyPicksUrl = (params?: GetConsumerWeeklyPicksParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/consumer/weekly-picks?${stringifiedParams}` : `/api/consumer/weekly-picks`
-}
-
-/**
- * @summary Read past official selections separately from retrospective reviews
- */
-export const getConsumerWeeklyPicks = async (params?: GetConsumerWeeklyPicksParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerWeeklyPickArchive> => {
-
-  return customFetch<ConsumerWeeklyPickArchive>(getGetConsumerWeeklyPicksUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetConsumerWeeklyPicksQueryKey = (params?: GetConsumerWeeklyPicksParams,) => {
-    return [
-    `/api/consumer/weekly-picks`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetConsumerWeeklyPicksQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(params?: GetConsumerWeeklyPicksParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetConsumerWeeklyPicksQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>> = ({ signal }) => getConsumerWeeklyPicks(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetConsumerWeeklyPicksQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>>
-export type GetConsumerWeeklyPicksQueryError = ErrorType<void | ConsumerDataUnavailableResponse>
-
-
-/**
- * @summary Read past official selections separately from retrospective reviews
- */
-
-export function useGetConsumerWeeklyPicks<TData = Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(
- params?: GetConsumerWeeklyPicksParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerWeeklyPicks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetConsumerWeeklyPicksQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -4067,27 +3482,20 @@ export const useRemoveSavedConsumerGame = <TError = ErrorType<ConsumerInvalidReq
       return useMutation(getRemoveSavedConsumerGameMutationOptions(options));
     }
 
-export const getGetConsumerPerformanceUrl = (params?: GetConsumerPerformanceParams,) => {
-  const normalizedParams = new URLSearchParams();
+export const getListMyPicksUrl = () => {
 
-  Object.entries(params || {}).forEach(([key, value]) => {
 
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
 
-  const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/consumer/performance?${stringifiedParams}` : `/api/consumer/performance`
+  return `/api/consumer/my-picks`
 }
 
 /**
- * @summary Read consumer-safe persisted performance
+ * @summary The signed-in user's own moneyline, spread and over/under picks with their record
  */
-export const getConsumerPerformance = async (params?: GetConsumerPerformanceParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerPerformance> => {
+export const listMyPicks = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerMyPicks> => {
 
-  return customFetch<ConsumerPerformance>(getGetConsumerPerformanceUrl(params),
+  return customFetch<ConsumerMyPicks>(getListMyPicksUrl(),
   {
     ...options,
     method: 'GET'
@@ -4100,45 +3508,45 @@ export const getConsumerPerformance = async (params?: GetConsumerPerformancePara
 
 
 
-export const getGetConsumerPerformanceQueryKey = (params?: GetConsumerPerformanceParams,) => {
+export const getListMyPicksQueryKey = () => {
     return [
-    `/api/consumer/performance`, ...(params ? [params] : [])
+    `/api/consumer/my-picks`
     ] as const;
     }
 
 
-export const getGetConsumerPerformanceQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerPerformance>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerPerformanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListMyPicksQueryOptions = <TData = Awaited<ReturnType<typeof listMyPicks>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyPicks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetConsumerPerformanceQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getListMyPicksQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerPerformance>>> = ({ signal }) => getConsumerPerformance(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyPicks>>> = ({ signal }) => listMyPicks({ signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyPicks>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type GetConsumerPerformanceQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerPerformance>>>
-export type GetConsumerPerformanceQueryError = ErrorType<ConsumerDataUnavailableResponse>
+export type ListMyPicksQueryResult = NonNullable<Awaited<ReturnType<typeof listMyPicks>>>
+export type ListMyPicksQueryError = ErrorType<void | ConsumerDataUnavailableResponse>
 
 
 /**
- * @summary Read consumer-safe persisted performance
+ * @summary The signed-in user's own moneyline, spread and over/under picks with their record
  */
 
-export function useGetConsumerPerformance<TData = Awaited<ReturnType<typeof getConsumerPerformance>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
- params?: GetConsumerPerformanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerPerformance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListMyPicks<TData = Awaited<ReturnType<typeof listMyPicks>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyPicks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetConsumerPerformanceQueryOptions(params,options)
+  const queryOptions = getListMyPicksQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -4151,23 +3559,116 @@ export function useGetConsumerPerformance<TData = Awaited<ReturnType<typeof getC
 
 
 
-export const getGetConsumerTrendsUrl = () => {
+export const getSaveMyPickUrl = (gameId: string,
+    market: 'moneyline' | 'spread' | 'total',) => {
 
 
 
 
-  return `/api/consumer/trends`
+  return `/api/consumer/my-picks/${gameId}/${market}`
 }
 
 /**
- * @summary Read consumer-safe performance trends
+ * @summary Make or change a pick before kickoff, locked at the current sportsbook number
  */
-export const getConsumerTrends = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerTrends> => {
+export const saveMyPick = async (gameId: string,
+    market: 'moneyline' | 'spread' | 'total',
+    saveMyPickBody: SaveMyPickBody, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerMyPick> => {
 
-  return customFetch<ConsumerTrends>(getGetConsumerTrendsUrl(),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ConsumerMyPick>(getSaveMyPickUrl(gameId,market),
   {
     ...options,
-    method: 'GET'
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(saveMyPickBody)
+  }
+);}
+
+
+
+
+
+export const getSaveMyPickMutationKey = () => ['saveMyPick'] as const;
+
+export const getSaveMyPickMutationOptions = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMyPick>>, TError,SaveMyPickMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveMyPick>>, TError,SaveMyPickMutationVariables, TContext> => {
+
+const mutationKey = getSaveMyPickMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveMyPick>>, SaveMyPickMutationVariables> = (props) => {
+          const {gameId,market,data} = props ?? {};
+
+          return  saveMyPick(gameId,market,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveMyPickMutationResult = NonNullable<Awaited<ReturnType<typeof saveMyPick>>>
+    export type SaveMyPickMutationBody = BodyType<SaveMyPickBody>
+    export type SaveMyPickMutationError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerError>
+    export type SaveMyPickMutationVariables = {gameId: string;market: 'moneyline' | 'spread' | 'total';data: BodyType<SaveMyPickBody>}
+
+    /**
+ * @summary Make or change a pick before kickoff, locked at the current sportsbook number
+ */
+export const useSaveMyPick = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMyPick>>, TError,SaveMyPickMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveMyPick>>,
+        TError,
+        SaveMyPickMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveMyPickMutationOptions(options));
+    }
+
+export const getRemoveMyPickUrl = (gameId: string,
+    market: 'moneyline' | 'spread' | 'total',) => {
+
+
+
+
+  return `/api/consumer/my-picks/${gameId}/${market}`
+}
+
+/**
+ * @summary Remove a pick before kickoff
+ */
+export const removeMyPick = async (gameId: string,
+    market: 'moneyline' | 'spread' | 'total', options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemoveMyPickUrl(gameId,market),
+  {
+    ...options,
+    method: 'DELETE'
 
 
   }
@@ -4177,56 +3678,53 @@ export const getConsumerTrends = async ( options?: Parameters<typeof customFetch
 
 
 
-export const getGetConsumerTrendsQueryKey = () => {
-    return [
-    `/api/consumer/trends`
-    ] as const;
-    }
+export const getRemoveMyPickMutationKey = () => ['removeMyPick'] as const;
 
+export const getRemoveMyPickMutationOptions = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMyPick>>, TError,RemoveMyPickMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeMyPick>>, TError,RemoveMyPickMutationVariables, TContext> => {
 
-export const getGetConsumerTrendsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerTrends>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetConsumerTrendsQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerTrends>>> = ({ signal }) => getConsumerTrends({ signal, ...requestOptions });
+const mutationKey = getRemoveMyPickMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeMyPick>>, RemoveMyPickMutationVariables> = (props) => {
+          const {gameId,market} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerTrends>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetConsumerTrendsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerTrends>>>
-export type GetConsumerTrendsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+          return  removeMyPick(gameId,market,requestOptions)
+        }
 
 
-/**
- * @summary Read consumer-safe performance trends
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveMyPickMutationResult = NonNullable<Awaited<ReturnType<typeof removeMyPick>>>
+
+    export type RemoveMyPickMutationError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerError>
+    export type RemoveMyPickMutationVariables = {gameId: string;market: 'moneyline' | 'spread' | 'total'}
+
+    /**
+ * @summary Remove a pick before kickoff
  */
-
-export function useGetConsumerTrends<TData = Awaited<ReturnType<typeof getConsumerTrends>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerTrends>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetConsumerTrendsQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useRemoveMyPick = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMyPick>>, TError,RemoveMyPickMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeMyPick>>,
+        TError,
+        RemoveMyPickMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveMyPickMutationOptions(options));
+    }
 
 export const getGetConsumerTeamAnalyticsUrl = (params: GetConsumerTeamAnalyticsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -4300,90 +3798,6 @@ export function useGetConsumerTeamAnalytics<TData = Awaited<ReturnType<typeof ge
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerTeamAnalyticsQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getGetConsumerGradedChartsUrl = (params?: GetConsumerGradedChartsParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/consumer/graded-charts?${stringifiedParams}` : `/api/consumer/graded-charts`
-}
-
-/**
- * @summary Read complete official pregame final-game grading aggregates
- */
-export const getConsumerGradedCharts = async (params?: GetConsumerGradedChartsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerGradedCharts> => {
-
-  return customFetch<ConsumerGradedCharts>(getGetConsumerGradedChartsUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetConsumerGradedChartsQueryKey = (params?: GetConsumerGradedChartsParams,) => {
-    return [
-    `/api/consumer/graded-charts`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetConsumerGradedChartsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(params?: GetConsumerGradedChartsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetConsumerGradedChartsQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerGradedCharts>>> = ({ signal }) => getConsumerGradedCharts(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetConsumerGradedChartsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerGradedCharts>>>
-export type GetConsumerGradedChartsQueryError = ErrorType<void | ConsumerDataUnavailableResponse>
-
-
-/**
- * @summary Read complete official pregame final-game grading aggregates
- */
-
-export function useGetConsumerGradedCharts<TData = Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(
- params?: GetConsumerGradedChartsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerGradedCharts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetConsumerGradedChartsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -5203,91 +4617,6 @@ export function useGetConsumerRedZoneOpportunities<TData = Awaited<ReturnType<ty
 
 
 
-export const getGetConsumerRecordUrl = (params?: GetConsumerRecordParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/consumer/record?${stringifiedParams}` : `/api/consumer/record`
-}
-
-/**
- * Grades each official pregame prediction against the final score. Winner picks count the projected winner. Spread and total picks take the side of the saved line that the projection favors; a projection exactly on the line is not a pick. Pushes are counted separately.
- * @summary Read Gridline's win-loss record for its official game picks
- */
-export const getConsumerRecord = async (params?: GetConsumerRecordParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerRecord> => {
-
-  return customFetch<ConsumerRecord>(getGetConsumerRecordUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetConsumerRecordQueryKey = (params?: GetConsumerRecordParams,) => {
-    return [
-    `/api/consumer/record`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetConsumerRecordQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerRecord>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerRecordParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetConsumerRecordQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerRecord>>> = ({ signal }) => getConsumerRecord(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerRecord>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetConsumerRecordQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerRecord>>>
-export type GetConsumerRecordQueryError = ErrorType<ConsumerDataUnavailableResponse>
-
-
-/**
- * @summary Read Gridline's win-loss record for its official game picks
- */
-
-export function useGetConsumerRecord<TData = Awaited<ReturnType<typeof getConsumerRecord>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
- params?: GetConsumerRecordParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetConsumerRecordQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
 export const getGetConsumerTouchdownsUrl = (params?: GetConsumerTouchdownsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -5446,6 +4775,175 @@ export function useGetConsumerGameProjections<TData = Awaited<ReturnType<typeof 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerGameProjectionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerReceiptsUrl = (params?: GetConsumerReceiptsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/receipts?${stringifiedParams}` : `/api/consumer/receipts`
+}
+
+/**
+ * Each game's last projection received before kickoff and each week's top five touchdown picks, with the time the site received them and the result. Runs are append-only; payloads are also committed to the public receipts branch of the repository.
+ * @summary Read every projection and top-5 touchdown pick as locked in before kickoff
+ */
+export const getConsumerReceipts = async (params?: GetConsumerReceiptsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerReceipts> => {
+
+  return customFetch<ConsumerReceipts>(getGetConsumerReceiptsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerReceiptsQueryKey = (params?: GetConsumerReceiptsParams,) => {
+    return [
+    `/api/consumer/receipts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerReceiptsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerReceipts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerReceiptsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerReceipts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerReceiptsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerReceipts>>> = ({ signal }) => getConsumerReceipts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerReceipts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerReceiptsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerReceipts>>>
+export type GetConsumerReceiptsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read every projection and top-5 touchdown pick as locked in before kickoff
+ */
+
+export function useGetConsumerReceipts<TData = Awaited<ReturnType<typeof getConsumerReceipts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerReceiptsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerReceipts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerReceiptsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerWatchAlertsUrl = (params?: GetConsumerWatchAlertsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/consumer/watch-alerts?${stringifiedParams}` : `/api/consumer/watch-alerts`
+}
+
+/**
+ * @summary Read recent opener-gap watch-list alerts
+ */
+export const getConsumerWatchAlerts = async (params?: GetConsumerWatchAlertsParams, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerWatchAlerts> => {
+
+  return customFetch<ConsumerWatchAlerts>(getGetConsumerWatchAlertsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerWatchAlertsQueryKey = (params?: GetConsumerWatchAlertsParams,) => {
+    return [
+    `/api/consumer/watch-alerts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConsumerWatchAlertsQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(params?: GetConsumerWatchAlertsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerWatchAlertsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerWatchAlerts>>> = ({ signal }) => getConsumerWatchAlerts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerWatchAlertsQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerWatchAlerts>>>
+export type GetConsumerWatchAlertsQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read recent opener-gap watch-list alerts
+ */
+
+export function useGetConsumerWatchAlerts<TData = Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+ params?: GetConsumerWatchAlertsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerWatchAlerts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerWatchAlertsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

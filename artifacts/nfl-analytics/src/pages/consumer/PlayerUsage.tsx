@@ -4,7 +4,24 @@ import { TeamLogo } from '@/components/TeamLogo';
 import { PlayerCell, ReportMeta, Seg, ShareBar, Sparkline } from '@/components/UsageBits';
 import { rankCellStyle, teamName } from '@/lib/team-colors';
 import { fixed, pct, useUsageReport, type UsagePlayer, type UsageReport, type UsageWindow } from '@/lib/usage-report';
-import { ConsumerLoading } from './consumer-ui';
+import { getGetConsumerDashboardQueryKey, useGetConsumerDashboard } from '@workspace/api-client-react';
+import { MatchupTag } from '@/components/GameDvp';
+import { normalizeTeam } from '@/lib/parlay';
+import { nextGames, playerMatchup, type NextGame } from '@/lib/dvp-matchups';
+import { ConsumerLoading, useConsumerNow } from './consumer-ui';
+
+type Next = Map<string, NextGame>;
+
+/** The player's next opponent and how that defense treats their position. */
+function MatchupCell({ report, next, player }: { report: UsageReport; next: Next; player: UsagePlayer }) {
+  const matchup = playerMatchup(report, next, player.team, player.position);
+  if (!matchup) return <td className="gl-muted">—</td>;
+  const { game, line } = matchup;
+  return <td className="gl-usage-matchup" title={line ? `${game.opponent} allows ${fixed(line.pprPerGame)} PPR points per game to ${player.position}s (#${line.pprRank} of 32)` : undefined}>
+    <span>{game.home ? 'vs' : '@'} <TeamLogo team={normalizeTeam(game.opponent)} size={16} />{game.opponent}</span>
+    <MatchupTag rank={line?.pprRank} />
+  </td>;
+}
 
 type View = 'team' | 'leaders';
 type Win = 'season' | 'last3';
@@ -33,14 +50,15 @@ function TeamPicker({ teams, value, onChange }: { teams: string[]; value: string
   </div>;
 }
 
-function TeamSummary({ report, team, players, win }: { report: UsageReport; team: string; players: UsagePlayer[]; win: Win }) {
+function TeamSummary({ report, team, players, win, next }: { report: UsageReport; team: string; players: UsagePlayer[]; win: Win; next: Next }) {
   const rz = report.redZoneTeams.find(row => row.team === team);
+  const nextGame = next.get(normalizeTeam(team));
   const lead = (key: keyof UsageWindow) => [...players].sort((a, b) => ((b[win][key] as number) ?? 0) - ((a[win][key] as number) ?? 0))[0];
   const target = lead('targetShare');
   const carry = lead('carryShare');
   const redZone = lead('redZoneShare');
   return <div className="gl-card gl-usage-team">
-    <div className="gl-usage-team-name"><TeamLogo team={team} size={56} /><div><h2>{teamName(team)}</h2><p>{rz ? `${rz.games} games played` : ''}</p></div></div>
+    <div className="gl-usage-team-name"><TeamLogo team={team} size={56} /><div><h2>{teamName(team)}</h2><p>{rz ? `${rz.games} games played` : ''}{nextGame ? ` · Next: ${nextGame.home ? 'vs' : 'at'} ${teamName(normalizeTeam(nextGame.opponent))}, week ${nextGame.week}` : ''}</p></div></div>
     <dl className="gl-usage-kpis">
       <div><dt>Top target</dt><dd><b>{target?.name ?? '—'}</b><span>{pct(target?.[win].targetShare ?? null)} of targets</span></dd></div>
       <div><dt>Lead back</dt><dd><b>{carry?.name ?? '—'}</b><span>{pct(carry?.[win].carryShare ?? null)} of carries</span></dd></div>
@@ -50,17 +68,18 @@ function TeamSummary({ report, team, players, win }: { report: UsageReport; team
   </div>;
 }
 
-function PassCatchers({ rows, win }: { rows: UsagePlayer[]; win: Win }) {
+function PassCatchers({ rows, win, report, next }: { rows: UsagePlayer[]; win: Win; report: UsageReport; next: Next }) {
   return <div className="gl-card gl-table-wrap">
     <table className="gl-table gl-usage-table">
       <caption className="gl-table-caption">Pass catchers <small>sorted by share of team targets</small></caption>
       <thead><tr>
-        <th scope="col">Player</th><th scope="col">Games</th><th scope="col">Targets / g</th><th scope="col">Target share</th>
+        <th scope="col">Player</th><th scope="col">Next matchup</th><th scope="col">Games</th><th scope="col">Targets / g</th><th scope="col">Target share</th>
         <th scope="col">Air yards share</th><th scope="col">Rec yds / g</th><th scope="col">Red-zone looks / g</th>
         <th scope="col">TDs</th><th scope="col">PPR / g</th><th scope="col">Weekly share</th>
       </tr></thead>
       <tbody>{rows.map(p => { const w = p[win]; return <tr key={p.playerId}>
         <td><PlayerCell name={p.name} position={p.position} team={p.team} headshot={p.headshot} showTeam={false} /></td>
+        <MatchupCell report={report} next={next} player={p} />
         <td>{w.games}</td><td>{fixed(w.targetsPerGame)}</td><td><ShareBar value={w.targetShare} max={0.4} /></td>
         <td>{pct(w.airYardsShare)}</td><td>{fixed(w.receivingYardsPerGame)}</td><td>{fixed(w.redZoneOppsPerGame)}</td>
         <td>{w.touchdowns}</td><td>{fixed(w.pprPerGame)}</td>
@@ -70,17 +89,18 @@ function PassCatchers({ rows, win }: { rows: UsagePlayer[]; win: Win }) {
   </div>;
 }
 
-function Backfield({ rows, win }: { rows: UsagePlayer[]; win: Win }) {
+function Backfield({ rows, win, report, next }: { rows: UsagePlayer[]; win: Win; report: UsageReport; next: Next }) {
   return <div className="gl-card gl-table-wrap">
     <table className="gl-table gl-usage-table">
       <caption className="gl-table-caption">Backfield <small>sorted by share of team carries</small></caption>
       <thead><tr>
-        <th scope="col">Player</th><th scope="col">Games</th><th scope="col">Carries / g</th><th scope="col">Carry share</th>
+        <th scope="col">Player</th><th scope="col">Next matchup</th><th scope="col">Games</th><th scope="col">Carries / g</th><th scope="col">Carry share</th>
         <th scope="col">Rush yds / g</th><th scope="col">Targets / g</th><th scope="col">Red-zone looks / g</th>
         <th scope="col">Inside the 10 / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th><th scope="col">Weekly share</th>
       </tr></thead>
       <tbody>{rows.map(p => { const w = p[win]; return <tr key={p.playerId}>
         <td><PlayerCell name={p.name} position={p.position} team={p.team} headshot={p.headshot} showTeam={false} /></td>
+        <MatchupCell report={report} next={next} player={p} />
         <td>{w.games}</td><td>{fixed(w.carriesPerGame)}</td><td><ShareBar value={w.carryShare} max={0.8} /></td>
         <td>{fixed(w.rushingYardsPerGame)}</td><td>{fixed(w.targetsPerGame)}</td><td>{fixed(w.redZoneOppsPerGame)}</td>
         <td>{fixed(w.inside10OppsPerGame)}</td><td>{w.touchdowns}</td><td>{fixed(w.pprPerGame)}</td>
@@ -90,16 +110,17 @@ function Backfield({ rows, win }: { rows: UsagePlayer[]; win: Win }) {
   </div>;
 }
 
-function Quarterbacks({ rows, win }: { rows: UsagePlayer[]; win: Win }) {
+function Quarterbacks({ rows, win, report, next }: { rows: UsagePlayer[]; win: Win; report: UsageReport; next: Next }) {
   return <div className="gl-card gl-table-wrap">
     <table className="gl-table gl-usage-table">
       <caption className="gl-table-caption">Quarterbacks</caption>
       <thead><tr>
-        <th scope="col">Player</th><th scope="col">Games</th><th scope="col">Pass yds / g</th><th scope="col">Carries / g</th>
+        <th scope="col">Player</th><th scope="col">Next matchup</th><th scope="col">Games</th><th scope="col">Pass yds / g</th><th scope="col">Carries / g</th>
         <th scope="col">Rush yds / g</th><th scope="col">Red-zone carries / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th>
       </tr></thead>
       <tbody>{rows.map(p => { const w = p[win]; return <tr key={p.playerId}>
         <td><PlayerCell name={p.name} position={p.position} team={p.team} headshot={p.headshot} showTeam={false} /></td>
+        <MatchupCell report={report} next={next} player={p} />
         <td>{w.games}</td><td>{fixed(w.passingYardsPerGame)}</td><td>{fixed(w.carriesPerGame)}</td>
         <td>{fixed(w.rushingYardsPerGame)}</td><td>{fixed(w.redZoneOppsPerGame)}</td><td>{w.touchdowns}</td><td>{fixed(w.pprPerGame)}</td>
       </tr>; })}</tbody>
@@ -107,7 +128,7 @@ function Quarterbacks({ rows, win }: { rows: UsagePlayer[]; win: Win }) {
   </div>;
 }
 
-function Leaders({ report, win, metric, position }: { report: UsageReport; win: Win; metric: Leader; position: PosFilter }) {
+function Leaders({ report, win, metric, position, next }: { report: UsageReport; win: Win; metric: Leader; position: PosFilter; next: Next }) {
   const minGames = win === 'season' ? Math.min(2, report.throughWeek) : 1;
   const rows = report.players
     .filter(p => position === 'ALL' || p.position === position)
@@ -120,12 +141,13 @@ function Leaders({ report, win, metric, position }: { report: UsageReport; win: 
   return <div className="gl-card gl-table-wrap">
     <table className="gl-table gl-usage-table gl-leaders">
       <thead><tr>
-        <th scope="col">#</th><th scope="col">Player</th><th scope="col">{LEADERS.find(([key]) => key === metric)?.[1]}</th>
+        <th scope="col">#</th><th scope="col">Player</th><th scope="col">Next matchup</th><th scope="col">{LEADERS.find(([key]) => key === metric)?.[1]}</th>
         <th scope="col">Targets / g</th><th scope="col">Carries / g</th><th scope="col">Red-zone looks / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th>
       </tr></thead>
       <tbody>{rows.map((p, index) => { const w = p[win]; return <tr key={`${p.playerId}-${p.team}`}>
         <td className="gl-rank-num"><b>{index + 1}</b></td>
         <td><PlayerCell name={p.name} position={p.position} team={p.team} headshot={p.headshot} /></td>
+        <MatchupCell report={report} next={next} player={p} />
         <td>{isShare ? <ShareBar value={w[metric]} max={max} /> : <span className="gl-share"><b>{fixed(w[metric])}</b><i aria-hidden="true"><em style={{ width: `${((w[metric] ?? 0) / max) * 100}%` }} /></i></span>}</td>
         <td>{fixed(w.targetsPerGame)}</td><td>{fixed(w.carriesPerGame)}</td><td>{fixed(w.redZoneOppsPerGame)}</td>
         <td>{w.touchdowns}</td><td>{fixed(w.pprPerGame)}</td>
@@ -136,6 +158,9 @@ function Leaders({ report, win, metric, position }: { report: UsageReport; win: 
 
 export default function PlayerUsage() {
   const { query, report } = useUsageReport();
+  const dashboard = useGetConsumerDashboard({ query: { queryKey: getGetConsumerDashboardQueryKey(), staleTime: 60_000 } });
+  const now = useConsumerNow();
+  const next = useMemo(() => nextGames(dashboard.data?.games ?? [], now), [dashboard.data, now]);
   const initial = useMemo(readParams, []);
   const [view, setView] = useState<View>(initial.view);
   const [win, setWin] = useState<Win>(initial.window);
@@ -184,18 +209,18 @@ export default function PlayerUsage() {
 
       {view === 'team' && activeTeam && <>
         <TeamPicker teams={teams} value={activeTeam} onChange={setTeam} />
-        <TeamSummary report={report} team={activeTeam} players={teamPlayers} win={win} />
-        {qbs.length > 0 && <Quarterbacks rows={qbs} win={win} />}
-        {backs.length > 0 && <Backfield rows={backs} win={win} />}
-        {catchers.length > 0 && <PassCatchers rows={catchers} win={win} />}
+        <TeamSummary report={report} team={activeTeam} players={teamPlayers} win={win} next={next} />
+        {qbs.length > 0 && <Quarterbacks rows={qbs} win={win} report={report} next={next} />}
+        {backs.length > 0 && <Backfield rows={backs} win={win} report={report} next={next} />}
+        {catchers.length > 0 && <PassCatchers rows={catchers} win={win} report={report} next={next} />}
       </>}
 
       {view === 'leaders' && <>
         <Seg label="Rank by" value={metric} onChange={setMetric} options={LEADERS} />
-        <Leaders report={report} win={win} metric={metric} position={position} />
+        <Leaders report={report} win={win} metric={metric} position={position} next={next} />
       </>}
 
-      <p className="gl-note">Shares are the player&apos;s portion of their team&apos;s targets, carries or plays inside the opponent&apos;s 20 in the games they played. Red-zone looks are targets plus carries inside the 20. Built from nflverse play-by-play; see <Link href="/red-zone" className="gl-link">Red Zone</Link> and <Link href="/defense-vs-position" className="gl-link">Defense vs Position</Link>.</p>
+      <p className="gl-note">Shares are the player&apos;s portion of their team&apos;s targets, carries or plays inside the opponent&apos;s 20 in the games they played. Red-zone looks are targets plus carries inside the 20. Next matchup is favorable when the opponent ranks in the top 8 for PPR points allowed to the player&apos;s position this season, and tough in the bottom 8. Built from nflverse play-by-play; see <Link href="/red-zone" className="gl-link">Red Zone</Link> and <Link href="/defense-vs-position" className="gl-link">Defense vs Position</Link>.</p>
     </>}
   </div>;
 }

@@ -11,19 +11,18 @@ pnpm --filter @workspace/scripts report:production-readiness -- --away=DET --hom
 ```
 
 The report queries the development database with `SELECT` statements only. It
-does not refresh feeds, generate predictions, freeze snapshots, grade games,
-promote models, or repair rows. `pending` means that a real game-cycle event
+does not refresh feeds, generate projections, or repair rows. `pending` means that a real game-cycle event
 has not happened (or has no persisted evidence); it is not a pass. Do not
 replace a pending or warning result with an assumption.
 
 ## Release gate
 
-- [ ] Review the report's 19 production-cycle checks and attach its JSON and
+- [ ] Review the report's 12 production-cycle checks and attach its JSON and
   Markdown output to the release record.
 - [ ] Confirm the report names the target kickoff and normalized state, authoritative
   entering records (all 32 teams and discrepancies), current DK/FD quote ages,
-  adaptive worker lease/cadence/skip state, quota affordability, prediction and
-  canonical 30-minute cutoff evidence, final-pre-kickoff evidence, and grading state.
+  adaptive worker lease/cadence/skip state, quota affordability, QB-model
+  projection coverage, final-pre-kickoff evidence, and final results.
 - [ ] Resolve every warning and document every pending real-time step.
 - [ ] Obtain an administrator approval for the deployment, model state,
   database checkpoint, and rollback plan.

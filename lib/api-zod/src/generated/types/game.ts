@@ -5,7 +5,6 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
-import type { GameModelStatus } from './gameModelStatus';
 import type { OddsQuote } from './oddsQuote';
 import type { TeamBrief } from './teamBrief';
 
@@ -27,7 +26,6 @@ export interface Game {
   gameStatus: string;
   /** @nullable */
   broadcast?: string | null;
-  modelStatus: GameModelStatus;
   /** @nullable */
   latestOdds?: OddsQuote[] | null;
 }

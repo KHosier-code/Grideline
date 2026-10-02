@@ -1,0 +1,315 @@
+<title>Gridline 200-Model Backtest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column for the findings, widening to a full-bleed ledger for the ranked table. */
+:root {
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --ink: #17201b;
+  --ink-2: #4a554e;
+  --muted: #7a857e;
+  --rule: #dfe3dd;
+  --accent: #0b6e4f;
+  --accent-soft: #dcefe6;
+  --good: #12804f;
+  --bad: #b3372c;
+  --dot: #9aa59e;
+  --font-display: "Archivo Narrow", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111613; --surface: #18201b; --ink: #e8ede9; --ink-2: #b4beb7; --muted: #87928b; --rule: #2b352f;
+    --accent: #4fc99a; --accent-soft: #1d3a2e; --good: #4fc99a; --bad: #f08174; --dot: #66726b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111613; --surface: #18201b; --ink: #e8ede9; --ink-2: #b4beb7; --muted: #87928b; --rule: #2b352f;
+  --accent: #4fc99a; --accent-soft: #1d3a2e; --good: #4fc99a; --bad: #f08174; --dot: #66726b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font-body); padding: 32px 16px 64px; }
+.wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 40px; }
+.wide { max-width: 1180px; margin: 40px auto 0; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 26px; font-weight: 700; }
+h3 { font-size: 18px; font-weight: 700; }
+p { margin: 0; }
+section { display: grid; gap: 14px; min-width: 0; }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 18px; color: var(--ink-2); }
+.mono, td.num, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.verdicts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.verdict { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; display: grid; gap: 6px; align-content: start; }
+.verdict .tag { font: 600 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.verdict.no .tag { color: var(--bad); }
+.verdict.yes .tag { color: var(--good); }
+.verdict.meh .tag { color: var(--muted); }
+.verdict strong { font-family: var(--font-display); font-size: 19px; line-height: 1.2; }
+.verdict p { color: var(--ink-2); font-size: 14px; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+th { font: 500 11.5px/1.3 var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); background: var(--surface); position: sticky; top: 0; }
+th:first-child, td:first-child, th.l, td.l { text-align: left; }
+td.name { white-space: normal; min-width: 240px; max-width: 380px; }
+td.fam { color: var(--muted); font-size: 12.5px; white-space: normal; min-width: 120px; }
+tr:last-child td { border-bottom: 0; }
+th.sortable { cursor: pointer; }
+th.sortable:hover, th.sorted { color: var(--ink); }
+.good { color: var(--good); font-weight: 500; }
+.bad { color: var(--bad); }
+.dim { color: var(--muted); }
+.pill { display: inline-block; font: 500 11px/1 var(--font-mono); padding: 4px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.pill.no { background: transparent; color: var(--muted); border: 1px solid var(--rule); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--surface); flex-wrap: wrap; }
+.seg button { font: 500 13px var(--font-body); color: var(--ink-2); background: none; border: 0; padding: 8px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.seg button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select, input[type="search"] { font: 14px var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 10px; }
+input[type="search"] { min-width: 0; flex: 1 1 180px; }
+.chartbox { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px; position: relative; }
+.chartbox svg { width: 100%; height: auto; display: block; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12.5px; padding: 6px 9px; border-radius: 4px; max-width: 280px; line-height: 1.4; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--ink-2); }
+.legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.legend .l-all::before { background: var(--dot); }
+.legend .l-hit::before { background: var(--accent); }
+.note { font-size: 13.5px; color: var(--muted); }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; }
+footer { color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) { .seg button { transition: background .15s; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:14px">
+    <div class="eyebrow">Gridline research · 2023–2025 NFL seasons + 2026 weeks 1–3</div>
+    <h1>We tested {{n}} prediction algorithms. None beats the closing line. One opening-line signal held up.</h1>
+    <p class="lede">Every algorithm predicted each game only from what was known before kickoff. They were ranked on 2023 and 2024, and then 2025 was used as an untouched test, so a model that got lucky in the first two seasons had to do it again to count.</p>
+  </header>
+
+  <section>
+    <div class="verdicts">
+      <div class="verdict no"><span class="tag">Against the closing spread</span><strong>Nothing survives</strong><p>Only {{above_be}} of {{eligible}} algorithms cleared 52.4% (break-even at −110) in 2023–24. The best was {{best_close}}, under the {{luck50}} that the best of 200 coin-flippers typically reaches. The top ten fell from {{top_close_sel}} to {{top_close_hold}} in 2025.</p></div>
+      <div class="verdict yes"><span class="tag">At the opening line</span><strong>Big disagreements won again</strong><p>When the EPA rating was 4+ points off the opener, its side went {{s4_sel}} ({{s4_sel_pct}}) in 2023–24, then {{s4_2025}} ({{s4_2025_pct}}) in the 2025 holdout. 2026 has started {{s4_2026}}.</p></div>
+      <div class="verdict meh"><span class="tag">Winners and margins</span><strong>The market is still better</strong><p>No model picked winners better than the Vegas favourite ({{fav_su}} in 2023–24). The best margin forecast ({{mae}} pts off) beats the opener ({{open_mae}}) but not the close ({{line_mae}}).</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">The one result that survived</div>
+    <h2>Bet the EPA rating's side at the opener when it disagrees by 4+ points</h2>
+    <p>This showed up in the sweep as “50% EPA rating + 50% opening line, bet when 2+ points off the opener”, which is the same rule as a 4-point gap between the raw rating and the opener. Rules of this kind (bet only when a model blended with the opener is 2+ points off it) took the top four opener spots in 2023–24, and all four stayed above 58% in 2025: {{top4}}. It also matches the lead the earlier research found (lines move toward Gridline's number about two times in three), so it was not a fresh guess.</p>
+    <div class="scroll">
+      <table id="signal">
+        <thead><tr><th>Gap vs opener</th><th>2023</th><th>2024</th><th>2025 (holdout)</th><th>2026 so far</th><th>All</th><th>No QB change</th><th>Same bets at the close</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note">Win–loss against the opening spread, pushes excluded. Green marks a record above 52.4%. Each row is a different cut-off on the same games, so read across rows for consistency rather than picking the best one.</p>
+    <div class="callout"><h3>Why this is a lead and not a betting system yet</h3></div>
+    <ul>
+      <li><strong>Luck check.</strong> On 2023–24 alone, the best of these rules had a {{top_adj}} chance of being luck once you account for trying {{n}} algorithms (sign-flip test), and the 4-point version {{s4_adj}}. The 2025 holdout is what makes it credible, and that is one season of about 50 bets.</li>
+      <li><strong>QB timing.</strong> The rating knows who actually started at quarterback, which may not be known when the line opens. Games with no starter change still went {{s4_noqb}} ({{s4_noqb_pct}}), so the edge is not only QB news, but it is smaller.</li>
+      <li><strong>2026 is going the other way.</strong> {{s4_2026}} through three weeks. That is too few games to mean much, but it is the most recent evidence.</li>
+      <li><strong>Price and availability.</strong> Grading assumes −110 at the exact opening number. Real openers move fast and limits are low.</li>
+    </ul>
+    <p>Betting the same games at the closing number went {{s4_close}} ({{s4_close_pct}}). That was found after looking, not chosen in advance, so treat it as a question for next season rather than a result.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Regression to the mean</div>
+    <h2>Good 2023–24 records mostly fell back in 2025</h2>
+    <p>Each dot is one algorithm with 100+ bets. If records reflected skill, dots on the right would stay high. Against the close they scatter around 50% no matter how well they did first.</p>
+    <div class="controls" role="group" aria-label="Chart metric">
+      <div class="seg" id="chartSeg">
+        <button type="button" data-m="close" aria-pressed="true">Every game, closing line</button>
+        <button type="button" data-m="open" aria-pressed="false">Every game, opener</button>
+        <button type="button" data-m="open2" aria-pressed="false">2+ pt edges, opener</button>
+      </div>
+    </div>
+    <div class="chartbox" id="chartbox"><svg id="chart" viewBox="0 0 720 420" role="img" aria-label="Scatter of 2023–24 win rate against 2025 win rate"></svg><div class="tip" id="tip" hidden></div></div>
+    <div class="legend"><span class="l-all">Algorithm</span><span class="l-hit">Top 10 in 2023–24</span><span class="dim">Dashed lines: 52.4% break-even</span></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">By family</div>
+    <h2>What each kind of idea did on average</h2>
+    <div class="scroll"><table id="fam"><thead><tr><th>Family</th><th>Variants</th><th>Close 23–24</th><th>Close 2025</th><th>Opener 23–24</th><th>Opener 2025</th></tr></thead><tbody></tbody></table></div>
+    <p class="note">Average win rate across the family's variants with 100+ bets. Elo and point-differential ratings trail the EPA rating, which uses play-by-play efficiency and the starting quarterback. Betting rules such as home dogs, rest edges and fading blowout winners are coin flips. Models built from the closing line can't be graded at the opener, so those cells are blank.</p>
+  </section>
+
+  <section>
+    <div class="eyebrow">How it was tested</div>
+    <h2>Method</h2>
+    <ul>
+      <li><strong>Games:</strong> 2023, 2024 and 2025 regular season and playoffs (285 each), plus 48 games of 2026. Scores, closing spreads and weather come from nflverse. Opening spreads come from the public nfelo project.</li>
+      <li><strong>Walk-forward:</strong> ratings use only earlier games. Anything fitted is fitted on 2020 through the season before.</li>
+      <li><strong>Selection vs holdout:</strong> rankings use 2023–24 only. 2025 was not used to choose anything.</li>
+      <li><strong>Luck bar:</strong> a sign-flip test reshuffles every game's cover outcome at once 4,000 times and asks how good the best of all {{n}} algorithms looks with zero skill. Typical: {{luck50}}; 95th percentile: {{luck95}}.</li>
+      <li><strong>Families swept:</strong> Elo (K, margin-of-victory, regression, home field), point-differential ratings (half-life, carryover, caps), the EPA rating across 14 decay and QB-shrinkage builds, feature subsets, regularization, gradient boosting, random forests and other learners, fixed home-field values, rest and bye handling, QB effect sizes, wind and cold, blends with the opener, market-aware models, ensembles and 29 classic betting rules.</li>
+      <li><strong>Caveats:</strong> weather is the kickoff reading, not the forecast. QB features use the player who actually started. Records assume −110 on every bet.</li>
+    </ul>
+  </section>
+</div>
+
+<section class="wide">
+  <div class="eyebrow">All {{n}} algorithms</div>
+  <h2 style="margin-bottom:6px">Ranked table</h2>
+  <p class="note" style="margin-bottom:12px">Sorted by the 2023–24 record for the chosen bet type. “Luck p” is the chance the best of all {{n}} reaches this rate with no skill; under 0.05 would be meaningful. Margin miss and winners are for models that predict a score margin.</p>
+  <div class="controls">
+    <div class="seg" id="tableSeg" role="group" aria-label="Bet type">
+      <button type="button" data-m="close" aria-pressed="true">Every game, close</button>
+      <button type="button" data-m="open" aria-pressed="false">Every game, opener</button>
+      <button type="button" data-m="close2" aria-pressed="false">2+ pt edges, close</button>
+      <button type="button" data-m="open2" aria-pressed="false">2+ pt edges, opener</button>
+    </div>
+    <select id="famFilter" aria-label="Family"><option value="">All families</option></select>
+    <input type="search" id="q" placeholder="Search algorithms" aria-label="Search algorithms">
+  </div>
+  <div class="scroll" style="max-height:640px">
+    <table id="ranked">
+      <thead><tr>
+        <th class="sortable" data-k="rank">#</th><th class="l">Algorithm</th><th class="l">Family</th>
+        <th class="sortable" data-k="sel">2023–24</th><th class="sortable" data-k="selp">Win %</th><th class="sortable" data-k="adj">Luck p</th>
+        <th class="sortable" data-k="hold">2025</th><th class="sortable" data-k="holdp">Win %</th><th>2026</th>
+        <th class="sortable" data-k="mae">Margin miss</th><th class="sortable" data-k="su">Winners</th><th class="sortable" data-k="clv">Line moved its way</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="note" style="margin-top:10px">Benchmarks for 2023–24: closing line misses the margin by {{line_mae}} pts (2025: {{line_mae_h}}), opener {{open_mae}} ({{open_mae_h}}); the Vegas favourite wins {{fav_su}} ({{fav_su_h}}). “Line moved its way” is the share of games where the model was 1+ pt off the opener and the line then moved toward it.</p>
+</section>
+
+<div class="wrap" style="margin-top:40px">
+  <footer>Code: <span class="mono">research/algo-sweep</span> on branch <span class="mono">claude/algorithm-backtest-kao7e9</span> of the Grideline repo. Nothing on the live site has changed.</footer>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+const BE = D.breakEven;
+const pc = x => x == null ? "—" : (x * 100).toFixed(1) + "%";
+const cls = x => x == null ? "dim" : x > BE ? "good" : x < 0.5 ? "bad" : "";
+const recTxt = r => r ? `${r[0]}–${r[1]}` : "—";
+
+// Opener-gap signal table
+(function () {
+  const tb = document.querySelector("#signal tbody");
+  for (const s of D.signal) {
+    const c = r => r && r.pct != null ? `<td class="num ${cls(r.pct)}">${r.w}–${r.l} <span class="dim">${pc(r.pct)}</span></td>` : `<td class="num dim">—</td>`;
+    tb.insertAdjacentHTML("beforeend", `<tr${s.gap === 4 ? ' style="background:var(--accent-soft)"' : ""}><td class="num">${s.gap}+ pts</td>${c(s["2023"])}${c(s["2024"])}${c(s["2025"])}${c(s["2026"])}${c(s.all)}${c(s.noQbChange)}${c(s.atClose)}</tr>`);
+  }
+})();
+
+// Family table
+(function () {
+  const tb = document.querySelector("#fam tbody");
+  for (const f of D.families) {
+    const c = x => `<td class="num ${cls(x)}">${pc(x)}</td>`;
+    tb.insertAdjacentHTML("beforeend", `<tr><td class="l">${f.family}</td><td class="num">${f.count}</td>${c(f.cs)}${c(f.ch)}${c(f.os)}${c(f.oh)}</tr>`);
+  }
+})();
+
+// Scatter: 2023-24 win rate vs 2025 win rate
+const svg = document.getElementById("chart"), tip = document.getElementById("tip"), box = document.getElementById("chartbox");
+function drawChart(m) {
+  const minBets = m.endsWith("2") ? 60 : 100;
+  const pts = D.rows.filter(r => r[m + "_select"] && r[m + "_holdout"] && r[m + "_select"][0] + r[m + "_select"][1] >= minBets);
+  const top = new Set([...pts].sort((a, b) => b[m + "_select"][2] - a[m + "_select"][2]).slice(0, 10).map(r => r.id));
+  const W = 720, H = 420, L = 56, R = 16, T = 16, B = 46;
+  const vals = pts.flatMap(r => [r[m + "_select"][2], r[m + "_holdout"][2]]).concat([BE]);
+  const lo = Math.floor(Math.min(...vals) * 20) / 20, hi = Math.ceil(Math.max(...vals) * 20) / 20;
+  const x = v => L + (Math.min(Math.max(v, lo), hi) - lo) / (hi - lo) * (W - L - R);
+  const y = v => T + (1 - (Math.min(Math.max(v, lo), hi) - lo) / (hi - lo)) * (H - T - B);
+  let s = "";
+  for (let t = lo; t <= hi + 1e-9; t += 0.05) {
+    s += `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--rule)" stroke-width="1"/>`;
+    s += `<text x="${L - 8}" y="${y(t) + 4}" text-anchor="end" font-size="12" fill="var(--muted)" font-family="var(--font-mono)">${Math.round(t * 100)}%</text>`;
+    s += `<text x="${x(t)}" y="${H - B + 18}" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="var(--font-mono)">${Math.round(t * 100)}%</text>`;
+  }
+  s += `<line x1="${x(BE)}" x2="${x(BE)}" y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+  s += `<line x1="${L}" x2="${W - R}" y1="${y(BE)}" y2="${y(BE)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle" font-size="12.5" fill="var(--ink-2)">2023–24 win rate (used for ranking)</text>`;
+  s += `<text transform="translate(14 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle" font-size="12.5" fill="var(--ink-2)">2025 win rate (holdout)</text>`;
+  const ordered = [...pts].sort((a, b) => top.has(a.id) - top.has(b.id));
+  for (const r of ordered) {
+    const hit = top.has(r.id);
+    s += `<circle cx="${x(r[m + "_select"][2])}" cy="${y(r[m + "_holdout"][2])}" r="${hit ? 6 : 4.5}" fill="${hit ? "var(--accent)" : "var(--dot)"}" fill-opacity="${hit ? 1 : 0.7}" stroke="var(--surface)" stroke-width="2" data-id="${r.id}"/>`;
+  }
+  svg.innerHTML = s;
+}
+svg.addEventListener("mousemove", e => {
+  const c = e.target.closest("circle");
+  if (!c) { tip.hidden = true; return; }
+  const r = D.rows.find(r => r.id === +c.dataset.id), m = chartMetric;
+  tip.innerHTML = `<strong>${r.name}</strong><br>2023–24: ${recTxt(r[m + "_select"])} (${pc(r[m + "_select"][2])})<br>2025: ${recTxt(r[m + "_holdout"])} (${pc(r[m + "_holdout"][2])})`;
+  tip.hidden = false;
+  const b = box.getBoundingClientRect();
+  tip.style.left = Math.min(e.clientX - b.left + 12, b.width - 290) + "px";
+  tip.style.top = (e.clientY - b.top + 12) + "px";
+});
+svg.addEventListener("mouseleave", () => tip.hidden = true);
+let chartMetric = "close";
+document.getElementById("chartSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  chartMetric = b.dataset.m;
+  for (const x of b.parentNode.children) x.setAttribute("aria-pressed", x === b);
+  drawChart(chartMetric);
+});
+drawChart("close");
+
+// Ranked table
+let metric = "close", sortKey = "rank", sortDir = 1;
+const famSel = document.getElementById("famFilter");
+[...new Set(D.rows.map(r => r.family))].sort().forEach(f => famSel.insertAdjacentHTML("beforeend", `<option>${f}</option>`));
+function renderTable() {
+  const m = metric, q = document.getElementById("q").value.toLowerCase(), fam = famSel.value;
+  const minBets = m.endsWith("2") ? 60 : 100;
+  const ranked = [...D.rows].sort((a, b) => {
+    const A = a[m + "_select"], B = b[m + "_select"];
+    const ea = A && A[0] + A[1] >= minBets, eb = B && B[0] + B[1] >= minBets;
+    if (ea !== eb) return eb - ea;
+    return (B ? B[2] : -1) - (A ? A[2] : -1);
+  });
+  ranked.forEach((r, i) => r._rank = i + 1);
+  const val = (r, k) => ({
+    rank: r._rank, sel: r[m + "_select"] ? r[m + "_select"][0] + r[m + "_select"][1] : -1, selp: r[m + "_select"] ? r[m + "_select"][2] : -1,
+    adj: r[m + "_adj"] ?? 2, hold: r[m + "_holdout"] ? r[m + "_holdout"][0] + r[m + "_holdout"][1] : -1, holdp: r[m + "_holdout"] ? r[m + "_holdout"][2] : -1,
+    mae: r.mae_select ?? 99, su: r.su_select ?? -1, clv: r.clv_select ?? -1,
+  })[k];
+  const desc = ["selp", "holdp", "su", "clv", "sel", "hold"].includes(sortKey);
+  const rows = ranked.filter(r => (!fam || r.family === fam) && (!q || r.name.toLowerCase().includes(q)))
+    .sort((a, b) => (val(a, sortKey) - val(b, sortKey)) * (desc ? -1 : 1) * sortDir);
+  const tb = document.querySelector("#ranked tbody");
+  tb.innerHTML = rows.map(r => {
+    const s = r[m + "_select"], h = r[m + "_holdout"], l = r[m + "_live"];
+    const few = s && s[0] + s[1] < minBets;
+    const adj = r[m + "_adj"];
+    return `<tr><td class="num dim">${r._rank}</td><td class="l name">${r.name}${few ? ' <span class="pill no">few bets</span>' : ""}</td><td class="l fam">${r.family}</td>
+      <td class="num">${recTxt(s)}</td><td class="num ${cls(s && s[2])}">${pc(s && s[2])}</td>
+      <td class="num ${adj != null && adj < 0.05 ? "good" : "dim"}">${adj == null ? "—" : adj.toFixed(2)}</td>
+      <td class="num">${recTxt(h)}</td><td class="num ${cls(h && h[2])}">${pc(h && h[2])}</td><td class="num dim">${recTxt(l)}</td>
+      <td class="num">${r.mae_select == null ? "—" : r.mae_select.toFixed(2)}</td><td class="num">${pc(r.su_select)}</td><td class="num">${pc(r.clv_select)}</td></tr>`;
+  }).join("") || `<tr><td colspan="12" class="l dim">No algorithms match that search.</td></tr>`;
+  document.querySelectorAll("#ranked th.sortable").forEach(th => th.classList.toggle("sorted", th.dataset.k === sortKey));
+}
+document.getElementById("tableSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  metric = b.dataset.m;
+  for (const x of b.parentNode.children) x.setAttribute("aria-pressed", x === b);
+  renderTable();
+});
+document.querySelectorAll("#ranked th.sortable").forEach(th => th.addEventListener("click", () => {
+  if (sortKey === th.dataset.k) sortDir *= -1; else { sortKey = th.dataset.k; sortDir = 1; }
+  renderTable();
+}));
+famSel.addEventListener("change", renderTable);
+document.getElementById("q").addEventListener("input", renderTable);
+renderTable();
+</script>

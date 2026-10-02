@@ -7,15 +7,13 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import { desc, eq, inArray, like } from "drizzle-orm";
 import {
-  db, gamesTable, identitySourceImportsTable, injuriesTable, nflversePlayerIdentitiesTable, predictionSnapshotsTable,
+  db, gamesTable, identitySourceImportsTable, injuriesTable, nflversePlayerIdentitiesTable,
   playerGameStatsTable, playersTable, snapCountsTable, teamsTable,
 } from "@workspace/db";
 import {
   GetConsumerDashboardResponse,
   GetConsumerGameResponse,
-  GetConsumerPerformanceResponse,
   GetConsumerPropsAvailabilityResponse,
-  GetConsumerTrendsResponse,
   GetConsumerPlayerUsageResponse,
   ListConsumerGamesResponse,
   GetConsumerScheduleSelectionResponse,
@@ -25,28 +23,20 @@ import { selectConsumerSlate } from "../lib/consumer-schedule-selection";
 import consumerRouter, {
   MAX_CONSUMER_GAMES,
   MAX_CONSUMER_MOVEMENT_ROWS,
-  MAX_CONSUMER_PERFORMANCE_ROWS,
-  MAX_CONSUMER_SNAPSHOT_ROWS,
   aggregatePlayerUsage,
-  applyModelPersonnelLimitationToRecommendation,
   applyCurrentPersonnelToConsumerContext,
-  americanOddsImpliedProbability,
   buildUsageSnapPlayerAliases,
   buildUsageTeamMappings,
-  buildConsumerMarketBoard,
   consumerGameDetailHandler,
   consumerGames,
   consumerFinalScore,
   consumerMarket,
-  currentModelPersonnelLimitation,
   eligibleUsageGames,
   eligibleUsageRows,
   filterUsagePlayers,
   rankRecentKeyPlayers,
   serializeContext,
   serializeMovement,
-  serializePerformance,
-  summarizeConsumerMarketBoards,
   usageCompositeIdentity,
   usageMatchupIdentity,
   usageSeasonAtCutoff,
@@ -55,108 +45,7 @@ import consumerRouter, {
   verifyTeamRecords,
 } from "./consumer";
 import { deriveCurrentTeamDepth } from "../lib/current-personnel-derivation";
-import { selectVerifiedHistoricalOfficialSnapshots } from "../lib/live-predictions";
-import { PHASE6_VECTOR_FEATURE_NAMES, PHASE6_VECTOR_SCHEMA_FINGERPRINT } from "../lib/modeling";
 import { logger } from "../lib/logger";
-
-test("historical consumer recovery keeps only verified frozen official pregame evidence from promoted models", () => {
-  const gameId = "historical-game";
-  const kickoff = new Date("2026-09-01T17:00:00Z");
-  const predicted = new Date("2026-09-01T16:00:00Z");
-  const vector = PHASE6_VECTOR_FEATURE_NAMES.map(() => 0);
-  const selectedValues = Object.fromEntries(PHASE6_VECTOR_FEATURE_NAMES.slice(0, -3).map((name) => [name, 0]));
-  const evidence = {
-    rows: [true, false].map((isHome) => ({
-      gameId, isHome, teamId: isHome ? "H" : "A", opponentTeamId: isHome ? "A" : "H",
-      sourceCutoff: "2026-09-01T15:00:00Z", generatedAt: "2026-09-01T15:30:00Z",
-      selectedValues, lowSample: false, qbDataConfidence: 0.8,
-    })),
-  };
-  const row = {
-    id: 1, gameId, kickoffTime: kickoff, predictionTimestamp: predicted, snapshotLabel: "final",
-    marketSnapshot: {}, marketComparison: {}, lowSample: false, qbConfidence: 0.8,
-    frozenAt: new Date("2026-09-01T16:40:00Z"), evaluationCutoffAt: new Date("2026-09-01T16:30:00Z"),
-    officialFinalPrediction: true, featureVersion: "historical-feature",
-    spreadModelVersion: "old-spread", moneylineModelVersion: "old-moneyline", totalsModelVersion: "old-totals",
-    trainingCutoff: "totals:2026-W3; spread:2026-W1; moneyline:2026-W2",
-    projectedHomeScore: 24, projectedAwayScore: 20, projectedMargin: 4, projectedTotal: 44,
-    homeWinProbability: 0.6, awayWinProbability: 0.4,
-    inputFeatureCount: vector.length, inputMissingFeatureCount: 0, inputVector: vector,
-    vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES], vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT,
-    inputSourceEvidence: evidence,
-    snapshotKey: `${gameId}:final:old-spread:old-moneyline:old-totals:input-integrity-v3:${PHASE6_VECTOR_SCHEMA_FINGERPRINT}`,
-  } as typeof predictionSnapshotsTable.$inferSelect;
-  const promotions = (["spread", "moneyline", "totals"] as const).map((family, index) => ({
-    family, modelVersion: `old-${family}`, role: "production", featureVersion: row.featureVersion,
-    trainingCutoff: `2026-W${index + 1}`, promotedAt: new Date("2026-08-30T12:00:00Z"),
-  })) as Array<typeof import("@workspace/db").modelPromotionHistoryTable.$inferSelect>;
-  const verified = new Set(["old-spread", "old-moneyline", "old-totals"]);
-  const games = new Map([[gameId, kickoff]]);
-  const asOf = new Date("2026-09-02T12:00:00Z");
-  const pick = (candidate: typeof row, evidencePromotions = promotions, artifacts = verified, date = asOf) =>
-    selectVerifiedHistoricalOfficialSnapshots([candidate], games, evidencePromotions, artifacts, date).get(gameId);
-  assert.equal(pick(row), row);
-  assert.equal(pick({ ...row, officialFinalPrediction: false }), undefined);
-  assert.equal(pick({ ...row, predictionTimestamp: kickoff }), undefined);
-  assert.equal(pick({ ...row, frozenAt: new Date("2026-09-01T17:01:00Z") }), undefined);
-  assert.equal(pick({ ...row, inputVector: null }), undefined);
-  assert.equal(pick({ ...row, inputSourceEvidence: null }), undefined);
-  assert.equal(pick({ ...row, projectedTotal: Number.NaN }), undefined);
-  assert.equal(pick(row, promotions.slice(1)), undefined);
-  assert.equal(pick({ ...row, trainingCutoff: "spread:2026-W1; moneyline:2026-W2; totals:2026-W4" }), undefined);
-  assert.equal(pick(row, promotions.map((promotion) => ({ ...promotion, promotedAt: kickoff }))), undefined);
-  assert.equal(pick(row, promotions, new Set(["old-spread", "old-moneyline"])), undefined);
-  assert.equal(pick(row, promotions, verified, new Date("2026-09-01T16:35:00Z")), undefined);
-  assert.equal(selectVerifiedHistoricalOfficialSnapshots([row], new Map([[gameId, new Date("2026-09-01T18:00:00Z")]]),
-    promotions, verified, asOf).size, 0);
-});
-
-test("consumerGames displays an earlier promoted official prediction after the active-model lookup misses", async (t) => {
-  const gameId = `history-${randomUUID()}`;
-  const kickoff = new Date("2026-09-01T17:00:00Z");
-  const asOf = new Date("2026-09-02T12:00:00Z");
-  const homeId = `home-${gameId}`;
-  const awayId = `away-${gameId}`;
-  await db.insert(teamsTable).values([
-    { teamId: homeId, abbreviation: "HME", teamName: "Archived Home" },
-    { teamId: awayId, abbreviation: "AWY", teamName: "Archived Away" },
-  ]);
-  t.after(async () => {
-    await db.delete(gamesTable).where(eq(gamesTable.gameId, gameId));
-    await db.delete(teamsTable).where(inArray(teamsTable.teamId, [homeId, awayId]));
-  });
-  await db.insert(gamesTable).values({
-    gameId, season: 2026, week: 1, gameDate: kickoff, kickoffTime: kickoff,
-    homeTeamId: homeId, awayTeamId: awayId, gameStatus: "STATUS_FINAL",
-    finalHomeScore: 21, finalAwayScore: 17,
-  });
-  // The official row is an in-memory read fixture: real official rows cannot
-  // be removed from this database after insertion.
-  const saved = {
-    gameId, kickoffTime: kickoff, predictionTimestamp: new Date("2026-09-01T16:00:00Z"),
-    frozenAt: new Date("2026-09-01T16:40:00Z"), evaluationCutoffAt: new Date("2026-09-01T16:30:00Z"),
-    officialFinalPrediction: true, projectedHomeScore: 24, projectedAwayScore: 20,
-    projectedMargin: 4, projectedTotal: 44, homeWinProbability: 0.6, awayWinProbability: 0.4,
-    qbConfidence: 0.8, lowSample: false, inputFeatureCount: PHASE6_VECTOR_FEATURE_NAMES.length,
-    inputMissingFeatureCount: 0, inputSourceEvidence: null,
-    spreadModelVersion: "old-spread", moneylineModelVersion: "old-moneyline", totalsModelVersion: "old-totals",
-    snapshotKey: `${gameId}:old`,
-  } as typeof predictionSnapshotsTable.$inferSelect;
-  const games = await consumerGames({ gameId, asOf }, false, async (requested, cutoff) => {
-    assert.deepEqual(requested, [gameId]);
-    assert.equal(cutoff.getTime(), asOf.getTime());
-    return new Map([[gameId, saved]]);
-  });
-  assert.equal(games[0]?.prediction?.officialFinalPrediction, true);
-  assert.equal(games[0]?.prediction?.projectedHomeScore, 24);
-  assert.equal(games[0]?.availability.prediction, null);
-  await db.update(gamesTable).set({ gameStatus: "STATUS_IN_PROGRESS" }).where(eq(gamesTable.gameId, gameId));
-  const live = await consumerGames({ gameId, asOf }, false, async (requested) => {
-    assert.deepEqual(requested, [], "a game still in progress must not use historical recovery");
-    return new Map();
-  });
-  assert.equal(live[0]?.prediction, null);
-});
 
 const boardRow = (
   sportsbook: string,
@@ -181,90 +70,6 @@ test("persisted schedule selects live then next kickoff, including postseason ye
   assert.deepEqual(selectConsumerSlate([{ ...rows[0], gameStatus: "STATUS_SCHEDULED" }, ...rows.slice(1)], new Date("2027-01-05T12:00:00Z")), { selection: { season: 2026, week: 19 }, reason: "upcoming" });
   assert.deepEqual(selectConsumerSlate([], new Date("2027-01-01T00:00:00Z")), { selection: null, reason: "no_schedule" });
   assert.equal(GetConsumerScheduleSelectionResponse.safeParse(selectConsumerSlate(rows, new Date("2027-01-05T00:00:00Z"))).success, true);
-});
-
-test("American odds implied probability rejects invalid prices", () => {
-  assert.equal(americanOddsImpliedProbability(-150), 0.6);
-  assert.equal(americanOddsImpliedProbability(200), 1 / 3);
-  for (const invalid of [0, 99, -99, 100.5, Number.NaN, null]) {
-    assert.equal(americanOddsImpliedProbability(invalid), null);
-  }
-});
-
-test("market board deterministically selects best lines and orients model differences", () => {
-  const board = buildConsumerMarketBoard({
-    projectedMargin: 4,
-    projectedTotal: 47,
-    homeWinProbability: 0.6,
-    predictionTimestamp: new Date("2026-09-01T11:00:00Z"),
-  }, [
-    boardRow("DraftKings", "spread", "Home Team", -3, -110, "2026-09-01T12:00:00Z"),
-    boardRow("FanDuel", "spread", "Home Team", -3, -105, "2026-09-01T12:01:00Z"),
-    boardRow("DraftKings", "total", "Over", 45.5, -105, "2026-09-01T12:00:00Z"),
-    boardRow("FanDuel", "total", "Over", 46, 110, "2026-09-01T12:01:00Z"),
-    boardRow("DraftKings", "moneyline", "Home Team", null, -150, "2026-09-01T12:00:00Z"),
-    boardRow("FanDuel", "moneyline", "Home Team", null, -145, "2026-09-01T12:01:00Z"),
-  ], { teamId: "home", name: "Home Team", abbreviation: "HME" }, new Date("2026-09-02T00:00:00Z"),
-  new Date("2026-09-01T12:10:00Z"), new Date("2026-09-01T12:09:00Z"));
-
-  assert.equal(board.status, "available");
-  assert.equal(board.comparisons[0]?.selectedQuote?.sportsbook, "FanDuel");
-  assert.equal(board.comparisons[0]?.difference, 1);
-  assert.equal(board.comparisons[1]?.selectedQuote?.sportsbook, "DraftKings");
-  assert.equal(board.comparisons[1]?.difference, 1.5);
-  assert.equal(board.comparisons[2]?.selectedQuote?.sportsbook, "FanDuel");
-  assert.ok(Math.abs((board.comparisons[2]?.difference ?? 0) - 0.8163265306) < 0.000001);
-});
-
-test("market board consumes only pre-kickoff history and exposes first/current evidence", () => {
-  const board = buildConsumerMarketBoard({
-    projectedMargin: 3,
-    projectedTotal: 44,
-    homeWinProbability: 0.55,
-    predictionTimestamp: new Date("2026-09-01T10:00:00Z"),
-  }, [
-    boardRow("DraftKings", "spread", "Home Team", -2.5, -110, "2026-09-01T12:00:00Z"),
-    boardRow("DraftKings", "spread", "Home Team", -3, -105, "2026-09-01T13:00:00Z"),
-    boardRow("DraftKings", "spread", "Home Team", -1, 110, "2026-09-01T15:00:00Z"),
-  ], { teamId: "home", name: "Home Team", abbreviation: "HME" }, new Date("2026-09-01T14:00:00Z"), new Date("2026-09-01T16:00:00Z"));
-
-  const spread = board.comparisons[0];
-  assert.equal(board.status, "stale");
-  assert.equal(spread?.state, "stale");
-  assert.equal(spread?.firstObserved?.point, -2.5);
-  assert.equal(spread?.current?.point, -3);
-  assert.equal(spread?.marketTimestamp, "2026-09-01T13:00:00.000Z");
-  assert.equal(board.comparisons[1]?.state, "absent");
-  assert.equal(board.comparisons[1]?.marketValue, null);
-});
-
-test("market board summary reports partial, stale, absent, and sportsbook coverage", () => {
-  const home = { teamId: "home", name: "Home Team", abbreviation: "HME" };
-  const snapshot = {
-    projectedMargin: 3,
-    projectedTotal: 44,
-    homeWinProbability: 0.55,
-    predictionTimestamp: new Date("2026-09-01T10:00:00Z"),
-  };
-  const available = buildConsumerMarketBoard(snapshot, [
-    boardRow("DraftKings", "spread", "Home Team", -3, -110, "2026-09-01T12:00:00Z"),
-  ], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"),
-  new Date("2026-09-01T12:09:00Z"));
-  const stale = buildConsumerMarketBoard(snapshot, [
-    boardRow("FanDuel", "total", "Over", 44, -110, "2026-09-01T11:00:00Z"),
-  ], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
-  const absent = buildConsumerMarketBoard(snapshot, [], home, new Date("2026-09-02T00:00:00Z"), new Date("2026-09-01T12:10:00Z"));
-
-  assert.deepEqual(summarizeConsumerMarketBoards([
-    { marketBoard: available },
-    { marketBoard: stale },
-    { marketBoard: absent },
-  ]), {
-    status: "partial",
-    coverage: { games: 3, gamesWithComparison: 2, DraftKings: 1, FanDuel: 1 },
-  });
-  assert.equal(summarizeConsumerMarketBoards([{ marketBoard: stale }]).status, "stale");
-  assert.equal(summarizeConsumerMarketBoards([]).status, "absent");
 });
 
 test("defensive route defaults to full weeks and validates its generated response", async (t) => {
@@ -837,14 +642,10 @@ test("consumer market quotes use deterministic, explicitly labeled sides", () =>
     capturedAt: "2026-09-01T12:00:00.000Z",
   });
   const market = consumerMarket({
-    marketSnapshot: {
-      markets: {
-        spread: { quotes: [quote("DraftKings", "Away Team", -3, -105), quote("DraftKings", "Home Team", 3, -115)] },
-        moneyline: { quotes: [quote("DraftKings", "Away Team", null, 130), quote("DraftKings", "Home Team", null, -145)] },
-        total: { quotes: [quote("DraftKings", "Under", 44.5, -108), quote("DraftKings", "Over", 44.5, -112)] },
-      },
-    },
-  } as any, { teamId: "home", name: "Home Team", abbreviation: "HME" });
+    spread: { quotes: [quote("DraftKings", "Away Team", -3, -105), quote("DraftKings", "Home Team", 3, -115)] },
+    moneyline: { quotes: [quote("DraftKings", "Away Team", null, 130), quote("DraftKings", "Home Team", null, -145)] },
+    total: { quotes: [quote("DraftKings", "Under", 44.5, -108), quote("DraftKings", "Over", 44.5, -112)] },
+  }, { teamId: "home", name: "Home Team", abbreviation: "HME" });
 
   assert.deepEqual(market.spread && { selection: market.spread.selection, point: market.spread.point, price: market.spread.price }, { selection: "HME", point: 3, price: -115 });
   assert.deepEqual(market.moneyline && { selection: market.moneyline.selection, price: market.moneyline.price }, { selection: "HME", price: -145 });
@@ -937,7 +738,6 @@ test("consumer movement and context use explicit unavailable states", () => {
     projectedMatchups: [],
     matchupMessage: "Matchup projection not yet available.",
     message: "Player information temporarily unavailable",
-    modelPersonnelLimitation: { active: false, reason: null, recommendationSuppressed: false },
   });
 });
 
@@ -1209,143 +1009,6 @@ test("defensive groupings retain distinct 3-4 and 4-3 fronts without guessed rol
   assert.deepEqual(serialize(fourThree).defensiveGroupings.safeties.map((player) => player.role).sort(), ["FS", "SS"]);
 });
 
-test("QB model limitation compares explicit cutoff-safe identity only", () => {
-  const current = {
-    teamId: "home", teamName: "Home", abbreviation: "HOM", asOf: "2026-09-17T11:00:00.000Z",
-    freshness: "current" as const,
-    qbStarter: { status: "available" as const, player: { playerId: "mariota", playerName: "Marcus Mariota" } as any },
-  } as any;
-  const predictionTimestamp = new Date("2026-09-15T15:00:00.000Z");
-  const evidence = (qbId: string) => ({
-    rows: [{
-      isHome: true, teamId: "home", opponentTeamId: "away",
-      sourceCutoff: "2026-09-15T14:59:59.000Z", generatedAt: "2026-09-15T15:00:00.000Z",
-      selectedAudit: { _personnel_context: { teams: { home: { qb: { projectedStarter: { playerId: qbId } } } } } },
-    }, {
-      isHome: false, teamId: "away", opponentTeamId: "home",
-      sourceCutoff: "2026-09-15T14:59:59.000Z", generatedAt: "2026-09-15T15:00:00.000Z",
-      selectedAudit: {},
-    }],
-  });
-  const base = {
-    predictionTimestamp, kickoffTime: new Date("2026-09-24T17:00:00.000Z"),
-    homeTeamId: "home", awayTeamId: "away", current: { home: current, away: null },
-  };
-  assert.equal(currentModelPersonnelLimitation({ ...base, savedInputSourceEvidence: evidence("daniels") }).recommendationSuppressed, true);
-  assert.equal(currentModelPersonnelLimitation({ ...base, savedInputSourceEvidence: evidence("mariota") }).active, false);
-  const noNamedQb = currentModelPersonnelLimitation({
-    ...base, savedInputSourceEvidence: { rows: [{ selectedValues: { qb_confidence_difference: 0 } }] },
-  });
-  assert.equal(noNamedQb.active, true);
-  assert.equal(noNamedQb.recommendationSuppressed, false);
-  assert.match(noNamedQb.reason ?? "", /does not retain a named quarterback identity/);
-  const futureEvidence = evidence("daniels");
-  futureEvidence.rows[0]!.sourceCutoff = "2026-09-17T11:00:00.000Z";
-  assert.equal(currentModelPersonnelLimitation({ ...base, savedInputSourceEvidence: futureEvidence }).recommendationSuppressed, false);
-});
-
-test("named QB-less snapshot warns unless cutoff-safe personnel confirms a post-snapshot change", () => {
-  const predictionTimestamp = new Date("2026-09-17T15:00:00.000Z");
-  const player = (playerId: string, capturedAt: string, rank: number) => ({
-    playerId, playerName: playerId === "daniels" ? "Jayden Daniels" : "Marcus Mariota",
-    position: "QB", rank, sourceClassification: "published_secondary" as const,
-    providerEvidence: [{ capturedAt }],
-    conflicts: [],
-  });
-  const current = {
-    home: {
-      asOf: "2026-09-24T11:00:00.000Z", freshness: "current" as const,
-      qbStarter: { status: "available" as const, player: player("mariota", "2026-09-24T10:00:00.000Z", 1) },
-    },
-    away: null,
-  } as any;
-  const historical = {
-    home: {
-      asOf: predictionTimestamp.toISOString(), freshness: "current" as const,
-      qbStarter: { status: "available" as const, player: player("daniels", "2026-09-17T11:00:00.000Z", 1) },
-    },
-    away: null,
-  } as any;
-  const result = currentModelPersonnelLimitation({
-    savedInputSourceEvidence: { rows: [{ selectedValues: { qb_confidence_difference: 0 } }] },
-    predictionTimestamp, kickoffTime: new Date("2026-09-24T17:00:00.000Z"),
-    homeTeamId: "home", awayTeamId: "away", current, historical,
-  });
-  assert.equal(result.active, true);
-  assert.equal(result.recommendationSuppressed, true);
-  assert.match(result.reason ?? "", /saved model input does not retain a named quarterback identity/);
-
-  const noTransition = currentModelPersonnelLimitation({
-    savedInputSourceEvidence: { rows: [{ selectedValues: { qb_confidence_difference: 0 } }] },
-    predictionTimestamp, kickoffTime: new Date("2026-09-24T17:00:00.000Z"),
-    homeTeamId: "home", awayTeamId: "away", current, historical: null,
-  });
-  assert.equal(noTransition.active, true);
-  assert.equal(noTransition.recommendationSuppressed, false);
-});
-
-test("confirmed QB mismatch withholds recommendations without modifying projections", () => {
-  const savedProjection = {
-    projectedHomeScore: 22.1146,
-    projectedAwayScore: 22.8403,
-    projectedMargin: -0.7257,
-    projectedTotal: 44.9549,
-    homeWinProbability: 0.3432,
-  };
-  const recommendation = {
-    status: "healthy" as const, reason: null,
-    markets: { spread: true, total: true, moneyline: true },
-  };
-  const limitation = { active: true, reason: "Saved personnel identity differs.", recommendationSuppressed: true };
-  assert.deepEqual(applyModelPersonnelLimitationToRecommendation(recommendation, limitation), {
-    status: "unavailable", reason: limitation.reason,
-    markets: { spread: false, total: false, moneyline: false },
-  });
-  assert.deepEqual(applyModelPersonnelLimitationToRecommendation(recommendation, {
-    active: true, reason: "No saved named QB.", recommendationSuppressed: false,
-  }), recommendation);
-  assert.deepEqual(savedProjection, {
-    projectedHomeScore: 22.1146, projectedAwayScore: 22.8403,
-    projectedMargin: -0.7257, projectedTotal: 44.9549, homeWinProbability: 0.3432,
-  });
-});
-
-test("consumer performance is whitelisted and matches generated response contracts", () => {
-  const performance = serializePerformance({
-    status: "measured",
-    windowTruncated: false,
-    officialPredictions: 12,
-    gradedPredictions: 10,
-    byFamily: {
-      spread: { predictions: 10, mae: 6.1, rmse: 8, avgClv: null },
-      moneyline: { predictions: 10, accuracy: 0.6, brier: 0.21, logLoss: 0.62 },
-      totals: { predictions: 10, mae: 7.2, rmse: 9.1, avgClv: 0.4 },
-    },
-    breakdowns: {
-      season: [{ group: "2025", predictions: 10, spreadMae: 6.1, totalsMae: 7.2, moneylineAccuracy: 0.6, avgClv: null }],
-      week: [],
-      model: [{ group: "internal-model-version", predictions: 10, spreadMae: 6.1, totalsMae: 7.2, moneylineAccuracy: 0.6, avgClv: null }],
-      edge: [],
-      homeAway: [],
-      favoriteUnderdog: [],
-      sampleQuality: [],
-      qbConfidence: [],
-    },
-    note: "internal note",
-  });
-
-  assert.equal(GetConsumerPerformanceResponse.safeParse(performance).success, true);
-  assert.equal(GetConsumerTrendsResponse.safeParse({
-    status: performance.status,
-    byWeek: performance.breakdowns.week,
-    byConfidence: performance.breakdowns.confidence,
-    byEdge: performance.breakdowns.edge,
-    window: performance.window,
-    note: "Trends are derived from persisted, graded official predictions only.",
-  }).success, true);
-  assert.doesNotMatch(JSON.stringify(performance), /internal-model-version|modelVersion|internal note/);
-});
-
 test("generated contracts accept representative list, dashboard, detail, and unavailable payloads", () => {
   const source = {
     status: "unavailable" as const,
@@ -1368,7 +1031,6 @@ test("generated contracts accept representative list, dashboard, detail, and una
       away: { name: "Away", abbreviation: "AWY", logoUrl: null },
     },
     finalScore: null,
-    prediction: null,
     initialMarkets: { capturedAt: null, moneyline: null, spread: null, total: null },
     market: {
       spread: null,
@@ -1377,49 +1039,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
       awayMoneyline: null,
       evidence: { available: false, capturedAt: null, message: "Sportsbook line updating" },
     },
-    marketBoard: {
-      status: "absent" as const,
-      staleAfterMinutes: 15,
-      selectionRule: "Best means the most favorable canonical line point, then the higher American price when points match; exact ties prefer DraftKings.",
-      comparisons: (["spread", "total", "moneyline"] as const).map((market) => ({
-        market,
-        label: market,
-        state: "absent" as const,
-        modelValue: null,
-        marketValue: null,
-        difference: null,
-        differenceUnit: market === "moneyline" ? "probability_points" as const : "points" as const,
-        selectedQuote: null,
-        currentQuotes: [],
-        firstObserved: null,
-        current: null,
-        modelTimestamp: null,
-        marketTimestamp: null,
-        observationAgeMinutes: null,
-        freshnessLabel: "Sportsbook line updating",
-      })),
-    },
-    recommendation: { status: "unavailable" as const, reason: "No complete market", markets: {
-      spread: false, total: false, moneyline: false,
-    } },
-    dataConfidence: { label: "Updating" as const, score: null, reason: "Prediction data is being refreshed" },
-    confidence: {
-      markets: (["spread", "moneyline", "total"] as const).map((market) => ({
-        market,
-        score: 0,
-        label: "Low" as const,
-        explanation: "Low confidence; required evidence is unavailable.",
-        components: [
-          { key: "data" as const, label: "Data Confidence", score: null, summary: "Unavailable" },
-          { key: "model" as const, label: "Model Confidence", score: null, summary: "Unavailable" },
-          { key: "marketEdge" as const, label: "Market Edge Strength", score: null, summary: "Unavailable" },
-        ],
-        evidence: {},
-        downgradeReasons: ["Required evidence is unavailable"],
-        calculatedAt: "2026-09-17T12:00:00.000Z",
-      })),
-    },
-    availability: { prediction: "No eligible saved projection exists for this game as of this request.", predictionReason: "missing_eligible_snapshot", market: "Sportsbook line updating" },
+    availability: { market: "Sportsbook line updating" },
   };
   const detail = {
     ...game,
@@ -1472,10 +1092,7 @@ test("generated contracts accept representative list, dashboard, detail, and una
 
   const routesDirectory = path.join(fileURLToPath(new URL("../../", import.meta.url)), "src/routes");
   const routeSource = readFileSync(path.join(routesDirectory, "consumer.ts"), "utf8");
-  const predictionSource = readFileSync(path.join(routesDirectory, "../lib/live-predictions.ts"), "utf8");
   assert.equal(ListConsumerGamesResponse.safeParse({
-    status: "absent",
-    coverage: { games: 1, gamesWithComparison: 0, DraftKings: 0, FanDuel: 0 },
     games: [game],
     sourceHealth,
     teamRecords: [],
@@ -1491,34 +1108,19 @@ test("generated contracts accept representative list, dashboard, detail, and una
   assert.equal(GetConsumerDashboardResponse.safeParse({
     status: "available",
     games: [game],
-    initialWeeklyPick: { pick: null, reason: "Waiting for first verified lines for the upcoming slate." },
     sourceHealth,
-    note: "Persisted snapshots only",
+    note: "Saved schedule and sportsbook lines only",
   }).success, true);
   assert.equal(GetConsumerGameResponse.safeParse({ ...detail, sourceHealth }).success, true);
   assert.equal(MAX_CONSUMER_GAMES, 100);
   assert.equal(MAX_CONSUMER_MOVEMENT_ROWS, 200);
-  assert.equal(MAX_CONSUMER_SNAPSHOT_ROWS, 100);
-  assert.equal(MAX_CONSUMER_PERFORMANCE_ROWS, 5_000);
   assert.match(routeSource, /\.limit\(MAX_CONSUMER_GAMES\)/);
   assert.match(routeSource, /inArray\(sportsbookOddsTable\.sportsbook, \["DraftKings", "FanDuel"\]\)/);
   assert.match(routeSource, /\.orderBy\(asc\(sportsbookOddsTable\.capturedAt\), asc\(sportsbookOddsTable\.id\)\)/);
-  assert.match(routeSource, /preKickoffOnly:\s*true/);
-  assert.match(routeSource, /snapshotDataConfidence\(\{[\s\S]*lowSample:\s*snapshot\.lowSample[\s\S]*inputMissingFeatureCount/);
-  assert.match(routeSource, /dataAcceptable:\s*confidenceData\.acceptable/);
-  assert.match(routeSource, /authoritativeGameKickoff:\s*true/);
   assert.match(routeSource, /new Date\(game\.kickoffTime\)\.getTime\(\) - 1/);
   assert.match(routeSource, /featureVersion,\s*PERSONNEL_CONTEXT_VERSION/);
-  assert.match(routeSource, /maxRows:\s*MAX_CONSUMER_SNAPSHOT_ROWS/);
-  assert.match(routeSource, /getPredictionPerformance\(MAX_CONSUMER_PERFORMANCE_ROWS\)/);
-  assert.match(predictionSource, /predictionTimestamp\}\s*<\s*\$\{gamesTable\.kickoffTime/);
-  assert.match(predictionSource, /selectDistinctOn/);
-  assert.match(predictionSource, /PHASE6_PRODUCTION_VECTOR_WIDTH/);
-  assert.match(predictionSource, /snapshotMatchesProductionModels/);
-  assert.match(predictionSource, /input-integrity-v3/);
-  assert.match(predictionSource, /options\.maxRows === undefined \? await query : await query\.limit\(options\.maxRows\)/);
   assert.match(routeSource, /\.limit\(1\)/);
-  assert.doesNotMatch(routeSource, /\b(generateLivePredictions|gradeCompletedPredictions|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);
+  assert.doesNotMatch(routeSource, /\b(live-predictions|predictionSnapshotsTable|syncSchedule|rebuildPregamePersonnelContextFeatures)\b/);
 });
 
 test("consumer matchup board exposes accessible partial states without wide tables or betting claims", () => {

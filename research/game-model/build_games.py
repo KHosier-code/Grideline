@@ -4,6 +4,7 @@ played strictly before the one being described.
 
 Usage: build_games.py <data dir> <out.parquet>
 """
+import os
 import sys
 from datetime import date
 
@@ -13,9 +14,9 @@ import pandas as pd
 DATA, OUT = sys.argv[1], sys.argv[2]
 CURRENT_SEASON = date.today().year if date.today().month >= 3 else date.today().year - 1
 SEASONS = list(range(2019, CURRENT_SEASON + 1))
-HALF_LIFE_GAMES = 6          # weight halves every 6 games
-SEASON_CARRYOVER = 0.5       # last season's games count half at the new season
-QB_PRIOR_DROPBACKS = 150     # shrink small samples toward replacement level
+HALF_LIFE_GAMES = float(os.environ.get("HALF_LIFE_GAMES", 6))      # weight halves every 6 games
+SEASON_CARRYOVER = float(os.environ.get("SEASON_CARRYOVER", 0.5))  # last season's games count half at the new season
+QB_PRIOR_DROPBACKS = float(os.environ.get("QB_PRIOR_DROPBACKS", 150))  # shrink small samples toward replacement level
 QB_REPLACEMENT_EPA = -0.08   # typical backup EPA per dropback
 TEAM_ALIASES = {"OAK": "LV", "SD": "LAC", "STL": "LA"}
 

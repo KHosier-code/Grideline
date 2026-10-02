@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db, touchdownPickRunsTable, weeklyReportsTable } from "@workspace/db";
 
 /**
@@ -148,4 +148,16 @@ export async function latestTouchdownProps(season: number, week: number): Promis
     .orderBy(desc(weeklyReportsTable.generatedAt)).limit(10);
   const row = rows.find((item) => item.season === season && item.week === week);
   return row ? (row.payload as unknown as TouchdownPropsReport) : null;
+}
+
+/** The latest captured prices for each week of a season. */
+export async function touchdownPropsForSeason(season: number): Promise<Map<number, TouchdownPropsReport>> {
+  const rows = await db.select().from(weeklyReportsTable)
+    .where(and(eq(weeklyReportsTable.kind, "td-props"), eq(weeklyReportsTable.season, season)))
+    .orderBy(desc(weeklyReportsTable.generatedAt));
+  const byWeek = new Map<number, TouchdownPropsReport>();
+  for (const row of rows) {
+    if (!byWeek.has(row.week)) byWeek.set(row.week, row.payload as unknown as TouchdownPropsReport);
+  }
+  return byWeek;
 }

@@ -54,7 +54,7 @@ function HeroStats({ season }: { season: number | undefined }) {
   </div>;
 }
 
-/** Three surest winners this week, linking to the full Pick'em Pool. */
+/** Three surest winners this week, linking to the full Pool Picks page. */
 function PoolTeaser({ views, now }: { views: ReturnType<typeof buildGameView>[]; now: number }) {
   const games = views
     .filter(view => !view.game.finalScore && (!view.game.kickoffTime || Date.parse(view.game.kickoffTime) > now))
@@ -62,7 +62,7 @@ function PoolTeaser({ views, now }: { views: ReturnType<typeof buildGameView>[];
     .sort((a, b) => b.wins - a.wins).slice(0, 3);
   if (games.length < 3) return null;
   return <Link href="/pickem" className="gl-card gl-pool-teaser">
-    <span className="gl-pool-teaser-copy"><span className="gl-label">Pick&apos;em Pool</span><b>Safest picks this week</b><small>Every game ranked for confidence and survivor pools ›</small></span>
+    <span className="gl-pool-teaser-copy"><span className="gl-label">Pool Picks</span><b>Safest picks this week</b><small>Winners, spreads and totals for your pool ›</small></span>
     {games.map(game => {
       const [win, loss] = matchupAccents(abbr(game, game.pick), abbr(game, game.pick === 'home' ? 'away' : 'home'));
       return <span key={game.view.game.gameId} className="gl-pool-teaser-pick">

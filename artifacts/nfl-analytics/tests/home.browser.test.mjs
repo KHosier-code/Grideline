@@ -39,10 +39,8 @@ const game = (gameId, away, home) => ({
   gameId, season, week, kickoffTime: kickoff, gameStatus: 'Scheduled', gameState: 'pregame',
   venue: null, matchup: { away: { teamId: away, abbreviation: away, name: `${away} Away` },
     home: { teamId: home, abbreviation: home, name: `${home} Home` } },
-  finalScore: null, prediction: null, market: {}, marketBoard: { comparisons: [] },
-  recommendation: { status: 'partial', reason: 'No eligible evidence', markets: { spread: false, total: false, moneyline: false } },
-  dataConfidence: { label: 'Limited', score: 0, reason: 'Synthetic test only' },
-  confidence: { markets: [] }, availability: { prediction: 'No eligible saved prediction', market: null },
+  finalScore: null, market: {}, initialMarkets: { capturedAt: null, moneyline: null, spread: null, total: null },
+  availability: { market: null },
 });
 const games = [game('home-test-one', 'AWY', 'HOM'), game('home-test-two', 'VIS', 'LOC')];
 const pastGame = {
@@ -51,8 +49,6 @@ const pastGame = {
 };
 let dashboardGames = games;
 const board = {
-  status: 'absent',
-  coverage: { games: games.length, gamesWithComparison: 0, DraftKings: 0, FanDuel: 0 },
   games,
   teamRecords: [],
   recordVerification: {
@@ -64,8 +60,7 @@ const board = {
 let detail = {
   ...games[0], weather: null, movement: { available: false, streams: [], message: 'No observations',
     completeness: { status: 'complete', returnedObservations: 0, totalObservations: 0 } },
-  context: { teams: [], message: 'No confirmed depth', projectedMatchups: [],
-    modelPersonnelLimitation: { active: false, recommendationSuppressed: false, reason: null } },
+  context: { teams: [], message: 'No confirmed depth', projectedMatchups: [] },
   keyPlayers: [], matchupBoard: { status: 'unavailable', sourceCutoff: new Date().toISOString(),
     assessments: [], summary: [], sources: [], completeness: { supportedCategories: 0, totalCategories: 0 } },
   sourceHealth: health, analysis: { drivers: [], availability: { weather: 'Weather unavailable' } },
@@ -177,8 +172,7 @@ test('weekly Home disclosure, focus, and contextual Game Detail in both themes a
           && url.searchParams.get('week') === String(week) ? board
         : path === '/api/consumer/games' && url.searchParams.get('season') === String(season)
           && url.searchParams.get('week') === '1'
-          ? { ...board, status: 'available', games: [pastGame],
-              coverage: { ...board.coverage, games: 1 }, recordVerification: { ...board.recordVerification, targetWeek: 1 } }
+          ? { ...board, games: [pastGame], recordVerification: { ...board.recordVerification, targetWeek: 1 } }
           : null;
       const action = isEvidence
         ? cdp.send('Fetch.fulfillRequest', { requestId, responseCode: 503,

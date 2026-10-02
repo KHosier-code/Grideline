@@ -10,9 +10,10 @@ import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
 import { ConsumerPregameComparisonChart } from '../../components/ConsumerPregameComparisonChart';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { DeferredDetailDisclosure } from '../../components/DeferredDetailDisclosure';
-import { GameDefenseVsPosition } from '../../components/DefenseVsPosition';
+import { GameDvp } from '../../components/GameDvp';
 import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
 import { GameAlerts } from './GameAlerts';
+import { BookTable } from '@/components/BookLines';
 import { ConsumerLoading, ConsumerMessage, SaveGameButton, formatKickoff, useConsumerNow } from './consumer-ui';
 import { useEffect } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
@@ -105,8 +106,10 @@ export default function ConsumerGameDetail() {
     </header>
 
     <GameProjectionPanel view={view} projection={qbProjection} />
+    {beforeKickoff && <BookTable books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />}
     <HundredGames view={view} />
     <MatchupRanks home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
+    <GameDvp home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
     <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />
     <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
     <DeferredDetailDisclosure key={`${game.gameId}-matchups`} testId="disclosure-matchups" title="Team matchup details" status="Offense vs defense, category by category">
@@ -114,7 +117,7 @@ export default function ConsumerGameDetail() {
       <ConsumerPregameComparisonChart board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
     </DeferredDetailDisclosure>
     <DeferredDetailDisclosure key={`${game.gameId}-personnel`} testId="disclosure-personnel" title="Players and depth chart" status="Depth, usage and position matchups">
-      {beforeKickoff && <><GameDefenseVsPosition gameId={game.gameId} season={game.season} away={game.matchup.away} home={game.matchup.home} /><PlayerPositionMatchup gameId={game.gameId} /></>}
+      {beforeKickoff && <PlayerPositionMatchup gameId={game.gameId} />}
       <ConsumerDepthChart context={game.context} />
       <ConsumerKeyPlayers players={game.keyPlayers} away={game.matchup.away} home={game.matchup.home} season={game.season} week={game.week} gameId={game.gameId} />
       <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
@@ -133,7 +136,7 @@ function GameProjectionPanel({ view, projection }: { view: GameView; projection:
   const reasons = drivers(view, projection);
   return <section className="gl-section" aria-labelledby="projection-heading">
     <div className="gl-section-head"><h2 id="projection-heading">Gridline projection</h2>
-      <p>{p.source === 'qb-model' ? 'Adjusted for the starting quarterbacks' : 'From our earlier model'}{game.finalScore ? '' : ' · updates through the week'}</p></div>
+      <p>Adjusted for the starting quarterbacks{game.finalScore ? '' : ' · updates through the week'}</p></div>
     <div className="gl-card gl-projection">
       <div className="gl-projection-score">
         <div><TeamChip team={away} /><b>{p.away.toFixed(1)}</b><small>{pct(1 - p.homeWin)} to win</small></div>
@@ -150,7 +153,7 @@ function GameProjectionPanel({ view, projection }: { view: GameView; projection:
       </div>
       {view.result && <p className="gl-note">Our projected winner was {view.result === 'win' ? 'right' : view.result === 'loss' ? 'wrong' : 'tied'}.</p>}
     </div>
-    {p.source === 'qb-model' && <div className="gl-why gl-card"><QbCard team={away} qb={p.awayQb} /><QbCard team={home} qb={p.homeQb} /></div>}
+    <div className="gl-why gl-card"><QbCard team={away} qb={p.awayQb} /><QbCard team={home} qb={p.homeQb} /></div>
     {reasons.length > 0 && <div className="gl-card gl-reasons"><h3 className="gl-label">What drives the projection</h3><ul>{reasons.map(reason => <li key={reason}>{reason}</li>)}</ul></div>}
     <p className="gl-note">This is a projection, not a pick. Our lines haven&apos;t beaten Vegas closing lines in testing, so use them as a second opinion. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
   </section>;

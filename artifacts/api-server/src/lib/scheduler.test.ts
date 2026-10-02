@@ -8,13 +8,11 @@ import {
   nextLeanOddsCapture,
   oddsCaptureMode,
   classifySchedulerAlerts,
-  confidenceCaptureOccurrences,
-  canonicalPredictionOccurrence,
+  isRetiredJobKind,
   adaptiveOddsJobReconciliation,
   nextWeeklyOccurrence,
   groupSundayKickoffWindows,
   shouldRecoverMissedOccurrence,
-  shouldRetireFlexedConfidenceOccurrence,
   shouldRearmDynamicOccurrence,
   startDataScheduler,
   stopDataScheduler,
@@ -249,40 +247,13 @@ test("Sunday injury windows dedupe same kickoff and retain late/SNF windows", ()
   assert.deepEqual(windows[0].gameIds, ["early-a", "early-b"]);
 });
 
-test("confidence captures use documented kickoff-relative windows", () => {
-  const kickoff = new Date("2026-09-20T17:00:00.000Z");
-  assert.deepEqual(
-    confidenceCaptureOccurrences("game-1", kickoff).map((occurrence) => ({
-      jobKey: occurrence.jobKey,
-      scheduledFor: occurrence.scheduledFor.toISOString(),
-    })),
-    [
-      { jobKey: "confidence-24h-game-1", scheduledFor: "2026-09-19T17:00:00.000Z" },
-      { jobKey: "confidence-6h-game-1", scheduledFor: "2026-09-20T11:00:00.000Z" },
-      { jobKey: "confidence-75m-game-1", scheduledFor: "2026-09-20T15:45:00.000Z" },
-    ],
-  );
-});
-
-test("canonical prediction occurrence is exactly 30 minutes before kickoff", () => {
-  const occurrence = canonicalPredictionOccurrence("game-1", new Date("2026-09-20T17:00:00.000Z"));
-  assert.equal(occurrence.jobKey, "prediction-canonical-game-1");
-  assert.equal(occurrence.cutoffMinutes, 30);
-  assert.equal(occurrence.scheduledFor.toISOString(), "2026-09-20T16:30:00.000Z");
-});
-
-test("normal due confidence jobs remain claimable while earlier kickoff flexes retire stale slots", () => {
-  const now = new Date("2026-09-20T11:01:00.000Z");
-  const normalOccurrence = new Date("2026-09-20T11:00:00.000Z");
-  assert.equal(shouldRetireFlexedConfidenceOccurrence(normalOccurrence, normalOccurrence, now), false);
-  assert.equal(
-    shouldRetireFlexedConfidenceOccurrence(
-      new Date("2026-09-20T12:00:00.000Z"),
-      new Date("2026-09-20T11:00:00.000Z"),
-      now,
-    ),
-    true,
-  );
+test("retired prediction-pipeline job kinds are recognized; live feeds are not", () => {
+  for (const kind of ["prediction", "prediction-grade", "prediction-freeze", "prediction-canonical", "confidence-capture", "model-challenger"]) {
+    assert.equal(isRetiredJobKind(kind), true, kind);
+  }
+  for (const kind of ["schedule", "injury", "injury-dynamic", "injury-kickoff", "odds", "odds-dynamic", "odds-adaptive", "nflverse", "sleeper-players", "personnel-context", "pregame-feature-repair"]) {
+    assert.equal(isRetiredJobKind(kind), false, kind);
+  }
 });
 
 test("latest-state injury dedupe preserves A-B-A history", () => {
