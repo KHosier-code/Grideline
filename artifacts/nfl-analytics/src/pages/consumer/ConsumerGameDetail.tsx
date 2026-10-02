@@ -9,6 +9,7 @@ import { ConsumerKeyPlayers } from '../../components/ConsumerKeyPlayers';
 import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { GameTabs } from '../../components/GameTabs';
+import { GamePicks } from '@/components/MyPicks';
 import { GameWeather } from '../../components/GameWeather';
 import { GameDvp, playerKey, type InjuryNames } from '../../components/GameDvp';
 import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
@@ -117,6 +118,7 @@ export default function ConsumerGameDetail() {
     <GameProjectionPanel view={view} />
     <GameTabs key={game.gameId} tabs={[
       { id: 'overview', label: 'Overview', content: <>
+        <GamePicks game={game} />
         <GameWhy view={view} projection={qbProjection} />
         <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
         <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />

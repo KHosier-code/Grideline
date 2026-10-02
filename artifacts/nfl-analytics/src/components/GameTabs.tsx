@@ -11,9 +11,9 @@ const hashTab = (tabs: Tab[]) => {
  * The game page's sections, one tab at a time so a phone isn't one long
  * scroll. A tab mounts the first time it is opened and stays mounted, and the
  * open tab is kept in the URL hash so a shared link opens it. Key it by game
- * so moving to another game starts fresh.
+ * so moving to another game starts fresh. The home page uses it too.
  */
-export function GameTabs({ tabs }: { tabs: Tab[] }) {
+export function GameTabs({ tabs, label = 'Game details' }: { tabs: Tab[]; label?: string }) {
   const [active, setActive] = useState(() => hashTab(tabs));
   const [opened, setOpened] = useState(() => new Set([active]));
   const bar = useRef<HTMLDivElement>(null);
@@ -26,7 +26,7 @@ export function GameTabs({ tabs }: { tabs: Tab[] }) {
     if (top !== undefined && top < 0) bar.current?.scrollIntoView({ block: 'start' });
   };
   return <div className="gl-game-tabs">
-    <div ref={bar} className="gl-tabbar" role="tablist" aria-label="Game details">
+    <div ref={bar} className="gl-tabbar" role="tablist" aria-label={label}>
       {tabs.map(tab => <button key={tab.id} type="button" role="tab" id={`game-tab-${tab.id}`}
         aria-selected={tab.id === current} aria-controls={`game-panel-${tab.id}`} tabIndex={tab.id === current ? 0 : -1}
         onClick={() => choose(tab.id)}

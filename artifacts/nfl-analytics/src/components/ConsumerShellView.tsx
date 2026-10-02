@@ -18,6 +18,7 @@ export const consumerNavGroups: NavGroup[] = [
     { href: '/touchdowns', label: 'TD Picks', icon: Trophy },
     { href: '/pickem', label: 'Pool Picks', icon: Grid3x3, newUntil: '2026-10-14' },
     { href: '/parlays', label: 'Parlay Builder', icon: Layers, newUntil: '2026-10-14' },
+    { href: '/my-picks', label: 'My Picks', icon: Bookmark, newUntil: '2026-10-21' },
   ] },
   { label: 'Model', items: [
     { href: '/games', label: 'Games', icon: CalendarDays },
@@ -34,7 +35,6 @@ export const consumerNavGroups: NavGroup[] = [
   ] },
   { label: 'About', items: [
     { href: '/methodology', label: 'How it works', icon: BookOpen },
-    { href: '/saved-games', label: 'Saved games', icon: Bookmark, signedInOnly: true },
   ] },
 ];
 /** Flat list, kept for callers that only need the links. */

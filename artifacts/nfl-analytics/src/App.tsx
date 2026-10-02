@@ -124,7 +124,7 @@ function Router() {
   const publicRoute = location === '/' || location === '/games' || location.startsWith('/games/')
     || location === '/performance' || location === '/receipts' || location === '/methodology'
     || location === '/defense-vs-position' || location === '/teams' || location === '/usage'
-    || location === '/saved-games' || location === '/touchdowns' || location === '/props'
+    || location === '/saved-games' || location === '/my-picks' || location === '/touchdowns' || location === '/props'
     || location === '/power-ratings' || location === '/qb-rankings'
     || location === '/weekly-picks'
     || location === '/red-zone' || location === '/share' || location === '/pickem' || location === '/parlays';
@@ -134,7 +134,8 @@ function Router() {
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
     <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
-    <Route path="/saved-games"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
+    <Route path="/my-picks"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
+    <Route path="/saved-games"><Redirect to="/my-picks" replace /></Route>
     <Route path="/methodology"><ConsumerShell><ConsumerMethodology /></ConsumerShell></Route>
     <Route path="/weekly-picks"><Redirect to="/performance" replace /></Route>
     <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
@@ -158,7 +159,8 @@ function Router() {
       <Route path="/admin/*" component={AdminRoutes} />
       <Route path="/games/:gameId"><ConsumerShell><ConsumerGameDetail /></ConsumerShell></Route>
       <Route path="/games"><ConsumerShell><ConsumerGames /></ConsumerShell></Route>
-      <Route path="/saved-games"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
+      <Route path="/my-picks"><ConsumerShell><ConsumerSavedGames /></ConsumerShell></Route>
+      <Route path="/saved-games"><Redirect to="/my-picks" replace /></Route>
       <Route path="/methodology"><ConsumerShell><ConsumerMethodology /></ConsumerShell></Route>
       <Route path="/weekly-picks"><Redirect to="/performance" replace /></Route>
       <Route path="/defense-vs-position"><ConsumerShell><DefenseVsPositionLeague /></ConsumerShell></Route>

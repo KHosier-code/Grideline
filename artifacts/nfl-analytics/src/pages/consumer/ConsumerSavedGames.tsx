@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useAuth } from '@clerk/react';
 import { ArrowRight, Bookmark, LockKeyhole, RefreshCw, WifiOff } from 'lucide-react';
 import { Link } from 'wouter';
-import { MyPicksRecord, PickControls, useMyPicks } from '@/components/MyPicks';
+import { MyPicksList, MyPicksRecord, PickControls, useMyPicks } from '@/components/MyPicks';
 import { ConsumerGameCard } from './consumer-ui';
 import './ConsumerSavedGames.css';
 
@@ -21,7 +21,7 @@ export default function ConsumerSavedGames() {
   const mine = picks.data?.picks ?? [];
   return <ConsumerSavedGamesView isLoaded={isLoaded} userId={userId ?? null} games={query.data ?? []}
     isLoading={query.isLoading} isError={query.isError} onRetry={() => void query.refetch()}
-    record={picks.data ? <MyPicksRecord data={picks.data} /> : null}
+    record={picks.data ? <><MyPicksRecord data={picks.data} /><MyPicksList picks={mine} /></> : null}
     renderPicks={picks.isError ? undefined : game => <PickControls game={game} picks={mine.filter(pick => pick.gameId === game.gameId)} />} />;
 }
 
@@ -44,21 +44,21 @@ export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isE
   const count = loading || signedOut || hasError ? null : String(games.length).padStart(2, '0');
 
   return (
-    <div className="consumer-page saved-view">
+    <div className="consumer-page saved-view my-scope">
       <header className="sv-hero">
         <div className="sv-hero-content">
-          <p className="sv-kicker">Your personal watchlist</p>
-          <h1>Saved <span>games.</span></h1>
-          <p className="sv-hero-copy">The matchups you want to keep close. Make your own moneyline, spread and over/under picks on each one, and track your record overall and week by week.</p>
+          <p className="sv-kicker">Your picks and saved games</p>
+          <h1>My <span>picks.</span></h1>
+          <p className="sv-hero-copy">Make your own moneyline, spread and over/under picks from any game page or on your saved games below. Each pick locks at kickoff at the number you took, and your record fills in as games finish.</p>
           <div className="sv-hero-actions">
             <Link href="/games" className="sv-primary-link" data-testid="link-browse-saved-games">
               Browse games <ArrowRight size={16} aria-hidden="true" />
             </Link>
-            {signedOut && <Link href="/sign-in" className="sv-secondary-link" data-testid="link-sign-in-saved-games">Sign in to view your list</Link>}
+            {signedOut && <Link href="/sign-in" className="sv-secondary-link" data-testid="link-sign-in-saved-games">Sign in to make picks</Link>}
           </div>
         </div>
         <div className="sv-hero-side" aria-hidden="true">
-          <span className="sv-hero-index">GRIDLINE / WATCHLIST</span>
+          <span className="sv-hero-index">MY PICKS</span>
           <div className="sv-count"><strong>{count ?? <LockKeyhole size={54} />}</strong><span>{count === null ? signedOut ? 'Sign in to view' : loading ? 'Loading list' : 'List unavailable' : count === '01' ? 'game saved' : 'games saved'}</span></div>
         </div>
       </header>
@@ -66,8 +66,7 @@ export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isE
       <section className="sv-body" aria-labelledby="sv-list-title" aria-busy={loading}>
         <div className="sv-section-head">
           <div>
-            <p className="sv-overline">The collection / 01</p>
-            <h2 id="sv-list-title">{signedOut ? 'Your list, your call.' : 'Matchups in focus'}</h2>
+                        <h2 id="sv-list-title">{signedOut ? 'Your picks, your record.' : 'Your picks'}</h2>
           </div>
           <span className="sv-section-meta">{signedOut ? 'SIGN IN TO SYNC' : loading ? 'LOADING YOUR LIST' : hasError ? 'LIST UNAVAILABLE' : `${games.length} ${games.length === 1 ? 'MATCHUP' : 'MATCHUPS'} SAVED`}</span>
         </div>
@@ -83,10 +82,10 @@ export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isE
           <div className="sv-state" data-testid="status-saved-games-signed-out">
             <div className="sv-state-content">
               <span className="sv-state-mark"><LockKeyhole size={20} aria-hidden="true" /></span>
-              <p className="sv-overline">Keep your matchups together</p>
-              <h3>A watchlist that follows you.</h3>
-              <p>Sign in to save the games you care about and find them here whenever you return. Your list stays private to your account.</p>
-              <Link href="/sign-in" className="sv-primary-link" data-testid="link-sign-in-watchlist">Sign in to see saved games <ArrowRight size={16} aria-hidden="true" /></Link>
+              <p className="sv-overline">Picks and saved games</p>
+              <h3>Track how your picks do.</h3>
+              <p>Sign in to make moneyline, spread and over/under picks, save games, and see your record week by week. Everything stays private to your account.</p>
+              <Link href="/sign-in" className="sv-primary-link" data-testid="link-sign-in-watchlist">Sign in <ArrowRight size={16} aria-hidden="true" /></Link>
             </div>
             <div className="sv-state-visual" aria-hidden="true"><span>YOUR FIELD / YOUR VIEW</span></div>
           </div>
@@ -103,18 +102,19 @@ export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isE
             </div>
             <div className="sv-state-visual" aria-hidden="true"><span>AWAITING CONNECTION</span></div>
           </div>
-        ) : games.length === 0 ? (
+        ) : games.length === 0 ? (<>
+          {record}
           <div className="sv-state" data-testid="status-saved-games-empty">
             <div className="sv-state-content">
               <span className="sv-state-mark"><Bookmark size={20} aria-hidden="true" /></span>
-              <p className="sv-overline">Nothing on the board yet</p>
+              <p className="sv-overline">No saved games yet</p>
               <h3>Start with a matchup.</h3>
-              <p>Explore the schedule and save a game worth following. Its projection and available market comparison will be waiting here.</p>
+              <p>Save a game from its page to keep it here with pick buttons underneath. You can also pick straight from any game page.</p>
               <Link href="/games" className="sv-primary-link" data-testid="link-explore-empty-saved-games">Explore games <ArrowRight size={16} aria-hidden="true" /></Link>
             </div>
             <div className="sv-state-visual" aria-hidden="true"><span>THE BOARD IS OPEN</span></div>
           </div>
-        ) : (
+        </>) : (
           <>
             {record}
             <div className="sv-grid" data-testid="list-saved-games">

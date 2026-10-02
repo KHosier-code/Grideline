@@ -52,6 +52,39 @@ in_progress = bool(this_week.played.any()) and bool(pd.to_datetime(left.kickoff)
 weeks = [week] + ([week + 1] if in_progress and (upcoming.week == week + 1).any() else [])
 slate = upcoming[upcoming.week.isin(weeks)].dropna(subset=RATING + TOTAL).copy()
 slate["margin_pred"] = rating.predict(slate[RATING])
+
+
+def kickoff_forecasts():
+    """Forecast wind and temperature at kickoff from the site's National Weather Service captures."""
+    origin, token = os.environ.get("GRIDLINE_INGEST_URL"), os.environ.get("GRIDLINE_INGEST_TOKEN")
+    if not origin or not token:
+        return {}
+    request = urllib.request.Request(f"{origin.rstrip('/')}/api/weather/kickoff-forecasts",
+                                     headers={"Authorization": f"Bearer {token}", "User-Agent": "gridline-game-model"})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            rows = json.load(response).get("forecasts", [])
+    except (urllib.error.URLError, ValueError) as error:
+        print(f"Kickoff forecasts unavailable ({error}); outdoor games use calm 65F.")
+        return {}
+    return {row["gameId"]: row for row in rows if row.get("indoorOutdoor") != "indoor"}
+
+
+# nflverse fills in wind and temperature only after a game is played, so before
+# kickoff the totals model would see calm 65F everywhere. Backtest 2021-2026:
+# real conditions cut the average total miss from 11.0 to 10.8 points.
+forecasts = kickoff_forecasts()
+applied = 0
+for index, row in slate.iterrows():
+    forecast = forecasts.get(str(int(row.espn))) if pd.notna(row.espn) else None
+    if forecast is None or row.dome:
+        continue
+    if forecast.get("sustainedWind") is not None:
+        slate.at[index, "wind"] = float(forecast["sustainedWind"])
+    if forecast.get("temperature") is not None:
+        slate.at[index, "temp"] = float(forecast["temperature"])
+    applied += 1
+print(f"Kickoff forecasts applied to {applied} outdoor games.")
 slate["total_pred"] = totals.predict(slate[TOTAL])
 slate["home_win"] = winner.predict_proba(slate.margin_pred.values.reshape(-1, 1))[:, 1]
 eastern = ZoneInfo("America/New_York")
