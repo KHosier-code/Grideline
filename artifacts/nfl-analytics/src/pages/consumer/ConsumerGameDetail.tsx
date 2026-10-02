@@ -1,6 +1,6 @@
 import {
   getGetConsumerGameProjectionsQueryKey, getGetConsumerGameQueryKey, useGetConsumerGame, useGetConsumerGameProjections,
-  useGetConsumerTouchdowns, type ConsumerGameProjection, type ConsumerProjectionQb,
+  useGetConsumerTouchdowns, type ConsumerContext, type ConsumerGameProjection, type ConsumerProjectionQb,
 } from '@workspace/api-client-react';
 import { ChevronLeft } from 'lucide-react';
 import { useSearch, useParams, Link } from 'wouter';
@@ -10,7 +10,7 @@ import { ConsumerMatchupBoard } from '../../components/ConsumerMatchupBoard';
 import { ConsumerPlayerMatchups } from '../../components/ConsumerPlayerMatchups';
 import { GameTabs } from '../../components/GameTabs';
 import { GameWeather } from '../../components/GameWeather';
-import { GameDvp } from '../../components/GameDvp';
+import { GameDvp, playerKey, type InjuryNames } from '../../components/GameDvp';
 import { PlayerPositionMatchup } from '../../components/PlayerPositionMatchup';
 import { GameAlerts } from './GameAlerts';
 import { BookTable } from '@/components/BookLines';
@@ -55,6 +55,22 @@ function drivers(view: GameView, projection: ConsumerGameProjection | undefined)
   return lines;
 }
 
+/** Players ruled out (or likely out) and questionable, from both teams' injury reports and roles. */
+function injuryNames(context: ConsumerContext): InjuryNames {
+  const out = new Set<string>();
+  const questionable = new Set<string>();
+  for (const team of context.teams) {
+    for (const player of team.injuries) {
+      const status = `${player.gameStatus ?? ''}`;
+      if (/out|doubtful|injured reserve|\bir\b|reserve|suspend|physically unable|inactive/i.test(status)) out.add(playerKey(player.name));
+      else if (/questionable/i.test(status)) questionable.add(playerKey(player.name));
+    }
+    const roles = [team.expectedQb, team.currentOffenseRoles.primaryTe, team.currentOffenseRoles.wr1, team.currentOffenseRoles.wr2, ...team.currentOffenseRoles.runningBackCommittee.players];
+    for (const role of roles) if (role.name && role.availability === 'unavailable') out.add(playerKey(role.name));
+  }
+  return { out, questionable };
+}
+
 export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
   const detailSearch = useSearch();
@@ -80,6 +96,7 @@ export default function ConsumerGameDetail() {
   const beforeKickoff = Boolean(game.kickoffTime && new Date(game.kickoffTime).getTime() > now
     && (game.gameState === 'pregame' || game.gameState === 'scheduled'));
   const view = buildGameView(game, qbProjection);
+  const injuries = injuryNames(game.context);
 
   return <div className="gl-page consumer-detail">
     <Link href={backHref} className="consumer-back"><ChevronLeft className="h-4 w-4" /> Back to games</Link>
@@ -106,7 +123,7 @@ export default function ConsumerGameDetail() {
         <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
       </> },
       { id: 'matchups', label: 'Matchups', content: <>
-        <GameDvp home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
+        <GameDvp home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} injuries={injuries} />
         <MatchupRanks home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
         <ConsumerMatchupBoard board={game.matchupBoard} away={game.matchup.away} home={game.matchup.home} />
       </> },
