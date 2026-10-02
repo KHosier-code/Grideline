@@ -20,6 +20,9 @@ import { withFeedLock } from "../lib/feed-lock";
 import { footballTime } from "../lib/feed-schedule";
 import { syncNflverseHistory } from "../lib/nflverse";
 import { personnelRefreshStatus, startPersonnelRefresh } from "../lib/personnel-refresh";
+import { syncEspnScheduleCoverage } from "../lib/schedule";
+import { syncEspnInjuries } from "../lib/availability";
+import { rebuildPregameFeatures } from "../lib/features";
 
 const router: IRouter = Router();
 
@@ -516,7 +519,17 @@ router.post("/nflverse/scheduled-refresh", async (req, res): Promise<void> => {
   const startedSignal = new Promise<"started">((resolve) => { signalStart = () => resolve("started"); });
   const job = withFeedLock("nflverse", async () => {
     signalStart();
-    return syncNflverseHistory([season], { jobKey: "github-stats", refresh: true });
+    const result = await syncNflverseHistory([season], { jobKey: "github-stats", refresh: true });
+    // Matchup Board numbers come from pregame team features, which the data
+    // worker rebuilt after each import. Rebuild them here too.
+    if ((result as { status?: string } | null)?.status === "success") {
+      try {
+        await rebuildPregameFeatures(undefined, new Date(), { futureOnly: true });
+      } catch (error) {
+        req.log.error({ error: describeError(error) }, "Pregame feature rebuild after nflverse refresh failed");
+      }
+    }
+    return result;
   });
   job.catch((error) => req.log.error({ error: describeError(error) }, "Scheduled nflverse refresh failed"));
   // withFeedLock resolves null at once when another import holds the lock.
@@ -536,6 +549,43 @@ router.get("/nflverse/refresh-status", async (req, res): Promise<void> => {
     completedAt: latest.completedAt?.toISOString() ?? null,
     recordsProcessed: latest.recordsProcessed, error: latest.errorMessage?.slice(0, 600) ?? null,
   } : { status: "none" });
+});
+
+/**
+ * Game status and final scores from ESPN, called by the GitHub "Scores"
+ * workflow. Pick records, receipts, the watch list and "Final" labels all
+ * read these; without this they only update when the data worker runs.
+ */
+router.post("/schedule/scheduled-refresh", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  try {
+    const result = await syncEspnScheduleCoverage({ jobKey: "github-scores" });
+    res.status(result.status === "failed" ? 502 : 200).json({
+      status: result.status, season: result.season, currentWeek: result.currentWeek,
+      gamesByWeek: result.gamesByWeek, failures: result.failures.slice(0, 10),
+    });
+  } catch (error) {
+    const reason = describeError(error);
+    req.log.error({ error: reason }, "Scheduled score refresh failed");
+    res.status(502).json({ status: "failed", reason });
+  }
+});
+
+/** The ESPN injury report alone (GitHub "Weather" workflow), so it refreshes through the day. */
+router.post("/injuries/scheduled-capture", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  try {
+    const result = await withFeedLock("injuries", () => syncEspnInjuries({ jobKey: "github-injuries" }));
+    if (!result) {
+      res.json({ status: "skipped", reason: "An injury sync is already running" });
+      return;
+    }
+    res.json(result);
+  } catch (error) {
+    const reason = describeError(error);
+    req.log.error({ error: reason }, "Scheduled injury capture failed");
+    res.status(502).json({ status: "failed", reason });
+  }
 });
 
 /**

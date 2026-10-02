@@ -189,7 +189,7 @@ export default function ConsumerTeams() {
   return <div className="ct-page">
     <header className="ct-hero">
       <div>
-        <p className="ct-kicker">GRIDLINE / TEAM EVIDENCE</p>
+        <p className="ct-kicker">Team charts</p>
         <h1 data-testid="text-page-title">The league, in context.</h1>
         <p>See where each team stands on both sides of the ball. Every point is backed by final-game play data, not a projection.</p>
       </div>
@@ -252,13 +252,13 @@ export default function ConsumerTeams() {
               <Scatter data={plotted} shape={(props: { cx?: number; cy?: number; payload?: DotData }) => <ScatterLogo {...props} selected={!!props.payload && selected.includes(props.payload.abbreviation)} onToggle={toggle} />} isAnimationActive={false} />
             </ScatterChart>
           </ChartContainer>
-          <div className="ct-chart-caption"><span><strong>Zero lines</strong> separate above / below baseline EPA. Scatter values are unweighted means of game-level EPA, not play-weighted averages.</span><span>Defense axis inverted · lower allowed is better</span></div>
+          <div className="ct-chart-caption"><span>The lines at zero mark league average. Teams further up and to the right are better on both sides of the ball.</span><span>Defense axis inverted · lower allowed is better</span></div>
         </>}
     </section>
 
     <section className="ct-panel" aria-labelledby="ct-trend-title">
       <div className="ct-panel-heading">
-        <div><p className="ct-overline">02 / GAME-BY-GAME</p><h2 id="ct-trend-title">Follow the evidence</h2><p className="ct-subtitle">Compare up to four teams. Gaps are missing observations, not zeroes.</p></div>
+        <div><p className="ct-overline">02 / GAME-BY-GAME</p><h2 id="ct-trend-title">Week by week</h2><p className="ct-subtitle">Compare up to four teams. A gap is a bye week.</p></div>
         <span className="ct-tag">{selected.length} / 4 selected</span>
       </div>
       <div className="ct-compare-controls">

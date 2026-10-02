@@ -62,14 +62,12 @@ function PlayerUsageCard({ player, testId, redZone }: { player: ConsumerKeyPlaye
         <div className="puc-info">
           <strong>{player.name}</strong>
           <span>
-            {player.position ?? 'Position unavailable'}
+            {player.position ?? ''}
             {player.currentPersonnel.depthRank ? ` · depth ${player.currentPersonnel.depthRank}` : ''}
             {player.currentPersonnel.injuryStatus && player.currentPersonnel.injuryStatus !== 'None'
               ? ` · ${player.currentPersonnel.injuryStatus}`
               : ''}
           </span>
-          <span className={`market-state market-state-${player.eligibility.status}`}>{player.eligibility.status === 'eligible' ? 'Status confirmed' : player.eligibility.status === 'ineligible' ? 'Unavailable for this game' : 'Status unconfirmed'}</span>
-          {player.eligibility.reason && <small>{player.eligibility.reason}</small>}
         </div>
       </header>
       <div className="puc-metrics">
@@ -82,7 +80,7 @@ function PlayerUsageCard({ player, testId, redZone }: { player: ConsumerKeyPlaye
           ))
         ) : (
           <div className="puc-missing-state">
-            <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Recent usage is unavailable
+            No recent snaps this season
           </div>
         )}
       </div>
@@ -110,8 +108,10 @@ export function ConsumerKeyPlayers({ players, away, home, season, week, gameId }
       ingestedAt: seasonData.ingestedAt ?? last3Data.ingestedAt,
     };
   };
-  const awayPlayers = (players ?? []).filter(p => p.teamId === away.abbreviation);
-  const homePlayers = (players ?? []).filter(p => p.teamId === home.abbreviation);
+  // Players ruled out for this game are left off, like everywhere else on the page.
+  const active = (players ?? []).filter(p => p.eligibility.status !== 'ineligible');
+  const awayPlayers = active.filter(p => p.teamId === away.abbreviation);
+  const homePlayers = active.filter(p => p.teamId === home.abbreviation);
   const fallback = !players?.length;
   if (fallback && !redZoneEnabled) return null;
   const fallbackPlayers = (team: string) => {
