@@ -14,7 +14,6 @@ import {
   dataSyncRunsTable,
   db,
   gamesTable,
-  predictionSnapshotsTable,
   schedulerJobsTable,
 } from "@workspace/db";
 import { syncEspnInjuries } from "./availability";
@@ -32,10 +31,7 @@ import {
   oddsCaptureRequestCount,
 } from "./odds";
 import { syncEspnScheduleCoverage } from "./schedule";
-import { freezeOfficialFinalPredictions, generateLivePredictions, generateWeeklyLearningReport, gradeCompletedPredictions } from "./live-predictions";
-import { trainPhase4Models } from "./modeling";
 import { logger } from "./logger";
-import { captureConfidenceResults } from "./confidence-capture";
 import { getWorkerObservation } from "./worker-heartbeat";
 
 export const FOOTBALL_TIMEZONE = "America/New_York";
@@ -70,11 +66,21 @@ export function nextLeanOddsCapture(now: Date, kickoffs: Date[], slotCandidates:
 export const ADAPTIVE_ODDS_CADENCE = oddsCaptureMode() === "intensive" ? INTENSIVE_ODDS_CADENCE : LEAN_ODDS_CADENCE;
 export const SCHEDULER_OVERDUE_GRACE_MS = 2 * TICK_MS;
 export const REPEATED_FAILURE_THRESHOLD = 3;
-export const CONFIDENCE_CAPTURE_OFFSETS = [
-  { key: "24h", minutes: 24 * 60 },
-  { key: "6h", minutes: 6 * 60 },
-  { key: "75m", minutes: 75 },
-] as const;
+
+/**
+ * Job kinds of the retired TypeScript prediction pipeline: weekly predictions,
+ * grading, official freezes, confidence captures and challenger training.
+ * Their scheduler_jobs rows are kept for history, but when one comes due it is
+ * disabled instead of re-armed.
+ */
+export const RETIRED_JOB_KINDS: readonly string[] = [
+  "prediction", "prediction-grade", "prediction-freeze", "prediction-canonical", "confidence-capture", "model-challenger",
+];
+const RETIRED_JOB_REASON = "Retired with the legacy prediction pipeline; this job is disabled and will not run again.";
+
+export function isRetiredJobKind(kind: string) {
+  return RETIRED_JOB_KINDS.includes(kind);
+}
 
 type SchedulerHealthJob = {
   jobKey: string;
@@ -209,19 +215,9 @@ export const INJURY_WEEKLY_SLOTS: WeeklyDefinition[] = [
   { jobKey: "injury-monday-final", provider: "espn-injuries", kind: "injury-dynamic", cadence: "weekly Mon 75m before MNF", weekday: 1, hour: 0, minute: 0 },
 ];
 
-export const PREDICTION_WEEKLY_SLOTS: WeeklyDefinition[] = [
-  { jobKey: "predictions-tuesday", provider: "gridline-model", kind: "prediction", cadence: "weekly Tue 11:00 ET", weekday: 2, hour: 11, minute: 0 },
-  { jobKey: "predictions-thursday", provider: "gridline-model", kind: "prediction", cadence: "weekly Thu 12:00 ET", weekday: 4, hour: 12, minute: 0 },
-  { jobKey: "predictions-friday", provider: "gridline-model", kind: "prediction", cadence: "weekly Fri 12:00 ET", weekday: 5, hour: 12, minute: 0 },
-  { jobKey: "predictions-saturday", provider: "gridline-model", kind: "prediction", cadence: "weekly Sat 12:00 ET", weekday: 6, hour: 12, minute: 0 },
-  { jobKey: "predictions-sunday", provider: "gridline-model", kind: "prediction", cadence: "weekly Sun 11:00 ET", weekday: 0, hour: 11, minute: 0 },
-  { jobKey: "predictions-grade", provider: "gridline-model", kind: "prediction-grade", cadence: "weekly Mon 05:00 ET", weekday: 1, hour: 5, minute: 0 },
-  { jobKey: "models-challenger-weekly", provider: "gridline-model", kind: "model-challenger", cadence: "weekly Tue 04:30 ET after completed games", weekday: 2, hour: 4, minute: 30 },
-];
-
 // Odds are deliberately not fixed weekly slots: the paid feed follows the
 // nearest persisted kickoff and the quota admission policy below.
-const ALL_WEEKLY_SLOTS = [...INJURY_WEEKLY_SLOTS, ...PREDICTION_WEEKLY_SLOTS];
+const ALL_WEEKLY_SLOTS = INJURY_WEEKLY_SLOTS;
 
 function lockExpired(lockUntil: Date | null, now: Date) {
   return !lockUntil || lockUntil.getTime() <= now.getTime();
@@ -276,75 +272,6 @@ export function groupSundayKickoffWindows(
     }
   }
   return [...grouped.values()].sort((left, right) => left.kickoffTime.getTime() - right.kickoffTime.getTime());
-}
-
-export function confidenceCaptureOccurrences(gameId: string, kickoffTime: Date) {
-  return CONFIDENCE_CAPTURE_OFFSETS.map((offset) => ({
-    jobKey: `confidence-${offset.key}-${gameId}`,
-    offsetKey: offset.key,
-    scheduledFor: new Date(kickoffTime.getTime() - offset.minutes * 60_000),
-  }));
-}
-
-export function canonicalPredictionOccurrence(gameId: string, kickoffTime: Date) {
-  return {
-    jobKey: `prediction-canonical-${gameId}`,
-    scheduledFor: new Date(kickoffTime.getTime() - 30 * 60_000),
-    cutoffMinutes: 30,
-  };
-}
-
-/** A freeze is a one-shot tied to its game, never a recurring interval. */
-export function freezeGameId(job: { kind: string; jobKey: string }): string | null {
-  const prefix = job.kind === "prediction-freeze" ? "prediction-freeze-"
-    : job.kind === "prediction-canonical" ? "prediction-canonical-" : "";
-  return prefix && job.jobKey.startsWith(prefix) && job.jobKey.length > prefix.length
-    ? job.jobKey.slice(prefix.length) : null;
-}
-
-export function expiredFreezeReason(
-  job: { kind: string; jobKey: string; nextRunAt: Date | null },
-  kickoff: Date | null,
-  now: Date,
-): string | null {
-  if (job.kind !== "prediction-freeze" && job.kind !== "prediction-canonical") return null;
-  if (!freezeGameId(job)) return "Invalid freeze game key; no late lock was attempted.";
-  if (!kickoff) return "Freeze game or authoritative kickoff is missing; no late lock was attempted.";
-  if (kickoff <= now) return "Authoritative kickoff elapsed; historical freeze retired without a late lock.";
-  if (!job.nextRunAt || job.nextRunAt <= now) {
-    return "Freeze occurrence elapsed while the worker was stopped; no catch-up lock was attempted.";
-  }
-  return null;
-}
-
-export function lateClaimedFreezeReason(
-  job: { kind: string; jobKey: string; nextRunAt: Date | null },
-  kickoff: Date | null,
-  now: Date,
-) {
-  if (!freezeGameId(job)) return "Invalid freeze game key; no late lock was attempted.";
-  if (!kickoff || kickoff <= now) return "Authoritative kickoff elapsed or is missing; no late lock was attempted.";
-  if (!job.nextRunAt || now.getTime() - job.nextRunAt.getTime() > SCHEDULER_OVERDUE_GRACE_MS)
-    return "Freeze occurrence missed its allowed claim window; no late lock was attempted.";
-  return null;
-}
-
-export function shouldRetireFlexedConfidenceOccurrence(
-  existingNextRunAt: Date | null,
-  recalculatedOccurrence: Date,
-  now: Date,
-) {
-  return recalculatedOccurrence.getTime() <= now.getTime()
-    && Boolean(existingNextRunAt)
-    && Math.abs(existingNextRunAt!.getTime() - recalculatedOccurrence.getTime()) > 60_000;
-}
-
-function confidenceGameId(jobKey: string) {
-  for (const offset of CONFIDENCE_CAPTURE_OFFSETS) {
-    const prefix = `confidence-${offset.key}-`;
-    if (jobKey.startsWith(prefix)) return jobKey.slice(prefix.length);
-  }
-  return null;
 }
 
 let timer: NodeJS.Timeout | null = null;
@@ -873,110 +800,6 @@ async function ensureKickoffJobs(now: Date) {
         .where(eq(schedulerJobsTable.jobKey, window.key));
     }
   }
-  const futureGames = games.filter((game): game is typeof game & { kickoffTime: Date } =>
-    Boolean(game.kickoffTime) && !isFinishedStatus(game.gameStatus),
-  );
-  for (const game of futureGames) {
-    const occurrence = canonicalPredictionOccurrence(game.gameId, game.kickoffTime);
-    const jobKey = occurrence.jobKey;
-    const canonicalAt = occurrence.scheduledFor;
-    const [official] = await db.select({ id: predictionSnapshotsTable.id })
-      .from(predictionSnapshotsTable)
-      .where(and(
-        eq(predictionSnapshotsTable.gameId, game.gameId),
-        eq(predictionSnapshotsTable.officialFinalPrediction, true),
-      )).limit(1);
-    const missedRunAt = canonicalAt > now ? canonicalAt : null;
-    const [existing] = await db.select().from(schedulerJobsTable)
-      .where(eq(schedulerJobsTable.jobKey, jobKey)).limit(1);
-    if (!existing) {
-      await db.insert(schedulerJobsTable).values({
-        jobKey,
-        provider: "gridline-model",
-        kind: "prediction-canonical",
-        timezone: FOOTBALL_TIMEZONE,
-        cadence: `one-shot canonical model + market evidence at 30m before kickoff (${game.gameId})`,
-        nextRunAt: official ? null : missedRunAt,
-        enabled: !official && Boolean(missedRunAt),
-      });
-    } else if (!official && missedRunAt && (
-      !existing.enabled
-      || !existing.nextRunAt
-      || (!existing.lastRunAt && Math.abs(existing.nextRunAt.getTime() - canonicalAt.getTime()) > 60_000)
-    )) {
-      await db.update(schedulerJobsTable).set({
-        nextRunAt: missedRunAt,
-        enabled: true,
-        updatedAt: now,
-      }).where(eq(schedulerJobsTable.jobKey, jobKey));
-    } else if (official && existing.enabled) {
-      await db.update(schedulerJobsTable).set({
-        nextRunAt: null,
-        enabled: false,
-        updatedAt: now,
-      }).where(eq(schedulerJobsTable.jobKey, jobKey));
-    }
-    for (const occurrence of confidenceCaptureOccurrences(game.gameId, game.kickoffTime)) {
-      const [confidenceJob] = await db.select().from(schedulerJobsTable)
-        .where(eq(schedulerJobsTable.jobKey, occurrence.jobKey)).limit(1);
-      if (!confidenceJob) {
-        const future = occurrence.scheduledFor.getTime() > now.getTime();
-        const skipReason = "Confidence capture window elapsed before it could be scheduled; no catch-up calculation was made.";
-        await db.insert(schedulerJobsTable).values({
-          jobKey: occurrence.jobKey,
-          provider: "gridline-confidence",
-          kind: "confidence-capture",
-          timezone: FOOTBALL_TIMEZONE,
-          cadence: `one-shot confidence capture ${occurrence.offsetKey} before kickoff (${game.gameId})`,
-          nextRunAt: future ? occurrence.scheduledFor : null,
-          enabled: future,
-          lastScheduledAt: future ? null : occurrence.scheduledFor,
-          lastStatus: future ? "pending" : "skipped",
-          lastError: future ? null : skipReason,
-        });
-        if (!future) await recordSchedulerSkip("gridline-confidence", occurrence.jobKey, occurrence.scheduledFor, skipReason);
-      } else if (
-        occurrence.scheduledFor.getTime() > now.getTime()
-        && !confidenceJob.enabled
-        && (!confidenceJob.lastRunAt || occurrence.scheduledFor.getTime() > confidenceJob.lastRunAt.getTime())
-      ) {
-        await db.update(schedulerJobsTable).set({
-          enabled: true,
-          nextRunAt: occurrence.scheduledFor,
-          lastStatus: "pending",
-          lastError: "Confidence capture rearmed after kickoff moved later.",
-          updatedAt: now,
-        }).where(eq(schedulerJobsTable.jobKey, occurrence.jobKey));
-      } else if (
-        occurrence.scheduledFor.getTime() > now.getTime()
-        &&
-        confidenceJob.enabled
-        && confidenceJob.nextRunAt
-        && Math.abs(confidenceJob.nextRunAt.getTime() - occurrence.scheduledFor.getTime()) > 60_000
-      ) {
-        await db.update(schedulerJobsTable).set({
-          nextRunAt: occurrence.scheduledFor,
-          updatedAt: now,
-          lastError: "Confidence capture recalculated from the latest persisted kickoff.",
-        }).where(eq(schedulerJobsTable.jobKey, occurrence.jobKey));
-      } else if (
-        confidenceJob.enabled
-        && shouldRetireFlexedConfidenceOccurrence(confidenceJob.nextRunAt, occurrence.scheduledFor, now)
-      ) {
-        const skipReason = "Kickoff moved earlier and this confidence capture window has elapsed; no catch-up calculation was made.";
-        await recordSchedulerSkip("gridline-confidence", occurrence.jobKey, occurrence.scheduledFor, skipReason);
-        await db.update(schedulerJobsTable).set({
-          enabled: false,
-          nextRunAt: null,
-          lastScheduledAt: occurrence.scheduledFor,
-          lastRunAt: now,
-          lastStatus: "skipped",
-          lastError: skipReason,
-          updatedAt: now,
-        }).where(eq(schedulerJobsTable.jobKey, occurrence.jobKey));
-      }
-    }
-  }
 }
 
 async function recoverMissedJobs(now: Date) {
@@ -996,12 +819,8 @@ async function recoverMissedJobs(now: Date) {
     ))
     .returning();
   for (const job of missed) {
-    const freezeId = freezeGameId(job);
-    const [freezeGame] = freezeId
-      ? await db.select({ kickoffTime: gamesTable.kickoffTime }).from(gamesTable)
-        .where(eq(gamesTable.gameId, freezeId)).limit(1)
-      : [];
-    const freezeReason = expiredFreezeReason(job, freezeGame?.kickoffTime ?? null, now);
+    const retired = isRetiredJobKind(job.kind);
+    if (retired) logger.info({ jobKey: job.jobKey, kind: job.kind }, "Disabled retired legacy scheduler job");
     const definition = ALL_WEEKLY_SLOTS.find((item) => item.jobKey === job.jobKey);
     const nextRunAt = job.kind === "schedule"
       ? nextIntervalOccurrence(now)
@@ -1012,17 +831,17 @@ async function recoverMissedJobs(now: Date) {
         : definition
           ? await nextOccurrence(definition, now)
           : nextIntervalOccurrence(now);
-    const skipReason = freezeReason ?? "Missed while the scheduler process was stopped; no catch-up request was made.";
+    const skipReason = retired ? RETIRED_JOB_REASON : "Missed while the scheduler process was stopped; no catch-up request was made.";
+    const disable = retired || job.kind === "injury-kickoff";
     await recordSchedulerSkip(job.provider, job.jobKey, job.nextRunAt, skipReason);
     await db.update(schedulerJobsTable)
       .set({
-        nextRunAt: freezeReason || job.kind === "injury-kickoff" || job.kind === "confidence-capture" ? null : nextRunAt,
-        enabled: !(freezeReason || job.kind === "injury-kickoff" || job.kind === "confidence-capture"),
+        nextRunAt: disable ? null : nextRunAt,
+        enabled: !disable,
         lastScheduledAt: job.nextRunAt,
         lastRunAt: now,
         lastStatus: "skipped",
         lastError: skipReason,
-        lastResult: freezeReason ? { freezeDisposition: "expired_without_lock", gameId: freezeId, onTime: false } : job.lastResult,
         lockOwner: null,
         lockAcquiredAt: null,
         lockUntil: null,
@@ -1296,121 +1115,11 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
       result = await rebuildPregamePersonnelContextFeatures();
     } else if (job.kind === "pregame-feature-repair") {
       result = await rebuildPregameFeatures(undefined, new Date(), { futureOnly: true });
-    } else if (job.kind === "prediction") {
-      result = await generateLivePredictions();
-    } else if (job.kind === "prediction-grade") {
-      result = await gradeCompletedPredictions();
-      const completed = await db
-        .select({ season: gamesTable.season, week: gamesTable.week })
-        .from(gamesTable)
-        .where(and(
-          sql`${gamesTable.kickoffTime} is not null`,
-          sql`${gamesTable.kickoffTime} < now()`,
-          sql`(lower(${gamesTable.gameStatus}) like '%final%' or lower(${gamesTable.gameStatus}) like '%completed%')`,
-        ))
-        .orderBy(desc(gamesTable.kickoffTime))
-        .limit(1);
-      if (completed[0]) {
-        const report = await generateWeeklyLearningReport(completed[0].season, completed[0].week);
-        result = { ...(result as Record<string, unknown>), report: { season: report.season, week: report.week } };
-      }
-    } else if (job.kind === "prediction-freeze" || job.kind === "prediction-canonical") {
-      const canonicalGameId = freezeGameId(job);
-      const priorCutoff = (job.lastResult as { canonicalCutoffAt?: string } | null)?.canonicalCutoffAt;
-      const [canonicalGame] = canonicalGameId
-        ? await db.select({ kickoffTime: gamesTable.kickoffTime }).from(gamesTable)
-          .where(eq(gamesTable.gameId, canonicalGameId)).limit(1)
-        : [];
-      const lateReason = lateClaimedFreezeReason(
-        { ...job, nextRunAt: scheduledFor }, canonicalGame?.kickoffTime ?? null, new Date(),
-      );
-      if (lateReason) {
-        status = "skipped";
-        disable = true;
-        result = { status, skipReason: lateReason, gameId: canonicalGameId, onTime: false };
-        await recordSchedulerSkip(job.provider, job.jobKey, scheduledFor, lateReason);
-      } else {
-      const persistedCutoff = priorCutoff ? new Date(priorCutoff) : null;
-      const currentKickoffCutoff = canonicalGame?.kickoffTime
-        ? new Date(canonicalGame.kickoffTime.getTime() - 30 * 60_000)
-        : null;
-      // A later kickoff never moves the evidence boundary forward after the
-      // first attempt. An earlier flex can only tighten it, preventing any
-      // observation from the newly post-kickoff period from becoming eligible.
-      const cutoffOverride = persistedCutoff && Number.isFinite(persistedCutoff.getTime())
-        ? currentKickoffCutoff && currentKickoffCutoff < persistedCutoff
-          ? currentKickoffCutoff
-          : persistedCutoff
-        : currentKickoffCutoff ?? undefined;
-      result = await freezeOfficialFinalPredictions(new Date(), {
-        gameId: canonicalGameId!,
-        cutoffOverride: cutoffOverride && Number.isFinite(cutoffOverride.getTime()) ? cutoffOverride : undefined,
-      });
-      // Missing/stale market evidence is a recoverable condition. Keep the
-      // occurrence enabled and retry; only an actually frozen snapshot ends
-      // this one-shot lifecycle.
-      disable = job.kind === "prediction-freeze"
-        || (result as { frozen?: number }).frozen! > 0;
-      }
-    } else if (job.kind === "confidence-capture") {
+    } else if (isRetiredJobKind(job.kind)) {
+      status = "skipped";
       disable = true;
-      const [captureRun] = await db.insert(dataSyncRunsTable).values({
-        provider: "gridline-confidence",
-        status: "running",
-        jobKey: job.jobKey,
-        scheduledFor,
-      }).returning({ id: dataSyncRunsTable.id });
-      try {
-        const gameId = confidenceGameId(job.jobKey);
-        if (!gameId) throw new Error("Confidence capture job has an invalid game identifier.");
-        const [game] = await db.select({
-          kickoffTime: gamesTable.kickoffTime,
-          gameStatus: gamesTable.gameStatus,
-        }).from(gamesTable).where(eq(gamesTable.gameId, gameId)).limit(1);
-        if (!scheduledFor || !game?.kickoffTime || game.kickoffTime.getTime() <= Date.now() || isFinishedStatus(game.gameStatus)) {
-          status = "skipped";
-          const skipReason = "Game is missing, finished, or no longer before kickoff; confidence was not calculated.";
-          result = { status, skipReason, gameId };
-        } else {
-          result = await captureConfidenceResults({ gameId, asOf: scheduledFor });
-          if ((result as { validSnapshotsEvaluated?: number }).validSnapshotsEvaluated === 0) {
-            result = {
-              ...(result as Record<string, unknown>),
-              status: "skipped",
-              skipReason: "No valid production prediction snapshot existed at the scheduled confidence boundary.",
-            };
-          }
-        }
-        const captureResult = result as {
-          status?: string;
-          marketResultsPersisted?: number;
-          skipReason?: string;
-        };
-        status = captureResult.status ?? status;
-        await db.update(dataSyncRunsTable).set({
-          status,
-          recordsProcessed: captureResult.marketResultsPersisted ?? 0,
-          skipReason: captureResult.skipReason ?? null,
-          completedAt: new Date(),
-          metadata: resultMetadata(result),
-        }).where(eq(dataSyncRunsTable.id, captureRun.id));
-      } catch (error) {
-        await db.update(dataSyncRunsTable).set({
-          status: "failed",
-          errorMessage: error instanceof Error ? error.message : String(error),
-          completedAt: new Date(),
-        }).where(eq(dataSyncRunsTable.id, captureRun.id));
-        throw error;
-      }
-    } else if (job.kind === "model-challenger") {
-      if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
-        result = await trainPhase4Models();
-      } else {
-        status = "skipped";
-        const reason = "Automatic model fitting is disabled outside an explicit development/test process.";
-        await recordSchedulerSkip(job.provider, job.jobKey, scheduledFor, reason);
-        result = { status, skipReason: reason };
-      }
+      logger.info({ jobKey: job.jobKey, kind: job.kind }, "Disabled retired legacy scheduler job");
+      result = { status, skipReason: RETIRED_JOB_REASON };
     } else {
       status = "skipped";
       const reason = `Unknown scheduler job kind "${job.kind}".`;
@@ -1428,7 +1137,7 @@ async function runClaimedJob(job: typeof schedulerJobsTable.$inferSelect & { own
   const now = new Date();
   const definition = ALL_WEEKLY_SLOTS.find((item) => item.jobKey === job.jobKey);
   let nextRunAt: Date | null = null;
-  if (!disable && job.kind !== "injury-kickoff" && job.kind !== "confidence-capture") {
+  if (!disable && job.kind !== "injury-kickoff") {
     nextRunAt = job.kind === "schedule"
       ? nextIntervalOccurrence(now)
       : job.kind === "nflverse"

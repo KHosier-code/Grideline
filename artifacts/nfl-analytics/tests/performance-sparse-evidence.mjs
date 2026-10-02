@@ -8,7 +8,7 @@ const comparisonSpecs = {
 };
 
 export function isSparseGameDetail(detail) {
-  if (!detail || detail.prediction || !Array.isArray(detail.matchupBoard?.assessments)
+  if (!detail || !Array.isArray(detail.matchupBoard?.assessments)
     || !Array.isArray(detail.movement?.streams)) return false;
   const comparisonAvailable = Object.entries(comparisonSpecs).some(([category, label]) => {
       const assessment = detail.matchupBoard.assessments?.find(item => item.category === category);

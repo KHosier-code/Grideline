@@ -1,14 +1,22 @@
 // Isolated component entry: no Clerk provider, credentials, saved-game API or production route.
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { getGetConsumerGameProjectionsQueryKey } from '@workspace/api-client-react';
 import { ConsumerSavedGamesView } from '../src/pages/consumer/ConsumerSavedGames';
 import { SaveGameControl } from '../src/pages/consumer/consumer-ui';
-import { savedGamesFixture } from './saved-games-fixture';
+import { savedGamesFixture, savedGamesProjectionsFixture } from './saved-games-fixture';
 import '../src/index.css';
 
 const state = new URLSearchParams(window.location.search).get('state');
 if (!['populated', 'empty', 'loading', 'error'].includes(state ?? '')) {
   throw new Error('Saved Games fixture requires state=populated|empty|loading|error');
+}
+
+// Projections are seeded in the cache and never refetched, so the cards make no network request.
+const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false, enabled: false } } });
+for (const season of new Set(savedGamesFixture.map(game => game.season))) {
+  queryClient.setQueryData(getGetConsumerGameProjectionsQueryKey({ season }), savedGamesProjectionsFixture(season));
 }
 
 function Fixture() {
@@ -22,4 +30,4 @@ function Fixture() {
   </main></div>;
 }
 
-createRoot(document.getElementById('root')!).render(<Fixture />);
+createRoot(document.getElementById('root')!).render(<QueryClientProvider client={queryClient}><Fixture /></QueryClientProvider>);

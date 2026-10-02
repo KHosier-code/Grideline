@@ -8,7 +8,6 @@ import {
 } from "../lib/personnel-context";
 import { requireAdmin } from "../middlewares/admin";
 import { getChallengerReadinessReport, getCurrentPersonnelCoverage } from "../lib/personnel-coverage";
-import { getLiveModelInputIntegrityAudit } from "../lib/live-predictions";
 import {
   getCurrentDepthValidationReport,
   getCurrentGamePersonnel,
@@ -50,10 +49,6 @@ router.get("/features/audit", requireAdmin, async (req, res): Promise<void> => {
   });
   const limit = numberParam("limit") ?? 600;
   res.json(rows.slice(0, Math.max(1, Math.min(limit, 2000))));
-});
-
-router.get("/features/live-input-integrity", requireAdmin, async (_req, res): Promise<void> => {
-  res.json(await getLiveModelInputIntegrityAudit());
 });
 
 router.get("/features/personnel-context/game/:gameId", requireAdmin, async (req, res): Promise<void> => {

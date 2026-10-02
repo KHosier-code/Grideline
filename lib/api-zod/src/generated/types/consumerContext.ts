@@ -5,7 +5,6 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
-import type { ConsumerContextModelPersonnelLimitation } from './consumerContextModelPersonnelLimitation';
 import type { ConsumerContextTeam } from './consumerContextTeam';
 import type { ConsumerProjectedMatchup } from './consumerProjectedMatchup';
 
@@ -23,5 +22,4 @@ export interface ConsumerContext {
   matchupMessage: string | null;
   /** @nullable */
   message: string | null;
-  modelPersonnelLimitation: ConsumerContextModelPersonnelLimitation;
 }

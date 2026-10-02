@@ -5,14 +5,12 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
-import type { ConsumerDashboardInitialWeeklyPick } from './consumerDashboardInitialWeeklyPick';
 import type { ConsumerDashboardStatus } from './consumerDashboardStatus';
 import type { ConsumerGame } from './consumerGame';
 import type { ConsumerSourceHealth } from './consumerSourceHealth';
 
 export interface ConsumerDashboard {
   status: ConsumerDashboardStatus;
-  initialWeeklyPick: ConsumerDashboardInitialWeeklyPick;
   games: ConsumerGame[];
   note: string;
   sourceHealth: ConsumerSourceHealth;

@@ -9,7 +9,7 @@ import type { ConsumerMarketQuote } from './consumerMarketQuote';
 
 export interface ConsumerInitialMarkets {
   /**
-     * Time of the verified first request; never a later quote.
+     * Time of the first saved capture for the game.
      * @nullable
      */
   capturedAt: Date | null;

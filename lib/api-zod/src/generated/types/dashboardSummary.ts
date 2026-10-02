@@ -5,19 +5,10 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
-import type { ModelEdge } from './modelEdge';
-import type { PerformanceSummary } from './performanceSummary';
 
 export interface DashboardSummary {
   season: number;
   /** @nullable */
   currentWeek: number | null;
   gamesThisWeek: number;
-  modelStatus: string;
-  ats: PerformanceSummary;
-  moneyline: PerformanceSummary;
-  totals: PerformanceSummary;
-  /** @nullable */
-  averageClv: number | null;
-  topEdges?: ModelEdge[];
 }
