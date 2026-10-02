@@ -1,0 +1,33 @@
+name: Scores
+
+# Asks the site to refresh game status and final scores from ESPN (free, no
+# key). Pick records, receipts, the watch list and "Final" labels read these.
+# Every 30 minutes while games are on (Sunday, plus Thursday and Monday
+# nights), and once each morning to catch anything late. Times are UTC
+# (ET + 4 during daylight time).
+on:
+  schedule:
+    - cron: "7,37 13-23 * * 0"   # Sunday 9:07 ET - 7:37 PM ET
+    - cron: "7,37 0-4 * * 1,2,5" # Sun, Mon and Thu nights, 8:07 PM - 12:37 AM ET
+    - cron: "7 12 * * *"         # every morning 8:07 ET
+  workflow_dispatch: {}
+
+concurrency:
+  group: scores
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Refresh game status and scores
+        env:
+          GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+          GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+        run: |
+          status=$(curl -sS -o response.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $GRIDLINE_INGEST_TOKEN" \
+            "${GRIDLINE_INGEST_URL%/}/api/schedule/scheduled-refresh")
+          cat response.json; echo
+          [ "$status" -lt 400 ]
