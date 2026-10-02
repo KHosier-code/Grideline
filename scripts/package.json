@@ -6,8 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "test:pregame-leakage": "tsx ./src/pregame-leakage.test.ts",
-    "test:model-promotion": "tsx ../artifacts/api-server/src/lib/model-promotion-validation.test.ts",
-    "test:prediction-safety": "tsx ../artifacts/api-server/src/lib/prediction-validation.test.ts && tsx ./src/pregame-leakage.test.ts",
+    "test:prediction-safety": "tsx ./src/pregame-leakage.test.ts",
     "test:auth-hardening": "tsx ../artifacts/api-server/src/middlewares/admin.test.ts && tsx ../artifacts/api-server/src/routes/authorization.test.ts",
     "test:usage-analytics": "tsx ../artifacts/api-server/src/routes/usage-analytics.test.ts",
     "test:consumer-api": "tsx ../artifacts/api-server/src/routes/consumer.test.ts && tsx ../artifacts/api-server/src/routes/authorization.test.ts",
@@ -15,7 +14,6 @@
     "test:typecheck-script-contract": "tsx ./src/typecheck-script-contract.test.ts",
     "db:migrate": "tsx ../lib/db/src/migrate.ts",
     "test:db-migrations": "tsx ../lib/db/src/migrate.test.ts",
-    "test:model-evaluation-evidence": "tsx ../artifacts/api-server/src/lib/model-evaluation-evidence.test.ts",
     "report:pregame-leakage": "tsx ./src/pregame-leakage-report.ts",
     "report:production-readiness": "tsx ./src/production-readiness-report.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

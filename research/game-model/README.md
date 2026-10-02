@@ -7,13 +7,9 @@ trained only on 2021 through the prior season, then graded against the
 closing lines in nflverse `games.csv`. Picks and grading use the same rules
 as the site (`artifacts/api-server/src/lib/pick-grading.ts`).
 
-Run locally after seeding a database (see `local-seed-cli.ts` and
-`local-pipeline-cli.ts`):
-
-```bash
-NODE_ENV=development DATABASE_URL=postgresql://postgres@127.0.0.1:5434/gridline?sslmode=disable \
-  pnpm --filter @workspace/scripts exec tsx ../artifacts/api-server/src/local-backtest-cli.ts data/games.csv
-```
+The Phase 6.1 pipeline and the `local-pipeline-cli.ts` / `local-backtest-cli.ts`
+commands that produced these numbers have been retired; check out a commit
+before their removal to reproduce them.
 
 ## Results (September 30, 2026)
 
