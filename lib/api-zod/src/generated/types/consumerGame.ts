@@ -5,17 +5,12 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
-import type { ConsumerConfidence } from './consumerConfidence';
 import type { ConsumerGameAvailability } from './consumerGameAvailability';
-import type { ConsumerGameDataConfidence } from './consumerGameDataConfidence';
 import type { ConsumerGameFinalScore } from './consumerGameFinalScore';
 import type { ConsumerGameGameState } from './consumerGameGameState';
 import type { ConsumerGameMarket } from './consumerGameMarket';
 import type { ConsumerGameMatchup } from './consumerGameMatchup';
-import type { ConsumerGamePrediction } from './consumerGamePrediction';
 import type { ConsumerInitialMarkets } from './consumerInitialMarkets';
-import type { ConsumerMarketBoard } from './consumerMarketBoard';
-import type { ConsumerRecommendation } from './consumerRecommendation';
 
 export interface ConsumerGame {
   gameId: string;
@@ -30,13 +25,7 @@ export interface ConsumerGame {
   matchup: ConsumerGameMatchup;
   /** @nullable */
   finalScore: ConsumerGameFinalScore;
-  /** @nullable */
-  prediction: ConsumerGamePrediction;
   market: ConsumerGameMarket;
   initialMarkets: ConsumerInitialMarkets;
-  marketBoard: ConsumerMarketBoard;
-  recommendation: ConsumerRecommendation;
-  dataConfidence: ConsumerGameDataConfidence;
-  confidence: ConsumerConfidence;
   availability: ConsumerGameAvailability;
 }

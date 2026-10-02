@@ -249,26 +249,6 @@ export interface ConsumerGameProjections {
   weeks: ConsumerGameProjectionsWeeksItem[];
 }
 
-export interface ConsumerRecordWeek {
-  week: number;
-  winners: ConsumerRecordLine;
-  spread: ConsumerRecordLine;
-  total: ConsumerRecordLine;
-}
-
-export interface ConsumerRecord {
-  /** @nullable */
-  season: number | null;
-  seasons: number[];
-  graded: number;
-  winners: ConsumerRecordLine;
-  spread: ConsumerRecordLine;
-  total: ConsumerRecordLine;
-  weeks: ConsumerRecordWeek[];
-  /** @nullable */
-  lastGradedAt: string | null;
-}
-
 export interface ConsumerTouchdownFactors {
   /** @nullable */
   targetsPerGame: number | null;
@@ -882,84 +862,13 @@ export interface ConsumerGameMarket {
 
 export interface ConsumerInitialMarkets {
   /**
-     * Time of the verified first request; never a later quote.
+     * Time of the first saved capture for the game.
      * @nullable
      */
   capturedAt: string | null;
   moneyline: ConsumerMarketQuote | null;
   spread: ConsumerMarketQuote | null;
   total: ConsumerMarketQuote | null;
-}
-
-export type ConsumerMarketComparisonMarket = typeof ConsumerMarketComparisonMarket[keyof typeof ConsumerMarketComparisonMarket];
-
-
-export const ConsumerMarketComparisonMarket = {
-  spread: 'spread',
-  total: 'total',
-  moneyline: 'moneyline',
-} as const;
-
-export type ConsumerMarketComparisonState = typeof ConsumerMarketComparisonState[keyof typeof ConsumerMarketComparisonState];
-
-
-export const ConsumerMarketComparisonState = {
-  available: 'available',
-  stale: 'stale',
-  absent: 'absent',
-} as const;
-
-export type ConsumerMarketComparisonDifferenceUnit = typeof ConsumerMarketComparisonDifferenceUnit[keyof typeof ConsumerMarketComparisonDifferenceUnit];
-
-
-export const ConsumerMarketComparisonDifferenceUnit = {
-  points: 'points',
-  probability_points: 'probability_points',
-} as const;
-
-export interface ConsumerMarketComparison {
-  market: ConsumerMarketComparisonMarket;
-  label: string;
-  state: ConsumerMarketComparisonState;
-  /** @nullable */
-  modelValue: number | null;
-  /** @nullable */
-  marketValue: number | null;
-  /** @nullable */
-  difference: number | null;
-  differenceUnit: ConsumerMarketComparisonDifferenceUnit;
-  selectedQuote: ConsumerMarketQuote | null;
-  firstObserved: ConsumerMarketQuote | null;
-  current: ConsumerMarketQuote | null;
-  currentQuotes: ConsumerMarketQuote[];
-  /** @nullable */
-  modelTimestamp: string | null;
-  /** @nullable */
-  marketTimestamp: string | null;
-  /** @nullable */
-  observationAgeMinutes: number | null;
-  freshnessLabel: string;
-}
-
-export type ConsumerMarketBoardStatus = typeof ConsumerMarketBoardStatus[keyof typeof ConsumerMarketBoardStatus];
-
-
-export const ConsumerMarketBoardStatus = {
-  available: 'available',
-  partial: 'partial',
-  stale: 'stale',
-  absent: 'absent',
-} as const;
-
-export interface ConsumerMarketBoard {
-  status: ConsumerMarketBoardStatus;
-  staleAfterMinutes: number;
-  selectionRule: string;
-  /**
-     * @minItems 3
-     * @maxItems 3
-     */
-  comparisons: ConsumerMarketComparison[];
 }
 
 export type ConsumerSourceHealthStatus = typeof ConsumerSourceHealthStatus[keyof typeof ConsumerSourceHealthStatus];
@@ -1009,87 +918,6 @@ export interface ConsumerSourceHealth {
   sources: ConsumerSourceHealthSources;
 }
 
-export type ConsumerRecommendationStatus = typeof ConsumerRecommendationStatus[keyof typeof ConsumerRecommendationStatus];
-
-
-export const ConsumerRecommendationStatus = {
-  healthy: 'healthy',
-  partial: 'partial',
-  stale: 'stale',
-  unavailable: 'unavailable',
-  historical: 'historical',
-} as const;
-
-export type ConsumerRecommendationMarkets = {
-  spread: boolean;
-  total: boolean;
-  moneyline: boolean;
-};
-
-export interface ConsumerRecommendation {
-  status: ConsumerRecommendationStatus;
-  /** @nullable */
-  reason: string | null;
-  markets: ConsumerRecommendationMarkets;
-}
-
-export type ConsumerConfidenceComponentKey = typeof ConsumerConfidenceComponentKey[keyof typeof ConsumerConfidenceComponentKey];
-
-
-export const ConsumerConfidenceComponentKey = {
-  data: 'data',
-  model: 'model',
-  marketEdge: 'marketEdge',
-} as const;
-
-export interface ConsumerConfidenceComponent {
-  key: ConsumerConfidenceComponentKey;
-  label: string;
-  /** @nullable */
-  score: number | null;
-  summary: string;
-}
-
-export type ConsumerConfidenceMarketsItemMarket = typeof ConsumerConfidenceMarketsItemMarket[keyof typeof ConsumerConfidenceMarketsItemMarket];
-
-
-export const ConsumerConfidenceMarketsItemMarket = {
-  spread: 'spread',
-  moneyline: 'moneyline',
-  total: 'total',
-} as const;
-
-export type ConsumerConfidenceMarketsItemLabel = typeof ConsumerConfidenceMarketsItemLabel[keyof typeof ConsumerConfidenceMarketsItemLabel];
-
-
-export const ConsumerConfidenceMarketsItemLabel = {
-  Low: 'Low',
-  Moderate: 'Moderate',
-  Strong: 'Strong',
-  Very_Strong: 'Very Strong',
-} as const;
-
-export type ConsumerConfidenceMarketsItemEvidence = { [key: string]: unknown };
-
-export type ConsumerConfidenceMarketsItem = {
-  market: ConsumerConfidenceMarketsItemMarket;
-  score: number;
-  label: ConsumerConfidenceMarketsItemLabel;
-  explanation: string;
-  components: ConsumerConfidenceComponent[];
-  evidence: ConsumerConfidenceMarketsItemEvidence;
-  downgradeReasons: string[];
-  calculatedAt: string;
-};
-
-export interface ConsumerConfidence {
-  /**
-     * @minItems 3
-     * @maxItems 3
-     */
-  markets: ConsumerConfidenceMarketsItem[];
-}
-
 export type ConsumerGameGameState = typeof ConsumerGameGameState[keyof typeof ConsumerGameGameState];
 
 
@@ -1116,73 +944,7 @@ export type ConsumerGameFinalScore = {
   away: number;
 } | null;
 
-/**
- * @nullable
- */
-export type ConsumerGamePrediction = {
-  modelLabel: 'Gridline Production Model';
-  /** Whether this saved snapshot was verified and frozen as the official pregame prediction. */
-  officialFinalPrediction?: boolean;
-  predictionTimestamp?: string;
-  /** @nullable */
-  projectedHomeScore: number | null;
-  /** @nullable */
-  projectedAwayScore: number | null;
-  /** @nullable */
-  projectedMargin: number | null;
-  /** @nullable */
-  projectedTotal: number | null;
-  /** @nullable */
-  homeWinProbability: number | null;
-  /** @nullable */
-  awayWinProbability: number | null;
-} | null;
-
-export type ConsumerGameDataConfidenceLabel = typeof ConsumerGameDataConfidenceLabel[keyof typeof ConsumerGameDataConfidenceLabel];
-
-
-export const ConsumerGameDataConfidenceLabel = {
-  Updating: 'Updating',
-  Limited: 'Limited',
-  Moderate: 'Moderate',
-  Standard: 'Standard',
-} as const;
-
-export type ConsumerGameDataConfidence = {
-  label: ConsumerGameDataConfidenceLabel;
-  /** @nullable */
-  score: number | null;
-  /** @nullable */
-  reason: string | null;
-};
-
-/**
- * Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.
- * @nullable
- */
-export type ConsumerGameAvailabilityPredictionReason = typeof ConsumerGameAvailabilityPredictionReason[keyof typeof ConsumerGameAvailabilityPredictionReason] | null;
-
-
-export const ConsumerGameAvailabilityPredictionReason = {
-  missing_promoted_models: 'missing_promoted_models',
-  schema_version_mismatch: 'schema_version_mismatch',
-  missing_eligible_snapshot: 'missing_eligible_snapshot',
-  invalid_inputs: 'invalid_inputs',
-  invalid_snapshot: 'invalid_snapshot',
-  cutoff_rejection: 'cutoff_rejection',
-} as const;
-
 export type ConsumerGameAvailability = {
-  /**
-     * Safe, user-facing explanation when no eligible projection was selected.
-     * @nullable
-     */
-  prediction: string | null;
-  /**
-     * Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.
-     * @nullable
-     */
-  predictionReason: ConsumerGameAvailabilityPredictionReason;
   /** @nullable */
   market: string | null;
 };
@@ -1200,14 +962,8 @@ export interface ConsumerGame {
   matchup: ConsumerGameMatchup;
   /** @nullable */
   finalScore: ConsumerGameFinalScore;
-  /** @nullable */
-  prediction: ConsumerGamePrediction;
   market: ConsumerGameMarket;
   initialMarkets: ConsumerInitialMarkets;
-  marketBoard: ConsumerMarketBoard;
-  recommendation: ConsumerRecommendation;
-  dataConfidence: ConsumerGameDataConfidence;
-  confidence: ConsumerConfidence;
   availability: ConsumerGameAvailability;
 }
 
@@ -1235,23 +991,6 @@ export interface ConsumerScheduleSelection {
   reason: ConsumerScheduleSelectionReason;
 }
 
-export type ConsumerGamesStatus = typeof ConsumerGamesStatus[keyof typeof ConsumerGamesStatus];
-
-
-export const ConsumerGamesStatus = {
-  available: 'available',
-  partial: 'partial',
-  stale: 'stale',
-  absent: 'absent',
-} as const;
-
-export type ConsumerGamesCoverage = {
-  games: number;
-  gamesWithComparison: number;
-  DraftKings: number;
-  FanDuel: number;
-};
-
 export interface ConsumerTeamRecord {
   teamId: string;
   abbreviation: string;
@@ -1273,8 +1012,6 @@ export interface ConsumerRecordVerification {
 }
 
 export interface ConsumerGames {
-  status: ConsumerGamesStatus;
-  coverage: ConsumerGamesCoverage;
   games: ConsumerGame[];
   teamRecords: ConsumerTeamRecord[];
   recordVerification: ConsumerRecordVerification;
@@ -1309,96 +1046,6 @@ export interface ConsumerPlayerUsageGames {
   games: ConsumerPlayerUsageGame[];
 }
 
-export type ConsumerArchivedWeeklyPickRetrospectiveStatus = typeof ConsumerArchivedWeeklyPickRetrospectiveStatus[keyof typeof ConsumerArchivedWeeklyPickRetrospectiveStatus];
-
-
-export const ConsumerArchivedWeeklyPickRetrospectiveStatus = {
-  reviewed: 'reviewed',
-  published: 'published',
-  unavailable: 'unavailable',
-} as const;
-
-export interface RetrospectiveChoice {
-  gameId: string;
-  teamName: string;
-  matchup: string;
-  probability: number;
-  cutoffAt: string;
-  evidenceId: string;
-  reviewedAt: string;
-  /** @nullable */
-  publishedAt: string | null;
-}
-
-export type ConsumerArchivedWeeklyPickPick = {
-  gameId: string;
-  teamName: string;
-  season: number;
-  week: number;
-  probability: number;
-  observedAt: string;
-} | null;
-
-export type ConsumerArchivedWeeklyPickRetrospective = {
-  status: ConsumerArchivedWeeklyPickRetrospectiveStatus;
-  label: string;
-  /** @nullable */
-  reason: string | null;
-  choice: null | RetrospectiveChoice;
-} | null;
-
-export interface ConsumerArchivedWeeklyPick {
-  season: number;
-  week: number;
-  pick: ConsumerArchivedWeeklyPickPick;
-  /** @nullable */
-  reason: string | null;
-  retrospective: ConsumerArchivedWeeklyPickRetrospective;
-}
-
-export interface ConsumerWeeklyPickArchive {
-  seasons: number[];
-  /** @nullable */
-  season: number | null;
-  weeks: ConsumerArchivedWeeklyPick[];
-}
-
-export type ConsumerFirstLinesSportsbook = typeof ConsumerFirstLinesSportsbook[keyof typeof ConsumerFirstLinesSportsbook];
-
-
-export const ConsumerFirstLinesSportsbook = {
-  DraftKings: 'DraftKings',
-  FanDuel: 'FanDuel',
-} as const;
-
-export type ConsumerFirstLinesQuotesItemMarket = typeof ConsumerFirstLinesQuotesItemMarket[keyof typeof ConsumerFirstLinesQuotesItemMarket];
-
-
-export const ConsumerFirstLinesQuotesItemMarket = {
-  moneyline: 'moneyline',
-  spread: 'spread',
-} as const;
-
-export type ConsumerFirstLinesQuotesItem = {
-  market: ConsumerFirstLinesQuotesItemMarket;
-  selection: string;
-  /** @nullable */
-  point: number | null;
-  price: number;
-};
-
-/**
- * Original quotes saved with the verified weekly selection, not current odds or betting advice.
- */
-export interface ConsumerFirstLines {
-  sportsbook: ConsumerFirstLinesSportsbook;
-  /**
-     * @minItems 4
-     * @maxItems 4
-     */
-  quotes: ConsumerFirstLinesQuotesItem[];
-}
-
 export type ConsumerDashboardStatus = typeof ConsumerDashboardStatus[keyof typeof ConsumerDashboardStatus];
 
 
@@ -1407,25 +1054,8 @@ export const ConsumerDashboardStatus = {
   unavailable: 'unavailable',
 } as const;
 
-export type ConsumerDashboardInitialWeeklyPickPick = {
-  gameId: string;
-  teamName: string;
-  season: number;
-  week: number;
-  probability: number;
-  observedAt: string;
-  firstLines?: ConsumerFirstLines;
-} | null;
-
-export type ConsumerDashboardInitialWeeklyPick = {
-  pick: ConsumerDashboardInitialWeeklyPickPick;
-  /** @nullable */
-  reason: string | null;
-};
-
 export interface ConsumerDashboard {
   status: ConsumerDashboardStatus;
-  initialWeeklyPick: ConsumerDashboardInitialWeeklyPick;
   games: ConsumerGame[];
   note: string;
   sourceHealth: ConsumerSourceHealth;
@@ -1765,13 +1395,6 @@ export interface ConsumerProjectedMatchup {
   summary: string;
 }
 
-export type ConsumerContextModelPersonnelLimitation = {
-  active: boolean;
-  /** @nullable */
-  reason: string | null;
-  recommendationSuppressed: boolean;
-};
-
 export interface ConsumerContext {
   available: boolean;
   /** @nullable */
@@ -1786,7 +1409,6 @@ export interface ConsumerContext {
   matchupMessage: string | null;
   /** @nullable */
   message: string | null;
-  modelPersonnelLimitation: ConsumerContextModelPersonnelLimitation;
 }
 
 export type ConsumerKeyPlayerEligibilityStatus = typeof ConsumerKeyPlayerEligibilityStatus[keyof typeof ConsumerKeyPlayerEligibilityStatus];
@@ -1974,136 +1596,6 @@ export type ConsumerGameDetail = ConsumerGame & {
   analysis: ConsumerGameDetailAnalysis;
 };
 
-export interface ConsumerPerformanceFamily {
-  predictions: number;
-  /** @nullable */
-  mae: number | null;
-  /** @nullable */
-  rmse: number | null;
-  /** @nullable */
-  accuracy: number | null;
-  /** @nullable */
-  brier: number | null;
-  /** @nullable */
-  logLoss: number | null;
-  /** @nullable */
-  avgClv: number | null;
-}
-
-export interface ConsumerPerformanceBreakdown {
-  group: string;
-  predictions: number;
-  /** @nullable */
-  spreadMae: number | null;
-  /** @nullable */
-  totalsMae: number | null;
-  /** @nullable */
-  moneylineAccuracy: number | null;
-  /** @nullable */
-  avgClv: number | null;
-}
-
-export type ConsumerPerformanceStatus = typeof ConsumerPerformanceStatus[keyof typeof ConsumerPerformanceStatus];
-
-
-export const ConsumerPerformanceStatus = {
-  available: 'available',
-  unavailable: 'unavailable',
-} as const;
-
-export type ConsumerPerformanceByFamily = {
-  spread: ConsumerPerformanceFamily;
-  moneyline: ConsumerPerformanceFamily;
-  totals: ConsumerPerformanceFamily;
-};
-
-export type ConsumerPerformanceBreakdowns = {
-  season: ConsumerPerformanceBreakdown[];
-  week: ConsumerPerformanceBreakdown[];
-  confidence: ConsumerPerformanceBreakdown[];
-  edge: ConsumerPerformanceBreakdown[];
-};
-
-export type ConsumerPerformanceWindow = {
-  maximumOfficialPredictions: 5000;
-  truncated: boolean;
-};
-
-/**
- * @nullable
- */
-export type ConsumerOfficialCoverageStates = {
-  pending: number;
-  unobserved: number;
-  missing_inputs: number;
-  missing_markets: number;
-  missed_cutoff: number;
-  cancelled: number;
-  nonfinal: number;
-  frozen: number;
-  graded: number;
-} | null;
-
-/**
- * @nullable
- */
-export type ConsumerOfficialCoverage = {
-  asOf: string;
-  /** @nullable */
-  season: number | null;
-  /** @nullable */
-  week: number | null;
-  seasons: number[];
-  weeks: number[];
-  /** @nullable */
-  scheduled: number | null;
-  /** @nullable */
-  eligible: number | null;
-  /** @nullable */
-  picked: number | null;
-  /** @nullable */
-  abstained: number | null;
-  /** @nullable */
-  pickCoverage: number | null;
-  /** @nullable */
-  abstentionRate: number | null;
-  /** @nullable */
-  states: ConsumerOfficialCoverageStates;
-} | null;
-
-export interface ConsumerPerformance {
-  status: ConsumerPerformanceStatus;
-  officialPredictions: number;
-  gradedPredictions: number;
-  coverage: ConsumerOfficialCoverage | null;
-  byFamily: ConsumerPerformanceByFamily;
-  breakdowns: ConsumerPerformanceBreakdowns;
-  window: ConsumerPerformanceWindow;
-  note: string;
-}
-
-export type ConsumerTrendsStatus = typeof ConsumerTrendsStatus[keyof typeof ConsumerTrendsStatus];
-
-
-export const ConsumerTrendsStatus = {
-  available: 'available',
-  unavailable: 'unavailable',
-} as const;
-
-export type ConsumerTrendsWindow = {
-  maximumOfficialPredictions: 5000;
-  truncated: boolean;
-};
-
-export interface ConsumerTrends {
-  status: ConsumerTrendsStatus;
-  byWeek: ConsumerPerformanceBreakdown[];
-  byConfidence: ConsumerPerformanceBreakdown[];
-  byEdge: ConsumerPerformanceBreakdown[];
-  window: ConsumerTrendsWindow;
-  note: string;
-}
-
 export interface ConsumerTeamObservation {
   gameId: string;
   week: number;
@@ -2176,48 +1668,6 @@ export interface ConsumerTeamAnalytics {
   source: string;
   coverage: ConsumerTeamAnalyticsCoverage;
   teams: ConsumerTeamAnalyticsTeam[];
-}
-
-export interface ConsumerGradedAggregate {
-  season: number;
-  graded: number;
-  winnerGraded: number;
-  winnerCorrect: number;
-  /** @nullable */
-  winnerAccuracy: number | null;
-  marginGraded: number;
-  /** @nullable */
-  marginMae: number | null;
-  totalGraded: number;
-  /** @nullable */
-  totalMae: number | null;
-}
-
-export type ConsumerGradedPoint = ConsumerGradedAggregate & {
-  week: number;
-  gameId: string;
-  kickoffTime: string;
-};
-
-export type ConsumerGradedChartsStatus = typeof ConsumerGradedChartsStatus[keyof typeof ConsumerGradedChartsStatus];
-
-
-export const ConsumerGradedChartsStatus = {
-  measured: 'measured',
-  not_configured: 'not_configured',
-} as const;
-
-export interface ConsumerGradedCharts {
-  status: ConsumerGradedChartsStatus;
-  source: string;
-  note: string;
-  /** @nullable */
-  season: number | null;
-  bySeason: ConsumerGradedAggregate[];
-  cumulative: ConsumerGradedPoint[];
-  openingClosingAvailable: boolean;
-  openingClosingReason: string;
-  truncated: boolean;
 }
 
 export interface ConsumerPropsAvailability {
@@ -3968,29 +3418,9 @@ week?: number;
 limit?: number;
 };
 
-export type GetConsumerWeeklyPicksParams = {
-/**
- * @minimum 2020
- */
-season?: number;
-};
-
 export type ListConsumerGamesParams = {
 /**
  * @minimum 2020
- */
-season?: number;
-/**
- * @minimum 1
- * @maximum 22
- */
-week?: number;
-};
-
-export type GetConsumerPerformanceParams = {
-/**
- * @minimum 1900
- * @maximum 2200
  */
 season?: number;
 /**
@@ -4027,14 +3457,6 @@ export const GetConsumerTeamAnalyticsWindow = {
   last5: 'last5',
   last8: 'last8',
 } as const;
-
-export type GetConsumerGradedChartsParams = {
-/**
- * @minimum 2000
- * @maximum 2100
- */
-season?: number;
-};
 
 export type GetConsumerDefenseVsPositionParams = {
 /**
@@ -4161,10 +3583,6 @@ export const GetConsumerRedZoneOpportunitiesPeriod = {
   season: 'season',
   last3: 'last3',
 } as const;
-
-export type GetConsumerRecordParams = {
-season?: number;
-};
 
 export type GetConsumerTouchdownsParams = {
 season?: number;

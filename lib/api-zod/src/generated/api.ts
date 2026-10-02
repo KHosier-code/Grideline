@@ -1054,39 +1054,8 @@ export const UpdateSettingsResponse = zod.object({
  * Returns consumer-safe, persisted data only. It never starts data synchronization or model computation.
  * @summary Read the persisted consumer game dashboard
  */
-export const getConsumerDashboardResponseInitialWeeklyPickPickTwoFirstLinesQuotesMin = 4;
-export const getConsumerDashboardResponseInitialWeeklyPickPickTwoFirstLinesQuotesMax = 4;
-
-export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin = 3;
-export const getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax = 3;
-
-export const getConsumerDashboardResponseGamesItemConfidenceMarketsMin = 3;
-export const getConsumerDashboardResponseGamesItemConfidenceMarketsMax = 3;
-
-
-
 export const GetConsumerDashboardResponse = zod.object({
   "status": zod.enum(['available', 'unavailable']),
-  "initialWeeklyPick": zod.object({
-  "pick": zod.union([zod.null(),zod.object({
-  "gameId": zod.string(),
-  "teamName": zod.string(),
-  "season": zod.number().int(),
-  "week": zod.number().int(),
-  "probability": zod.number(),
-  "observedAt": zod.coerce.date(),
-  "firstLines": zod.object({
-  "sportsbook": zod.enum(['DraftKings', 'FanDuel']),
-  "quotes": zod.array(zod.object({
-  "market": zod.enum(['moneyline', 'spread']),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number().int()
-})).min(getConsumerDashboardResponseInitialWeeklyPickPickTwoFirstLinesQuotesMin).max(getConsumerDashboardResponseInitialWeeklyPickPickTwoFirstLinesQuotesMax)
-}).optional().describe('Original quotes saved with the verified weekly selection, not current odds or betting advice.')
-})]),
-  "reason": zod.string().nullable()
-}),
   "games": zod.array(zod.object({
   "gameId": zod.string(),
   "season": zod.number().int(),
@@ -1110,17 +1079,6 @@ export const GetConsumerDashboardResponse = zod.object({
   "finalScore": zod.object({
   "home": zod.number().int(),
   "away": zod.number().int()
-}).nullable(),
-  "prediction": zod.object({
-  "modelLabel": zod.literal("Gridline Production Model"),
-  "officialFinalPrediction": zod.boolean().optional().describe('Whether this saved snapshot was verified and frozen as the official pregame prediction.'),
-  "predictionTimestamp": zod.coerce.date().optional(),
-  "projectedHomeScore": zod.number().nullable(),
-  "projectedAwayScore": zod.number().nullable(),
-  "projectedMargin": zod.number().nullable(),
-  "projectedTotal": zod.number().nullable(),
-  "homeWinProbability": zod.number().nullable(),
-  "awayWinProbability": zod.number().nullable()
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
@@ -1172,7 +1130,7 @@ export const GetConsumerDashboardResponse = zod.object({
 })
 }),
   "initialMarkets": zod.object({
-  "capturedAt": zod.coerce.date().nullable().describe('Time of the verified first request; never a later quote.'),
+  "capturedAt": zod.coerce.date().nullable().describe('Time of the first saved capture for the game.'),
   "moneyline": zod.union([zod.object({
   "sportsbook": zod.string(),
   "selection": zod.string(),
@@ -1195,86 +1153,7 @@ export const GetConsumerDashboardResponse = zod.object({
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()])
 }),
-  "marketBoard": zod.object({
-  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
-  "staleAfterMinutes": zod.number().int(),
-  "selectionRule": zod.string(),
-  "comparisons": zod.array(zod.object({
-  "market": zod.enum(['spread', 'total', 'moneyline']),
-  "label": zod.string(),
-  "state": zod.enum(['available', 'stale', 'absent']),
-  "modelValue": zod.number().nullable(),
-  "marketValue": zod.number().nullable(),
-  "difference": zod.number().nullable(),
-  "differenceUnit": zod.enum(['points', 'probability_points']),
-  "selectedQuote": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "firstObserved": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "current": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "currentQuotes": zod.array(zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-})),
-  "modelTimestamp": zod.coerce.date().nullable(),
-  "marketTimestamp": zod.coerce.date().nullable(),
-  "observationAgeMinutes": zod.number().nullable(),
-  "freshnessLabel": zod.string()
-})).min(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMin).max(getConsumerDashboardResponseGamesItemMarketBoardComparisonsMax)
-}),
-  "recommendation": zod.object({
-  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable', 'historical']),
-  "reason": zod.string().nullable(),
-  "markets": zod.object({
-  "spread": zod.boolean(),
-  "total": zod.boolean(),
-  "moneyline": zod.boolean()
-})
-}),
-  "dataConfidence": zod.object({
-  "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
-  "score": zod.number().nullable(),
-  "reason": zod.string().nullable()
-}),
-  "confidence": zod.object({
-  "markets": zod.array(zod.object({
-  "market": zod.enum(['spread', 'moneyline', 'total']),
-  "score": zod.number(),
-  "label": zod.enum(['Low', 'Moderate', 'Strong', 'Very Strong']),
-  "explanation": zod.string(),
-  "components": zod.array(zod.object({
-  "key": zod.enum(['data', 'model', 'marketEdge']),
-  "label": zod.string(),
-  "score": zod.number().nullable(),
-  "summary": zod.string()
-})),
-  "evidence": zod.record(zod.string(), zod.unknown()),
-  "downgradeReasons": zod.array(zod.string()),
-  "calculatedAt": zod.coerce.date()
-})).min(getConsumerDashboardResponseGamesItemConfidenceMarketsMin).max(getConsumerDashboardResponseGamesItemConfidenceMarketsMax)
-}),
   "availability": zod.object({
-  "prediction": zod.string().nullable().describe('Safe, user-facing explanation when no eligible projection was selected.'),
-  "predictionReason": zod.union([zod.literal('missing_promoted_models'),zod.literal('schema_version_mismatch'),zod.literal('missing_eligible_snapshot'),zod.literal('invalid_inputs'),zod.literal('invalid_snapshot'),zod.literal('cutoff_rejection'),zod.literal(null)]).nullable().describe('Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.'),
   "market": zod.string().nullable()
 })
 })),
@@ -1324,51 +1203,6 @@ export const GetConsumerDashboardResponse = zod.object({
 
 
 /**
- * @summary Read past official selections separately from retrospective reviews
- */
-export const getConsumerWeeklyPicksQuerySeasonMin = 2020;
-
-
-
-export const GetConsumerWeeklyPicksQueryParams = zod.object({
-  "season": zod.coerce.number().int().min(getConsumerWeeklyPicksQuerySeasonMin).optional()
-})
-
-export const GetConsumerWeeklyPicksResponse = zod.object({
-  "seasons": zod.array(zod.number().int()),
-  "season": zod.number().int().nullable(),
-  "weeks": zod.array(zod.object({
-  "season": zod.number().int(),
-  "week": zod.number().int(),
-  "pick": zod.union([zod.null(),zod.object({
-  "gameId": zod.string(),
-  "teamName": zod.string(),
-  "season": zod.number().int(),
-  "week": zod.number().int(),
-  "probability": zod.number(),
-  "observedAt": zod.coerce.date()
-})]),
-  "reason": zod.string().nullable(),
-  "retrospective": zod.union([zod.null(),zod.object({
-  "status": zod.enum(['reviewed', 'published', 'unavailable']),
-  "label": zod.string(),
-  "reason": zod.string().nullable(),
-  "choice": zod.union([zod.null(),zod.object({
-  "gameId": zod.string(),
-  "teamName": zod.string(),
-  "matchup": zod.string(),
-  "probability": zod.number(),
-  "cutoffAt": zod.coerce.date(),
-  "evidenceId": zod.string(),
-  "reviewedAt": zod.coerce.date(),
-  "publishedAt": zod.coerce.date().nullable()
-})])
-})])
-}))
-})
-
-
-/**
  * @summary Select a slate from persisted NFL schedule evidence
  */
 export const GetConsumerScheduleSelectionResponse = zod.object({
@@ -1395,22 +1229,7 @@ export const ListConsumerGamesQueryParams = zod.object({
   "week": zod.coerce.number().int().min(1).max(listConsumerGamesQueryWeekMax).optional()
 })
 
-export const listConsumerGamesResponseGamesItemMarketBoardComparisonsMin = 3;
-export const listConsumerGamesResponseGamesItemMarketBoardComparisonsMax = 3;
-
-export const listConsumerGamesResponseGamesItemConfidenceMarketsMin = 3;
-export const listConsumerGamesResponseGamesItemConfidenceMarketsMax = 3;
-
-
-
 export const ListConsumerGamesResponse = zod.object({
-  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
-  "coverage": zod.object({
-  "games": zod.number().int(),
-  "gamesWithComparison": zod.number().int(),
-  "DraftKings": zod.number().int(),
-  "FanDuel": zod.number().int()
-}),
   "games": zod.array(zod.object({
   "gameId": zod.string(),
   "season": zod.number().int(),
@@ -1434,17 +1253,6 @@ export const ListConsumerGamesResponse = zod.object({
   "finalScore": zod.object({
   "home": zod.number().int(),
   "away": zod.number().int()
-}).nullable(),
-  "prediction": zod.object({
-  "modelLabel": zod.literal("Gridline Production Model"),
-  "officialFinalPrediction": zod.boolean().optional().describe('Whether this saved snapshot was verified and frozen as the official pregame prediction.'),
-  "predictionTimestamp": zod.coerce.date().optional(),
-  "projectedHomeScore": zod.number().nullable(),
-  "projectedAwayScore": zod.number().nullable(),
-  "projectedMargin": zod.number().nullable(),
-  "projectedTotal": zod.number().nullable(),
-  "homeWinProbability": zod.number().nullable(),
-  "awayWinProbability": zod.number().nullable()
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
@@ -1496,7 +1304,7 @@ export const ListConsumerGamesResponse = zod.object({
 })
 }),
   "initialMarkets": zod.object({
-  "capturedAt": zod.coerce.date().nullable().describe('Time of the verified first request; never a later quote.'),
+  "capturedAt": zod.coerce.date().nullable().describe('Time of the first saved capture for the game.'),
   "moneyline": zod.union([zod.object({
   "sportsbook": zod.string(),
   "selection": zod.string(),
@@ -1519,86 +1327,7 @@ export const ListConsumerGamesResponse = zod.object({
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()])
 }),
-  "marketBoard": zod.object({
-  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
-  "staleAfterMinutes": zod.number().int(),
-  "selectionRule": zod.string(),
-  "comparisons": zod.array(zod.object({
-  "market": zod.enum(['spread', 'total', 'moneyline']),
-  "label": zod.string(),
-  "state": zod.enum(['available', 'stale', 'absent']),
-  "modelValue": zod.number().nullable(),
-  "marketValue": zod.number().nullable(),
-  "difference": zod.number().nullable(),
-  "differenceUnit": zod.enum(['points', 'probability_points']),
-  "selectedQuote": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "firstObserved": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "current": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "currentQuotes": zod.array(zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-})),
-  "modelTimestamp": zod.coerce.date().nullable(),
-  "marketTimestamp": zod.coerce.date().nullable(),
-  "observationAgeMinutes": zod.number().nullable(),
-  "freshnessLabel": zod.string()
-})).min(listConsumerGamesResponseGamesItemMarketBoardComparisonsMin).max(listConsumerGamesResponseGamesItemMarketBoardComparisonsMax)
-}),
-  "recommendation": zod.object({
-  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable', 'historical']),
-  "reason": zod.string().nullable(),
-  "markets": zod.object({
-  "spread": zod.boolean(),
-  "total": zod.boolean(),
-  "moneyline": zod.boolean()
-})
-}),
-  "dataConfidence": zod.object({
-  "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
-  "score": zod.number().nullable(),
-  "reason": zod.string().nullable()
-}),
-  "confidence": zod.object({
-  "markets": zod.array(zod.object({
-  "market": zod.enum(['spread', 'moneyline', 'total']),
-  "score": zod.number(),
-  "label": zod.enum(['Low', 'Moderate', 'Strong', 'Very Strong']),
-  "explanation": zod.string(),
-  "components": zod.array(zod.object({
-  "key": zod.enum(['data', 'model', 'marketEdge']),
-  "label": zod.string(),
-  "score": zod.number().nullable(),
-  "summary": zod.string()
-})),
-  "evidence": zod.record(zod.string(), zod.unknown()),
-  "downgradeReasons": zod.array(zod.string()),
-  "calculatedAt": zod.coerce.date()
-})).min(listConsumerGamesResponseGamesItemConfidenceMarketsMin).max(listConsumerGamesResponseGamesItemConfidenceMarketsMax)
-}),
   "availability": zod.object({
-  "prediction": zod.string().nullable().describe('Safe, user-facing explanation when no eligible projection was selected.'),
-  "predictionReason": zod.union([zod.literal('missing_promoted_models'),zod.literal('schema_version_mismatch'),zod.literal('missing_eligible_snapshot'),zod.literal('invalid_inputs'),zod.literal('invalid_snapshot'),zod.literal('cutoff_rejection'),zod.literal(null)]).nullable().describe('Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.'),
   "market": zod.string().nullable()
 })
 })),
@@ -1670,12 +1399,6 @@ export const GetConsumerGameParams = zod.object({
   "gameId": zod.coerce.string()
 })
 
-export const getConsumerGameResponseOneMarketBoardComparisonsMin = 3;
-export const getConsumerGameResponseOneMarketBoardComparisonsMax = 3;
-
-export const getConsumerGameResponseOneConfidenceMarketsMin = 3;
-export const getConsumerGameResponseOneConfidenceMarketsMax = 3;
-
 export const getConsumerGameResponseTwoMovementStreamsMax = 24;
 
 export const getConsumerGameResponseTwoContextTeamsItemCurrentOffenseRolesRunningBackCommitteePlayersMax = 3;
@@ -1731,17 +1454,6 @@ export const GetConsumerGameResponse = zod.object({
   "home": zod.number().int(),
   "away": zod.number().int()
 }).nullable(),
-  "prediction": zod.object({
-  "modelLabel": zod.literal("Gridline Production Model"),
-  "officialFinalPrediction": zod.boolean().optional().describe('Whether this saved snapshot was verified and frozen as the official pregame prediction.'),
-  "predictionTimestamp": zod.coerce.date().optional(),
-  "projectedHomeScore": zod.number().nullable(),
-  "projectedAwayScore": zod.number().nullable(),
-  "projectedMargin": zod.number().nullable(),
-  "projectedTotal": zod.number().nullable(),
-  "homeWinProbability": zod.number().nullable(),
-  "awayWinProbability": zod.number().nullable()
-}).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
   "sportsbook": zod.string(),
@@ -1792,7 +1504,7 @@ export const GetConsumerGameResponse = zod.object({
 })
 }),
   "initialMarkets": zod.object({
-  "capturedAt": zod.coerce.date().nullable().describe('Time of the verified first request; never a later quote.'),
+  "capturedAt": zod.coerce.date().nullable().describe('Time of the first saved capture for the game.'),
   "moneyline": zod.union([zod.object({
   "sportsbook": zod.string(),
   "selection": zod.string(),
@@ -1815,86 +1527,7 @@ export const GetConsumerGameResponse = zod.object({
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()])
 }),
-  "marketBoard": zod.object({
-  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
-  "staleAfterMinutes": zod.number().int(),
-  "selectionRule": zod.string(),
-  "comparisons": zod.array(zod.object({
-  "market": zod.enum(['spread', 'total', 'moneyline']),
-  "label": zod.string(),
-  "state": zod.enum(['available', 'stale', 'absent']),
-  "modelValue": zod.number().nullable(),
-  "marketValue": zod.number().nullable(),
-  "difference": zod.number().nullable(),
-  "differenceUnit": zod.enum(['points', 'probability_points']),
-  "selectedQuote": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "firstObserved": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "current": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "currentQuotes": zod.array(zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-})),
-  "modelTimestamp": zod.coerce.date().nullable(),
-  "marketTimestamp": zod.coerce.date().nullable(),
-  "observationAgeMinutes": zod.number().nullable(),
-  "freshnessLabel": zod.string()
-})).min(getConsumerGameResponseOneMarketBoardComparisonsMin).max(getConsumerGameResponseOneMarketBoardComparisonsMax)
-}),
-  "recommendation": zod.object({
-  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable', 'historical']),
-  "reason": zod.string().nullable(),
-  "markets": zod.object({
-  "spread": zod.boolean(),
-  "total": zod.boolean(),
-  "moneyline": zod.boolean()
-})
-}),
-  "dataConfidence": zod.object({
-  "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
-  "score": zod.number().nullable(),
-  "reason": zod.string().nullable()
-}),
-  "confidence": zod.object({
-  "markets": zod.array(zod.object({
-  "market": zod.enum(['spread', 'moneyline', 'total']),
-  "score": zod.number(),
-  "label": zod.enum(['Low', 'Moderate', 'Strong', 'Very Strong']),
-  "explanation": zod.string(),
-  "components": zod.array(zod.object({
-  "key": zod.enum(['data', 'model', 'marketEdge']),
-  "label": zod.string(),
-  "score": zod.number().nullable(),
-  "summary": zod.string()
-})),
-  "evidence": zod.record(zod.string(), zod.unknown()),
-  "downgradeReasons": zod.array(zod.string()),
-  "calculatedAt": zod.coerce.date()
-})).min(getConsumerGameResponseOneConfidenceMarketsMin).max(getConsumerGameResponseOneConfidenceMarketsMax)
-}),
   "availability": zod.object({
-  "prediction": zod.string().nullable().describe('Safe, user-facing explanation when no eligible projection was selected.'),
-  "predictionReason": zod.union([zod.literal('missing_promoted_models'),zod.literal('schema_version_mismatch'),zod.literal('missing_eligible_snapshot'),zod.literal('invalid_inputs'),zod.literal('invalid_snapshot'),zod.literal('cutoff_rejection'),zod.literal(null)]).nullable().describe('Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.'),
   "market": zod.string().nullable()
 })
 }).and(zod.object({
@@ -2081,12 +1714,7 @@ export const GetConsumerGameResponse = zod.object({
   "summary": zod.string()
 })).max(getConsumerGameResponseTwoContextProjectedMatchupsMax),
   "matchupMessage": zod.string().nullable(),
-  "message": zod.string().nullable(),
-  "modelPersonnelLimitation": zod.object({
-  "active": zod.boolean(),
-  "reason": zod.string().nullable(),
-  "recommendationSuppressed": zod.boolean()
-})
+  "message": zod.string().nullable()
 }),
   "keyPlayers": zod.array(zod.object({
   "playerId": zod.string(),
@@ -2266,14 +1894,6 @@ export const ListSavedGameIdsResponse = zod.array(ListSavedGameIdsResponseItem)
 /**
  * @summary Read the signed-in user's saved games with current persisted evidence
  */
-export const listSavedGamesResponseMarketBoardComparisonsMin = 3;
-export const listSavedGamesResponseMarketBoardComparisonsMax = 3;
-
-export const listSavedGamesResponseConfidenceMarketsMin = 3;
-export const listSavedGamesResponseConfidenceMarketsMax = 3;
-
-
-
 export const ListSavedGamesResponseItem = zod.object({
   "gameId": zod.string(),
   "season": zod.number().int(),
@@ -2297,17 +1917,6 @@ export const ListSavedGamesResponseItem = zod.object({
   "finalScore": zod.object({
   "home": zod.number().int(),
   "away": zod.number().int()
-}).nullable(),
-  "prediction": zod.object({
-  "modelLabel": zod.literal("Gridline Production Model"),
-  "officialFinalPrediction": zod.boolean().optional().describe('Whether this saved snapshot was verified and frozen as the official pregame prediction.'),
-  "predictionTimestamp": zod.coerce.date().optional(),
-  "projectedHomeScore": zod.number().nullable(),
-  "projectedAwayScore": zod.number().nullable(),
-  "projectedMargin": zod.number().nullable(),
-  "projectedTotal": zod.number().nullable(),
-  "homeWinProbability": zod.number().nullable(),
-  "awayWinProbability": zod.number().nullable()
 }).nullable(),
   "market": zod.object({
   "spread": zod.union([zod.object({
@@ -2359,7 +1968,7 @@ export const ListSavedGamesResponseItem = zod.object({
 })
 }),
   "initialMarkets": zod.object({
-  "capturedAt": zod.coerce.date().nullable().describe('Time of the verified first request; never a later quote.'),
+  "capturedAt": zod.coerce.date().nullable().describe('Time of the first saved capture for the game.'),
   "moneyline": zod.union([zod.object({
   "sportsbook": zod.string(),
   "selection": zod.string(),
@@ -2382,86 +1991,7 @@ export const ListSavedGamesResponseItem = zod.object({
   "capturedAt": zod.coerce.date().nullable()
 }),zod.null()])
 }),
-  "marketBoard": zod.object({
-  "status": zod.enum(['available', 'partial', 'stale', 'absent']),
-  "staleAfterMinutes": zod.number().int(),
-  "selectionRule": zod.string(),
-  "comparisons": zod.array(zod.object({
-  "market": zod.enum(['spread', 'total', 'moneyline']),
-  "label": zod.string(),
-  "state": zod.enum(['available', 'stale', 'absent']),
-  "modelValue": zod.number().nullable(),
-  "marketValue": zod.number().nullable(),
-  "difference": zod.number().nullable(),
-  "differenceUnit": zod.enum(['points', 'probability_points']),
-  "selectedQuote": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "firstObserved": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "current": zod.union([zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-}),zod.null()]),
-  "currentQuotes": zod.array(zod.object({
-  "sportsbook": zod.string(),
-  "selection": zod.string(),
-  "point": zod.number().nullable(),
-  "price": zod.number(),
-  "capturedAt": zod.coerce.date().nullable()
-})),
-  "modelTimestamp": zod.coerce.date().nullable(),
-  "marketTimestamp": zod.coerce.date().nullable(),
-  "observationAgeMinutes": zod.number().nullable(),
-  "freshnessLabel": zod.string()
-})).min(listSavedGamesResponseMarketBoardComparisonsMin).max(listSavedGamesResponseMarketBoardComparisonsMax)
-}),
-  "recommendation": zod.object({
-  "status": zod.enum(['healthy', 'partial', 'stale', 'unavailable', 'historical']),
-  "reason": zod.string().nullable(),
-  "markets": zod.object({
-  "spread": zod.boolean(),
-  "total": zod.boolean(),
-  "moneyline": zod.boolean()
-})
-}),
-  "dataConfidence": zod.object({
-  "label": zod.enum(['Updating', 'Limited', 'Moderate', 'Standard']),
-  "score": zod.number().nullable(),
-  "reason": zod.string().nullable()
-}),
-  "confidence": zod.object({
-  "markets": zod.array(zod.object({
-  "market": zod.enum(['spread', 'moneyline', 'total']),
-  "score": zod.number(),
-  "label": zod.enum(['Low', 'Moderate', 'Strong', 'Very Strong']),
-  "explanation": zod.string(),
-  "components": zod.array(zod.object({
-  "key": zod.enum(['data', 'model', 'marketEdge']),
-  "label": zod.string(),
-  "score": zod.number().nullable(),
-  "summary": zod.string()
-})),
-  "evidence": zod.record(zod.string(), zod.unknown()),
-  "downgradeReasons": zod.array(zod.string()),
-  "calculatedAt": zod.coerce.date()
-})).min(listSavedGamesResponseConfidenceMarketsMin).max(listSavedGamesResponseConfidenceMarketsMax)
-}),
   "availability": zod.object({
-  "prediction": zod.string().nullable().describe('Safe, user-facing explanation when no eligible projection was selected.'),
-  "predictionReason": zod.union([zod.literal('missing_promoted_models'),zod.literal('schema_version_mismatch'),zod.literal('missing_eligible_snapshot'),zod.literal('invalid_inputs'),zod.literal('invalid_snapshot'),zod.literal('cutoff_rejection'),zod.literal(null)]).nullable().describe('Read-only diagnostic category; null when a projection is available. Never includes model IDs or source evidence.'),
   "market": zod.string().nullable()
 })
 })
@@ -2486,157 +2016,6 @@ export const RemoveSavedConsumerGameParams = zod.object({
 })
 
 export const RemoveSavedConsumerGameResponse = zod.void()
-
-
-/**
- * @summary Read consumer-safe persisted performance
- */
-export const getConsumerPerformanceQuerySeasonMin = 1900;
-export const getConsumerPerformanceQuerySeasonMax = 2200;
-
-export const getConsumerPerformanceQueryWeekMax = 22;
-
-
-
-export const GetConsumerPerformanceQueryParams = zod.object({
-  "season": zod.coerce.number().int().min(getConsumerPerformanceQuerySeasonMin).max(getConsumerPerformanceQuerySeasonMax).optional(),
-  "week": zod.coerce.number().int().min(1).max(getConsumerPerformanceQueryWeekMax).optional()
-})
-
-export const GetConsumerPerformanceResponse = zod.object({
-  "status": zod.enum(['available', 'unavailable']),
-  "officialPredictions": zod.number().int(),
-  "gradedPredictions": zod.number().int(),
-  "coverage": zod.object({
-  "asOf": zod.coerce.date(),
-  "season": zod.number().int().nullable(),
-  "week": zod.number().int().nullable(),
-  "seasons": zod.array(zod.number().int()),
-  "weeks": zod.array(zod.number().int()),
-  "scheduled": zod.number().int().nullable(),
-  "eligible": zod.number().int().nullable(),
-  "picked": zod.number().int().nullable(),
-  "abstained": zod.number().int().nullable(),
-  "pickCoverage": zod.number().nullable(),
-  "abstentionRate": zod.number().nullable(),
-  "states": zod.object({
-  "pending": zod.number().int(),
-  "unobserved": zod.number().int(),
-  "missing_inputs": zod.number().int(),
-  "missing_markets": zod.number().int(),
-  "missed_cutoff": zod.number().int(),
-  "cancelled": zod.number().int(),
-  "nonfinal": zod.number().int(),
-  "frozen": zod.number().int(),
-  "graded": zod.number().int()
-}).nullable()
-}).nullable(),
-  "byFamily": zod.object({
-  "spread": zod.object({
-  "predictions": zod.number().int(),
-  "mae": zod.number().nullable(),
-  "rmse": zod.number().nullable(),
-  "accuracy": zod.number().nullable(),
-  "brier": zod.number().nullable(),
-  "logLoss": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-}),
-  "moneyline": zod.object({
-  "predictions": zod.number().int(),
-  "mae": zod.number().nullable(),
-  "rmse": zod.number().nullable(),
-  "accuracy": zod.number().nullable(),
-  "brier": zod.number().nullable(),
-  "logLoss": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-}),
-  "totals": zod.object({
-  "predictions": zod.number().int(),
-  "mae": zod.number().nullable(),
-  "rmse": zod.number().nullable(),
-  "accuracy": zod.number().nullable(),
-  "brier": zod.number().nullable(),
-  "logLoss": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-})
-}),
-  "breakdowns": zod.object({
-  "season": zod.array(zod.object({
-  "group": zod.string(),
-  "predictions": zod.number().int(),
-  "spreadMae": zod.number().nullable(),
-  "totalsMae": zod.number().nullable(),
-  "moneylineAccuracy": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-})),
-  "week": zod.array(zod.object({
-  "group": zod.string(),
-  "predictions": zod.number().int(),
-  "spreadMae": zod.number().nullable(),
-  "totalsMae": zod.number().nullable(),
-  "moneylineAccuracy": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-})),
-  "confidence": zod.array(zod.object({
-  "group": zod.string(),
-  "predictions": zod.number().int(),
-  "spreadMae": zod.number().nullable(),
-  "totalsMae": zod.number().nullable(),
-  "moneylineAccuracy": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-})),
-  "edge": zod.array(zod.object({
-  "group": zod.string(),
-  "predictions": zod.number().int(),
-  "spreadMae": zod.number().nullable(),
-  "totalsMae": zod.number().nullable(),
-  "moneylineAccuracy": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-}))
-}),
-  "window": zod.object({
-  "maximumOfficialPredictions": zod.literal(5000),
-  "truncated": zod.boolean()
-}),
-  "note": zod.string()
-})
-
-
-/**
- * @summary Read consumer-safe performance trends
- */
-export const GetConsumerTrendsResponse = zod.object({
-  "status": zod.enum(['available', 'unavailable']),
-  "byWeek": zod.array(zod.object({
-  "group": zod.string(),
-  "predictions": zod.number().int(),
-  "spreadMae": zod.number().nullable(),
-  "totalsMae": zod.number().nullable(),
-  "moneylineAccuracy": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-})),
-  "byConfidence": zod.array(zod.object({
-  "group": zod.string(),
-  "predictions": zod.number().int(),
-  "spreadMae": zod.number().nullable(),
-  "totalsMae": zod.number().nullable(),
-  "moneylineAccuracy": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-})),
-  "byEdge": zod.array(zod.object({
-  "group": zod.string(),
-  "predictions": zod.number().int(),
-  "spreadMae": zod.number().nullable(),
-  "totalsMae": zod.number().nullable(),
-  "moneylineAccuracy": zod.number().nullable(),
-  "avgClv": zod.number().nullable()
-})),
-  "window": zod.object({
-  "maximumOfficialPredictions": zod.literal(5000),
-  "truncated": zod.boolean()
-}),
-  "note": zod.string()
-})
 
 
 /**
@@ -2695,55 +2074,6 @@ export const GetConsumerTeamAnalyticsResponse = zod.object({
   "defenseSuccessRate": zod.number().nullable()
 }))
 }))
-})
-
-
-/**
- * @summary Read complete official pregame final-game grading aggregates
- */
-export const getConsumerGradedChartsQuerySeasonMin = 2000;
-export const getConsumerGradedChartsQuerySeasonMax = 2100;
-
-
-
-export const GetConsumerGradedChartsQueryParams = zod.object({
-  "season": zod.coerce.number().int().min(getConsumerGradedChartsQuerySeasonMin).max(getConsumerGradedChartsQuerySeasonMax).optional()
-})
-
-export const GetConsumerGradedChartsResponse = zod.object({
-  "status": zod.enum(['measured', 'not_configured']),
-  "source": zod.string(),
-  "note": zod.string(),
-  "season": zod.number().int().nullable(),
-  "bySeason": zod.array(zod.object({
-  "season": zod.number().int(),
-  "graded": zod.number().int(),
-  "winnerGraded": zod.number().int(),
-  "winnerCorrect": zod.number().int(),
-  "winnerAccuracy": zod.number().nullable(),
-  "marginGraded": zod.number().int(),
-  "marginMae": zod.number().nullable(),
-  "totalGraded": zod.number().int(),
-  "totalMae": zod.number().nullable()
-})),
-  "cumulative": zod.array(zod.object({
-  "season": zod.number().int(),
-  "graded": zod.number().int(),
-  "winnerGraded": zod.number().int(),
-  "winnerCorrect": zod.number().int(),
-  "winnerAccuracy": zod.number().nullable(),
-  "marginGraded": zod.number().int(),
-  "marginMae": zod.number().nullable(),
-  "totalGraded": zod.number().int(),
-  "totalMae": zod.number().nullable()
-}).and(zod.object({
-  "week": zod.number().int(),
-  "gameId": zod.string(),
-  "kickoffTime": zod.string()
-}))),
-  "openingClosingAvailable": zod.boolean(),
-  "openingClosingReason": zod.string(),
-  "truncated": zod.boolean()
 })
 
 
@@ -3356,55 +2686,6 @@ export const GetConsumerRedZoneOpportunitiesResponse = zod.object({
   "carryShare": zod.number().min(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMin).max(getConsumerRedZoneOpportunitiesResponsePlayersItemZonesItemCarryShareMax).nullable()
 }))
 }))
-})
-
-
-/**
- * Grades each official pregame prediction against the final score. Winner picks count the projected winner. Spread and total picks take the side of the saved line that the projection favors; a projection exactly on the line is not a pick. Pushes are counted separately.
- * @summary Read Gridline's win-loss record for its official game picks
- */
-export const GetConsumerRecordQueryParams = zod.object({
-  "season": zod.coerce.number().int().optional()
-})
-
-export const GetConsumerRecordResponse = zod.object({
-  "season": zod.number().int().nullable(),
-  "seasons": zod.array(zod.number().int()),
-  "graded": zod.number().int(),
-  "winners": zod.object({
-  "wins": zod.number().int(),
-  "losses": zod.number().int(),
-  "pushes": zod.number().int()
-}),
-  "spread": zod.object({
-  "wins": zod.number().int(),
-  "losses": zod.number().int(),
-  "pushes": zod.number().int()
-}),
-  "total": zod.object({
-  "wins": zod.number().int(),
-  "losses": zod.number().int(),
-  "pushes": zod.number().int()
-}),
-  "weeks": zod.array(zod.object({
-  "week": zod.number().int(),
-  "winners": zod.object({
-  "wins": zod.number().int(),
-  "losses": zod.number().int(),
-  "pushes": zod.number().int()
-}),
-  "spread": zod.object({
-  "wins": zod.number().int(),
-  "losses": zod.number().int(),
-  "pushes": zod.number().int()
-}),
-  "total": zod.object({
-  "wins": zod.number().int(),
-  "losses": zod.number().int(),
-  "pushes": zod.number().int()
-})
-})),
-  "lastGradedAt": zod.coerce.date().nullable()
 })
 
 

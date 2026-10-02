@@ -31,8 +31,7 @@ test('QB model projection splits into scores', () => {
 });
 
 test('a game without a QB model row is projection pending', () => {
-  const legacy = { ...game(), prediction: { projectedHomeScore: 23, projectedAwayScore: 21, projectedMargin: 2, projectedTotal: 44, homeWinProbability: 0.55 } };
-  const view = buildGameView(legacy as unknown as ConsumerGame);
+  const view = buildGameView(game());
   assert.equal(view.projection, null);
   assert.equal(view.winner, null);
   assert.equal(view.result, null);

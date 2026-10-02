@@ -1,15 +1,15 @@
 import { getAuth } from "@clerk/express";
-import { and, desc, eq, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, lte } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import {
-  db, gameAlertsTable, gamesTable, sportsbookOddsTable,
+  db, gameAlertsTable, gameProjectionRunsTable, gamesTable, sportsbookOddsTable,
   type GameAlertEvidence,
 } from "@workspace/db";
 import { GetConsumerGameAlertsResponse, EnableConsumerGameAlertsResponse } from "@workspace/api-zod";
-import { getLatestValidPredictionSnapshots } from "../lib/live-predictions";
 import { getCurrentGamePersonnel } from "../lib/current-personnel";
 import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
 import { advanceGameAlertEvidence, detectGameAlerts, sameGameAlertEvidence } from "../lib/game-alert-detection";
+import { projectionsBeforeKickoff } from "../lib/game-projections";
 
 function gameIdFrom(value: string | string[] | undefined) {
   const gameId = Array.isArray(value) ? value[0] : value;
@@ -22,8 +22,15 @@ export function verifiedQbAlertIdentity(team: Pick<InterpretedTeamDepth, "freshn
 }
 
 async function persistedEvidence(game: typeof gamesTable.$inferSelect, cutoff: Date): Promise<GameAlertEvidence> {
-  const [snapshots, personnel, quotes] = await Promise.all([
-    getLatestValidPredictionSnapshots([game.gameId], { preKickoffOnly: true, authoritativeGameKickoff: true, cutoffAt: cutoff }),
+  const [projectionRuns, personnel, quotes] = await Promise.all([
+    // The quarterback-adjusted projection runs saved before both the cutoff and kickoff.
+    db.select({ generatedAt: gameProjectionRunsTable.generatedAt, games: gameProjectionRunsTable.games })
+      .from(gameProjectionRunsTable).where(and(
+        eq(gameProjectionRunsTable.season, game.season),
+        eq(gameProjectionRunsTable.week, game.week),
+        lte(gameProjectionRunsTable.generatedAt, cutoff),
+        game.kickoffTime ? lt(gameProjectionRunsTable.generatedAt, game.kickoffTime) : undefined,
+      )),
     getCurrentGamePersonnel(game.gameId, cutoff),
     db.select({
       sportsbook: sportsbookOddsTable.sportsbook, market: sportsbookOddsTable.market,
@@ -36,7 +43,7 @@ async function persistedEvidence(game: typeof gamesTable.$inferSelect, cutoff: D
       lte(sportsbookOddsTable.capturedAt, cutoff),
     )).orderBy(desc(sportsbookOddsTable.capturedAt), desc(sportsbookOddsTable.id)).limit(300),
   ]);
-  const snapshot = snapshots.get(game.gameId);
+  const projection = projectionsBeforeKickoff(projectionRuns).get(game.gameId);
   const roles: Record<string, string> = {};
   for (const side of ["home", "away"] as const) {
     const team = personnel?.teams[side];
@@ -54,8 +61,8 @@ async function persistedEvidence(game: typeof gamesTable.$inferSelect, cutoff: D
     if (!market[key]) market[key] = { point: quote.point, price: quote.price };
   }
   return {
-    projection: snapshot && snapshot.projectedMargin !== null && snapshot.projectedTotal !== null && snapshot.homeWinProbability !== null
-      ? { margin: snapshot.projectedMargin, total: snapshot.projectedTotal, homeWinProbability: snapshot.homeWinProbability } : null,
+    projection: projection && [projection.projectedMargin, projection.projectedTotal, projection.homeWinProbability].every(Number.isFinite)
+      ? { margin: projection.projectedMargin, total: projection.projectedTotal, homeWinProbability: projection.homeWinProbability } : null,
     personnel: Object.keys(roles).length ? roles : null,
     market: Object.keys(market).length ? market : null,
   };

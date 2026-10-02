@@ -3,14 +3,12 @@ import { Router, type IRouter } from "express";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
-  db, gameProjectionRunsTable, gamesTable, predictionSnapshotsTable, sportsbookOddsTable, teamsTable, touchdownPickResultsTable,
+  db, gameProjectionRunsTable, gamesTable, sportsbookOddsTable, teamsTable, touchdownPickResultsTable,
   touchdownPickRunsTable, weeklyReportsTable,
 } from "@workspace/db";
 import {
   favoriteRecord, lineValueGames, lineValueSummary, projectionsBeforeKickoff, winnerRecord, type SpreadQuote,
 } from "../lib/game-projections";
-import { isEligiblePredictionSnapshot } from "../lib/live-predictions";
-import { addResult, emptyRecordLine, gradePicks, picksForProjection } from "../lib/pick-grading";
 import { boardForWeek, fairAmericanOdds, topTenRecord } from "../lib/touchdown-board";
 import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecision } from "../lib/odds";
 import { bestBookPrice, captureTouchdownProps, latestTouchdownProps } from "../lib/td-props";
@@ -25,63 +23,6 @@ function parseInteger(value: unknown, min: number, max: number) {
 }
 
 const isFinal = (status: string | null) => /final|completed/i.test(status ?? "");
-
-router.get("/consumer/record", async (req, res): Promise<void> => {
-  const requested = parseInteger(req.query.season, 1990, 2200);
-  if (requested === null) {
-    res.status(400).json({ error: "Invalid season" });
-    return;
-  }
-  try {
-    const rows = await db.select({ snapshot: predictionSnapshotsTable, game: gamesTable })
-      .from(predictionSnapshotsTable)
-      .innerJoin(gamesTable, eq(gamesTable.gameId, predictionSnapshotsTable.gameId))
-      .where(eq(predictionSnapshotsTable.officialFinalPrediction, true))
-      .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id));
-    const latestPerGame = new Map<string, (typeof rows)[number]>();
-    for (const row of rows) {
-      if (!latestPerGame.has(row.game.gameId) && isEligiblePredictionSnapshot(row.snapshot)) latestPerGame.set(row.game.gameId, row);
-    }
-    const graded = [...latestPerGame.values()].filter(({ game }) =>
-      isFinal(game.gameStatus) && game.finalHomeScore !== null && game.finalAwayScore !== null);
-    const seasons = [...new Set(graded.map(({ game }) => game.season))].sort((a, b) => b - a);
-    const season = requested ?? seasons[0] ?? null;
-    const winners = emptyRecordLine();
-    const spread = emptyRecordLine();
-    const total = emptyRecordLine();
-    const weeks = new Map<number, { week: number; winners: ReturnType<typeof emptyRecordLine>; spread: ReturnType<typeof emptyRecordLine>; total: ReturnType<typeof emptyRecordLine> }>();
-    let count = 0;
-    let lastGradedAt: Date | null = null;
-    for (const { snapshot, game } of graded) {
-      if (game.season !== season) continue;
-      const comparison = (snapshot.marketComparison ?? {}) as Record<string, any>;
-      const projection = {
-        margin: snapshot.projectedMargin,
-        total: snapshot.projectedTotal,
-        homeWinProbability: snapshot.homeWinProbability,
-        spreadLine: typeof comparison.spread?.marketLine === "number" ? comparison.spread.marketLine : null,
-        totalLine: typeof comparison.totals?.marketTotal === "number" ? comparison.totals.marketTotal : null,
-      };
-      const result = gradePicks(picksForProjection(projection), projection, game.finalHomeScore!, game.finalAwayScore!);
-      const week = weeks.get(game.week) ?? { week: game.week, winners: emptyRecordLine(), spread: emptyRecordLine(), total: emptyRecordLine() };
-      weeks.set(game.week, week);
-      addResult(winners, result.winner); addResult(week.winners, result.winner);
-      addResult(spread, result.spread); addResult(week.spread, result.spread);
-      addResult(total, result.total); addResult(week.total, result.total);
-      count += 1;
-      const played = game.kickoffTime ?? game.gameDate;
-      if (!lastGradedAt || played > lastGradedAt) lastGradedAt = played;
-    }
-    res.json({
-      season, seasons, graded: count, winners, spread, total,
-      weeks: [...weeks.values()].sort((a, b) => a.week - b.week),
-      lastGradedAt: lastGradedAt?.toISOString() ?? null,
-    });
-  } catch (error) {
-    req.log.error({ error }, "Consumer record read failed");
-    res.status(503).json({ error: "Record is being refreshed", code: "consumer_data_unavailable" });
-  }
-});
 
 router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
   const season = parseInteger(req.query.season, 1990, 2200);

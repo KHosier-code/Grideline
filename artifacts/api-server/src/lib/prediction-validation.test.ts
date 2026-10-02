@@ -16,13 +16,10 @@ import {
   vectorForRows,
   snapshotIneligibilityReason,
 } from "./live-predictions";
-import { buildConsumerMarketBoard, consumerProjection } from "../routes/consumer";
-import { consumerRecommendation } from "./consumer-recommendation";
 import { safeNoVigProbabilities, validatePredictionOutputs } from "./prediction-validation";
 import { standardize, trainingVectorForRows } from "./modeling";
 import { PHASE6_VECTOR_FEATURE_NAMES, PHASE6_VECTOR_SCHEMA_FINGERPRINT } from "./modeling";
 import { pregameSourceCutoff } from "./features";
-import synthetic from "../../../../test-fixtures/synthetic-week3-consumer.json" with { type: "json" };
 
 function completeSnapshot(overrides: Record<string, unknown> = {}) {
   const selectedHome = Object.fromEntries(PHASE6_VECTOR_FEATURE_NAMES.slice(0, -3).map((name) => [name, 1]));
@@ -251,46 +248,6 @@ test("consumer snapshot provenance must match every active model and exact vecto
   assert.equal(snapshotIneligibilityReason([{ ...snapshot, projectedTotal: Number.NaN }], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "invalid_snapshot");
   assert.equal(snapshotIneligibilityReason([{ ...snapshot, snapshotKey: "legacy" }], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "invalid_inputs");
   assert.equal(snapshotIneligibilityReason([snapshot, deficient], snapshot.kickoffTime, snapshot.predictionTimestamp, models), "missing_eligible_snapshot");
-});
-
-test("SYNTHETIC Week 3 fixture: quote, verified snapshot, API projection and consumer comparison", () => {
-  // In-memory fixture only. These prices and scores are NOT provider observations or a real pick.
-  assert.equal(synthetic.synthetic, true);
-  const artifact = {
-    version: 1, algorithm: "linear_regression", centers: Array(27).fill(0), scales: Array(27).fill(1),
-    model: { kind: "linear", coefficients: Array(28).fill(0) },
-  };
-  const models = new Map(["spread", "moneyline", "totals"].map((family) => [family, {
-    family, algorithm: "linear_regression", featureVersion: "pregame-v3",
-    modelVersion: `${family}-v1`, vectorFeatureNames: [...PHASE6_VECTOR_FEATURE_NAMES],
-    vectorSchemaFingerprint: PHASE6_VECTOR_SCHEMA_FINGERPRINT, modelArtifact: artifact,
-  }])) as any;
-  const kickoff = new Date(synthetic.kickoff);
-  const savedAt = new Date(synthetic.savedAt);
-  const now = new Date(synthetic.now);
-  const snapshot = completeSnapshot({ gameId: synthetic.gameId, featureVersion: "pregame-v3", kickoffTime: kickoff, predictionTimestamp: savedAt,
-    snapshotKey: `${synthetic.gameId}:fixture:spread-v1:moneyline-v1:totals-v1:input-integrity-v3:${PHASE6_VECTOR_SCHEMA_FINGERPRINT}`,
-    inputSourceEvidence: { rows: (completeSnapshot().inputSourceEvidence as any).rows.map((row: any) => ({ ...row, gameId: synthetic.gameId })) },
-    officialFinalPrediction: false,
-  }) as any;
-  assert.equal(snapshotMatchesProductionModels(snapshot, models), true);
-  const quoteAt = new Date(synthetic.quoteAt);
-  const rows = synthetic.books.flatMap((sportsbook) => [
-    { sportsbook, market: "spread", selection: synthetic.home.name, point: synthetic.homeSpreadPoint, price: synthetic.spreadPrice, capturedAt: quoteAt },
-    { sportsbook, market: "spread", selection: synthetic.away.name, point: synthetic.awaySpreadPoint, price: synthetic.spreadPrice, capturedAt: quoteAt },
-  ]);
-  const home = synthetic.home;
-  const board = buildConsumerMarketBoard(snapshot, rows, home, kickoff, now, quoteAt);
-  const recommendation = consumerRecommendation({ gameState: "pregame", kickoffTime: kickoff, now,
-    sourceHealth: { sources: { schedule: { status: "healthy" }, odds: { status: "healthy" } } } as any,
-    homeAbbreviation: home.abbreviation, homeName: home.name, awayAbbreviation: synthetic.away.abbreviation, awayName: synthetic.away.name,
-    rows, comparisons: board.comparisons, verifiedAt: quoteAt });
-  const api = { prediction: consumerProjection(snapshot), marketBoard: board, recommendation };
-  assert.equal(api.prediction?.projectedHomeScore, synthetic.projectedHomeScore);
-  assert.equal(api.prediction?.officialFinalPrediction, false);
-  assert.equal(api.marketBoard.comparisons[0].state, "available");
-  assert.equal(api.marketBoard.comparisons[0].difference, 1); // model home +4 vs market implied +3
-  assert.equal(api.recommendation.markets.spread, true);
 });
 
 test("snapshot audit vectors remain immutable when current future rows change", () => {

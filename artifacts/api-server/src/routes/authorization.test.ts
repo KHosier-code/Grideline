@@ -67,8 +67,6 @@ test("consumer API is public and read-only", () => {
     "/consumer/schedule-selection",
     "/consumer/games",
     "/consumer/games/:gameId",
-    "/consumer/performance",
-    "/consumer/trends",
     "/consumer/props",
   ];
   for (const path of expected) {

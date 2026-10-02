@@ -12,60 +12,29 @@ import {
   redZoneTeamGameFactsTable,
   snapCountsTable,
   pregameTeamFeaturesTable,
-  predictionSnapshotsTable,
   sportsbookOddsTable,
   teamsTable,
   weatherForecastSnapshotsTable,
-  modelTrainingRunsTable,
   playersTable,
-  oddsApiRequestsTable,
-  oddsEventAuditsTable,
   savedGamesTable,
-  initialLinePicksTable,
 } from "@workspace/db";
-import {
-  gameSpecificSnapshot,
-  getHistoricalOfficialPredictionSnapshots,
-  getLatestValidPredictionSnapshots,
-  getSnapshotIneligibilityReasons,
-  snapshotUnavailableMessages,
-  getPredictionPerformance,
-  getOfficialPickCoverage,
-} from "../lib/live-predictions";
 import { nflverseTeamCandidates, normalizeTeamId } from "../lib/personnel-context-derivation";
 import { buildConsumerMatchupBoard } from "../lib/consumer-matchups";
-import {
-  buildConsumerConfidence,
-  cutoffSafeRevisions,
-  normalizeModelConfidence,
-  projectionRevisionStability,
-  snapshotDataConfidence,
-  startersResolvedFromEvidence,
-} from "../lib/confidence-framework";
-import { verifyArtifactIntegrity } from "../lib/modeling";
-import retained2025Baseline from "../../../../reports/gridline-2025-market-baseline.json" with { type: "json" };
-import { persistConfidenceMethodology, persistConfidenceResults } from "../lib/confidence-persistence";
 import { getCurrentGamePersonnel } from "../lib/current-personnel";
 import type { InterpretedTeamDepth } from "../lib/current-personnel-derivation";
 import { authoritativeFinalRegularSeasonGame, buildTeamRecords, consumerFinalScore, gameStatusVocabulary, interpretNflGameState, SUPPORTED_GAME_STATUS_PATTERNS, verifyTeamRecords } from "../lib/game-state";
 import { getConsumerSourceHealth } from "../lib/consumer-source-health";
-import { consumerRecommendation } from "../lib/consumer-recommendation";
 import { selectConsumerSlateSummaries } from "../lib/consumer-schedule-selection";
-import { readInitialWeeklyPick, readInitialWeeklyPickArchive } from "../lib/initial-line-picks";
-import { firstSavedMarkets, selectFirstRequestMarkets } from "../lib/consumer-opening-markets";
+import { firstSavedMarkets } from "../lib/consumer-opening-markets";
 import { isRedZoneFeatureEnabled } from "../lib/red-zone-feature-flag";
 import { buildDefenseVsPosition, defaultDefenseSeason, readDefenseInputs, readMatchupDefenseInputs, WINDOWS } from "../lib/defense-vs-position";
 import { attachQualifiedScoringTdProbability, buildPlayerPositionMatchup } from "../lib/player-position-matchup";
 import { qualifyPlayerEligibility, readPlayerEligibilityEvidence } from "../lib/availability-roster";
 import { readDevelopmentPlayerTdForecastReadiness } from "../lib/player-td-forecast-readiness";
 import { GetConsumerPlayerPositionMatchupResponse } from "@workspace/api-zod";
-import { GetConsumerScheduleSelectionResponse, GetConsumerWeeklyPicksResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
+import { GetConsumerScheduleSelectionResponse, ListSavedGameIdsResponse, ListSavedGamesResponse, SaveConsumerGameParams, RemoveSavedConsumerGameParams } from "@workspace/api-zod";
 import { classifyPlayerEligibility } from "../lib/consumer-player-eligibility";
 import { consumerVerifiedImages, playerHeadshot } from "../lib/verified-imagery";
-import {
-  completeGameMarketObservation,
-  consumerMarketFreshnessMinutes,
-} from "../lib/consumer-market-freshness";
 import {
   cutoffSafeRedZoneGames,
   coveredRedZoneWindow,
@@ -92,21 +61,6 @@ export function redZoneFeatureGate(_req: Request, res: Response, next: NextFunct
 }
 export const MAX_CONSUMER_GAMES = 100;
 export const MAX_CONSUMER_MOVEMENT_ROWS = 200;
-export const MAX_CONSUMER_SNAPSHOT_ROWS = MAX_CONSUMER_GAMES;
-export const MAX_CONSUMER_PERFORMANCE_ROWS = 5_000;
-export function consumerProjection(snapshot: typeof predictionSnapshotsTable.$inferSelect | undefined) {
-  return snapshot ? {
-    modelLabel: "Gridline Production Model",
-    officialFinalPrediction: snapshot.officialFinalPrediction,
-    predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
-    projectedHomeScore: safeNumber(snapshot.projectedHomeScore),
-    projectedAwayScore: safeNumber(snapshot.projectedAwayScore),
-    projectedMargin: safeNumber(snapshot.projectedMargin),
-    projectedTotal: safeNumber(snapshot.projectedTotal),
-    homeWinProbability: safeNumber(snapshot.homeWinProbability),
-    awayWinProbability: safeNumber(snapshot.awayWinProbability),
-  } : null;
-}
 const SUPPORTED_CONSUMER_BOOKS = new Set(["DraftKings", "FanDuel"]);
 const SUPPORTED_CONSUMER_MARKETS = new Set(["spread", "total", "moneyline"]);
 const PERSONNEL_CONTEXT_VERSION = "pregame-v4-personnel-context";
@@ -420,15 +374,6 @@ export function safeNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function confidence(snapshot: typeof predictionSnapshotsTable.$inferSelect | undefined) {
-  if (!snapshot) return { label: "Updating", score: null, reason: "Prediction data is being refreshed" };
-  if (snapshot.lowSample) return { label: "Limited", score: safeNumber(snapshot.qbConfidence), reason: "Limited historical sample" };
-  if (typeof snapshot.qbConfidence === "number" && snapshot.qbConfidence < 0.75) {
-    return { label: "Moderate", score: snapshot.qbConfidence, reason: "Player information temporarily unavailable" };
-  }
-  return { label: "Standard", score: safeNumber(snapshot.qbConfidence), reason: null };
-}
-
 type ConsumerHomeTeam = { teamId: string; name: string; abbreviation: string };
 
 const normalizeSelection = (value: unknown) => typeof value === "string"
@@ -450,11 +395,6 @@ function validAmericanOdds(value: unknown): value is number {
     && (value <= -100 || value >= 100);
 }
 
-export function americanOddsImpliedProbability(value: unknown): number | null {
-  if (!validAmericanOdds(value)) return null;
-  return value < 0 ? Math.abs(value) / (Math.abs(value) + 100) : 100 / (value + 100);
-}
-
 /** Builds the consumer market from the latest saved quote per book, market and side. */
 export function latestSavedMarket(
   rows: Array<Pick<typeof sportsbookOddsTable.$inferSelect, "sportsbook" | "market" | "selection" | "point" | "price" | "capturedAt">>,
@@ -472,14 +412,14 @@ export function latestSavedMarket(
       sportsbook: row.sportsbook, selection: row.selection, point: row.point, price: row.price, capturedAt: row.capturedAt.toISOString(),
     });
   }
-  return consumerMarket({ marketSnapshot: { markets } } as unknown as typeof predictionSnapshotsTable.$inferSelect, home);
+  return consumerMarket(markets, home);
 }
 
+/** Canonical home/over quotes and their other sides from saved quotes grouped by market. */
 export function consumerMarket(
-  snapshot: typeof predictionSnapshotsTable.$inferSelect | undefined,
+  markets: Record<string, any> | undefined,
   home?: ConsumerHomeTeam,
 ) {
-  const markets = (snapshot?.marketSnapshot as Record<string, any> | undefined)?.markets;
   const quote = (name: "spread" | "moneyline" | "total") => {
     const quotes = Array.isArray(markets?.[name]?.quotes) ? markets[name].quotes : [];
     const isCanonical = (value: Record<string, unknown>) => name === "total"
@@ -559,131 +499,6 @@ export function consumerMarket(
 
 type MovementRow = Pick<typeof sportsbookOddsTable.$inferSelect,
   "sportsbook" | "market" | "selection" | "point" | "price" | "capturedAt">;
-
-type BoardPrediction = Pick<typeof predictionSnapshotsTable.$inferSelect,
-  "projectedMargin" | "projectedTotal" | "homeWinProbability" | "predictionTimestamp">;
-
-const quoteFromMovement = (row: MovementRow, market: "spread" | "total" | "moneyline", home?: ConsumerHomeTeam) => ({
-  sportsbook: row.sportsbook,
-  selection: market === "total" ? "Over" : home?.abbreviation ?? "Home",
-  point: safeNumber(row.point),
-  price: row.price,
-  capturedAt: row.capturedAt.toISOString(),
-});
-
-export function buildConsumerMarketBoard(
-  snapshot: BoardPrediction | undefined,
-  rows: MovementRow[],
-  home: ConsumerHomeTeam | undefined,
-  kickoffTime: Date | null,
-  now = new Date(),
-  verifiedAt: Date | null = null,
-) {
-  const cutoff = kickoffTime && kickoffTime.getTime() < now.getTime() ? kickoffTime : now;
-  const eligible = rows.filter((row) =>
-    SUPPORTED_CONSUMER_BOOKS.has(row.sportsbook)
-    && SUPPORTED_CONSUMER_MARKETS.has(row.market)
-    && row.capturedAt.getTime() <= cutoff.getTime());
-  const specs = [
-    { market: "spread" as const, label: "Home spread", modelValue: safeNumber(snapshot?.projectedMargin), unit: "points" as const },
-    { market: "total" as const, label: "Game total", modelValue: safeNumber(snapshot?.projectedTotal), unit: "points" as const },
-    { market: "moneyline" as const, label: "Home moneyline", modelValue: safeNumber(snapshot?.homeWinProbability), unit: "probability_points" as const },
-  ];
-  const comparisons = specs.map((spec) => {
-    const canonical = eligible.filter((row) =>
-      row.market === spec.market
-      && validAmericanOdds(row.price)
-      && (spec.market === "moneyline" || safeNumber(row.point) !== null)
-      && (spec.market === "total"
-        ? normalizeSelection(row.selection).includes("over")
-        : isHomeSelection(row.selection, home)));
-    const currentByBook = ["DraftKings", "FanDuel"].flatMap((sportsbook) => {
-      const stream = canonical.filter((row) => row.sportsbook === sportsbook);
-      return stream.length ? [stream[stream.length - 1]] : [];
-    });
-    const ranked = [...currentByBook].sort((left, right) => {
-      if (spec.market === "spread" && left.point !== right.point) return (right.point ?? -Infinity) - (left.point ?? -Infinity);
-      if (spec.market === "total" && left.point !== right.point) return (left.point ?? Infinity) - (right.point ?? Infinity);
-      if (left.price !== right.price) return right.price - left.price;
-      return left.sportsbook.localeCompare(right.sportsbook);
-    });
-    const selected = ranked[0];
-    const first = selected
-      ? canonical.find((row) => row.sportsbook === selected.sportsbook)
-      : undefined;
-    const marketValue = selected
-      ? spec.market === "moneyline" ? americanOddsImpliedProbability(selected.price) : safeNumber(selected.point)
-      : null;
-    const difference = spec.modelValue !== null && marketValue !== null
-      ? spec.market === "spread"
-        ? spec.modelValue + marketValue
-        : (spec.modelValue - marketValue) * (spec.market === "moneyline" ? 100 : 1)
-      : null;
-    const staleAfterMinutes = kickoffTime
-      ? consumerMarketFreshnessMinutes(kickoffTime, cutoff, spec.market)
-      : 0;
-    const effectiveObservationAt = verifiedAt && verifiedAt <= cutoff ? verifiedAt : null;
-    const stale = Boolean(selected && (!effectiveObservationAt
-      || cutoff.getTime() - effectiveObservationAt.getTime() > staleAfterMinutes * 60_000));
-    const observationAgeMinutes = selected
-      ? Math.max(0, (cutoff.getTime() - selected.capturedAt.getTime()) / 60_000)
-      : null;
-    return {
-      market: spec.market,
-      label: spec.label,
-      state: selected ? stale ? "stale" as const : "available" as const : "absent" as const,
-      modelValue: spec.modelValue,
-      marketValue,
-      difference,
-      differenceUnit: spec.unit,
-      selectedQuote: selected ? quoteFromMovement(selected, spec.market, home) : null,
-      currentQuotes: currentByBook.map((row) => quoteFromMovement(row, spec.market, home)),
-      firstObserved: first ? quoteFromMovement(first, spec.market, home) : null,
-      current: selected ? quoteFromMovement(selected, spec.market, home) : null,
-      modelTimestamp: snapshot?.predictionTimestamp.toISOString() ?? null,
-      marketTimestamp: selected?.capturedAt.toISOString() ?? null,
-      observationAgeMinutes,
-      freshnessLabel: selected
-        ? stale
-          ? `Stale — last observed ${selected.capturedAt.toISOString()}`
-          : `Updated ${Math.round(observationAgeMinutes ?? 0)} min ago`
-        : "No observation",
-    };
-  });
-  const available = comparisons.filter((item) => item.state === "available").length;
-  const stale = comparisons.filter((item) => item.state === "stale").length;
-  return {
-    status: available === 3 ? "available" as const
-      : available > 0 ? "partial" as const
-      : stale > 0 ? "stale" as const
-      : "absent" as const,
-        staleAfterMinutes: kickoffTime
-          ? Math.min(...comparisons.map((comparison) =>
-              consumerMarketFreshnessMinutes(kickoffTime, cutoff, comparison.market)))
-          : 0,
-    selectionRule: "Best means the most favorable canonical line point, then the higher American price when points match; exact ties prefer DraftKings.",
-    comparisons,
-  };
-}
-
-export function summarizeConsumerMarketBoards(games: Array<{ marketBoard: ReturnType<typeof buildConsumerMarketBoard> }>) {
-  const statuses = games.map((game) => game.marketBoard.status);
-  const coveredBy = (sportsbook: string) => games.filter((game) =>
-    game.marketBoard.comparisons.some((comparison) => comparison.selectedQuote?.sportsbook === sportsbook)).length;
-  return {
-    status: !games.length ? "absent" as const
-      : statuses.every((value) => value === "available") ? "available" as const
-      : statuses.some((value) => value === "available" || value === "partial") ? "partial" as const
-      : statuses.some((value) => value === "stale") ? "stale" as const
-      : "absent" as const,
-    coverage: {
-      games: games.length,
-      gamesWithComparison: games.filter((game) => game.marketBoard.status !== "absent").length,
-      DraftKings: coveredBy("DraftKings"),
-      FanDuel: coveredBy("FanDuel"),
-    },
-  };
-}
 
 export function serializeMovement(rows: MovementRow[], kickoffTime?: Date | null, now = new Date()) {
   const supportedRows = rows.filter((row) =>
@@ -835,7 +650,6 @@ type SerializedContext = {
   projectedMatchups: [];
   matchupMessage: string;
   message: string | null;
-  modelPersonnelLimitation: { active: boolean; reason: string | null; recommendationSuppressed: boolean };
 };
 
 type CurrentRoleEntry = {
@@ -888,126 +702,6 @@ function currentDefenseEntry(
   };
 }
 
-function savedPersonnelQbId(
-  evidence: unknown,
-  side: "home" | "away",
-  teamId: string,
-  opponentId: string,
-  predictionTimestamp: Date,
-  kickoffTime: Date | null,
-) {
-  if (!evidence || typeof evidence !== "object") return null;
-  const rows = (evidence as Record<string, unknown>).rows;
-  if (!Array.isArray(rows) || rows.length !== 2) return null;
-  const row = rows.find((candidate) => candidate && typeof candidate === "object"
-    && (candidate as Record<string, unknown>).isHome === (side === "home"));
-  if (!row || typeof row !== "object") return null;
-  const input = row as Record<string, unknown>;
-  if (input.teamId !== teamId || input.opponentTeamId !== opponentId) return null;
-  const sourceCutoff = typeof input.sourceCutoff === "string" ? Date.parse(input.sourceCutoff) : NaN;
-  const generatedAt = typeof input.generatedAt === "string" ? Date.parse(input.generatedAt) : NaN;
-  if (!Number.isFinite(sourceCutoff) || !Number.isFinite(generatedAt)
-    || sourceCutoff > predictionTimestamp.getTime() || generatedAt > predictionTimestamp.getTime()
-    || (kickoffTime && sourceCutoff >= kickoffTime.getTime())) return null;
-  const selectedAudit = input.selectedAudit;
-  if (!selectedAudit || typeof selectedAudit !== "object") return null;
-  const context = (selectedAudit as Record<string, unknown>)._personnel_context;
-  if (!context || typeof context !== "object") return null;
-  const teams = (context as Record<string, unknown>).teams;
-  if (!teams || typeof teams !== "object") return null;
-  const team = (teams as Record<string, unknown>)[side];
-  if (!team || typeof team !== "object") return null;
-  const qb = (team as Record<string, unknown>).qb;
-  if (!qb || typeof qb !== "object") return null;
-  const starter = (qb as Record<string, unknown>).projectedStarter;
-  if (!starter || typeof starter !== "object") return null;
-  const playerId = (starter as Record<string, unknown>).playerId;
-  return typeof playerId === "string" && playerId.trim() ? playerId : null;
-}
-
-export function currentModelPersonnelLimitation(input: {
-  savedInputSourceEvidence: unknown;
-  predictionTimestamp: Date | null;
-  kickoffTime: Date | null;
-  homeTeamId: string;
-  awayTeamId: string;
-  current: { home: InterpretedTeamDepth | null; away: InterpretedTeamDepth | null } | null;
-  historical?: { home: InterpretedTeamDepth | null; away: InterpretedTeamDepth | null } | null;
-}) {
-  const unchanged = { active: false, reason: null as string | null, recommendationSuppressed: false };
-  if (!input.predictionTimestamp || !input.current) return unchanged;
-  const unmodeledSides: string[] = [];
-  for (const side of ["home", "away"] as const) {
-    const team = input.current[side];
-    const historicalTeam = input.historical?.[side];
-    const opponentId = side === "home" ? input.awayTeamId : input.homeTeamId;
-    const teamId = side === "home" ? input.homeTeamId : input.awayTeamId;
-    const expected = team?.qbStarter;
-    const expectedPlayer = expected?.status === "available"
-      && expected.player?.sourceClassification !== "inferred"
-      && !expected.player?.conflicts?.some((conflict) => conflict.severity === "blocking")
-      ? expected.player : null;
-    const savedId = savedPersonnelQbId(
-      input.savedInputSourceEvidence, side, teamId, opponentId, input.predictionTimestamp, input.kickoffTime,
-    );
-    if (savedId && team?.freshness === "current" && expectedPlayer?.playerId && savedId !== expectedPlayer.playerId) {
-      return {
-        active: true,
-        reason: `The supported ${side === "home" ? "home" : "away"} expected quarterback differs from the quarterback identity stored with this saved prediction. The saved projection is unchanged; an official recommendation is withheld.`,
-        recommendationSuppressed: true,
-      };
-    }
-    const historicalQb = historicalTeam?.freshness === "current"
-      && historicalTeam.qbStarter.status === "available"
-      && historicalTeam.qbStarter.player?.rank === 1
-      && historicalTeam.qbStarter.player.sourceClassification !== "inferred"
-      && !historicalTeam.qbStarter.player.conflicts?.some((conflict) => conflict.severity === "blocking")
-      ? historicalTeam.qbStarter.player : null;
-    const currentEvidenceAfterPrediction = expectedPlayer?.providerEvidence?.some((item) => {
-      const capturedAt = item.capturedAt ? Date.parse(item.capturedAt) : NaN;
-      return Number.isFinite(capturedAt) && capturedAt > input.predictionTimestamp!.getTime()
-        && (!input.kickoffTime || capturedAt < input.kickoffTime.getTime());
-    });
-    const historicalCutoffSafe = historicalTeam?.asOf
-      ? Date.parse(historicalTeam.asOf) <= input.predictionTimestamp.getTime() : false;
-    if (!savedId && team?.freshness === "current" && expectedPlayer?.rank === 1
-      && expectedPlayer.playerId && historicalQb?.rank === 1 && historicalQb.playerId
-      && historicalQb.playerId !== expectedPlayer.playerId && historicalCutoffSafe
-      && currentEvidenceAfterPrediction) {
-      return {
-        active: true,
-        reason: `Cutoff-safe personnel evidence confirms the ${side} QB1 changed after this prediction, but the saved model input does not retain a named quarterback identity. The saved projection is unchanged; an official recommendation is withheld.`,
-        recommendationSuppressed: true,
-      };
-    }
-    if (!savedId && team) unmodeledSides.push(side);
-  }
-  if (unmodeledSides.length) {
-    return {
-      active: true,
-      reason: `The saved model input does not retain a named quarterback identity for the ${unmodeledSides.join(" and ")} side${unmodeledSides.length === 1 ? "" : "s"}; a modeled-QB comparison cannot be confirmed. No player identity is inferred from numeric QB-confidence features.`,
-      recommendationSuppressed: false,
-    };
-  }
-  return unchanged;
-}
-
-export function applyModelPersonnelLimitationToRecommendation<
-  T extends {
-    status: "healthy" | "partial" | "stale" | "unavailable" | "historical";
-    reason: string | null;
-    markets: { spread: boolean; total: boolean; moneyline: boolean };
-  },
->(recommendation: T, limitation: { active: boolean; reason: string | null; recommendationSuppressed: boolean }) {
-  if (!limitation.active || !limitation.recommendationSuppressed) return recommendation;
-  return {
-    ...recommendation,
-    status: "unavailable" as const,
-    reason: limitation.reason,
-    markets: { spread: false, total: false, moneyline: false },
-  };
-}
-
 export function serializeContext(
   context: PersistedContext | null,
   homeTeamId: string,
@@ -1022,7 +716,6 @@ export function serializeContext(
       projectedMatchups: [],
       matchupMessage: "Matchup projection not yet available.",
       message: "Player information temporarily unavailable",
-      modelPersonnelLimitation: { active: false, reason: null, recommendationSuppressed: false },
     };
   }
   const teams = [
@@ -1127,7 +820,6 @@ export function serializeContext(
     projectedMatchups: [],
     matchupMessage: "Matchup projection not yet available.",
     message: null,
-    modelPersonnelLimitation: { active: false, reason: null, recommendationSuppressed: false },
   };
 }
 
@@ -1310,57 +1002,7 @@ export function applyCurrentPersonnelToConsumerContext(
   };
 }
 
-export function serializePerformance(
-  performance: Awaited<ReturnType<typeof getPredictionPerformance>>,
-  coverage: Awaited<ReturnType<typeof getOfficialPickCoverage>> | null = null,
-) {
-  const metric = (value: unknown) => safeNumber(value);
-  const family = (value: Record<string, unknown>) => ({
-    predictions: typeof value.predictions === "number" ? value.predictions : 0,
-    mae: metric(value.mae),
-    rmse: metric(value.rmse),
-    accuracy: metric(value.accuracy),
-    brier: metric(value.brier),
-    logLoss: metric(value.logLoss),
-    avgClv: metric(value.avgClv),
-  });
-  const breakdown = (items: Array<Record<string, unknown>>) => items.map((item) => ({
-    group: typeof item.group === "string" ? item.group : "unavailable",
-    predictions: typeof item.predictions === "number" ? item.predictions : 0,
-    spreadMae: metric(item.spreadMae),
-    totalsMae: metric(item.totalsMae),
-    moneylineAccuracy: metric(item.moneylineAccuracy),
-    avgClv: metric(item.avgClv),
-  }));
-  return {
-    status: performance.status === "measured" ? "available" as const : "unavailable" as const,
-    officialPredictions: performance.officialPredictions,
-    gradedPredictions: performance.gradedPredictions,
-    coverage,
-    byFamily: {
-      spread: family(performance.byFamily.spread),
-      moneyline: family(performance.byFamily.moneyline),
-      totals: family(performance.byFamily.totals),
-    },
-    breakdowns: {
-      season: breakdown(performance.breakdowns.season),
-      week: breakdown(performance.breakdowns.week),
-      confidence: breakdown(performance.breakdowns.sampleQuality),
-      edge: breakdown(performance.breakdowns.edge),
-    },
-    window: {
-      maximumOfficialPredictions: MAX_CONSUMER_PERFORMANCE_ROWS,
-      truncated: performance.windowTruncated,
-    },
-    note: "Winner accuracy, projection error, ATS/O/U results, and CLV are separate measures. Market outcomes appear only where legitimate evidence exists.",
-  };
-}
-
-export async function consumerGames(
-  filters: ConsumerFilters = {},
-  persistConfidence = false,
-  historicalLoader: typeof getHistoricalOfficialPredictionSnapshots = getHistoricalOfficialPredictionSnapshots,
-) {
+export async function consumerGames(filters: ConsumerFilters = {}) {
   const asOf = filters.asOf ?? new Date();
   const sourceHealth = await getConsumerSourceHealth(asOf);
   const conditions = [
@@ -1382,14 +1024,8 @@ export async function consumerGames(
   const teamIds = [...new Set(games.flatMap((game) => [game.homeTeamId, game.awayTeamId]))];
   const recordSeason = filters.season ?? games[0]?.season;
   const recordWeek = filters.week ?? games[0]?.week;
-  const [teams, snapshots, marketRows, modelRuns, snapshotHistory, marketAudits, completeMarketAudits, firstDecisions] = await Promise.all([
+  const [teams, marketRows] = await Promise.all([
     teamIds.length ? db.select().from(teamsTable).where(inArray(teamsTable.teamId, teamIds)) : [],
-    getLatestValidPredictionSnapshots(games.map((game) => game.gameId), {
-      preKickoffOnly: true,
-      authoritativeGameKickoff: true,
-      maxRows: MAX_CONSUMER_SNAPSHOT_ROWS,
-      cutoffAt: asOf,
-    }),
     (games.length ? db.select({
       gameId: sportsbookOddsTable.gameId,
       sportsbook: sportsbookOddsTable.sportsbook,
@@ -1406,56 +1042,7 @@ export async function consumerGames(
         inArray(sportsbookOddsTable.market, ["spread", "total", "moneyline"]),
       ))
       .orderBy(asc(sportsbookOddsTable.capturedAt), asc(sportsbookOddsTable.id)) : []) as Promise<Array<MovementRow & { gameId: string; sourceTimestamp: Date | null }>>,
-    db.select().from(modelTrainingRunsTable),
-    games.length ? db.select().from(predictionSnapshotsTable)
-      .where(and(inArray(predictionSnapshotsTable.gameId, games.map((game) => game.gameId)), lte(predictionSnapshotsTable.predictionTimestamp, asOf)))
-      .orderBy(asc(predictionSnapshotsTable.predictionTimestamp), asc(predictionSnapshotsTable.id)) : [],
-    games.length ? db.selectDistinctOn([oddsEventAuditsTable.matchedGridlineGameId], {
-      gameId: oddsEventAuditsTable.matchedGridlineGameId,
-      auditedAt: oddsEventAuditsTable.auditedAt,
-      outcome: oddsEventAuditsTable.outcome,
-      observationsReceived: oddsEventAuditsTable.observationsReceived,
-      rejectedObservations: oddsEventAuditsTable.rejectedObservations,
-    }).from(oddsEventAuditsTable)
-      .innerJoin(oddsApiRequestsTable, eq(oddsApiRequestsTable.id, oddsEventAuditsTable.requestId))
-      .where(and(
-        inArray(oddsEventAuditsTable.matchedGridlineGameId, games.map((game) => game.gameId)),
-        eq(oddsApiRequestsTable.status, "success"),
-        lte(oddsEventAuditsTable.auditedAt, asOf),
-      ))
-      .orderBy(
-        oddsEventAuditsTable.matchedGridlineGameId,
-        desc(oddsEventAuditsTable.auditedAt),
-        desc(oddsEventAuditsTable.id),
-      ) : [],
-    games.length ? db.selectDistinctOn([oddsEventAuditsTable.matchedGridlineGameId], {
-      gameId: oddsEventAuditsTable.matchedGridlineGameId,
-      auditedAt: oddsEventAuditsTable.auditedAt,
-    }).from(oddsEventAuditsTable)
-      .innerJoin(oddsApiRequestsTable, eq(oddsApiRequestsTable.id, oddsEventAuditsTable.requestId))
-      .where(and(
-        inArray(oddsEventAuditsTable.matchedGridlineGameId, games.map((game) => game.gameId)),
-        eq(oddsApiRequestsTable.status, "success"),
-        eq(oddsEventAuditsTable.outcome, "matched_saved"),
-        eq(oddsEventAuditsTable.observationsReceived, 12),
-        eq(oddsEventAuditsTable.rejectedObservations, 0),
-        lte(oddsEventAuditsTable.auditedAt, asOf),
-      ))
-      .orderBy(oddsEventAuditsTable.matchedGridlineGameId, desc(oddsEventAuditsTable.auditedAt), desc(oddsEventAuditsTable.id)) : [],
-    games.length ? db.select().from(initialLinePicksTable)
-      .where(and(inArray(initialLinePicksTable.gameId, games.map((game) => game.gameId)),
-        eq(initialLinePicksTable.status, "locked"),
-        lte(initialLinePicksTable.observedAt, asOf))) : [],
   ]);
-  // Only final games without an active-model selection can recover their
-  // already-frozen official prediction. Current-model selections always win.
-  const historical = await historicalLoader(
-    games.filter((game) => game.kickoffTime && game.kickoffTime <= asOf
-      && interpretNflGameState(game, asOf) === "final" && !snapshots.has(game.gameId))
-      .map((game) => game.gameId),
-    asOf,
-  );
-  for (const [gameId, snapshot] of historical) snapshots.set(gameId, snapshot);
   const recordTeams = recordSeason === undefined ? [] : await db.select({
     teamId: teamsTable.teamId,
     abbreviation: teamsTable.abbreviation,
@@ -1473,225 +1060,41 @@ export async function consumerGames(
     eq(gamesTable.season, recordSeason),
     recordWeek === undefined ? undefined : lt(gamesTable.week, recordWeek),
   ));
-  const verifiedArtifacts = new Map(modelRuns.filter((run) => verifyArtifactIntegrity(run).valid).map((run) => [run.modelVersion, true]));
-  const predictionReasons = await getSnapshotIneligibilityReasons(
-    snapshotHistory,
-    games.filter((game) => !snapshots.has(game.gameId)),
-    asOf,
-  );
   const teamsById = new Map(teams.map((team) => [team.teamId, team]));
   const imagery = consumerVerifiedImages(teams.map(team => ({
     teamId: team.teamId, abbreviation: team.abbreviation, name: team.teamName,
   })));
-  const latestMarketAuditByGame = new Map(
-    marketAudits.flatMap((audit) => audit.gameId ? [[audit.gameId, audit] as const] : []),
-  );
-  const lastCompleteAuditByGame = new Map(
-    completeMarketAudits.flatMap((audit) => audit.gameId ? [[audit.gameId, audit.auditedAt] as const] : []),
-  );
-  const firstDecisionByGame = new Map(firstDecisions.map((row) => [row.gameId, row]));
-  let persistedConfidenceResults = 0;
-  if (persistConfidence) await persistConfidenceMethodology();
-  const results = await Promise.all(games.map(async (game) => {
-    const gameState = interpretNflGameState(game, asOf);
-    const snapshot = gameSpecificSnapshot(game.gameId, snapshots);
+  const results = games.map((game) => {
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
     const consumerHome = home ? { teamId: home.teamId, name: home.teamName, abbreviation: home.abbreviation } : undefined;
     const gameRows = marketRows.filter((row) => row.gameId === game.gameId);
-    // The newest saved sportsbook lines, straight from the odds captures; the
-    // prediction snapshot's copy is only a fallback, since those snapshots come
-    // from a worker job that may not run.
-    const savedMarket = latestSavedMarket(gameRows, consumerHome);
-    const market = savedMarket.evidence.available ? savedMarket : consumerMarket(snapshot, consumerHome);
-    const latestMarketAudit = latestMarketAuditByGame.get(game.gameId);
-    const marketVerifiedAt = latestMarketAudit && completeGameMarketObservation(latestMarketAudit)
-      ? latestMarketAudit.auditedAt
-      : null;
-    const marketBoard = buildConsumerMarketBoard(
-      snapshot,
-      marketRows.filter((row) => row.gameId === game.gameId),
-      consumerHome,
-      game.kickoffTime,
-      asOf,
-      marketVerifiedAt,
-    );
-    const recommendation = consumerRecommendation({
-      gameState, kickoffTime: game.kickoffTime, now: asOf, sourceHealth,
-      homeAbbreviation: home?.abbreviation ?? "", homeName: home?.teamName,
-      awayAbbreviation: away?.abbreviation ?? "", awayName: away?.teamName,
-      rows: marketRows.filter((row) => row.gameId === game.gameId),
-      comparisons: marketBoard.comparisons,
-      verifiedAt: marketVerifiedAt,
-      audit: latestMarketAudit,
-      lastCompleteAt: lastCompleteAuditByGame.get(game.gameId) ?? null,
-    });
-    const dataConfidence = confidence(snapshot);
-    const confidenceData = snapshot ? snapshotDataConfidence({
-      qbConfidence: snapshot.qbConfidence,
-      lowSample: snapshot.lowSample,
-      inputFeatureCount: snapshot.inputFeatureCount,
-      inputMissingFeatureCount: snapshot.inputMissingFeatureCount,
-    }) : { score: null, acceptable: false };
-    const reportModels = retained2025Baseline.models as Array<Record<string, unknown>>;
-    const revisions = cutoffSafeRevisions(
-      snapshotHistory.filter((row) => row.gameId === game.gameId),
-      snapshot?.predictionTimestamp,
-      game.kickoffTime,
-    );
-    const historicalFor = (market: "spread" | "moneyline" | "total", difference: number | null) => {
-      const family = market === "total" ? "totals" : market;
-      const model = reportModels.find((item) => item.family === family);
-      const marketEvidence = model?.market as Record<string, unknown> | undefined;
-      const buckets = Array.isArray(marketEvidence?.edgeBuckets)
-        ? marketEvidence.edgeBuckets as Array<Record<string, unknown>>
-        : [];
-      const magnitude = difference === null ? null : Math.abs(difference);
-      const bucketLabel = magnitude === null ? null
-        : magnitude < 1 ? "<1"
-          : magnitude < 2 ? "1-1.99"
-            : magnitude < 3 ? "2-2.99"
-              : magnitude < 5 ? "3-4.99" : "5+";
-      const bucket = buckets.find((item) => item.bucket === bucketLabel);
-      const gradedSampleSize = typeof bucket?.gradedSampleSize === "number" ? bucket.gradedSampleSize : 0;
-      return {
-        status: gradedSampleSize >= 30 ? "measured_recorded_evidence" : "insufficient",
-        source: "nflverse/nfldata games.csv",
-        designation: "source_designated_recorded",
-        bucket: bucketLabel,
-        sampleSize: typeof bucket?.sampleSize === "number" ? bucket.sampleSize : 0,
-        gradedSampleSize,
-        winRate: typeof bucket?.winRate === "number" ? bucket.winRate : null,
-        confidenceInterval95: bucket?.confidenceInterval95 ?? { low: null, high: null },
-        note: market === "moneyline"
-          ? "The retained baseline has recorded prices but no edge buckets for moneyline; evidence is insufficient."
-          : "Recorded-line comparison only; not a verified close, CLV, profitability result, or universal threshold.",
-      };
-    };
-    const comparisonFor = (market: "spread" | "moneyline" | "total") =>
-      marketBoard.comparisons.find((comparison) => comparison.market === market);
-    const retainedErrorScore = (market: "spread" | "moneyline" | "total") => {
-      const family = market === "total" ? "totals" : market;
-      const model = reportModels.find((item) => item.family === family);
-      const metrics = model?.metrics as Record<string, unknown> | undefined;
-      if (market === "moneyline") {
-        const brier = typeof metrics?.brierScore === "number" ? metrics.brierScore : null;
-        return brier === null ? null : Math.max(0, Math.min(100, (0.35 - brier) / 0.25 * 100));
-      }
-      return normalizeModelConfidence(typeof metrics?.mae === "number" ? metrics.mae : null);
-    };
-    const modelScores = Object.fromEntries((["spread", "moneyline", "total"] as const).map((confidenceMarket) => {
-      const stability = projectionRevisionStability(confidenceMarket, revisions);
-      const error = retainedErrorScore(confidenceMarket);
-      return [confidenceMarket, stability === null || error === null ? null : (stability + error) / 2];
-    }));
-    const calculatedConfidence = buildConsumerConfidence({
-      snapshot: snapshot ? {
-        snapshotKey: snapshot.snapshotKey,
-        predictionTimestamp: snapshot.predictionTimestamp,
-        qbConfidence: snapshot.qbConfidence,
-        inputFeatureCount: snapshot.inputFeatureCount,
-        inputMissingFeatureCount: snapshot.inputMissingFeatureCount,
-        lowSample: snapshot.lowSample,
-        spreadModelVersion: snapshot.spreadModelVersion,
-        moneylineModelVersion: snapshot.moneylineModelVersion,
-        totalsModelVersion: snapshot.totalsModelVersion,
-        verifiedArtifacts: {
-          spread: Boolean(snapshot.spreadModelVersion && verifiedArtifacts.get(snapshot.spreadModelVersion)),
-          moneyline: Boolean(snapshot.moneylineModelVersion && verifiedArtifacts.get(snapshot.moneylineModelVersion)),
-          total: Boolean(snapshot.totalsModelVersion && verifiedArtifacts.get(snapshot.totalsModelVersion)),
-        },
-      } : undefined,
-      dataConfidence: { score: confidenceData.score },
-      dataAcceptable: confidenceData.acceptable,
-      comparisons: marketBoard.comparisons.map((comparison) => ({
-        market: comparison.market === "total" ? "total" as const : comparison.market,
-        difference: comparison.difference,
-        state: comparison.state,
-        currentQuotes: comparison.currentQuotes,
-      })),
-      startersResolved: startersResolvedFromEvidence(snapshot?.inputSourceEvidence),
-      modelScores,
-      historical: {
-        spread: historicalFor("spread", comparisonFor("spread")?.difference ?? null),
-        moneyline: historicalFor("moneyline", comparisonFor("moneyline")?.difference ?? null),
-        total: historicalFor("total", comparisonFor("total")?.difference ?? null),
-      },
-      calculatedAt: asOf,
-    });
-    if (persistConfidence && snapshot) {
-      const auditInputs = Object.fromEntries((["spread", "moneyline", "total"] as const).map((confidenceMarket) => {
-        const comparison = comparisonFor(confidenceMarket);
-        const family = confidenceMarket === "total" ? "totals" : confidenceMarket;
-        const retainedModel = reportModels.find((item) => item.family === family);
-        return [confidenceMarket, {
-          snapshot: {
-            predictionTimestamp: snapshot.predictionTimestamp.toISOString(),
-            lowSample: snapshot.lowSample,
-            qbConfidence: snapshot.qbConfidence,
-            inputFeatureCount: snapshot.inputFeatureCount,
-            inputMissingFeatureCount: snapshot.inputMissingFeatureCount,
-            modelVersion: confidenceMarket === "spread" ? snapshot.spreadModelVersion
-              : confidenceMarket === "moneyline" ? snapshot.moneylineModelVersion
-                : snapshot.totalsModelVersion,
-          },
-          quotes: comparison?.currentQuotes ?? [],
-          revisions: revisions.map((revision) => ({
-            predictionTimestamp: revision.predictionTimestamp.toISOString(),
-            projectedMargin: revision.projectedMargin,
-            projectedTotal: revision.projectedTotal,
-            homeWinProbability: revision.homeWinProbability,
-          })),
-          retainedBaseline: {
-            evaluationRunId: retained2025Baseline.evaluationRunId,
-            family,
-            metrics: retainedModel?.metrics ?? null,
-            historical: calculatedConfidence.markets.find((result) => result.market === confidenceMarket)?.evidence.historical ?? null,
-          },
-        }];
-      }));
-      const persisted = await persistConfidenceResults(snapshot.snapshotKey, calculatedConfidence.markets, auditInputs);
-      persistedConfidenceResults += persisted.inserted;
-    }
+    // The newest saved sportsbook lines, straight from the odds captures.
+    const market = latestSavedMarket(gameRows, consumerHome);
     return {
       gameId: game.gameId,
       season: game.season,
       week: game.week,
       kickoffTime: game.kickoffTime?.toISOString() ?? null,
       gameStatus: game.gameStatus,
-      gameState,
+      gameState: interpretNflGameState(game, asOf),
       venue: game.stadium,
       matchup: {
         home: { name: home?.teamName ?? "Team unavailable", abbreviation: home?.abbreviation ?? "—", logoUrl: imagery?.teams.logos.get(game.homeTeamId) ?? null },
         away: { name: away?.teamName ?? "Team unavailable", abbreviation: away?.abbreviation ?? "—", logoUrl: imagery?.teams.logos.get(game.awayTeamId) ?? null },
       },
       finalScore: consumerFinalScore(game, asOf),
-      prediction: consumerProjection(snapshot),
-      initialMarkets: (() => {
-        const locked = selectFirstRequestMarkets(
-          firstDecisionByGame.get(game.gameId), gameRows,
-          home?.abbreviation ?? "", away?.abbreviation ?? "",
-          snapshot?.homeWinProbability ?? null, snapshot?.projectedTotal ?? null,
-        );
-        return locked.capturedAt ? locked : firstSavedMarkets(gameRows);
-      })(),
+      initialMarkets: firstSavedMarkets(gameRows),
       market,
-      marketBoard,
-      recommendation,
-      dataConfidence,
-      confidence: calculatedConfidence,
       availability: {
-        prediction: snapshot ? null : snapshotUnavailableMessages[predictionReasons.get(game.gameId) ?? "missing_eligible_snapshot"],
-        predictionReason: snapshot ? null : predictionReasons.get(game.gameId) ?? "missing_eligible_snapshot",
         market: market.evidence.available ? null : "No eligible saved sportsbook line is available.",
       },
     };
-  }));
+  });
   const teamRecords = buildTeamRecords(recordTeams, recordGames, asOf);
   const completedPriorGames = recordGames.filter((game) => authoritativeFinalRegularSeasonGame(game, asOf)).length;
   return Object.assign(results, {
     sourceHealth,
-    persistedConfidenceResults,
     teamRecords,
     recordVerification: verifyTeamRecords(teamRecords, { targetWeek: recordWeek, completedPriorGames }),
   });
@@ -1699,28 +1102,12 @@ export async function consumerGames(
 
 router.get("/consumer/dashboard", async (_req, res): Promise<void> => {
   try {
-    const [games, initialWeeklyPick] = await Promise.all([consumerGames(), readInitialWeeklyPick()]);
+    const games = await consumerGames();
     res.set("Cache-Control", "no-store");
-    res.json({ status: games.length ? "available" : "unavailable", games, initialWeeklyPick, sourceHealth: games.sourceHealth, note: "Persisted snapshots only; this endpoint never starts model computation or data synchronization." });
+    res.json({ status: games.length ? "available" : "unavailable", games, sourceHealth: games.sourceHealth, note: "Saved schedule and sportsbook lines only; this endpoint never starts data synchronization." });
   } catch (error) {
     _req.log.error({ error }, "Consumer dashboard read failed");
     res.status(503).json({ error: "Prediction data is being refreshed", code: "consumer_data_unavailable" });
-  }
-});
-
-router.get("/consumer/weekly-picks", async (req, res): Promise<void> => {
-  const value = req.query.season;
-  if (value !== undefined && (typeof value !== "string" || !/^\d{4}$/.test(value) || Number(value) < 2020)) {
-    res.status(400).json({ error: "Choose a valid season.", code: "invalid_request" });
-    return;
-  }
-  try {
-    const archive = await readInitialWeeklyPickArchive(value === undefined ? undefined : Number(value));
-    res.set("Cache-Control", "no-store");
-    res.json(GetConsumerWeeklyPicksResponse.parse(archive));
-  } catch (error) {
-    req.log.error({ error }, "Consumer weekly pick archive read failed");
-    res.status(503).json({ error: "Pick history unavailable", code: "consumer_data_unavailable" });
   }
 });
 
@@ -1839,10 +1226,8 @@ router.get("/consumer/games", async (req, res): Promise<void> => {
   }
   try {
     const games = await consumerGames({ season, week });
-    const summary = summarizeConsumerMarketBoards(games);
     res.set("Cache-Control", "no-store");
     res.json({
-      ...summary,
       games,
       sourceHealth: games.sourceHealth,
       teamRecords: games.teamRecords,
@@ -1979,7 +1364,7 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
     ));
     const eligibleRecentGames = eligibleUsageGames(recentGames, game.season, sourceCutoff, game.gameId);
     const detailKeys = usageSourceGameKeys(eligibleRecentGames, detailTeamMaps);
-    const [weather, contextRows, movementRows, recentStats, recentSnaps, currentPersonnel, predictionEvidenceRows] = await Promise.all([
+    const [weather, contextRows, movementRows, recentStats, recentSnaps, currentPersonnel] = await Promise.all([
       db.select().from(weatherForecastSnapshotsTable)
         .where(and(
           eq(weatherForecastSnapshotsTable.gameId, game.gameId),
@@ -2033,21 +1418,6 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
           usageSourceGameCondition(snapCountsTable, detailKeys, true),
         )) : Promise.resolve([]),
       getCurrentGamePersonnel(game.gameId, sourceCutoff),
-      db.select({
-        predictionTimestamp: predictionSnapshotsTable.predictionTimestamp,
-        projectedHomeScore: predictionSnapshotsTable.projectedHomeScore,
-        projectedAwayScore: predictionSnapshotsTable.projectedAwayScore,
-        projectedMargin: predictionSnapshotsTable.projectedMargin,
-        projectedTotal: predictionSnapshotsTable.projectedTotal,
-        homeWinProbability: predictionSnapshotsTable.homeWinProbability,
-        inputSourceEvidence: predictionSnapshotsTable.inputSourceEvidence,
-      }).from(predictionSnapshotsTable)
-        .where(and(
-          eq(predictionSnapshotsTable.gameId, game.gameId),
-          lte(predictionSnapshotsTable.predictionTimestamp, sourceCutoff),
-        ))
-        .orderBy(desc(predictionSnapshotsTable.predictionTimestamp), desc(predictionSnapshotsTable.id))
-        .limit(20),
     ]);
     const forecast = weather[0];
     const context = contextRows
@@ -2056,39 +1426,6 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
     const finalizedContext = applyCurrentPersonnelToConsumerContext(
       serializeContext(context ?? null, gameRow?.homeTeamId ?? "", gameRow?.awayTeamId ?? ""),
       currentPersonnel,
-    );
-    const savedPrediction = game.prediction
-      && game.prediction.projectedHomeScore !== null
-      && game.prediction.projectedAwayScore !== null
-      && game.prediction.projectedMargin !== null
-      && game.prediction.projectedTotal !== null
-      && game.prediction.homeWinProbability !== null
-      ? predictionEvidenceRows.find((row) =>
-        safeNumber(row.projectedHomeScore) === game.prediction?.projectedHomeScore
-        && safeNumber(row.projectedAwayScore) === game.prediction?.projectedAwayScore
-        && safeNumber(row.projectedMargin) === game.prediction?.projectedMargin
-        && safeNumber(row.projectedTotal) === game.prediction?.projectedTotal
-        && safeNumber(row.homeWinProbability) === game.prediction?.homeWinProbability)
-      : undefined;
-    const historicalPersonnel = savedPrediction
-      ? await getCurrentGamePersonnel(game.gameId, savedPrediction.predictionTimestamp)
-      : null;
-    const modelPersonnelLimitation = currentModelPersonnelLimitation({
-      savedInputSourceEvidence: savedPrediction?.inputSourceEvidence,
-      predictionTimestamp: savedPrediction?.predictionTimestamp ?? null,
-      kickoffTime: kickoff,
-      homeTeamId: gameRow?.homeTeamId ?? "",
-      awayTeamId: gameRow?.awayTeamId ?? "",
-      current: currentPersonnel?.teams ?? null,
-      historical: historicalPersonnel?.teams ?? null,
-    });
-    finalizedContext.modelPersonnelLimitation = {
-      active: modelPersonnelLimitation.active,
-      reason: modelPersonnelLimitation.reason,
-      recommendationSuppressed: modelPersonnelLimitation.recommendationSuppressed,
-    };
-    const recommendation = applyModelPersonnelLimitationToRecommendation(
-      game.recommendation, modelPersonnelLimitation,
     );
     const recentIds = new Set(eligibleRecentGames.map((candidate) => candidate.gameId));
     const recentMatchups = new Map<string, string>();
@@ -2191,7 +1528,6 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
     res.set("Cache-Control", "no-store");
     res.json({
       ...game,
-      recommendation,
       sourceHealth: gameResults.sourceHealth,
       weather: forecast ? {
         available: true,
@@ -2241,48 +1577,6 @@ export function consumerGameDetailHandler(loadGames: typeof consumerGames = cons
 }
 
 router.get("/consumer/games/:gameId", consumerGameDetailHandler());
-
-router.get("/consumer/performance", async (req, res): Promise<void> => {
-  const parse = (value: unknown) => {
-    if (value === undefined) return undefined;
-    if (typeof value !== "string" || !/^\d{1,4}$/.test(value)) return null;
-    return Number(value);
-  };
-  const season = parse(req.query.season);
-  const week = parse(req.query.week);
-  if (season === null || week === null || (season !== undefined && (season < 1900 || season > 2200))
-    || (week !== undefined && (week < 1 || week > 22))) {
-    res.status(400).json({ error: "Invalid season or week" });
-    return;
-  }
-  try {
-    const [performance, coverage] = await Promise.all([
-      getPredictionPerformance(MAX_CONSUMER_PERFORMANCE_ROWS),
-      getOfficialPickCoverage({ season, week }),
-    ]);
-    res.json(serializePerformance(performance, coverage));
-  } catch (error) {
-    req.log.error({ error }, "Consumer performance read failed");
-    res.status(503).json({ error: "Performance data is being refreshed", code: "consumer_data_unavailable" });
-  }
-});
-
-router.get("/consumer/trends", async (req, res): Promise<void> => {
-  try {
-    const performance = serializePerformance(await getPredictionPerformance(MAX_CONSUMER_PERFORMANCE_ROWS));
-    res.json({
-      status: performance.status,
-      byWeek: performance.breakdowns.week,
-      byConfidence: performance.breakdowns.confidence,
-      byEdge: performance.breakdowns.edge,
-      window: performance.window,
-      note: "Trends are derived from persisted, graded official predictions only.",
-    });
-  } catch (error) {
-    req.log.error({ error }, "Consumer trends read failed");
-    res.status(503).json({ error: "Trend data is being refreshed", code: "consumer_data_unavailable" });
-  }
-});
 
 router.get("/consumer/props", (_req, res): void => {
   res.json({ status: "unavailable", message: "Player information temporarily unavailable", available: false });
