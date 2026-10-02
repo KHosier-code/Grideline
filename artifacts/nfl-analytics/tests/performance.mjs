@@ -59,7 +59,7 @@ try {
           if (!dashboardResponse.ok) throw new Error(`Consumer API unavailable (${dashboardResponse.status}); start the API workflow before measuring.`);
           const dashboard = await dashboardResponse.json();
           for (const candidate of dashboard.games ?? []) {
-            if (!candidate.gameId || candidate.prediction) continue;
+            if (!candidate.gameId) continue;
             const detailResponse = await fetch(`http://localhost:80/api/consumer/games/${encodeURIComponent(candidate.gameId)}`);
             if (!detailResponse.ok) throw new Error(`Game Detail unavailable (${detailResponse.status}).`);
             const detail = await detailResponse.json();

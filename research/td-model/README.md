@@ -26,7 +26,8 @@ Rolling windows carry over from the previous season.
 | Matchup | Opponent's TDs allowed to that position (last 8, shrunk), red-zone plays allowed |
 | Game context | Team and opponent Vegas implied points (from spread and total), home or away |
 
-Model: gradient-boosted trees (scikit-learn `HistGradientBoostingClassifier`).
+Model: gradient-boosted trees (scikit-learn `HistGradientBoostingClassifier`), fit with five random seeds and
+averaged (`SeedAveragedGBM` in `features.py`) so one random draw can't reorder the board.
 Before ranking, players who aren't on the active roster that week are removed.
 
 ## Results

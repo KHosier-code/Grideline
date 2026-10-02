@@ -16,18 +16,16 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier
 
 DATASET, DATA, METRICS = sys.argv[1], sys.argv[2], sys.argv[3]
-MODEL_VERSION = "gridline-td-gbm-v3"
+MODEL_VERSION = "gridline-td-gbm-v4-seed-avg"
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "features.py")).read())
 
 df = pd.read_parquet(DATASET)
 for p in ["QB", "RB", "WR", "TE"]:
     df[f"pos_{p}"] = (df.position == p).astype(int)
 history = df[(df.upcoming == 0) & (df.prior_games >= 1) & df.implied.notna()]
-model = HistGradientBoostingClassifier(max_iter=400, learning_rate=0.03, max_leaf_nodes=15, min_samples_leaf=80,
-                                       l2_regularization=1.0, random_state=7).fit(history[ALL], history.label)
+model = SeedAveragedGBM().fit(history[ALL], history.label)
 
 upcoming = df[(df.upcoming == 1) & (df.prior_games >= 1) & df.implied.notna()].copy()
 if upcoming.empty:

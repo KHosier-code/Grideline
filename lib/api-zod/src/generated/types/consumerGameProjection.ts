@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerBookLines } from './consumerBookLines';
 import type { ConsumerGameProjectionFactors } from './consumerGameProjectionFactors';
 import type { ConsumerProjectionQb } from './consumerProjectionQb';
 
@@ -33,4 +34,7 @@ export interface ConsumerGameProjection {
   awayQb: ConsumerProjectionQb;
   factors: ConsumerGameProjectionFactors;
   projectedAt: Date;
+  /** When the site received this projection (it only counts for games that start after this) */
+  lockedAt?: Date;
+  books?: ConsumerBookLines[];
 }

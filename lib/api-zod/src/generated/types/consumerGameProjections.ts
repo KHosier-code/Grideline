@@ -11,6 +11,7 @@ import type { ConsumerGameProjectionsStatus } from './consumerGameProjectionsSta
 import type { ConsumerGameProjectionsWeeksItem } from './consumerGameProjectionsWeeksItem';
 import type { ConsumerLineValue } from './consumerLineValue';
 import type { ConsumerRecordLine } from './consumerRecordLine';
+import type { ConsumerWatchList } from './consumerWatchList';
 
 export interface ConsumerGameProjections {
   status: ConsumerGameProjectionsStatus;
@@ -26,5 +27,6 @@ export interface ConsumerGameProjections {
   /** Straight-up record of the betting favorite on the same games, for comparison with `record`. */
   favoriteRecord: ConsumerRecordLine;
   lineValue: ConsumerLineValue;
+  watch: ConsumerWatchList;
   weeks: ConsumerGameProjectionsWeeksItem[];
 }

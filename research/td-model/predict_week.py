@@ -1,7 +1,6 @@
 import json
 import sys
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier
 
 sys.argv += []
 DATASET, DATA, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -11,8 +10,7 @@ df = pd.read_parquet(DATASET)
 for p in ["QB", "RB", "WR", "TE"]:
     df[f"pos_{p}"] = (df.position == p).astype(int)
 hist = df[(df.upcoming == 0) & (df.prior_games >= 1) & df.implied.notna() & df.season.between(2020, 2026)]
-model = HistGradientBoostingClassifier(max_iter=400, learning_rate=0.03, max_leaf_nodes=15, min_samples_leaf=80,
-                                       l2_regularization=1.0, random_state=7).fit(hist[ALL], hist.label)
+model = SeedAveragedGBM().fit(hist[ALL], hist.label)
 
 up = df[(df.upcoming == 1) & (df.prior_games >= 1)].copy()
 season, week = int(up.season.iloc[0]), int(up.week.iloc[0])

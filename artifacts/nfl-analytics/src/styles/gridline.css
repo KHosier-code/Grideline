@@ -359,6 +359,7 @@
 .gl-who .pos { color: hsl(var(--foreground)); font-size: 12px; font-weight: 700; }
 .gl-flag { padding: 0 7px; border: 1px solid currentColor; border-radius: 999px; color: hsl(var(--status-warn)); font-size: 11px; font-weight: 700; }
 .gl-flag.out { color: hsl(var(--status-bad)); }
+.gl-flag.value { color: hsl(var(--status-good)); }
 .gl-bar { display: grid; gap: 4px; }
 .gl-bar i { display: block; height: 8px; overflow: hidden; border-radius: 99px; background: hsl(var(--gl-bar)); }
 .gl-bar i b { display: block; height: 100%; border-radius: 99px; background: hsl(var(--primary)); }
@@ -943,3 +944,20 @@
 .gl-chip-button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
 .gl-chip-button[aria-pressed="true"] { opacity: .45; text-decoration: line-through; }
 .gl-pool-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Line shopping */
+.gl-best-number b { color: hsl(var(--foreground)); margin-right: 4px; }
+.gl-book-table { margin-top: 16px; }
+.gl-book-table .gl-note { padding: 0 16px 14px; margin: 0; }
+.gl-best-cell { background: hsl(var(--gl-good-bg)); color: hsl(var(--status-good)); font-weight: 700; }
+
+/* Watch list and receipts */
+.gl-record-grid.gl-four { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.gl-watch-table td, .gl-watch-table th { white-space: nowrap; }
+.gl-watch-table th small { display: block; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.gl-receipt-meta { color: hsl(var(--muted-foreground)); font-size: 12px; }
+.gl-receipts { min-width: 0; }
+.gl-receipt-weeks { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.gl-receipt-week { min-width: 0; }
+.gl-receipt-week summary { display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline; padding: 14px 16px; cursor: pointer; }
+.gl-receipt-week summary a { margin-left: auto; }

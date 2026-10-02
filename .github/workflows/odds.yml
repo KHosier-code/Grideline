@@ -8,6 +8,8 @@ name: Odds
 # Every capture saves all upcoming games, so the late-Sunday run records next
 # week's lines soon after books post them: the true opener. Model Performance
 # grades closing line value from the first and last capture before kickoff.
+# After each capture, watch-list alerts (games 4+ points off the opener, and
+# a point or more of line movement on them) go to the site's ntfy topic.
 # Times are UTC (ET + 4 during daylight time, + 5 after early November).
 on:
   schedule:
@@ -32,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Note the start time
+        run: echo "STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
       - name: Capture sportsbook lines
         env:
           GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
@@ -55,3 +59,12 @@ jobs:
             "${GRIDLINE_INGEST_URL%/}/api/odds/td-props-capture?hours=$HOURS")
           cat props.json; echo
           [ "$status" -lt 400 ]
+      - uses: actions/checkout@v4
+        if: ${{ !cancelled() }}
+        with:
+          sparse-checkout: .github/scripts
+      - name: Send watch-list alerts
+        if: ${{ !cancelled() }}
+        env:
+          GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+        run: ./.github/scripts/send-watch-alerts.sh

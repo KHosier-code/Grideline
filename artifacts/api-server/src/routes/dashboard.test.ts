@@ -169,16 +169,6 @@ const dataHealthDependencies = {
     lowSampleRows: 0,
     latestGeneratedAt: null,
   }),
-  getModelArtifactImmutabilityStatus: async () => ({
-    status: "application_only",
-    mechanism: "application_append_only",
-    applicationUpdateDeleteBlocked: true,
-    productionFittingBlocked: true,
-    databaseTriggerActive: false,
-    databaseTriggerSupport: "unavailable_through_current_publish_path",
-    verification: "test fixture",
-    note: "Test fixture",
-  }),
   getPlayerRecoveryReceiptCleanupHealth: async () => ({
     retentionDays: 90,
     cleanupIntervalHours: 24,

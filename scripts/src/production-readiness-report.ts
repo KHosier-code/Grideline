@@ -5,18 +5,14 @@
 import { db, pool } from "@workspace/db";
 import {
   dataSyncRunsTable,
+  gameProjectionRunsTable,
   gamesTable,
-  modelPromotionHistoryTable,
-  modelTrainingRunsTable,
   nflverseSourceFilesTable,
   oddsApiRequestsTable,
   oddsEventAuditsTable,
-  predictionGradesTable,
-  predictionSnapshotsTable,
   pregameTeamFeaturesTable,
   schedulerJobsTable,
   sportsbookOddsTable,
-  weeklyLearningReportsTable,
   teamsTable,
 } from "@workspace/db";
 import { asc, desc } from "drizzle-orm";
@@ -31,13 +27,9 @@ const awayArgument = process.argv.find((argument) => argument.startsWith("--away
 const homeArgument = process.argv.find((argument) => argument.startsWith("--home="))?.split("=")[1]?.toUpperCase();
 
 const terminalStatuses = ["final", "completed", "postponed", "canceled"];
-const families = ["spread", "moneyline", "totals"];
-const canonicalMarketMaxAgeMinutes = 15;
 type ReadinessStatus = "pass" | "warning" | "pending";
 type SyncRow = typeof dataSyncRunsTable.$inferSelect;
 type SchedulerRow = typeof schedulerJobsTable.$inferSelect;
-type PromotionRow = typeof modelPromotionHistoryTable.$inferSelect;
-type TrainingRunRow = typeof modelTrainingRunsTable.$inferSelect;
 type OddsRequestRow = typeof oddsApiRequestsTable.$inferSelect;
 type OddsRequestEvidence = Pick<OddsRequestRow,
   "id" | "requestedAt" | "status" | "httpStatus" | "recordsProcessed" |
@@ -61,30 +53,12 @@ type FeatureRow = {
   generatedAt: Date;
   lowSample: boolean;
 };
-type SnapshotRow = {
-  id: number;
-  gameId: string;
-  predictionTimestamp: Date;
-  snapshotLabel: string;
-  kickoffTime: Date | null;
-  featureVersion: string;
-  spreadModelVersion: string | null;
-  moneylineModelVersion: string | null;
-  totalsModelVersion: string | null;
-  officialFinalPrediction: boolean;
-  frozenAt: Date | null;
-  lowSample: boolean;
-};
-type GradeRow = {
-  id: number;
-  predictionId: number;
-  gradedAt: Date;
-  clv: Record<string, unknown>;
-};
-type WeeklyReportRow = {
+type ProjectionRunRow = {
   season: number;
   week: number;
   generatedAt: Date;
+  modelVersion: string;
+  games: Array<{ gameId: string }>;
 };
 type NflverseFileRow = {
   dataset: string;
@@ -394,16 +368,6 @@ function step(number: number, name: string, status: ReadinessStatus, evidence: E
   return { number, name, status, evidence, ...(note ? { note } : {}) };
 }
 
-function currentByFamily<T extends { family: string }>(rows: T[]) {
-  const result = new Map<string, T>();
-  for (const row of rows) if (!result.has(row.family)) result.set(row.family, row);
-  return [...result.values()];
-}
-
-function latestRunByStatus<T extends { status: string }>(rows: T[], status: string) {
-  return rows.find((run) => run.status === status) ?? null;
-}
-
 function quoteAge(capturedAt: Date | null | undefined) {
   return capturedAt instanceof Date
     ? { minutes: Math.max(0, (now.getTime() - capturedAt.getTime()) / 60_000), capturedAt: capturedAt.toISOString() }
@@ -481,23 +445,19 @@ function markdown(report: ReadinessReport) {
   for (const blocker of report.blockers) lines.push(`- **${blocker.status.toUpperCase()}** ${blocker.check}: ${blocker.reason}`);
   lines.push("", "## Safety confirmations", "");
   for (const [key, value] of Object.entries(report.safetyConfirmations)) lines.push(`- ${key}: **${value ? "yes" : "no"}**`);
-  lines.push("", "## Read-only report notes", "", "- `pending` means the real game-cycle event has not happened or no evidence exists; it is not a pass.", "- `warning` means evidence is stale, incomplete, failed, or not safe to call healthy.", "- No feed, prediction, promotion, freeze, grade, or database mutation is performed by this command.", "");
+  lines.push("", "## Read-only report notes", "", "- `pending` means the real game-cycle event has not happened or no evidence exists; it is not a pass.", "- `warning` means evidence is stale, incomplete, failed, or not safe to call healthy.", "- No feed, projection, or database mutation is performed by this command.", "");
   return `${lines.join("\n")}\n`;
 }
 
 async function buildReport() {
   // Keep these as plain reads. In particular, do not import scheduler or
-  // prediction functions: those functions intentionally write to the DB.
+  // sync functions: those functions intentionally write to the DB.
   const [
     games,
     syncRuns,
     schedulerJobs,
     features,
-    promotions,
-    trainingRuns,
-    snapshots,
-    grades,
-    weeklyReports,
+    projectionRuns,
     nflverseFiles,
     oddsRequests,
     oddsQuotes,
@@ -524,33 +484,13 @@ async function buildReport() {
       generatedAt: pregameTeamFeaturesTable.generatedAt,
       lowSample: pregameTeamFeaturesTable.lowSample,
     }).from(pregameTeamFeaturesTable).orderBy(desc(pregameTeamFeaturesTable.generatedAt)),
-    db.select().from(modelPromotionHistoryTable).orderBy(desc(modelPromotionHistoryTable.promotedAt), desc(modelPromotionHistoryTable.id)),
-    db.select().from(modelTrainingRunsTable).orderBy(desc(modelTrainingRunsTable.trainedAt), desc(modelTrainingRunsTable.id)),
     db.select({
-      id: predictionSnapshotsTable.id,
-      gameId: predictionSnapshotsTable.gameId,
-      predictionTimestamp: predictionSnapshotsTable.predictionTimestamp,
-      snapshotLabel: predictionSnapshotsTable.snapshotLabel,
-      kickoffTime: predictionSnapshotsTable.kickoffTime,
-      featureVersion: predictionSnapshotsTable.featureVersion,
-      spreadModelVersion: predictionSnapshotsTable.spreadModelVersion,
-      moneylineModelVersion: predictionSnapshotsTable.moneylineModelVersion,
-      totalsModelVersion: predictionSnapshotsTable.totalsModelVersion,
-      officialFinalPrediction: predictionSnapshotsTable.officialFinalPrediction,
-      frozenAt: predictionSnapshotsTable.frozenAt,
-      lowSample: predictionSnapshotsTable.lowSample,
-    }).from(predictionSnapshotsTable).orderBy(desc(predictionSnapshotsTable.predictionTimestamp)),
-    db.select({
-      id: predictionGradesTable.id,
-      predictionId: predictionGradesTable.predictionId,
-      gradedAt: predictionGradesTable.gradedAt,
-      clv: predictionGradesTable.clv,
-    }).from(predictionGradesTable).orderBy(desc(predictionGradesTable.gradedAt)),
-    db.select({
-      season: weeklyLearningReportsTable.season,
-      week: weeklyLearningReportsTable.week,
-      generatedAt: weeklyLearningReportsTable.generatedAt,
-    }).from(weeklyLearningReportsTable).orderBy(desc(weeklyLearningReportsTable.generatedAt)),
+      season: gameProjectionRunsTable.season,
+      week: gameProjectionRunsTable.week,
+      generatedAt: gameProjectionRunsTable.generatedAt,
+      modelVersion: gameProjectionRunsTable.modelVersion,
+      games: gameProjectionRunsTable.games,
+    }).from(gameProjectionRunsTable).orderBy(desc(gameProjectionRunsTable.generatedAt)),
     db.select({
       dataset: nflverseSourceFilesTable.dataset,
       season: nflverseSourceFilesTable.season,
@@ -634,91 +574,28 @@ async function buildReport() {
     : featureReady.length === upcoming.length ? "pass"
       : featureReady.length ? "warning" : "pending";
 
-  const currentPromotions = currentByFamily(promotions.filter((promotion) => promotion.role === "production"));
-  const phase6Promotions = currentPromotions.filter((promotion) => String(promotion.modelVersion).startsWith("phase6-refit-"));
-  const phase6PromotionEvidence = phase6Promotions.filter((promotion) =>
-    trainingRuns.some((run) => run.modelVersion === promotion.modelVersion && run.status === "refit_candidate"));
-  const phase6Families = new Set(phase6PromotionEvidence.map((promotion) => promotion.family));
-  const phase6Status = families.every((family) => phase6Families.has(family)) ? "pass"
-    : currentPromotions.length ? "warning" : "pending";
-
-  const upcomingSnapshotCounts = upcoming.map((game) => ({
-    gameId: game.gameId,
-    snapshots: snapshots.filter((snapshot) => snapshot.gameId === game.gameId && snapshot.predictionTimestamp < (game.kickoffTime ?? now)).length,
-    latestSnapshotAt: iso(snapshots.find((snapshot) => snapshot.gameId === game.gameId)?.predictionTimestamp),
-  }));
-  const snapshotReady = upcomingSnapshotCounts.filter((item) => item.snapshots > 0);
-  const snapshotStatus = upcoming.length === 0 ? "pending"
-    : snapshotReady.length === upcoming.length ? "pass"
-      : snapshotReady.length ? "warning" : "pending";
-
-  const pastKickoffSnapshots = snapshots.filter((snapshot) => snapshot.kickoffTime && snapshot.kickoffTime <= now);
-  const freezeDue = pastKickoffSnapshots.filter((snapshot) => !snapshot.officialFinalPrediction);
-  const freezeCompleted = pastKickoffSnapshots.filter((snapshot) => snapshot.officialFinalPrediction);
-  const freezeStatus = freezeDue.length ? "warning" : pastKickoffSnapshots.length ? "pass" : "pending";
-
-  // This is a database invariant check, not an attempted mutation. A row
-  // written after kickoff is evidence of a safety failure; an empty database
-  // cannot prove the runtime guard has been exercised.
-  const postKickoffWrites = snapshots.filter((snapshot) =>
-    snapshot.kickoffTime && snapshot.predictionTimestamp >= snapshot.kickoffTime);
-  const safetyStatus = postKickoffWrites.length
-    ? "warning"
-    : pastKickoffSnapshots.length
-      ? "pass"
-      : "pending";
+  // The QB-adjusted game model (research/game-model) posts one run per
+  // upload; a game counts as projected when a run saved before its kickoff
+  // includes it.
+  const upcomingProjections = upcoming.map((game) => {
+    const run = (projectionRuns as ProjectionRunRow[]).find((item) =>
+      item.generatedAt < (game.kickoffTime ?? now)
+      && item.games.some((projection) => projection.gameId === game.gameId));
+    return {
+      gameId: game.gameId,
+      latestProjectionAt: iso(run?.generatedAt),
+      modelVersion: run?.modelVersion ?? null,
+    };
+  });
+  const projectedUpcoming = upcomingProjections.filter((item) => item.latestProjectionAt);
+  const projectionStatus = upcoming.length === 0 ? "pending"
+    : projectedUpcoming.length === upcoming.length ? "pass"
+      : projectedUpcoming.length ? "warning" : "pending";
 
   const scoredCompleted = completed.filter((game) => game.finalHomeScore !== null && game.finalAwayScore !== null);
-  const completedIds = new Set(scoredCompleted.map((game) => game.gameId));
-  const completedSnapshots = snapshots.filter((snapshot) => completedIds.has(snapshot.gameId) && snapshot.officialFinalPrediction);
-  const gradedIds = new Set(grades.map((grade) => grade.predictionId));
-  const ungradedCompleted = completedSnapshots.filter((snapshot) => !gradedIds.has(snapshot.id));
-  const resultGradeStatus = completed.length === 0 ? "pending"
-    : scoredCompleted.length < completed.length ||
-      completedSnapshots.length < scoredCompleted.length ||
-      ungradedCompleted.length ||
-      grades.length === 0 ? "warning"
-      : scoredCompleted.length ? "pass" : "pending";
+  const resultStatus = completed.length === 0 ? "pending"
+    : scoredCompleted.length < completed.length ? "warning" : "pass";
 
-  const clvEligible = grades.filter((grade) => grade.clv && typeof grade.clv === "object" && grade.clv.status === "measured");
-  const clvStatus = grades.length === 0 ? "pending" : clvEligible.length ? "pass" : "warning";
-
-  const latestCompleted = completed.sort((left, right) => (right.kickoffTime?.getTime() ?? 0) - (left.kickoffTime?.getTime() ?? 0))[0];
-  const matchingReport = latestCompleted && weeklyReports.find((report) =>
-    report.season === latestCompleted.season && report.week === latestCompleted.week);
-  const performanceStatus = completed.length === 0 ? "pending"
-    : matchingReport && grades.length ? "pass" : "warning";
-
-  const latestChallenger = latestRunByStatus(trainingRuns, "challenger");
-  const latestRefit = latestRunByStatus(trainingRuns, "refit_candidate");
-  const challengerStatus = latestChallenger || latestRefit ? "pass" : "pending";
-
-  const selectedSnapshot = selectedGame
-    ? snapshots.find((snapshot) => snapshot.gameId === selectedGame.gameId && snapshot.officialFinalPrediction) ?? null
-    : null;
-  const selectedCutoff = selectedGame?.kickoffTime
-    ? new Date(selectedGame.kickoffTime.getTime() - 30 * 60_000)
-    : null;
-  const cutoffEligibleSnapshot = selectedGame && selectedCutoff
-    ? snapshots.find((snapshot) =>
-      snapshot.gameId === selectedGame.gameId
-      && snapshot.predictionTimestamp <= selectedCutoff) ?? null
-    : null;
-  const selectedCanonicalMarkets = Object.values(selectedMarkets?.canonicalAtCutoff ?? {}).filter(
-    (quote): quote is OddsQuoteRow => {
-      if (!quote?.capturedAt) return false;
-      return quote.capturedAt.getTime() <= (selectedCutoff?.getTime() ?? -Infinity)
-        && (selectedCutoff!.getTime() - quote.capturedAt.getTime()) <= canonicalMarketMaxAgeMinutes * 60_000;
-    },
-  );
-  const canonicalMarketComplete = selectedCanonicalMarkets.length === 6;
-  const beforeKickoff = Boolean(selectedGame?.kickoffTime && now < selectedGame.kickoffTime);
-  const canonicalReady = beforeKickoff
-    ? Boolean(cutoffEligibleSnapshot && canonicalMarketComplete)
-    : Boolean(selectedSnapshot && selectedCutoff
-      && selectedSnapshot.predictionTimestamp <= selectedCutoff
-      && canonicalMarketComplete);
-  const selectedGrade = selectedSnapshot ? grades.find((grade) => grade.predictionId === selectedSnapshot.id) ?? null : null;
   const selectedFinalEvidence = selectedGame
     ? Object.values(selectedMarkets?.finalPreKickoff ?? {}).filter(Boolean).length
     : 0;
@@ -800,96 +677,31 @@ async function buildReport() {
       gamesWithTwoTeamRows: featureReady.length,
       featureRows: upcomingFeatureCounts,
     }),
-    step(10, "Active Phase 6 production promotions", phase6Status, {
-      requiredFamilies: families,
-      activeProductionPromotions: currentPromotions.map((promotion) => ({
-        family: promotion.family,
-        modelVersion: promotion.modelVersion,
-        featureVersion: promotion.featureVersion,
-        promotedAt: iso(promotion.promotedAt),
-        promotedBy: promotion.promotedBy,
-      })),
-    }, phase6Status !== "pass" ? "All three families must have explicit phase6-refit production promotions; no automatic promotion is inferred." : undefined),
-    step(11, "Current prediction snapshots", snapshotStatus, {
+    step(10, "QB-model projections for upcoming games", projectionStatus, {
       upcomingGames: upcoming.length,
-      gamesWithPreKickoffSnapshots: snapshotReady.length,
-      games: upcomingSnapshotCounts,
-    }),
-    step(12, "Canonical 30-minute cutoff snapshot", canonicalReady ? "pass" : selectedGame ? "warning" : "pending", {
-      gameId: selectedGame?.gameId ?? null,
-      cutoff: iso(selectedCutoff),
-      ready: canonicalReady,
-      lifecycle: beforeKickoff ? "cutoff-eligible pregame evidence" : "immutable post-kickoff freeze",
-      marketRecencyBoundaryMinutes: canonicalMarketMaxAgeMinutes,
-      cutoffEligibleSnapshotId: cutoffEligibleSnapshot?.id ?? null,
-      canonicalMarketComplete,
-      canonicalMarketObservations: selectedCanonicalMarkets.length,
-      snapshotId: selectedSnapshot?.id ?? null,
-      completedAt: iso(selectedSnapshot?.frozenAt),
-    }),
-    step(13, "Official freezes due/completed", freezeStatus, {
-      pastKickoffSnapshots: pastKickoffSnapshots.length,
-      freezesDue: freezeDue.length,
-      freezesCompleted: freezeCompleted.length,
-      dueGameIds: [...new Set(freezeDue.map((snapshot) => snapshot.gameId))],
-      completedGameIds: [...new Set(freezeCompleted.map((snapshot) => snapshot.gameId))],
-    }, freezeDue.length ? "Past-kickoff snapshots remain unfrozen; this read-only report intentionally does not freeze them." : undefined),
-    step(14, "Post-kickoff prediction mutation safety", safetyStatus, {
-      postKickoffSnapshotWrites: postKickoffWrites.length,
-      checkedSnapshots: snapshots.length,
-      postKickoffGameIds: [...new Set(postKickoffWrites.map((snapshot) => snapshot.gameId))],
-    }, !pastKickoffSnapshots.length
-      ? "No snapshot has reached kickoff to exercise the post-kickoff guard; pending is more honest than pass."
+      gamesWithPreKickoffProjection: projectedUpcoming.length,
+      latestRun: projectionRuns[0] ? {
+        season: projectionRuns[0].season,
+        week: projectionRuns[0].week,
+        generatedAt: iso(projectionRuns[0].generatedAt),
+        modelVersion: projectionRuns[0].modelVersion,
+      } : null,
+      games: upcomingProjections,
+    }, projectionStatus === "pending" && upcoming.length
+      ? "No QB-model projection run saved before kickoff covers the upcoming games."
       : undefined),
-    step(15, "Final pre-kickoff evidence and grading", selectedGame && selectedState === "final"
-      ? selectedFinalEvidence === requiredMarketStreams.length && selectedGrade ? "pass" : "warning"
+    step(11, "Final pre-kickoff market evidence", selectedGame && selectedState === "final"
+      ? selectedFinalEvidence === requiredMarketStreams.length ? "pass" : "warning"
       : "pending", {
       gameId: selectedGame?.gameId ?? null,
       state: selectedState,
       finalPreKickoffObservations: selectedFinalEvidence,
-      gradeId: selectedGrade?.id ?? null,
-      gradeAt: iso(selectedGrade?.gradedAt),
       authoritativeFinalRequired: true,
     }),
-    step(16, "Final results ingested and prediction grades", resultGradeStatus, {
+    step(12, "Final results ingested", resultStatus, {
       completedGames: completed.length,
       completedGamesWithFinalScores: scoredCompleted.length,
-      officialSnapshotsForCompletedGames: completedSnapshots.length,
-      ungradedOfficialSnapshots: ungradedCompleted.length,
-      grades: grades.length,
-      latestGradeAt: iso(grades[0]?.gradedAt),
     }),
-    step(17, "CLV eligibility", clvStatus, {
-      grades: grades.length,
-      measuredClvGrades: clvEligible.length,
-      eligiblePredictionIds: clvEligible.slice(0, 20).map((grade) => grade.predictionId),
-    }, grades.length === 0 ? "CLV waits for a completed, graded prediction with a legitimate pre-prediction market line." : undefined),
-    step(18, "Reports and performance readiness", performanceStatus, {
-      completedGames: completed.length,
-      latestCompletedGame: latestCompleted ? { season: latestCompleted.season, week: latestCompleted.week, gameId: latestCompleted.gameId } : null,
-      latestWeeklyReport: weeklyReports[0] ? {
-        season: weeklyReports[0].season,
-        week: weeklyReports[0].week,
-        generatedAt: iso(weeklyReports[0].generatedAt),
-      } : null,
-      grades: grades.length,
-    }),
-    step(19, "Latest challenger/refit runs", challengerStatus, {
-      latestChallenger: latestChallenger ? {
-        modelVersion: latestChallenger.modelVersion,
-        family: latestChallenger.family,
-        status: latestChallenger.status,
-        trainedAt: iso(latestChallenger.trainedAt),
-        sampleSize: latestChallenger.sampleSize,
-      } : null,
-      latestPhase6Refit: latestRefit ? {
-        modelVersion: latestRefit.modelVersion,
-        family: latestRefit.family,
-        status: latestRefit.status,
-        trainedAt: iso(latestRefit.trainedAt),
-        sampleSize: latestRefit.sampleSize,
-      } : null,
-    }, challengerStatus === "pending" ? "No challenger or Phase 6 refit run is persisted; retraining cannot be claimed." : undefined),
   ];
 
   const hasWarnings = productionCycleSteps.some((item) => item.status === "warning");
@@ -916,11 +728,9 @@ async function buildReport() {
     blockers,
     safetyConfirmations: {
       readOnlyQueriesOnly: true,
-      noFeedOrPredictionMutation: true,
+      noFeedOrProjectionMutation: true,
       authoritativeRegularSeasonRecordsOnly: true,
       marketEvidenceStrictlyBeforeKickoffForFinal: true,
-      canonicalCutoffIsThirtyMinutes: true,
-      postKickoffPredictionWritesDetected: postKickoffWrites.length > 0,
     },
   };
 }
