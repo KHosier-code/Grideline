@@ -73,17 +73,17 @@ function PassCatchers({ rows, win, report, next }: { rows: UsagePlayer[]; win: W
     <table className="gl-table gl-usage-table">
       <caption className="gl-table-caption">Pass catchers <small>sorted by share of team targets</small></caption>
       <thead><tr>
-        <th scope="col">Player</th><th scope="col">Games</th><th scope="col">Targets / g</th><th scope="col">Target share</th>
+        <th scope="col">Player</th><th scope="col">Next matchup</th><th scope="col">Games</th><th scope="col">Targets / g</th><th scope="col">Target share</th>
         <th scope="col">Air yards share</th><th scope="col">Rec yds / g</th><th scope="col">Red-zone looks / g</th>
-        <th scope="col">TDs</th><th scope="col">PPR / g</th><th scope="col">Weekly share</th><th scope="col">Next matchup</th>
+        <th scope="col">TDs</th><th scope="col">PPR / g</th><th scope="col">Weekly share</th>
       </tr></thead>
       <tbody>{rows.map(p => { const w = p[win]; return <tr key={p.playerId}>
         <td><PlayerCell name={p.name} position={p.position} team={p.team} headshot={p.headshot} showTeam={false} /></td>
+        <MatchupCell report={report} next={next} player={p} />
         <td>{w.games}</td><td>{fixed(w.targetsPerGame)}</td><td><ShareBar value={w.targetShare} max={0.4} /></td>
         <td>{pct(w.airYardsShare)}</td><td>{fixed(w.receivingYardsPerGame)}</td><td>{fixed(w.redZoneOppsPerGame)}</td>
         <td>{w.touchdowns}</td><td>{fixed(w.pprPerGame)}</td>
         <td className="gl-spark-cell"><Sparkline values={p.weekly.map(week => week.targetShare)} label={`${p.name} weekly target share`} /></td>
-        <MatchupCell report={report} next={next} player={p} />
       </tr>; })}</tbody>
     </table>
   </div>;
@@ -94,17 +94,17 @@ function Backfield({ rows, win, report, next }: { rows: UsagePlayer[]; win: Win;
     <table className="gl-table gl-usage-table">
       <caption className="gl-table-caption">Backfield <small>sorted by share of team carries</small></caption>
       <thead><tr>
-        <th scope="col">Player</th><th scope="col">Games</th><th scope="col">Carries / g</th><th scope="col">Carry share</th>
+        <th scope="col">Player</th><th scope="col">Next matchup</th><th scope="col">Games</th><th scope="col">Carries / g</th><th scope="col">Carry share</th>
         <th scope="col">Rush yds / g</th><th scope="col">Targets / g</th><th scope="col">Red-zone looks / g</th>
-        <th scope="col">Inside the 10 / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th><th scope="col">Weekly share</th><th scope="col">Next matchup</th>
+        <th scope="col">Inside the 10 / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th><th scope="col">Weekly share</th>
       </tr></thead>
       <tbody>{rows.map(p => { const w = p[win]; return <tr key={p.playerId}>
         <td><PlayerCell name={p.name} position={p.position} team={p.team} headshot={p.headshot} showTeam={false} /></td>
+        <MatchupCell report={report} next={next} player={p} />
         <td>{w.games}</td><td>{fixed(w.carriesPerGame)}</td><td><ShareBar value={w.carryShare} max={0.8} /></td>
         <td>{fixed(w.rushingYardsPerGame)}</td><td>{fixed(w.targetsPerGame)}</td><td>{fixed(w.redZoneOppsPerGame)}</td>
         <td>{fixed(w.inside10OppsPerGame)}</td><td>{w.touchdowns}</td><td>{fixed(w.pprPerGame)}</td>
         <td className="gl-spark-cell"><Sparkline values={p.weekly.map(week => week.carryShare)} label={`${p.name} weekly carry share`} /></td>
-        <MatchupCell report={report} next={next} player={p} />
       </tr>; })}</tbody>
     </table>
   </div>;
@@ -115,14 +115,14 @@ function Quarterbacks({ rows, win, report, next }: { rows: UsagePlayer[]; win: W
     <table className="gl-table gl-usage-table">
       <caption className="gl-table-caption">Quarterbacks</caption>
       <thead><tr>
-        <th scope="col">Player</th><th scope="col">Games</th><th scope="col">Pass yds / g</th><th scope="col">Carries / g</th>
-        <th scope="col">Rush yds / g</th><th scope="col">Red-zone carries / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th><th scope="col">Next matchup</th>
+        <th scope="col">Player</th><th scope="col">Next matchup</th><th scope="col">Games</th><th scope="col">Pass yds / g</th><th scope="col">Carries / g</th>
+        <th scope="col">Rush yds / g</th><th scope="col">Red-zone carries / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th>
       </tr></thead>
       <tbody>{rows.map(p => { const w = p[win]; return <tr key={p.playerId}>
         <td><PlayerCell name={p.name} position={p.position} team={p.team} headshot={p.headshot} showTeam={false} /></td>
+        <MatchupCell report={report} next={next} player={p} />
         <td>{w.games}</td><td>{fixed(w.passingYardsPerGame)}</td><td>{fixed(w.carriesPerGame)}</td>
         <td>{fixed(w.rushingYardsPerGame)}</td><td>{fixed(w.redZoneOppsPerGame)}</td><td>{w.touchdowns}</td><td>{fixed(w.pprPerGame)}</td>
-        <MatchupCell report={report} next={next} player={p} />
       </tr>; })}</tbody>
     </table>
   </div>;
@@ -141,16 +141,16 @@ function Leaders({ report, win, metric, position, next }: { report: UsageReport;
   return <div className="gl-card gl-table-wrap">
     <table className="gl-table gl-usage-table gl-leaders">
       <thead><tr>
-        <th scope="col">#</th><th scope="col">Player</th><th scope="col">{LEADERS.find(([key]) => key === metric)?.[1]}</th>
-        <th scope="col">Targets / g</th><th scope="col">Carries / g</th><th scope="col">Red-zone looks / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th><th scope="col">Next matchup</th>
+        <th scope="col">#</th><th scope="col">Player</th><th scope="col">Next matchup</th><th scope="col">{LEADERS.find(([key]) => key === metric)?.[1]}</th>
+        <th scope="col">Targets / g</th><th scope="col">Carries / g</th><th scope="col">Red-zone looks / g</th><th scope="col">TDs</th><th scope="col">PPR / g</th>
       </tr></thead>
       <tbody>{rows.map((p, index) => { const w = p[win]; return <tr key={`${p.playerId}-${p.team}`}>
         <td className="gl-rank-num"><b>{index + 1}</b></td>
         <td><PlayerCell name={p.name} position={p.position} team={p.team} headshot={p.headshot} /></td>
+        <MatchupCell report={report} next={next} player={p} />
         <td>{isShare ? <ShareBar value={w[metric]} max={max} /> : <span className="gl-share"><b>{fixed(w[metric])}</b><i aria-hidden="true"><em style={{ width: `${((w[metric] ?? 0) / max) * 100}%` }} /></i></span>}</td>
         <td>{fixed(w.targetsPerGame)}</td><td>{fixed(w.carriesPerGame)}</td><td>{fixed(w.redZoneOppsPerGame)}</td>
         <td>{w.touchdowns}</td><td>{fixed(w.pprPerGame)}</td>
-        <MatchupCell report={report} next={next} player={p} />
       </tr>; })}</tbody>
     </table>
   </div>;

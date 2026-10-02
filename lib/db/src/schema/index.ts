@@ -8,5 +8,6 @@ export * from "./imagery-review";
 export * from "./usage-analytics";
 export * from "./game-alerts";
 export * from "./saved-games";
+export * from "./user-picks";
 export * from "./worker-heartbeat";
 export * from "./touchdown-picks";

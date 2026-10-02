@@ -976,6 +976,7 @@
 /* Pool Picks: spread and over/under rows */
 .gl-line-head, .gl-line-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.3fr) 90px 110px; align-items: center; gap: 14px; }
 .gl-line-row { padding: 12px 18px; }
+.gl-line-head span:nth-child(4) { grid-column: auto; justify-self: end; }
 .gl-line-row.locked { opacity: .72; }
 .gl-line-matchup { display: inline-flex; align-items: center; gap: 6px; }
 .gl-line-pick { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; }

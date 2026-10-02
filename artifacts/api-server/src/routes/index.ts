@@ -13,6 +13,7 @@ import consumerTeamAnalyticsRouter from "./consumer-team-analytics";
 import usageAnalyticsRouter from "./usage-analytics";
 import playerProjectionsRouter from "./player-projections";
 import gameAlertsRouter from "./game-alerts";
+import userPicksRouter from "./user-picks";
 import verifiedImageryRouter from "./verified-imagery";
 
 const router: IRouter = Router();
@@ -31,5 +32,6 @@ router.use(consumerTeamAnalyticsRouter);
 router.use(usageAnalyticsRouter);
 router.use(playerProjectionsRouter);
 router.use(gameAlertsRouter);
+router.use(userPicksRouter);
 router.use(verifiedImageryRouter);
 export default router;

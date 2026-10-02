@@ -2019,6 +2019,138 @@ export const RemoveSavedConsumerGameResponse = zod.void()
 
 
 /**
+ * @summary The signed-in user's own moneyline, spread and over/under picks with their record
+ */
+export const ListMyPicksResponse = zod.object({
+  "picks": zod.array(zod.object({
+  "gameId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date().nullable(),
+  "home": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+}),
+  "away": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+}),
+  "market": zod.enum(['moneyline', 'spread', 'total']),
+  "side": zod.enum(['home', 'away', 'over', 'under']),
+  "line": zod.number().nullable().describe('The picked side\'s spread or the total; null for moneyline.'),
+  "price": zod.number().int().nullable().describe('American odds when the pick was made, when saved.'),
+  "sportsbook": zod.string().nullable(),
+  "result": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable(),
+  "units": zod.number().nullable().describe('Profit for a 1-unit stake at the locked price.'),
+  "finalScore": zod.object({
+  "home": zod.number().int(),
+  "away": zod.number().int()
+}).nullable(),
+  "locked": zod.boolean().describe('True once the game has kicked off.'),
+  "updatedAt": zod.coerce.date()
+})),
+  "record": zod.object({
+  "overall": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int(),
+  "pending": zod.number().int(),
+  "units": zod.number()
+}),
+  "byMarket": zod.object({
+  "moneyline": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int(),
+  "pending": zod.number().int(),
+  "units": zod.number()
+}),
+  "spread": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int(),
+  "pending": zod.number().int(),
+  "units": zod.number()
+}),
+  "total": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int(),
+  "pending": zod.number().int(),
+  "units": zod.number()
+})
+}),
+  "byWeek": zod.array(zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int(),
+  "pending": zod.number().int(),
+  "units": zod.number()
+}).and(zod.object({
+  "season": zod.number().int(),
+  "week": zod.number().int()
+})))
+})
+})
+
+
+/**
+ * @summary Make or change a pick before kickoff, locked at the current sportsbook number
+ */
+export const SaveMyPickParams = zod.object({
+  "gameId": zod.coerce.string(),
+  "market": zod.enum(['moneyline', 'spread', 'total'])
+})
+
+export const SaveMyPickBody = zod.object({
+  "side": zod.enum(['home', 'away', 'over', 'under'])
+})
+
+export const SaveMyPickResponse = zod.object({
+  "gameId": zod.string(),
+  "season": zod.number().int(),
+  "week": zod.number().int(),
+  "kickoffTime": zod.coerce.date().nullable(),
+  "home": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+}),
+  "away": zod.object({
+  "name": zod.string(),
+  "abbreviation": zod.string(),
+  "logoUrl": zod.string().nullable()
+}),
+  "market": zod.enum(['moneyline', 'spread', 'total']),
+  "side": zod.enum(['home', 'away', 'over', 'under']),
+  "line": zod.number().nullable().describe('The picked side\'s spread or the total; null for moneyline.'),
+  "price": zod.number().int().nullable().describe('American odds when the pick was made, when saved.'),
+  "sportsbook": zod.string().nullable(),
+  "result": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable(),
+  "units": zod.number().nullable().describe('Profit for a 1-unit stake at the locked price.'),
+  "finalScore": zod.object({
+  "home": zod.number().int(),
+  "away": zod.number().int()
+}).nullable(),
+  "locked": zod.boolean().describe('True once the game has kicked off.'),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Remove a pick before kickoff
+ */
+export const RemoveMyPickParams = zod.object({
+  "gameId": zod.coerce.string(),
+  "market": zod.enum(['moneyline', 'spread', 'total'])
+})
+
+export const RemoveMyPickResponse = zod.void()
+
+
+/**
  * @summary Read final-game NFLverse team EPA and success-rate observations
  */
 export const getConsumerTeamAnalyticsQuerySeasonMin = 2000;

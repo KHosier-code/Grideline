@@ -817,6 +817,77 @@ paths:
           $ref: "#/components/responses/ConsumerInvalidRequest"
         "401":
           description: Sign in required
+  /consumer/my-picks:
+    get:
+      operationId: listMyPicks
+      tags: [nfl]
+      summary: The signed-in user's own moneyline, spread and over/under picks with their record
+      responses:
+        "200":
+          description: Picks and record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerMyPicks" }
+        "401":
+          description: Sign in required
+        "503":
+          $ref: "#/components/responses/ConsumerDataUnavailable"
+  /consumer/my-picks/{gameId}/{market}:
+    parameters:
+      - name: gameId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: market
+        in: path
+        required: true
+        schema: { type: string, enum: [moneyline, spread, total] }
+    put:
+      operationId: saveMyPick
+      tags: [nfl]
+      summary: Make or change a pick before kickoff, locked at the current sportsbook number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [side]
+              properties:
+                side: { type: string, enum: [home, away, over, under] }
+      responses:
+        "200":
+          description: The saved pick
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerMyPick" }
+        "400":
+          $ref: "#/components/responses/ConsumerInvalidRequest"
+        "401":
+          description: Sign in required
+        "404":
+          $ref: "#/components/responses/ConsumerGameNotFound"
+        "409":
+          description: The game has started or the line isn't posted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerError" }
+    delete:
+      operationId: removeMyPick
+      tags: [nfl]
+      summary: Remove a pick before kickoff
+      responses:
+        "204":
+          description: Removed or already absent
+        "400":
+          $ref: "#/components/responses/ConsumerInvalidRequest"
+        "401":
+          description: Sign in required
+        "409":
+          description: The game has started
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerError" }
   /consumer/team-analytics:
     get:
       operationId: getConsumerTeamAnalytics
@@ -1925,6 +1996,69 @@ components:
         events:
           type: array
           items: { $ref: "#/components/schemas/ConsumerGameAlert" }
+    ConsumerMyPick:
+      type: object
+      required: [gameId, season, week, kickoffTime, home, away, market, side, line, price, sportsbook, result, units, finalScore, locked, updatedAt]
+      properties:
+        gameId: { type: string }
+        season: { type: integer }
+        week: { type: integer }
+        kickoffTime: { type: ["string", "null"], format: date-time }
+        home: { $ref: "#/components/schemas/ConsumerTeam" }
+        away: { $ref: "#/components/schemas/ConsumerTeam" }
+        market: { type: string, enum: [moneyline, spread, total] }
+        side: { type: string, enum: [home, away, over, under] }
+        line: { type: ["number", "null"], description: "The picked side's spread or the total; null for moneyline." }
+        price: { type: ["integer", "null"], description: "American odds when the pick was made, when saved." }
+        sportsbook: { type: ["string", "null"] }
+        result: { type: ["string", "null"], enum: [win, loss, push, null] }
+        units: { type: ["number", "null"], description: "Profit for a 1-unit stake at the locked price." }
+        finalScore:
+          type: ["object", "null"]
+          required: [home, away]
+          properties:
+            home: { type: integer }
+            away: { type: integer }
+        locked: { type: boolean, description: "True once the game has kicked off." }
+        updatedAt: { type: string, format: date-time }
+    ConsumerMyPickRecord:
+      type: object
+      required: [wins, losses, pushes, pending, units]
+      properties:
+        wins: { type: integer }
+        losses: { type: integer }
+        pushes: { type: integer }
+        pending: { type: integer }
+        units: { type: number }
+    ConsumerMyPicks:
+      type: object
+      required: [picks, record]
+      properties:
+        picks:
+          type: array
+          items: { $ref: "#/components/schemas/ConsumerMyPick" }
+        record:
+          type: object
+          required: [overall, byMarket, byWeek]
+          properties:
+            overall: { $ref: "#/components/schemas/ConsumerMyPickRecord" }
+            byMarket:
+              type: object
+              required: [moneyline, spread, total]
+              properties:
+                moneyline: { $ref: "#/components/schemas/ConsumerMyPickRecord" }
+                spread: { $ref: "#/components/schemas/ConsumerMyPickRecord" }
+                total: { $ref: "#/components/schemas/ConsumerMyPickRecord" }
+            byWeek:
+              type: array
+              items:
+                allOf:
+                  - $ref: "#/components/schemas/ConsumerMyPickRecord"
+                  - type: object
+                    required: [season, week]
+                    properties:
+                      season: { type: integer }
+                      week: { type: integer }
     ConsumerTeam:
       type: object
       required: [name, abbreviation, logoUrl]

@@ -1115,11 +1115,116 @@ export interface ConsumerGameAlerts {
   events: ConsumerGameAlert[];
 }
 
+export type ConsumerMyPickMarket = typeof ConsumerMyPickMarket[keyof typeof ConsumerMyPickMarket];
+
+
+export const ConsumerMyPickMarket = {
+  moneyline: 'moneyline',
+  spread: 'spread',
+  total: 'total',
+} as const;
+
+export type ConsumerMyPickSide = typeof ConsumerMyPickSide[keyof typeof ConsumerMyPickSide];
+
+
+export const ConsumerMyPickSide = {
+  home: 'home',
+  away: 'away',
+  over: 'over',
+  under: 'under',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerMyPickResult = typeof ConsumerMyPickResult[keyof typeof ConsumerMyPickResult] | null;
+
+
+export const ConsumerMyPickResult = {
+  win: 'win',
+  loss: 'loss',
+  push: 'push',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerMyPickFinalScore = {
+  home: number;
+  away: number;
+} | null;
+
 export interface ConsumerTeam {
   name: string;
   abbreviation: string;
   /** @nullable */
   logoUrl: string | null;
+}
+
+export interface ConsumerMyPick {
+  gameId: string;
+  season: number;
+  week: number;
+  /** @nullable */
+  kickoffTime: string | null;
+  home: ConsumerTeam;
+  away: ConsumerTeam;
+  market: ConsumerMyPickMarket;
+  side: ConsumerMyPickSide;
+  /**
+     * The picked side's spread or the total; null for moneyline.
+     * @nullable
+     */
+  line: number | null;
+  /**
+     * American odds when the pick was made, when saved.
+     * @nullable
+     */
+  price: number | null;
+  /** @nullable */
+  sportsbook: string | null;
+  /** @nullable */
+  result: ConsumerMyPickResult;
+  /**
+     * Profit for a 1-unit stake at the locked price.
+     * @nullable
+     */
+  units: number | null;
+  /** @nullable */
+  finalScore: ConsumerMyPickFinalScore;
+  /** True once the game has kicked off. */
+  locked: boolean;
+  updatedAt: string;
+}
+
+export interface ConsumerMyPickRecord {
+  wins: number;
+  losses: number;
+  pushes: number;
+  pending: number;
+  units: number;
+}
+
+export type ConsumerMyPicksRecordByMarket = {
+  moneyline: ConsumerMyPickRecord;
+  spread: ConsumerMyPickRecord;
+  total: ConsumerMyPickRecord;
+};
+
+export type ConsumerMyPicksRecordByWeekItem = ConsumerMyPickRecord & {
+  season: number;
+  week: number;
+};
+
+export type ConsumerMyPicksRecord = {
+  overall: ConsumerMyPickRecord;
+  byMarket: ConsumerMyPicksRecordByMarket;
+  byWeek: ConsumerMyPicksRecordByWeekItem[];
+};
+
+export interface ConsumerMyPicks {
+  picks: ConsumerMyPick[];
+  record: ConsumerMyPicksRecord;
 }
 
 export interface ConsumerMarketQuote {
@@ -3721,6 +3826,20 @@ season?: number;
  * @maximum 22
  */
 week?: number;
+};
+
+export type SaveMyPickBodySide = typeof SaveMyPickBodySide[keyof typeof SaveMyPickBodySide];
+
+
+export const SaveMyPickBodySide = {
+  home: 'home',
+  away: 'away',
+  over: 'over',
+  under: 'under',
+} as const;
+
+export type SaveMyPickBody = {
+  side: SaveMyPickBodySide;
 };
 
 export type GetConsumerTeamAnalyticsParams = {

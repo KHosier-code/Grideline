@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useAuth } from '@clerk/react';
 import { ArrowRight, Bookmark, LockKeyhole, RefreshCw, WifiOff } from 'lucide-react';
 import { Link } from 'wouter';
+import { MyPicksRecord, PickControls, useMyPicks } from '@/components/MyPicks';
 import { ConsumerGameCard } from './consumer-ui';
 import './ConsumerSavedGames.css';
 
@@ -16,11 +17,15 @@ export default function ConsumerSavedGames() {
     refetchOnWindowFocus: true,
   } });
 
+  const picks = useMyPicks();
+  const mine = picks.data?.picks ?? [];
   return <ConsumerSavedGamesView isLoaded={isLoaded} userId={userId ?? null} games={query.data ?? []}
-    isLoading={query.isLoading} isError={query.isError} onRetry={() => void query.refetch()} />;
+    isLoading={query.isLoading} isError={query.isError} onRetry={() => void query.refetch()}
+    record={picks.data ? <MyPicksRecord data={picks.data} /> : null}
+    renderPicks={picks.isError ? undefined : game => <PickControls game={game} picks={mine.filter(pick => pick.gameId === game.gameId)} />} />;
 }
 
-export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isError, onRetry, renderSaveControl }: {
+export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isError, onRetry, renderSaveControl, renderPicks, record }: {
   isLoaded: boolean;
   userId: string | null;
   games: ConsumerGame[];
@@ -28,6 +33,10 @@ export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isE
   isError: boolean;
   onRetry: () => void;
   renderSaveControl?: (gameId: string) => ReactNode;
+  /** Moneyline, spread and over/under pick buttons under each saved game. */
+  renderPicks?: (game: ConsumerGame) => ReactNode;
+  /** The signed-in user's pick record, above the list. */
+  record?: ReactNode;
 }) {
   const loading = !isLoaded || (Boolean(userId) && isLoading);
   const signedOut = isLoaded && !userId;
@@ -40,7 +49,7 @@ export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isE
         <div className="sv-hero-content">
           <p className="sv-kicker">Your personal watchlist</p>
           <h1>Saved <span>games.</span></h1>
-          <p className="sv-hero-copy">The matchups you want to keep close. Revisit the latest eligible projection alongside available market evidence, without confusing one for the other.</p>
+          <p className="sv-hero-copy">The matchups you want to keep close. Make your own moneyline, spread and over/under picks on each one, and track your record overall and week by week.</p>
           <div className="sv-hero-actions">
             <Link href="/games" className="sv-primary-link" data-testid="link-browse-saved-games">
               Browse games <ArrowRight size={16} aria-hidden="true" />
@@ -106,9 +115,12 @@ export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isE
             <div className="sv-state-visual" aria-hidden="true"><span>THE BOARD IS OPEN</span></div>
           </div>
         ) : (
-          <div className="sv-grid" data-testid="list-saved-games">
-            {games.map((game) => <div key={game.gameId} data-testid={`card-saved-game-${game.gameId}`}><ConsumerGameCard game={game} renderSaveControl={renderSaveControl} /></div>)}
-          </div>
+          <>
+            {record}
+            <div className="sv-grid" data-testid="list-saved-games">
+              {games.map((game) => <div key={game.gameId} data-testid={`card-saved-game-${game.gameId}`}><ConsumerGameCard game={game} renderSaveControl={renderSaveControl} />{renderPicks?.(game)}</div>)}
+            </div>
+          </>
         )}
       </section>
 

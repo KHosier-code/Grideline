@@ -26,6 +26,7 @@ import type {
   ConsumerDashboard,
   ConsumerDataUnavailableResponse,
   ConsumerDefenseVsPosition,
+  ConsumerError,
   ConsumerGame,
   ConsumerGameAlerts,
   ConsumerGameDetail,
@@ -33,6 +34,8 @@ import type {
   ConsumerGameProjections,
   ConsumerGames,
   ConsumerInvalidRequestResponse,
+  ConsumerMyPick,
+  ConsumerMyPicks,
   ConsumerPlayerPositionMatchup,
   ConsumerPlayerProjections,
   ConsumerPlayerTdForecasts,
@@ -86,6 +89,7 @@ import type {
   PregameFeatureRow,
   ReviewImageryCandidate201,
   ReviewImageryCandidateBody,
+  SaveMyPickBody,
   ScheduleStatusHealth,
   ScheduleSyncRequest,
   ScheduleSyncResult,
@@ -3476,6 +3480,250 @@ export const useRemoveSavedConsumerGame = <TError = ErrorType<ConsumerInvalidReq
         TContext
       > => {
       return useMutation(getRemoveSavedConsumerGameMutationOptions(options));
+    }
+
+export const getListMyPicksUrl = () => {
+
+
+
+
+  return `/api/consumer/my-picks`
+}
+
+/**
+ * @summary The signed-in user's own moneyline, spread and over/under picks with their record
+ */
+export const listMyPicks = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerMyPicks> => {
+
+  return customFetch<ConsumerMyPicks>(getListMyPicksUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyPicksQueryKey = () => {
+    return [
+    `/api/consumer/my-picks`
+    ] as const;
+    }
+
+
+export const getListMyPicksQueryOptions = <TData = Awaited<ReturnType<typeof listMyPicks>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyPicks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyPicksQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyPicks>>> = ({ signal }) => listMyPicks({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyPicks>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMyPicksQueryResult = NonNullable<Awaited<ReturnType<typeof listMyPicks>>>
+export type ListMyPicksQueryError = ErrorType<void | ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary The signed-in user's own moneyline, spread and over/under picks with their record
+ */
+
+export function useListMyPicks<TData = Awaited<ReturnType<typeof listMyPicks>>, TError = ErrorType<void | ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyPicks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMyPicksQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveMyPickUrl = (gameId: string,
+    market: 'moneyline' | 'spread' | 'total',) => {
+
+
+
+
+  return `/api/consumer/my-picks/${gameId}/${market}`
+}
+
+/**
+ * @summary Make or change a pick before kickoff, locked at the current sportsbook number
+ */
+export const saveMyPick = async (gameId: string,
+    market: 'moneyline' | 'spread' | 'total',
+    saveMyPickBody: SaveMyPickBody, options?: Parameters<typeof customFetch>[1]): Promise<ConsumerMyPick> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ConsumerMyPick>(getSaveMyPickUrl(gameId,market),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(saveMyPickBody)
+  }
+);}
+
+
+
+
+
+export const getSaveMyPickMutationKey = () => ['saveMyPick'] as const;
+
+export const getSaveMyPickMutationOptions = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMyPick>>, TError,SaveMyPickMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveMyPick>>, TError,SaveMyPickMutationVariables, TContext> => {
+
+const mutationKey = getSaveMyPickMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveMyPick>>, SaveMyPickMutationVariables> = (props) => {
+          const {gameId,market,data} = props ?? {};
+
+          return  saveMyPick(gameId,market,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveMyPickMutationResult = NonNullable<Awaited<ReturnType<typeof saveMyPick>>>
+    export type SaveMyPickMutationBody = BodyType<SaveMyPickBody>
+    export type SaveMyPickMutationError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerError>
+    export type SaveMyPickMutationVariables = {gameId: string;market: 'moneyline' | 'spread' | 'total';data: BodyType<SaveMyPickBody>}
+
+    /**
+ * @summary Make or change a pick before kickoff, locked at the current sportsbook number
+ */
+export const useSaveMyPick = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerGameNotFoundResponse | ConsumerError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMyPick>>, TError,SaveMyPickMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveMyPick>>,
+        TError,
+        SaveMyPickMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveMyPickMutationOptions(options));
+    }
+
+export const getRemoveMyPickUrl = (gameId: string,
+    market: 'moneyline' | 'spread' | 'total',) => {
+
+
+
+
+  return `/api/consumer/my-picks/${gameId}/${market}`
+}
+
+/**
+ * @summary Remove a pick before kickoff
+ */
+export const removeMyPick = async (gameId: string,
+    market: 'moneyline' | 'spread' | 'total', options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRemoveMyPickUrl(gameId,market),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveMyPickMutationKey = () => ['removeMyPick'] as const;
+
+export const getRemoveMyPickMutationOptions = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMyPick>>, TError,RemoveMyPickMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeMyPick>>, TError,RemoveMyPickMutationVariables, TContext> => {
+
+const mutationKey = getRemoveMyPickMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeMyPick>>, RemoveMyPickMutationVariables> = (props) => {
+          const {gameId,market} = props ?? {};
+
+          return  removeMyPick(gameId,market,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveMyPickMutationResult = NonNullable<Awaited<ReturnType<typeof removeMyPick>>>
+
+    export type RemoveMyPickMutationError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerError>
+    export type RemoveMyPickMutationVariables = {gameId: string;market: 'moneyline' | 'spread' | 'total'}
+
+    /**
+ * @summary Remove a pick before kickoff
+ */
+export const useRemoveMyPick = <TError = ErrorType<ConsumerInvalidRequestResponse | void | ConsumerError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMyPick>>, TError,RemoveMyPickMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeMyPick>>,
+        TError,
+        RemoveMyPickMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveMyPickMutationOptions(options));
     }
 
 export const getGetConsumerTeamAnalyticsUrl = (params: GetConsumerTeamAnalyticsParams,) => {

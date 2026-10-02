@@ -28,7 +28,7 @@ function Row({ pick, points, now }: { pick: LinePick; points: number; now: numbe
       {team && <TeamLogo team={team} size={22} />}<b>{linePickLabel(pick)}</b>
       <small>{book} · {ours}</small>
     </span>
-    <span className="gl-line-edge"><b>{pick.edge.toFixed(1)}</b><small>pts gap</small>{pick.edge >= BIG_GAP && <span className="gl-pill strong" title="Our number is 4+ points off the book's">4+ pts</span>}</span>
+    <span className="gl-line-edge"><b>{pick.edge.toFixed(1)}</b><small>pts gap</small>{pick.market === 'spread' && pick.edge >= BIG_GAP && <span className="gl-pill strong" title="Our number is 4+ points off the book's">4+ pts</span>}</span>
     <span className="gl-pool-meta">
       <span>{game.finalScore ? `Final ${game.finalScore.away}-${game.finalScore.home}` : started ? 'Live' : kickoff}</span>
       {pick.result && <span className={`gl-pill ${pick.result === 'win' ? 'win' : pick.result === 'loss' ? 'loss' : 'small'}`}>{RESULT_TEXT[pick.result]}</span>}
