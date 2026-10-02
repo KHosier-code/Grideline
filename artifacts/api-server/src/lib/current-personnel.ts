@@ -162,7 +162,18 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
       playerId: playersTable.playerId, teamId: playersTable.teamId, position: playersTable.position,
     }).from(playersTable).where(inArray(playersTable.playerId, mappedPlayerIds))
     : [];
-  const playerById = new Map(mappedPlayers.map((player) => [player.playerId, player]));
+  // The players table only holds ESPN IDs (from the injury feed), while snaps,
+  // QB stats, nflverse depth and Sleeper mappings use nflverse IDs. Those rows
+  // are their own identity evidence, so they count as known players too;
+  // a players-table row still wins when both exist.
+  const playerById = new Map<string, { playerId: string; teamId: string | null; position: string | null }>();
+  for (const row of [...historicalDepth, ...snaps]) {
+    if (!playerById.has(row.playerId)) playerById.set(row.playerId, { playerId: row.playerId, teamId: row.teamId, position: row.position ?? null });
+  }
+  for (const row of qbs) {
+    if (!playerById.has(row.playerId)) playerById.set(row.playerId, { playerId: row.playerId, teamId: row.teamId, position: "QB" });
+  }
+  for (const player of mappedPlayers) playerById.set(player.playerId, player);
   const reconstructedSleeperRows = reconstructLatestSleeperState(
     sleeperRows,
     mappingRun?.sourceCapturedAt ?? cutoff,
@@ -172,7 +183,8 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
     .flatMap((row) => {
       const mapping = mappingBySleeperId.get(row.sleeperPlayerId);
       if (!mapping?.mappedGridlinePlayerId || mapping.mappingStatus === "ambiguous" || mapping.mappingStatus === "unmatched") return [];
-      const player = playerById.get(mapping.mappedGridlinePlayerId);
+      const player = playerById.get(mapping.mappedGridlinePlayerId)
+        ?? { playerId: mapping.mappedGridlinePlayerId, teamId: mapping.normalizedTeam, position: row.position };
       const teamId = canonicalTeamId(mapping.normalizedTeam);
       const sourceTeam = canonicalNflCode(row.team);
       const mappedTeam = canonicalNflCode(mapping.normalizedTeam);
@@ -187,7 +199,7 @@ async function currentEvidence(cutoff: Date, teamIdentities?: string[]) {
         playerName: row.fullName,
         teamId,
         sourceTeamId: row.team,
-        position: row.depthChartPosition ?? row.position,
+        position: row.position ?? row.depthChartPosition,
         role: row.depthChartPosition,
         depthOrder: row.depthChartOrder,
         source: "sleeper" as const,
