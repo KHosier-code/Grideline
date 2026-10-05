@@ -1,0 +1,4801 @@
+{
+ "season": 2026,
+ "week": 4,
+ "generatedAt": "2026-10-05T23:13:54.910030Z",
+ "modelVersion": "gridline-td-gbm-v4-seed-avg",
+ "evaluation": {
+  "topTenHitRate": 0.591,
+  "auc": 0.7331,
+  "testedOn": "7,255 player-games from 2025\u20132026 the model never trained on"
+ },
+ "picks": [
+  {
+   "playerId": "00-0037239",
+   "name": "Chris Olave",
+   "position": "WR",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.3732,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 10.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.297,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.31,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 1.21,
+    "recentTdRate": 0.396
+   }
+  },
+  {
+   "playerId": "00-0038542",
+   "name": "Bijan Robinson",
+   "position": "RB",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.3184,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 6.38,
+    "carriesPerGame": 19.75,
+    "targetShare": 0.227,
+    "carryShare": 0.629,
+    "redZoneTouchesPerGame": 3.12,
+    "redZoneShare": 0.525,
+    "goalLineShare": 0.5,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.497
+   }
+  },
+  {
+   "playerId": "00-0037238",
+   "name": "Drake London",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.1476,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 6.75,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.257,
+    "carryShare": 0.008,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.188,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.01,
+    "recentTdRate": 0.309
+   }
+  },
+  {
+   "playerId": "00-0036040",
+   "name": "Juwan Johnson",
+   "position": "TE",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.1277,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 5.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.159,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.233,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 1.51,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0039424",
+   "name": "Devaughn Vele",
+   "position": "WR",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.1159,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 6.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.183,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.185,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 1.21,
+    "recentTdRate": 0.265
+   }
+  },
+  {
+   "playerId": "00-0036970",
+   "name": "Kyle Pitts",
+   "position": "TE",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0963,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 6.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.218,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.194,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.04,
+    "recentTdRate": 0.171
+   }
+  },
+  {
+   "playerId": "00-0035644",
+   "name": "Noah Fant",
+   "position": "TE",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0888,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.062,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.111,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 1.51,
+    "recentTdRate": 0.302
+   }
+  },
+  {
+   "playerId": "00-0037231",
+   "name": "Kevin Austin Jr.",
+   "position": "WR",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0876,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.095,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.076,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 1.21,
+    "recentTdRate": 0.105
+   }
+  },
+  {
+   "playerId": "00-0037741",
+   "name": "Jahan Dotson",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0791,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.124,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.098,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.01,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0033906",
+   "name": "Alvin Kamara",
+   "position": "RB",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0783,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.12,
+    "carriesPerGame": 9.5,
+    "targetShare": 0.092,
+    "carryShare": 0.402,
+    "redZoneTouchesPerGame": 1.25,
+    "redZoneShare": 0.265,
+    "goalLineShare": 0.1,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 0.55,
+    "recentTdRate": 0.149
+   }
+  },
+  {
+   "playerId": "00-0032392",
+   "name": "Austin Hooper",
+   "position": "TE",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0686,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.082,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.146,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.04,
+    "recentTdRate": 0.171
+   }
+  },
+  {
+   "playerId": "00-0038551",
+   "name": "Kendre Miller",
+   "position": "RB",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0684,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.0,
+    "carriesPerGame": 6.88,
+    "targetShare": 0.029,
+    "carryShare": 0.257,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.226,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 0.55,
+    "recentTdRate": 0.236
+   }
+  },
+  {
+   "playerId": "00-0035208",
+   "name": "Olamide Zaccheaus",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0669,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.096,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.136,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.01,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0040743",
+   "name": "Tyler Shough",
+   "position": "QB",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0657,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 4.75,
+    "targetShare": 0.0,
+    "carryShare": 0.18,
+    "redZoneTouchesPerGame": 1.38,
+    "redZoneShare": 0.324,
+    "goalLineShare": 0.333,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.192
+   }
+  },
+  {
+   "playerId": "00-0041067",
+   "name": "Bryce Lance",
+   "position": "WR",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.063,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.67,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.065,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 1.21,
+    "recentTdRate": 0.122
+   }
+  },
+  {
+   "playerId": "00-0041044",
+   "name": "Zachariah Branch",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0582,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.33,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.055,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.01,
+    "recentTdRate": 0.122
+   }
+  },
+  {
+   "playerId": "00-0037746",
+   "name": "Brian Robinson",
+   "position": "RB",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0533,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 7.25,
+    "targetShare": 0.019,
+    "carryShare": 0.23,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.09,
+    "goalLineShare": 0.039,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.193
+   }
+  },
+  {
+   "playerId": "00-0041041",
+   "name": "Oscar Delp",
+   "position": "TE",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0483,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.031,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 1.51,
+    "recentTdRate": 0.134
+   }
+  },
+  {
+   "playerId": "00-0036463",
+   "name": "Chris Blair",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0466,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.83,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.032,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.01,
+    "recentTdRate": 0.092
+   }
+  },
+  {
+   "playerId": "00-0041194",
+   "name": "Jack Strand",
+   "position": "QB",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0438,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.0,
+    "targetShare": 0.0,
+    "carryShare": 0.062,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": null,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.119
+   }
+  },
+  {
+   "playerId": "00-0036429",
+   "name": "Charlie Woerner",
+   "position": "TE",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0433,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.04,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.044,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.04,
+    "recentTdRate": 0.041
+   }
+  },
+  {
+   "playerId": "00-0041326",
+   "name": "CJ Donaldson",
+   "position": "RB",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0364,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.67,
+    "carriesPerGame": 1.33,
+    "targetShare": 0.016,
+    "carryShare": 0.05,
+    "redZoneTouchesPerGame": 0.33,
+    "redZoneShare": 0.071,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 0.55,
+    "recentTdRate": 0.159
+   }
+  },
+  {
+   "playerId": "00-0039917",
+   "name": "Michael Penix Jr.",
+   "position": "QB",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0353,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.0,
+    "targetShare": 0.0,
+    "carryShare": 0.071,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.022,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0033662",
+   "name": "Cooper Rush",
+   "position": "QB",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0317,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 1.25,
+    "targetShare": 0.0,
+    "carryShare": 0.048,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.036
+   }
+  },
+  {
+   "playerId": "00-0041099",
+   "name": "Barion Brown",
+   "position": "WR",
+   "team": "NO",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0308,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 0.5,
+    "targetShare": 0.0,
+    "carryShare": 0.019,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.5,
+    "opponentTdsAllowedRatio": 1.21,
+    "recentTdRate": 0.138
+   }
+  },
+  {
+   "playerId": "00-0037317",
+   "name": "Nick Muse",
+   "position": "TE",
+   "team": "ATL",
+   "opponent": "NO",
+   "isHome": false,
+   "kickoff": "2026-10-06T00:15:00Z",
+   "probability": 0.0286,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.33,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.012,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.04,
+    "recentTdRate": 0.104
+   }
+  }
+ ],
+ "results": [
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0023459",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0023459",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0026498",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0026498",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0027973",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0028986",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0029604",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0029604",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0030061",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0030061",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0030279",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0030506",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0030506",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0030565",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0030565",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0031235",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0031236",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0031381",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0031381",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0031408",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0031408",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0031484",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0031503",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0031503",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0031588",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0031588",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0031610",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0031610",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0032104",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0032104",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0032268",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0032268",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0032385",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0032385",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0032392",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0032398",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0032464",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0032464",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0032764",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0032764",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0032951",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0032951",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033077",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033077",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033090",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033090",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033106",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033106",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033110",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033110",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033119",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033119",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033217",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033246",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033246",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033280",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033280",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033288",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033288",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033293",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033293",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033307",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033376",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033526",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033526",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033537",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033537",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033555",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033555",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033576",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033576",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033589",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033589",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033699",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033757",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033858",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033858",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033873",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033873",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033881",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033881",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033906",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033908",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033908",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0033921",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0033921",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034272",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034272",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034348",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034348",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034365",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034383",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034383",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034419",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034419",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034613",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034613",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034753",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034753",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034796",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034796",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034798",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034827",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034827",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034829",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034829",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034837",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034837",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034844",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034844",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034854",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034855",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034857",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034857",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034869",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034869",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034960",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034960",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034975",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034975",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0034981",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0034981",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035021",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035208",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035228",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035228",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035229",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035229",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035249",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035261",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035261",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035500",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035500",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035537",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035537",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035544",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035544",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035567",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035594",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035594",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035602",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035631",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035640",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035640",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035644",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035659",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035685",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035685",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035689",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035689",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035710",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035710",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035719",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035719",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0035891",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035891",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0035993",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036040",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036158",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036158",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036182",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036223",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036223",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036244",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036252",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036252",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036259",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036259",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036264",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036264",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036265",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036265",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036275",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036275",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036290",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036290",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036309",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036309",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036322",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036331",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036331",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036355",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036355",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036358",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036358",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036389",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036389",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036407",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036410",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036410",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036422",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036425",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036425",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036442",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036442",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036463",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036550",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036550",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036554",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036555",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036555",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036556",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036590",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036613",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036613",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036626",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036626",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036628",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036630",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036637",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036637",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036646",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036646",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036754",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036754",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036825",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036825",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036842",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036849",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036862",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036862",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036875",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036875",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036887",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036887",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036893",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036893",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036894",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036894",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036900",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036900",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036912",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036919",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036919",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036963",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036963",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036970",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036971",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036971",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036973",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036988",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0036997",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0036997",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037004",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037004",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037005",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037005",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037085",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037085",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037091",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037091",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037093",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037093",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037120",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037120",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037132",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037132",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037228",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037228",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037238",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037239",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037240",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037240",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037247",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037247",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037248",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037248",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037252",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037256",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037261",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037261",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037263",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037263",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037291",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037292",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037311",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037317",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037524",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037545",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037545",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037594",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037594",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037614",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037614",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037666",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037740",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037740",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037741",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037742",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037742",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037744",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037744",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037746",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037755",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037755",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037801",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037801",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037805",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037809",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037816",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037816",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037834",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037834",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037838",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037838",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0037840",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0037840",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038041",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038041",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038090",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038090",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038104",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038104",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038115",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038115",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038117",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038117",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038120",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038124",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038124",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038128",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038128",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038129",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038129",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038134",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038134",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038359",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038393",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038393",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038409",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038409",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038416",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038454",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038454",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038476",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038488",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038488",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038489",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038498",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038498",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038519",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038519",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038542",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038543",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038543",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038544",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038544",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038547",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038551",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038555",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038555",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038558",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038558",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038559",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038559",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038563",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038563",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038564",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038564",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038573",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038573",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038576",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038597",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038597",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038606",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038606",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038608",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038608",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038611",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038611",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038618",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038618",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038621",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038621",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038640",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038640",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038643",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038643",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038685",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038685",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038710",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038728",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038738",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038740",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038783",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038794",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038797",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038797",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038824",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038824",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038839",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038840",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038840",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038896",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038896",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038933",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038933",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038935",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038935",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038951",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038976",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038994",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038994",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038996",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038996",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0038997",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0038997",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039021",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039032",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039032",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039040",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039041",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039041",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039050",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039062",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039064",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039064",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039065",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039065",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039066",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039066",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039067",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039074",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039074",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039075",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039139",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039139",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039150",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039150",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039163",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039163",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039299",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039299",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039337",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039337",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039338",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039338",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039355",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039359",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039361",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039361",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039364",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039364",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039365",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039365",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039384",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039384",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039391",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039391",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039407",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039407",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039410",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039410",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039424",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039451",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039451",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039489",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039491",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039530",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039530",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039589",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039589",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039686",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039686",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039710",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039732",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039732",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039738",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039738",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039739",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039739",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039746",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039746",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039751",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039792",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039792",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039793",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039793",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039794",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039794",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039796",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039798",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039798",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039811",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039811",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039816",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039816",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039847",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039849",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039849",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039851",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039851",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039855",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039868",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039874",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039875",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039880",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039880",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039893",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039893",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039894",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039894",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039901",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039901",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039912",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039915",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039915",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039917",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039919",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039919",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0039920",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0039920",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040024",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040024",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040075",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040075",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040078",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040081",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040081",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040122",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040122",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040124",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040124",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040126",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040126",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040128",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040128",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040129",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040129",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040131",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040131",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040134",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040134",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040138",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040138",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040142",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040142",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040154",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040154",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040164",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040164",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040170",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040170",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040172",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040187",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040187",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040189",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040189",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040194",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040198",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040198",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040208",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040215",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040236",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040236",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040237",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040237",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040238",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040238",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040242",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040242",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040265",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040331",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040363",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040390",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040394",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040394",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040405",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040466",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040466",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040506",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040506",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040534",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040556",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040556",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040563",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040563",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040583",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040583",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040584",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040584",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040590",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040590",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040598",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040646",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040646",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040648",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040648",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040663",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040663",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040666",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040666",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040667",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040667",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040668",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040669",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040669",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040676",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040676",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040705",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040705",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040715",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040715",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040719",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040719",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040727",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040727",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040730",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040730",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040734",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040734",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040735",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040735",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040737",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040743",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040782",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040784",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040784",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040785",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040785",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040867",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040867",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040876",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040878",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040878",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040879",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040879",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040886",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040887",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040887",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040890",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040894",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040894",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0040948",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0040948",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041013",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041013",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041027",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041027",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041032",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041032",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041037",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041037",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041040",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041040",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041042",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041042",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041044",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041048",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041048",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041051",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041051",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041052",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041052",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041067",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041069",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041081",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041094",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041094",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041096",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041100",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041100",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041104",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041104",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041117",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041125",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041125",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041131",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041132",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041251",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041251",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041267",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041292",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041326",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041395",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041397",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041397",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041415",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041415",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041436",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041438",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041438",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041467",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041489",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041489",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041503",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041503",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041512",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041524",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041524",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041525",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041525",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041529",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041529",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041547",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041547",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 3,
+   "playerId": "00-0041558",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 4,
+   "playerId": "00-0041558",
+   "scored": false
+  }
+ ]
+}

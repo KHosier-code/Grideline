@@ -1,0 +1,651 @@
+{
+ "season": 2026,
+ "week": 5,
+ "generatedAt": "2026-10-05T23:14:39.962383Z",
+ "modelVersion": "gridline-qb-rating-v1",
+ "evaluation": {
+  "marginMissRating": 10.09,
+  "marginMissLine": 9.76,
+  "winnersModel": 0.648,
+  "winnersFavorite": 0.665,
+  "atsRating": 0.494,
+  "totalMissRating": 10.62,
+  "totalMissLine": 10.31,
+  "testedOn": "2021-2025 seasons, each predicted by a model trained only on earlier seasons",
+  "seasons": [
+   {
+    "season": 2021,
+    "games": 285,
+    "mae_rating": 11.01,
+    "mae_market_aware": 10.77,
+    "mae_line": 10.67,
+    "winners_model": 0.623,
+    "winners_favorite": 0.623,
+    "total_miss_rating": 11.02,
+    "total_miss_line": 10.81,
+    "total_spread_rating": 4.55,
+    "ats_wins": 141,
+    "ats_losses": 140,
+    "ats_pushes": 4
+   },
+   {
+    "season": 2022,
+    "games": 284,
+    "mae_rating": 9.14,
+    "mae_market_aware": 8.84,
+    "mae_line": 8.78,
+    "winners_model": 0.656,
+    "winners_favorite": 0.663,
+    "total_miss_rating": 11.09,
+    "total_miss_line": 10.4,
+    "total_spread_rating": 3.98,
+    "ats_wins": 141,
+    "ats_losses": 133,
+    "ats_pushes": 10
+   },
+   {
+    "season": 2023,
+    "games": 285,
+    "mae_rating": 10.38,
+    "mae_market_aware": 10.04,
+    "mae_line": 9.98,
+    "winners_model": 0.621,
+    "winners_favorite": 0.674,
+    "total_miss_rating": 10.45,
+    "total_miss_line": 10.17,
+    "total_spread_rating": 4.42,
+    "ats_wins": 129,
+    "ats_losses": 142,
+    "ats_pushes": 14
+   },
+   {
+    "season": 2024,
+    "games": 285,
+    "mae_rating": 9.92,
+    "mae_market_aware": 9.68,
+    "mae_line": 9.7,
+    "winners_model": 0.691,
+    "winners_favorite": 0.705,
+    "total_miss_rating": 9.76,
+    "total_miss_line": 9.77,
+    "total_spread_rating": 4.39,
+    "ats_wins": 144,
+    "ats_losses": 137,
+    "ats_pushes": 4
+   },
+   {
+    "season": 2025,
+    "games": 285,
+    "mae_rating": 10.0,
+    "mae_market_aware": 9.69,
+    "mae_line": 9.67,
+    "winners_model": 0.648,
+    "winners_favorite": 0.658,
+    "total_miss_rating": 10.79,
+    "total_miss_line": 10.42,
+    "total_spread_rating": 3.85,
+    "ats_wins": 135,
+    "ats_losses": 149,
+    "ats_pushes": 1
+   },
+   {
+    "season": 2026,
+    "games": 63,
+    "mae_rating": 10.02,
+    "mae_market_aware": 9.56,
+    "mae_line": 9.43,
+    "winners_model": 0.556,
+    "winners_favorite": 0.651,
+    "total_miss_rating": 11.12,
+    "total_miss_line": 10.56,
+    "total_spread_rating": 3.1,
+    "ats_wins": 26,
+    "ats_losses": 32,
+    "ats_pushes": 5
+   }
+  ]
+ },
+ "games": [
+  {
+   "gameId": "401872980",
+   "nflverseGameId": "2026_05_TB_DAL",
+   "homeTeam": "DAL",
+   "awayTeam": "TB",
+   "kickoff": "2026-10-09T00:15:00Z",
+   "projectedMargin": 7.2,
+   "projectedTotal": 48.89,
+   "homeWinProbability": 0.7151,
+   "marketMargin": 9.5,
+   "marketTotal": 47.5,
+   "homeQb": {
+    "name": "Dak Prescott",
+    "value": 0.113,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Jalon Daniels",
+    "value": -0.08,
+    "listed": true,
+    "newStarter": true,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": 0.192,
+    "teamEdge": -0.003,
+    "passEdge": -0.022,
+    "rushEdge": -0.133,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872981",
+   "nflverseGameId": "2026_05_PHI_JAX",
+   "homeTeam": "JAX",
+   "awayTeam": "PHI",
+   "kickoff": "2026-10-11T13:30:00Z",
+   "projectedMargin": 10.29,
+   "projectedTotal": 47.62,
+   "homeWinProbability": 0.7943,
+   "marketMargin": 6.5,
+   "marketTotal": 42.5,
+   "homeQb": {
+    "name": "Trevor Lawrence",
+    "value": 0.084,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Jalen Hurts",
+    "value": -0.026,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": 0.11,
+    "teamEdge": 0.283,
+    "passEdge": 0.383,
+    "rushEdge": 0.148,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872990",
+   "nflverseGameId": "2026_05_CHI_GB",
+   "homeTeam": "GB",
+   "awayTeam": "CHI",
+   "kickoff": "2026-10-11T17:00:00Z",
+   "projectedMargin": -0.1,
+   "projectedTotal": 46.94,
+   "homeWinProbability": 0.4757,
+   "marketMargin": -3.0,
+   "marketTotal": 44.5,
+   "homeQb": {
+    "name": "Jordan Love",
+    "value": 0.044,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Tyson Bagent",
+    "value": -0.035,
+    "listed": true,
+    "newStarter": true,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": 0.079,
+    "teamEdge": -0.176,
+    "passEdge": -0.235,
+    "rushEdge": -0.175,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872982",
+   "nflverseGameId": "2026_05_CIN_MIA",
+   "homeTeam": "MIA",
+   "awayTeam": "CIN",
+   "kickoff": "2026-10-11T17:00:00Z",
+   "projectedMargin": -5.69,
+   "projectedTotal": 47.22,
+   "homeWinProbability": 0.2942,
+   "marketMargin": -7.0,
+   "marketTotal": 42.5,
+   "homeQb": {
+    "name": "Malik Willis",
+    "value": -0.042,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Joe Burrow",
+    "value": 0.06,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.102,
+    "teamEdge": -0.21,
+    "passEdge": -0.363,
+    "rushEdge": -0.022,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872983",
+   "nflverseGameId": "2026_05_CLE_NYJ",
+   "homeTeam": "NYJ",
+   "awayTeam": "CLE",
+   "kickoff": "2026-10-11T17:00:00Z",
+   "projectedMargin": 0.87,
+   "projectedTotal": 44.81,
+   "homeWinProbability": 0.5096,
+   "marketMargin": 2.5,
+   "marketTotal": 39.5,
+   "homeQb": {
+    "name": "Geno Smith",
+    "value": -0.023,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Deshaun Watson",
+    "value": 0.0,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.023,
+    "teamEdge": -0.079,
+    "passEdge": -0.26,
+    "rushEdge": 0.155,
+    "restDiff": -3.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872984",
+   "nflverseGameId": "2026_05_HOU_TEN",
+   "homeTeam": "TEN",
+   "awayTeam": "HOU",
+   "kickoff": "2026-10-11T17:00:00Z",
+   "projectedMargin": -3.58,
+   "projectedTotal": 43.12,
+   "homeWinProbability": 0.3585,
+   "marketMargin": -7.0,
+   "marketTotal": 39.5,
+   "homeQb": {
+    "name": "Cam Ward",
+    "value": -0.09,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "C.J. Stroud",
+    "value": 0.01,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.101,
+    "teamEdge": -0.23,
+    "passEdge": -0.399,
+    "rushEdge": 0.066,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872985",
+   "nflverseGameId": "2026_05_IND_PIT",
+   "homeTeam": "PIT",
+   "awayTeam": "IND",
+   "kickoff": "2026-10-11T17:00:00Z",
+   "projectedMargin": 0.47,
+   "projectedTotal": 42.39,
+   "homeWinProbability": 0.4955,
+   "marketMargin": 2.5,
+   "marketTotal": 44.5,
+   "homeQb": {
+    "name": "Aaron Rodgers",
+    "value": -0.069,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Daniel Jones",
+    "value": -0.074,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": 0.006,
+    "teamEdge": -0.021,
+    "passEdge": 0.076,
+    "rushEdge": -0.103,
+    "restDiff": 3.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872986",
+   "nflverseGameId": "2026_05_LV_NE",
+   "homeTeam": "NE",
+   "awayTeam": "LV",
+   "kickoff": "2026-10-11T17:00:00Z",
+   "projectedMargin": 4.0,
+   "projectedTotal": 46.01,
+   "homeWinProbability": 0.6165,
+   "marketMargin": 3.5,
+   "marketTotal": 45.5,
+   "homeQb": {
+    "name": "Drake Maye",
+    "value": 0.018,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Kirk Cousins",
+    "value": 0.037,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.019,
+    "teamEdge": 0.088,
+    "passEdge": 0.132,
+    "rushEdge": 0.056,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872987",
+   "nflverseGameId": "2026_05_MIN_NO",
+   "homeTeam": "NO",
+   "awayTeam": "MIN",
+   "kickoff": "2026-10-11T17:00:00Z",
+   "projectedMargin": 2.24,
+   "projectedTotal": 44.87,
+   "homeWinProbability": 0.5572,
+   "marketMargin": -1.5,
+   "marketTotal": 41.5,
+   "homeQb": {
+    "name": "Tyler Shough",
+    "value": 0.006,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Kyler Murray",
+    "value": -0.032,
+    "listed": true,
+    "newStarter": true,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": 0.038,
+    "teamEdge": -0.075,
+    "passEdge": -0.126,
+    "rushEdge": -0.081,
+    "restDiff": -1.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872988",
+   "nflverseGameId": "2026_05_NYG_WAS",
+   "homeTeam": "WAS",
+   "awayTeam": "NYG",
+   "kickoff": "2026-10-11T17:00:00Z",
+   "projectedMargin": -0.96,
+   "projectedTotal": 41.47,
+   "homeWinProbability": 0.4461,
+   "marketMargin": 3.0,
+   "marketTotal": 43.5,
+   "homeQb": {
+    "name": "Athan Kaliakmanis",
+    "value": -0.122,
+    "listed": true,
+    "newStarter": true,
+    "outName": "Jayden Daniels",
+    "outReason": "Out"
+   },
+   "awayQb": {
+    "name": "Jameis Winston",
+    "value": -0.075,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.047,
+    "teamEdge": -0.065,
+    "passEdge": -0.104,
+    "rushEdge": 0.073,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872989",
+   "nflverseGameId": "2026_05_DEN_LAC",
+   "homeTeam": "LAC",
+   "awayTeam": "DEN",
+   "kickoff": "2026-10-11T20:05:00Z",
+   "projectedMargin": -0.04,
+   "projectedTotal": 44.79,
+   "homeWinProbability": 0.478,
+   "marketMargin": -3.5,
+   "marketTotal": 42.5,
+   "homeQb": {
+    "name": "Justin Herbert",
+    "value": -0.074,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Bo Nix",
+    "value": 0.003,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.077,
+    "teamEdge": -0.049,
+    "passEdge": -0.106,
+    "rushEdge": 0.066,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872991",
+   "nflverseGameId": "2026_05_DET_ARI",
+   "homeTeam": "ARI",
+   "awayTeam": "DET",
+   "kickoff": "2026-10-11T20:25:00Z",
+   "projectedMargin": -2.51,
+   "projectedTotal": 49.76,
+   "homeWinProbability": 0.3936,
+   "marketMargin": -4.5,
+   "marketTotal": 54.5,
+   "homeQb": {
+    "name": "Jacoby Brissett",
+    "value": -0.052,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Jared Goff",
+    "value": 0.117,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.168,
+    "teamEdge": -0.145,
+    "passEdge": -0.382,
+    "rushEdge": 0.126,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872992",
+   "nflverseGameId": "2026_05_SF_SEA",
+   "homeTeam": "SEA",
+   "awayTeam": "SF",
+   "kickoff": "2026-10-11T20:25:00Z",
+   "projectedMargin": -0.79,
+   "projectedTotal": 51.09,
+   "homeWinProbability": 0.4519,
+   "marketMargin": 2.5,
+   "marketTotal": 47.5,
+   "homeQb": {
+    "name": "Drew Lock",
+    "value": 0.02,
+    "listed": true,
+    "newStarter": true,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Brock Purdy",
+    "value": 0.171,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.152,
+    "teamEdge": 0.05,
+    "passEdge": -0.017,
+    "rushEdge": 0.119,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872993",
+   "nflverseGameId": "2026_05_BAL_ATL",
+   "homeTeam": "ATL",
+   "awayTeam": "BAL",
+   "kickoff": "2026-10-12T00:20:00Z",
+   "projectedMargin": -4.52,
+   "projectedTotal": 48.89,
+   "homeWinProbability": 0.3291,
+   "marketMargin": -2.5,
+   "marketTotal": 44.5,
+   "homeQb": {
+    "name": "Michael Penix Jr.",
+    "value": 0.011,
+    "listed": true,
+    "newStarter": true,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Lamar Jackson",
+    "value": 0.109,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.098,
+    "teamEdge": -0.2,
+    "passEdge": -0.374,
+    "rushEdge": -0.034,
+    "restDiff": -1.0,
+    "neutralSite": false
+   }
+  },
+  {
+   "gameId": "401872994",
+   "nflverseGameId": "2026_05_BUF_LA",
+   "homeTeam": "LA",
+   "awayTeam": "BUF",
+   "kickoff": "2026-10-13T00:15:00Z",
+   "projectedMargin": 2.89,
+   "projectedTotal": 53.48,
+   "homeWinProbability": 0.5792,
+   "marketMargin": 2.5,
+   "marketTotal": 54.5,
+   "homeQb": {
+    "name": "Matthew Stafford",
+    "value": 0.062,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "awayQb": {
+    "name": "Josh Allen",
+    "value": 0.109,
+    "listed": true,
+    "newStarter": false,
+    "outName": null,
+    "outReason": null
+   },
+   "factors": {
+    "qbEdge": -0.047,
+    "teamEdge": 0.059,
+    "passEdge": 0.05,
+    "rushEdge": 0.035,
+    "restDiff": 0.0,
+    "neutralSite": false
+   }
+  }
+ ],
+ "teams": []
+}
