@@ -32,7 +32,9 @@ df = pd.read_parquet(GAMES)
 df["hfa"] = 1 - df.neutral
 history = df[df.played & (df.season >= 2020)].dropna(subset=RATING + TOTAL)
 rating = make_pipeline(StandardScaler(), Ridge(alpha=10)).fit(history[RATING], history.margin)
-winner = LogisticRegression(max_iter=2000).fit(rating.predict(history[RATING]).reshape(-1, 1), (history.margin > 0).astype(int))
+# No intercept: a projected margin of 0 is exactly 50%, so the win chance always
+# favors the same team as the projected margin (and the graded pick).
+winner = LogisticRegression(fit_intercept=False, max_iter=2000).fit(rating.predict(history[RATING]).reshape(-1, 1), (history.margin > 0).astype(int))
 totals = make_pipeline(StandardScaler(), Ridge(alpha=10)).fit(history[TOTAL], history.total)
 
 current = df.season.max()

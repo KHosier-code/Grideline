@@ -38,6 +38,17 @@ export type GameView = {
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
 /**
+ * The win chance shown next to a projected margin. Runs published before the
+ * win model was made symmetric could give the projected winner of a near-even
+ * game under 50% (WAS by 0.1 at 48%); those show as a 50/50 pick'em instead of
+ * contradicting the pick.
+ */
+export function consistentHomeWin(margin: number, homeWin: number) {
+  if (margin === 0 || (margin > 0) !== (homeWin > 0.5)) return 0.5;
+  return homeWin;
+}
+
+/**
  * The view for one game. The projection comes only from the QB-adjusted model
  * (game_projection_runs); a game without a row stays "projection pending".
  */
@@ -45,7 +56,8 @@ export function buildGameView(game: ConsumerGame, qbModel?: ConsumerGameProjecti
   const projection: GameView['projection'] = qbModel ? {
     home: (qbModel.projectedTotal + qbModel.projectedMargin) / 2,
     away: (qbModel.projectedTotal - qbModel.projectedMargin) / 2,
-    margin: qbModel.projectedMargin, total: qbModel.projectedTotal, homeWin: qbModel.homeWinProbability,
+    margin: qbModel.projectedMargin, total: qbModel.projectedTotal,
+    homeWin: consistentHomeWin(qbModel.projectedMargin, qbModel.homeWinProbability),
     homeQb: qbModel.homeQb, awayQb: qbModel.awayQb,
   } : null;
   const winner = projection && projection.margin !== 0

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { getGetConsumerReceiptsQueryKey, useGetConsumerReceipts, type ConsumerReceipts } from '@workspace/api-client-react';
-import { lineText, vegasLineText } from '@/lib/pick-sheet';
+import { consistentHomeWin, lineText, vegasLineText } from '@/lib/pick-sheet';
 import { ConsumerLoading } from './consumer-ui';
 
 /** Each weekly-picks run commits what it sent to this branch (see .github/workflows/weekly-picks.yml). */
@@ -38,7 +38,7 @@ function WeekReceipts({ season, week }: { season: number; week: Week }) {
         <tbody>{week.games.map(game => <tr key={game.gameId}>
           <td>{game.awayTeam} at {game.homeTeam}</td>
           <td className="gl-receipt-meta">{stamp(game.lockedAt)}</td>
-          <td><b>{lineText(game.projectedMargin, game.homeTeam, game.awayTeam)}</b> <small className="gl-muted">{pct(game.projectedMargin > 0 ? game.homeWinProbability : 1 - game.homeWinProbability)}</small></td>
+          <td><b>{lineText(game.projectedMargin, game.homeTeam, game.awayTeam)}</b> <small className="gl-muted">{pct(game.projectedMargin > 0 ? consistentHomeWin(game.projectedMargin, game.homeWinProbability) : 1 - consistentHomeWin(game.projectedMargin, game.homeWinProbability))}</small></td>
           <td>{game.line ? <>{vegasLineText(game.line.homeLine, game.homeTeam, game.awayTeam)} <small className="gl-muted">{game.line.sportsbook}</small></> : '—'}</td>
           <td>{game.final ? `${game.awayTeam} ${game.final.away}, ${game.homeTeam} ${game.final.home}` : '—'}</td>
           <td><Result value={game.winner} /></td>

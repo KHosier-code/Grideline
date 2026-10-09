@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startKickoffClock } from "./lib/kickoff-clock";
 import { ensurePlayerRecoveryReceiptCleanupMarker } from "./lib/player-recovery-receipts";
 
 const rawPort = process.env["PORT"];
@@ -25,6 +26,7 @@ async function start() {
     }
 
     logger.info({ port }, "Server listening");
+    startKickoffClock();
   });
 }
 

@@ -32,7 +32,14 @@ for p in ["QB", "RB", "WR", "TE"]:
     td[f"pos_{p}"] = (td.position == p).astype(int)
 played = td[(td.upcoming == 0) & (td.prior_games >= 1) & td.implied.notna() & (td.season >= 2020)]
 season = int(played.season.max())
-weeks = sorted(int(w) for w in played[played.season == season].week.unique())
+# Live picks started in week 4 of 2026. Weeks from there on have real,
+# timestamped picks, so they are never replayed (a replay would only show
+# hindsight-friendly numbers next to the real ones). A new season is live
+# from week 1 and has nothing to replay.
+LIVE_FROM_WEEK = {2026: 4}
+live_from = LIVE_FROM_WEEK.get(season, 1)
+weeks = sorted(int(w) for w in played[played.season == season].week.unique() if int(w) < live_from)
+print(f"{season}: replaying weeks {weeks or 'none'} (live picks from week {live_from})")
 
 games = pd.read_parquet(GAMES)
 games["hfa"] = 1 - games.neutral
@@ -60,14 +67,14 @@ for week in weeks:
     # --- Game winners -------------------------------------------------------
     g_train = before(game_hist, week)
     rating = make_pipeline(StandardScaler(), Ridge(alpha=10)).fit(g_train[GAME_RATING], g_train.margin)
-    winner = LogisticRegression(max_iter=2000).fit(
+    winner = LogisticRegression(fit_intercept=False, max_iter=2000).fit(
         rating.predict(g_train[GAME_RATING]).reshape(-1, 1), (g_train.margin > 0).astype(int))
     g_week = game_hist[(game_hist.season == season) & (game_hist.week == week)].copy()
     g_week["margin_pred"] = rating.predict(g_week[GAME_RATING])
     g_week["home_win"] = winner.predict_proba(g_week.margin_pred.values.reshape(-1, 1))[:, 1]
     game_rows = []
     for r in g_week.sort_values("game_id").itertuples():
-        pick = r.home_team if r.home_win > 0.5 else r.away_team
+        pick = r.home_team if r.margin_pred > 0 else r.away_team
         favorite = None
         if pd.notna(r.spread_line) and r.spread_line != 0:
             favorite = r.home_team if r.spread_line > 0 else r.away_team
@@ -104,6 +111,9 @@ report = {
 if OUT:
     json.dump(report, open(OUT, "w"), indent=1)
 
+if not replay_weeks:
+    print("No pre-live weeks to replay: not sending.")
+    sys.exit(0)
 origin, token = os.environ.get("GRIDLINE_INGEST_URL"), os.environ.get("GRIDLINE_INGEST_TOKEN")
 if not origin or not token:
     print("GRIDLINE_INGEST_URL/TOKEN not set: not sending.")
