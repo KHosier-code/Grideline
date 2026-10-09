@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { dueClockTasks, kickoffClockEnabled, kickoffWindows } from "./kickoff-clock";
+import { dueClockTasks, kickoffClockEnabled, kickoffWindows, upcomingClockPlan } from "./kickoff-clock";
 
 // Sunday Oct 11 2026: 1:00, 4:05, 4:25 and 8:20 PM ET.
 const early = new Date("2026-10-11T17:00:00Z");
@@ -36,4 +36,10 @@ test("the clock is off in development unless asked for", () => {
   assert.equal(kickoffClockEnabled({ NODE_ENV: "development" }), false);
   assert.equal(kickoffClockEnabled({ NODE_ENV: "development", GRIDLINE_KICKOFF_CLOCK: "on" }), true);
   assert.equal(kickoffClockEnabled({ GRIDLINE_KICKOFF_CLOCK: "off" }), false);
+});
+
+test("the plan lists each task's start time, soonest first", () => {
+  const plan = upcomingClockPlan(new Date("2026-10-11T15:00:00Z"), kickoffs, 5);
+  assert.deepEqual(plan.map((item) => `${item.kind}@${item.at.slice(11, 16)}`),
+    ["injuries@15:40", "weather@15:40", "picks@15:45", "odds@16:20", "scores@17:00"]);
 });

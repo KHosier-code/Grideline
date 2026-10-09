@@ -48,6 +48,7 @@ test("sensitive admin reads are not exposed through consumer routes", () => {
     ["features.ts", '/features/personnel/current/team/:teamId/qb'],
     ["features.ts", '/features/personnel/current/team/:teamId/wr-cb'],
     ["features.ts", '/features/personnel/current/validation'],
+    ["ops.ts", '/admin/ops'],
   ];
   for (const [routeFile, path] of sensitiveReads) {
     const source = routeSource(routeFile);

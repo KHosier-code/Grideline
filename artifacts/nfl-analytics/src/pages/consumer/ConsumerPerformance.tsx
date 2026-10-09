@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import { CountUp } from '@/components/CountUp';
 import { CircleCheck, Crosshair, Target, Trophy } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
@@ -19,7 +20,7 @@ function SummaryCard({ title, icon, value, caption, rows }: {
 }) {
   return <div className="gl-card gl-summary-card">
     <div className="gl-summary-top"><span>{title}</span><span className="gl-summary-icon" aria-hidden="true">{icon}</span></div>
-    <b>{value}</b>
+    <b><CountUp text={value} /></b>
     <p>{caption}</p>
     <dl>{rows.map(([label, content]) => <div key={label}><dt>{label}</dt><dd>{content}</dd></div>)}</dl>
   </div>;
@@ -61,11 +62,11 @@ function ReplaySection({ replay }: { replay: Replay }) {
     <div className="gl-record-grid">
       <div className="gl-card gl-record-card">
         <span className="gl-label">Touchdown top 10, replayed</span>
-        <b>{hits}/{picks}</b><p>{pct(hits / Math.max(1, picks), 0)} scored. In back-testing the weekly top 10 averaged about 60%.</p>
+        <b><CountUp text={`${hits}/${picks}`} /></b><p>{pct(hits / Math.max(1, picks), 0)} scored. In back-testing the weekly top 10 averaged about 60%.</p>
       </div>
       <div className="gl-card gl-record-card">
         <span className="gl-label">Game winners, replayed</span>
-        <b>{wins}–{losses}</b><p>Taking every Vegas favorite went {favWins}–{favLosses} over the same games.</p>
+        <b><CountUp text={`${wins}–${losses}`} /></b><p>Taking every Vegas favorite went {favWins}–{favLosses} over the same games.</p>
       </div>
     </div>
     {replay.weeks.map(week => <details key={week.week} className="gl-card gl-replay-week">
@@ -261,7 +262,7 @@ export default function ConsumerPerformance() {
       <div className="gl-record-grid">
         <div className="gl-card gl-record-card">
           <span className="gl-label">Game winners</span>
-          {decided > 0 ? <><b>{seasonWinners!.wins}–{seasonWinners!.losses}</b><p>{pct(seasonWinners!.wins / decided)} of winners picked.{favoriteDecided > 0
+          {decided > 0 ? <><b><CountUp text={`${seasonWinners!.wins}–${seasonWinners!.losses}`} /></b><p>{pct(seasonWinners!.wins / decided)} of winners picked.{favoriteDecided > 0
             ? ` The Vegas favorite went ${seasonFavorite!.wins}–${seasonFavorite!.losses} (${pct(seasonFavorite!.wins / favoriteDecided)}) on the same games.` : ''}</p></>
             : <><b>—</b><p>The first graded games appear after this week&apos;s games.</p></>}
         </div>

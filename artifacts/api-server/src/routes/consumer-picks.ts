@@ -368,7 +368,7 @@ router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
 });
 
 const reportIngestSchema = zod.object({
-  kind: zod.enum(["usage", "replay", "share-td"]),
+  kind: zod.enum(["usage", "replay", "share-td", "share-clip"]),
   season: zod.number().int().min(2000).max(2200),
   week: zod.number().int().min(0).max(22),
   generatedAt: zod.string().datetime({ offset: true }),
@@ -690,6 +690,47 @@ router.get("/share/td-card.png", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Share card read failed");
     res.redirect(302, "/gridline-share.png");
+  }
+});
+
+/**
+ * This week's animated TD picks (research/td-model/share_clip.py), a 9-second
+ * vertical MP4 for Reels, TikTok and Shorts. Answers byte ranges, which iOS
+ * Safari needs before it will play a video.
+ */
+router.get("/share/td-clip.mp4", async (req, res): Promise<void> => {
+  try {
+    const [latest] = await db.select({ payload: weeklyReportsTable.payload, season: weeklyReportsTable.season, week: weeklyReportsTable.week })
+      .from(weeklyReportsTable).where(eq(weeklyReportsTable.kind, "share-clip"))
+      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    const video = typeof latest?.payload.mp4 === "string" ? Buffer.from(latest.payload.mp4, "base64") : null;
+    const week = req.query.week === undefined ? null : Number(req.query.week);
+    if (!latest || !video?.length || (week !== null && week !== latest.week)) {
+      res.status(404).json({ error: week === null ? "No clip has been made yet" : `No clip for week ${week} yet` });
+      return;
+    }
+    res.set({
+      "Content-Type": "video/mp4", "Accept-Ranges": "bytes", "Cache-Control": "public, max-age=3600",
+      ...(req.query.download === "1" ? { "Content-Disposition": `attachment; filename="gridline-td-picks-${latest.season}-week-${latest.week}.mp4"` } : {}),
+    });
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "");
+    if (!range || (!range[1] && !range[2])) {
+      res.send(video);
+      return;
+    }
+    const size = video.length;
+    let start = range[1] ? Number(range[1]) : size - Number(range[2]);
+    let end = range[1] && range[2] ? Number(range[2]) : size - 1;
+    start = Math.max(0, start);
+    end = Math.min(end, size - 1);
+    if (start > end) {
+      res.status(416).set("Content-Range", `bytes */${size}`).end();
+      return;
+    }
+    res.status(206).set("Content-Range", `bytes ${start}-${end}/${size}`).send(video.subarray(start, end + 1));
+  } catch (error) {
+    req.log.error({ error }, "Share clip read failed");
+    res.status(503).json({ error: "Clip unavailable" });
   }
 });
 
