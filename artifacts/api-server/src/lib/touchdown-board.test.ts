@@ -51,9 +51,21 @@ test("fair odds", () => {
 test("top-10 record only counts fully graded weeks", () => {
   const board = Array.from({ length: 12 }, (_, index) => ({ ...pick(`p${index}`, 0.5 - index / 100, SUN), generatedAt: new Date(), lockedAt: new Date() }));
   const results = new Map(board.map((entry, index) => [entry.playerId, index % 2 === 0]));
-  assert.deepEqual(topTenRecord([{ week: 4, board, results }]), { weeksGraded: 1, topTenPicks: 10, topTenHits: 5, weeks: [{ week: 4, picks: 10, hits: 5 }] });
+  const record = topTenRecord([{ week: 4, board, results }]);
+  assert.deepEqual([record.weeksGraded, record.topTenPicks, record.topTenHits], [1, 10, 5]);
+  assert.ok(Math.abs(record.expectedHits - 4.55) < 0.06, `${record.expectedHits}`);
+  assert.deepEqual(record.priced, { picks: 0, hits: 0, units: 0 });
   const partial = new Map([...results].slice(0, 5));
-  assert.deepEqual(topTenRecord([{ board, results: partial }]), { weeksGraded: 0, topTenPicks: 0, topTenHits: 0, weeks: [] });
+  assert.equal(topTenRecord([{ board, results: partial }]).weeksGraded, 0);
+});
+
+test("top-10 profit uses each pick's book price and skips unpriced picks", () => {
+  const board = Array.from({ length: 10 }, (_, index) => ({ ...pick(`p${index}`, 0.4, SUN), generatedAt: new Date(), lockedAt: new Date() }));
+  const results = new Map(board.map((entry, index) => [entry.playerId, index < 4]));
+  // Hits at -150 pay 0.667 each; misses lose 1; p9 has no price.
+  const record = topTenRecord([{ week: 5, board, results, price: (entry) => entry.playerId === "p9" ? null : -150 }]);
+  assert.deepEqual(record.priced, { picks: 9, hits: 4, units: -2.33 });
+  assert.equal(record.weeks[0].pricedPicks, 9);
 });
 
 test("value picks are top-5 picks priced longer than fair odds", () => {

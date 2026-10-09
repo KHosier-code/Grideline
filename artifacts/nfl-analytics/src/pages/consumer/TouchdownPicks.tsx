@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CountUp } from '@/components/CountUp';
+import { TouchdownStat } from '@/components/TrackRecord';
 import { Link } from 'wouter';
 import {
   getGetConsumerTouchdownsQueryKey, useGetConsumerTouchdowns, type ConsumerTouchdownPick,
@@ -102,9 +103,7 @@ export default function TouchdownPicks() {
         {data?.evaluation.topTenHitRate !== null && data?.evaluation.topTenHitRate !== undefined && <div className="gl-stat">
           <b><CountUp text={pct(data.evaluation.topTenHitRate)} /></b><small>of top-10 picks scored in testing</small>
         </div>}
-        {record && record.weeksGraded > 0 && <div className="gl-stat">
-          <b><CountUp text={`${record.topTenHits}/${record.topTenPicks}`} /></b><small>top-10 picks scored this season</small>
-        </div>}
+        {record && record.weeksGraded > 0 && <TouchdownStat record={record} />}
         {value && value.picks > 0 && <div className="gl-stat">
           <b><CountUp text={`${value.hits}/${value.picks} · ${units(value.units)}`} /></b><small>value picks this season, 1 unit each</small>
         </div>}

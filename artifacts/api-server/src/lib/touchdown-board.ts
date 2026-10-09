@@ -43,22 +43,45 @@ export function fairAmericanOdds(probability: number) {
 
 /** Top-10 record over weeks where every top-10 player has a graded result. */
 export function topTenRecord(
-  weeks: Array<{ week?: number; board: BoardEntry[]; results: Map<string, boolean> }>,
+  weeks: Array<{ week?: number; board: BoardEntry[]; results: Map<string, boolean>; price?: (entry: BoardEntry) => number | null }>,
 ) {
   let weeksGraded = 0;
   let topTenPicks = 0;
   let topTenHits = 0;
-  const byWeek: Array<{ week: number; picks: number; hits: number }> = [];
-  for (const { week, board, results } of weeks) {
+  let expectedHits = 0;
+  const priced = { picks: 0, hits: 0, units: 0 };
+  const byWeek: Array<{ week: number; picks: number; hits: number; expectedHits: number; pricedPicks: number; units: number }> = [];
+  for (const { week, board, results, price } of weeks) {
     const top = board.slice(0, 10);
     if (top.length < 10 || top.some((entry) => !results.has(entry.playerId))) continue;
     const hits = top.filter((entry) => results.get(entry.playerId)).length;
+    const expected = top.reduce((sum, entry) => sum + entry.probability, 0);
+    // 1 unit on each top-10 pick that had a captured DraftKings/FanDuel price.
+    let pricedPicks = 0;
+    let units = 0;
+    for (const entry of top) {
+      const odds = price?.(entry);
+      if (typeof odds !== "number" || !Number.isFinite(odds) || odds === 0) continue;
+      pricedPicks += 1;
+      units += results.get(entry.playerId) ? decimalOdds(odds) - 1 : -1;
+      if (results.get(entry.playerId)) priced.hits += 1;
+    }
     weeksGraded += 1;
     topTenPicks += top.length;
     topTenHits += hits;
-    if (week !== undefined) byWeek.push({ week, picks: top.length, hits });
+    expectedHits += expected;
+    priced.picks += pricedPicks;
+    priced.units += units;
+    if (week !== undefined) {
+      byWeek.push({ week, picks: top.length, hits, expectedHits: Math.round(expected * 10) / 10, pricedPicks, units: Math.round(units * 100) / 100 });
+    }
   }
-  return { weeksGraded, topTenPicks, topTenHits, weeks: byWeek.sort((a, b) => a.week - b.week) };
+  return {
+    weeksGraded, topTenPicks, topTenHits,
+    expectedHits: Math.round(expectedHits * 10) / 10,
+    priced: { ...priced, units: Math.round(priced.units * 100) / 100 },
+    weeks: byWeek.sort((a, b) => a.week - b.week),
+  };
 }
 
 /** Picks this high on the weekly board can be flagged as value. In testing on 2021-2026 the top 5 scored 55% of the time. */

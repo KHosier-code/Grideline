@@ -2892,10 +2892,19 @@ export const GetConsumerTouchdownsResponse = zod.object({
   "weeksGraded": zod.number().int(),
   "topTenPicks": zod.number().int(),
   "topTenHits": zod.number().int(),
+  "expectedHits": zod.number().describe('Sum of the model\'s probabilities for the graded top-10 picks.'),
+  "priced": zod.object({
+  "picks": zod.number().int(),
+  "hits": zod.number().int(),
+  "units": zod.number()
+}).describe('1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price.'),
   "weeks": zod.array(zod.object({
   "week": zod.number().int(),
   "picks": zod.number().int(),
-  "hits": zod.number().int()
+  "hits": zod.number().int(),
+  "expectedHits": zod.number(),
+  "pricedPicks": zod.number().int(),
+  "units": zod.number()
 }))
 }),
   "valueRecord": zod.object({

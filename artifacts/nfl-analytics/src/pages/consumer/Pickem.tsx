@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { CountUp } from '@/components/CountUp';
 import { Link } from 'wouter';
 import {
   getGetConsumerDashboardQueryKey, getGetConsumerGameProjectionsQueryKey, getGetConsumerPowerRatingsQueryKey,
@@ -103,6 +104,15 @@ export default function Pickem() {
         <h1 className="gl-title">Pool <span>Picks</span></h1>
         <p className="gl-lede">Every game ranked for your office pool: straight-up winners from surest thing to coin flip, plus Gridline&apos;s side of every spread and total.</p>
       </div>
+      {(() => {
+        const su = projections.data?.record; const fav = projections.data?.favoriteRecord;
+        if (!su || su.wins + su.losses === 0) return null;
+        return <div className="gl-stats" aria-label="Straight-up record">
+          <div className="gl-stat"><b><CountUp text={`${su.wins}–${su.losses}`} /></b>
+            <small>Straight-up winners this season{fav && fav.wins + fav.losses > 0 ? ` (always taking the Vegas favorite: ${fav.wins}–${fav.losses})` : ''}</small></div>
+          <p className="gl-stats-note">Picks posted before kickoff. <Link href="/performance" className="gl-link">Full record</Link></p>
+        </div>;
+      })()}
     </header>
 
     {(dashboard.isLoading || projections.isLoading) && <ConsumerLoading label="Loading this week's games…" />}
