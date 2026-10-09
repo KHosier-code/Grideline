@@ -160,3 +160,10 @@ overrides:
   esbuild: "0.28.2"
   # orval pins js-yaml to an exact version older than the CVE fix (>=4.3.2)
   js-yaml: '4.3.2'
+  # Security Center fixes (Oct 2026 advisories in transitive dependencies)
+  proxy-addr: '2.0.8'                                   # express: IPv4-mapped IPv6 trust bypass
+  source-map-js: '^1.2.2'                               # indexed source map DoS
+  'brace-expansion@>=4.0.0 <5.0.12': '5.0.12'           # nested-brace recursion / quadratic DoS
+  'fast-uri@>=3.0.0 <3.1.8': '^3.1.8'                   # host case normalization
+  'gaxios>uuid': '^11.1.1'                              # v3/v5/v6 buffer bounds check
+  '@tailwindcss/typography>postcss-selector-parser': '7.1.6'  # quadratic selector parsing
