@@ -68,7 +68,7 @@ for season in [2021, 2022, 2023, 2024, 2025, 2026]:
     residual = Ridge(alpha=200).fit(market_x(train, r_train), train.margin - train.spread_line)
     m_test = test.spread_line.values + residual.predict(market_x(test, r_test))
     # Winners: logistic on the rating, and the Vegas favorite as a benchmark.
-    win = LogisticRegression(max_iter=2000).fit(r_train.reshape(-1, 1), (train.margin > 0).astype(int))
+    win = LogisticRegression(fit_intercept=False, max_iter=2000).fit(r_train.reshape(-1, 1), (train.margin > 0).astype(int))
     p_home = win.predict_proba(r_test.reshape(-1, 1))[:, 1]
     decided = test.margin != 0
     model_winners = ((p_home > 0.5) == (test.margin > 0))[decided].mean()

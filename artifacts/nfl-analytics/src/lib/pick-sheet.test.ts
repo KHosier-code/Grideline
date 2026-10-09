@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ConsumerGame, ConsumerGameProjection } from '@workspace/api-client-react';
-import { buildGameView, currentWeek, lineGap, lineText, vegasLineText, type GameView } from './pick-sheet.ts';
+import { buildGameView, consistentHomeWin, currentWeek, lineGap, lineText, vegasLineText, type GameView } from './pick-sheet.ts';
 
 const quote = (point: number | null, price: number) => ({ sportsbook: 'DraftKings', selection: 'X', point, price, capturedAt: '2026-09-29T18:00:00Z' });
 function game(overrides: { gameId?: string; week?: number; kickoffTime?: string; finalScore?: { home: number; away: number } | null; homeLine?: number } = {}): ConsumerGame {
@@ -80,4 +80,11 @@ test('lineGap measures the Gridline vs book gap and movement toward Gridline', (
   assert.deepEqual(lineGap(view(-1, -3), -4), { points: 4, side: 'away', moved: 1 });
   assert.equal(lineGap(view(3, -3), null)?.side, null);
   assert.equal(lineGap(view(3, -3.5), null)?.moved, null);
+});
+
+test('a near-even game never shows its projected winner under 50%', () => {
+  assert.equal(consistentHomeWin(-0.1, 0.52), 0.5);
+  assert.equal(consistentHomeWin(0, 0.6), 0.5);
+  assert.equal(consistentHomeWin(3, 0.6), 0.6);
+  assert.equal(consistentHomeWin(-3, 0.4), 0.4);
 });

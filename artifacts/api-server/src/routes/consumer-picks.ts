@@ -14,6 +14,7 @@ import {
   bookComparison, bookFairProbability, boardForWeek, expectedValue, fairAmericanOdds, isValuePick, topTenRecord, valueRecord,
 } from "../lib/touchdown-board";
 import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecision } from "../lib/odds";
+import { ODDS_BACKUP_RECENT_MS, recentOddsCapture } from "../lib/kickoff-clock";
 import { bestBookPrice, captureTouchdownProps, touchdownPropsForSeason } from "../lib/td-props";
 import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
@@ -403,10 +404,19 @@ async function latestReport(kind: "usage" | "replay", req: import("express").Req
       res.json({ status: "unavailable", season: null, week: null, generatedAt: null, report: null });
       return;
     }
+    let report = latest.payload;
+    if (kind === "replay") {
+      // A replayed week must never sit next to that week's real, timestamped
+      // picks: keep only weeks before the first live TD pick run.
+      const [firstLive] = await db.select({ week: touchdownPickRunsTable.week }).from(touchdownPickRunsTable)
+        .where(eq(touchdownPickRunsTable.season, latest.season)).orderBy(asc(touchdownPickRunsTable.week)).limit(1);
+      const weeks = (report as { weeks?: Array<{ week: number }> }).weeks;
+      if (firstLive && Array.isArray(weeks)) report = { ...report, weeks: weeks.filter((week) => week.week < firstLive.week) };
+    }
     res.set("Cache-Control", "public, max-age=300");
     res.json({
       status: "available", season: latest.season, week: latest.week,
-      generatedAt: latest.generatedAt.toISOString(), report: latest.payload,
+      generatedAt: latest.generatedAt.toISOString(), report,
     });
   } catch (error) {
     req.log.error({ error, kind }, "Weekly report read failed");
@@ -444,6 +454,13 @@ router.post("/odds/scheduled-capture", async (req, res): Promise<void> => {
   if (!authorizeIngest(req, res)) return;
   const slot = new Date(Math.floor(Date.now() / 600_000) * 600_000);
   try {
+    // GitHub's cron often runs hours late. When the site's kickoff clock (or an
+    // earlier run) captured recently, a late backup run must not pay again.
+    const recent = req.query.force === "1" ? null : await recentOddsCapture(ODDS_BACKUP_RECENT_MS);
+    if (recent) {
+      res.json({ status: "skipped", reason: `Lines were captured at ${recent.toISOString()}; this backup run is not needed.` });
+      return;
+    }
     const quota = oddsCaptureQuotaDecision(await getOddsSchedulingBalance());
     if (!quota.safe) {
       res.json({ status: "skipped", reason: quota.reason, creditsRemaining: quota.creditsRemaining ?? null });
