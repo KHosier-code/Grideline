@@ -96,7 +96,7 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
   return (
     <div className="consumer-game-card">
     <Link href={href} className="consumer-game-card-link">
-      <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : projection ? 'Gridline projection' : pending}</span></div>
+      <div className="consumer-game-card-head"><span>{formatKickoff(game.kickoffTime)}</span><span>{final ? 'Final' : projection ? 'Our projection' : pending}</span></div>
       <div className="consumer-matchup">
         <div><TeamMark className="consumer-team-mark" url={game.matchup.away.logoUrl} abbreviation={away} /><span>{game.matchup.away.name}</span></div><b>{final ? final.away : score(projection?.away)}</b>
         <div><TeamMark className="consumer-team-mark" url={game.matchup.home.logoUrl} abbreviation={home} /><span>{game.matchup.home.name}</span></div><b>{final ? final.home : score(projection?.home)}</b>
@@ -105,8 +105,8 @@ export function ConsumerGameCard({ game, compact = false, href = `/games/${game.
         <span><small>Projection</small>{projection ? lineText(projection.margin, home, away) : pending}</span>
          <span><small>Market spread</small>{spreadQuote ? formatQuote(spreadQuote, 'spread') : game.availability.market ?? 'Sportsbook line updating'}</span>
       </div>}
-      <div className="consumer-game-card-foot"><span>{projection ? `Total: Gridline ${projection.total.toFixed(1)} · Vegas ${view.vegas.total ?? '—'}`
-        : final ? 'No Gridline projection was posted for this game' : 'Our projection usually posts by Tuesday morning'}</span><ChevronRight className="h-4 w-4" /></div>
+      <div className="consumer-game-card-foot"><span>{projection ? `Total: ours ${projection.total.toFixed(1)} · Vegas ${view.vegas.total ?? '—'}`
+        : final ? 'We posted no projection for this game' : 'Our projection usually posts by Tuesday morning'}</span><ChevronRight className="h-4 w-4" /></div>
     </Link>
     <div className="consumer-game-card-save">{renderSaveControl ? renderSaveControl(game.gameId) : <SaveGameButton gameId={game.gameId} />}</div>
     </div>

@@ -132,7 +132,7 @@ function WatchListSection({ watch, topic }: { watch: ConsumerWatchList; topic: s
     {watch.games.length > 0 ? <div className="gl-card gl-table-wrap">
       <table className="gl-table gl-watch-table">
         <thead><tr>
-          <th scope="col">Game</th><th scope="col">Gridline</th><th scope="col">Our side</th><th scope="col">Opener</th>
+          <th scope="col">Game</th><th scope="col">Ours</th><th scope="col">Our side</th><th scope="col">Opener</th>
           <th scope="col">Posted<small>line when we flagged it</small></th><th scope="col">Now<small>or the close</small></th>
           <th scope="col">Moved<small>toward us</small></th><th scope="col">Covered<small>open · posted · close</small></th>
         </tr></thead>

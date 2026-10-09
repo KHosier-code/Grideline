@@ -3,19 +3,19 @@ import { useLocation } from 'wouter';
 
 // Keep in sync with metadata.mjs (server-rendered tags for the same pages).
 const pages: Record<string, [string, string]> = {
-  '/': ['Gridline | Free NFL Touchdown Picks and Game Projections', 'Free weekly anytime touchdown picks and a projected score for every NFL game, adjusted for the starting quarterback, next to the Vegas line.'],
-  '/touchdowns': ['Anytime Touchdown Picks This Week | Gridline', 'Ranked anytime touchdown scorer picks for every NFL game, with each player\'s red-zone role, target and carry share, Vegas team total and defensive matchup.'],
-  '/pickem': ['NFL Pool Picks This Week: Winners, Spreads and Totals | Gridline', 'Every NFL game ranked for pick\'em, confidence, survivor, against-the-spread and over/under pools, with 100-game simulations of each matchup.'],
-  '/parlays': ['NFL Parlay Builder: Real Hit Chances | Gridline', 'Build an NFL parlay from game winners and anytime touchdown scorers and see how often it really hits, its fair payout and what your sportsbook charges.'],
-  '/power-ratings': ['NFL Power Ratings: All 32 Teams Ranked | Gridline', 'Every NFL team ranked 1-32 by points better or worse than an average team, with offense, defense and quarterback ratings.'],
-  '/qb-rankings': ['NFL QB Rankings by EPA per Dropback | Gridline', 'Every team\'s expected starting quarterback ranked by value per dropback, and what each is worth to the team in points.'],
-  '/games': ['NFL Games, Projections and Lines | Gridline', 'Browse every NFL game by week with Gridline\'s projected score, the sportsbook line and final results.'],
-  '/teams': ['NFL Team Rankings by EPA | Gridline', 'Offense and defense for all 32 NFL teams from play-by-play data, updated after every game.'],
-  '/usage': ['NFL Player Usage: Target, Carry and Red-Zone Share | Gridline', 'Target share, carry share, air yards and red-zone looks for every NFL team and skill player, with week-by-week trends.'],
-  '/red-zone': ['NFL Red Zone Stats: TD Rate and Red-Zone Looks | Gridline', 'Red-zone trips and touchdown rate for every NFL offense and defense, plus the players who get the most looks inside the 20.'],
-  '/defense-vs-position': ['NFL Defense vs Position | Gridline', 'Fantasy points and touchdowns each NFL defense allows to quarterbacks, running backs, receivers and tight ends.'],
-  '/methodology': ['How Gridline Makes Its Picks | Gridline', 'What goes into Gridline\'s game projections and touchdown picks, how they are tested, and how picks are graded.'],
-  '/performance': ['NFL Model Performance | Gridline', 'How Gridline\'s game and touchdown models performed on seasons they never trained on, and this season\'s graded record.'],
+  '/': ['Probable | Free NFL Touchdown Picks and Game Projections', 'Free weekly anytime touchdown picks and a projected score for every NFL game, adjusted for the starting quarterback, next to the Vegas line.'],
+  '/touchdowns': ['Anytime Touchdown Picks This Week | Probable', 'Ranked anytime touchdown scorer picks for every NFL game, with each player\'s red-zone role, target and carry share, Vegas team total and defensive matchup.'],
+  '/pickem': ['NFL Pool Picks This Week: Winners, Spreads and Totals | Probable', 'Every NFL game ranked for pick\'em, confidence, survivor, against-the-spread and over/under pools, with 100-game simulations of each matchup.'],
+  '/parlays': ['NFL Parlay Builder: Real Hit Chances | Probable', 'Build an NFL parlay from game winners and anytime touchdown scorers and see how often it really hits, its fair payout and what your sportsbook charges.'],
+  '/power-ratings': ['NFL Power Ratings: All 32 Teams Ranked | Probable', 'Every NFL team ranked 1-32 by points better or worse than an average team, with offense, defense and quarterback ratings.'],
+  '/qb-rankings': ['NFL QB Rankings by EPA per Dropback | Probable', 'Every team\'s expected starting quarterback ranked by value per dropback, and what each is worth to the team in points.'],
+  '/games': ['NFL Games, Projections and Lines | Probable', 'Browse every NFL game by week with our projected score, the sportsbook line and final results.'],
+  '/teams': ['NFL Team Rankings by EPA | Probable', 'Offense and defense for all 32 NFL teams from play-by-play data, updated after every game.'],
+  '/usage': ['NFL Player Usage: Target, Carry and Red-Zone Share | Probable', 'Target share, carry share, air yards and red-zone looks for every NFL team and skill player, with week-by-week trends.'],
+  '/red-zone': ['NFL Red Zone Stats: TD Rate and Red-Zone Looks | Probable', 'Red-zone trips and touchdown rate for every NFL offense and defense, plus the players who get the most looks inside the 20.'],
+  '/defense-vs-position': ['NFL Defense vs Position | Probable', 'Fantasy points and touchdowns each NFL defense allows to quarterbacks, running backs, receivers and tight ends.'],
+  '/methodology': ['How Probable Makes Its Picks | Probable', 'What goes into Probable\'s game projections and touchdown picks, how they are tested, and how picks are graded.'],
+  '/performance': ['NFL Model Performance | Probable', 'How Probable\'s game and touchdown models performed on seasons they never trained on, and this season\'s graded record.'],
 };
 
 const setMeta = (selector: string, attribute: string, value: string) => {
@@ -32,7 +32,7 @@ const setMeta = (selector: string, attribute: string, value: string) => {
 export function setPublicMetadata(path: string, title: string, description: string, index = true) {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   const canonical = `${window.location.origin}${base}${path}`;
-  const image = `${window.location.origin}${base}/gridline-share.png`;
+  const image = `${window.location.origin}${base}/probable-share.png`;
   document.title = title;
   setMeta('meta[name="description"]', 'name', description);
   setMeta('meta[name="robots"]', 'name', index ? 'index, follow' : 'noindex, nofollow');
@@ -56,7 +56,7 @@ export function useRouteMetadata() {
     const path = location.split('?')[0].replace(/\/$/, '') || '/';
     const page = pages[path];
     if (page) setPublicMetadata(path, page[0], page[1]);
-    else if (path === '/share') setPublicMetadata(path, 'Share This Week | Gridline', 'This week\'s TD picks card, post and email.', false);
-    else setPublicMetadata(path, 'Gridline | Private or unavailable page', 'This page is not included in public search results.', false);
+    else if (path === '/share') setPublicMetadata(path, 'Share This Week | Probable', 'This week\'s TD picks card, post and email.', false);
+    else setPublicMetadata(path, 'Probable | Private or unavailable page', 'This page is not included in public search results.', false);
   }, [location]);
 }

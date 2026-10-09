@@ -15,7 +15,9 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
+
+import brand
 
 PAYLOAD, OUT = sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None
 payload = json.load(open(PAYLOAD))
@@ -23,18 +25,15 @@ picks = payload["picks"][:10]
 season, week = payload["season"], payload["week"]
 
 W, H = 1200, 630
-BG, CARD, LINE = (20, 20, 20), (30, 30, 30), (48, 48, 48)
-TEXT, MUTED, ORANGE = (240, 240, 240), (150, 150, 150), (249, 115, 22)
-FONT_DIR = os.environ.get("GRIDLINE_FONT_DIR", "fonts")
+BG, CARD, LINE = brand.NAVY, brand.CARD, brand.LINE
+TEXT, MUTED, ORANGE = brand.TEXT, brand.MUTED, brand.CORAL
 
 
 def font(weight, size):
-    for path in (f"{FONT_DIR}/BarlowCondensed-{weight}.ttf",
-                 "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf" if weight in ("Bold", "SemiBold")
-                 else "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf"):
-        if os.path.exists(path):
-            return ImageFont.truetype(path, size)
-    return ImageFont.load_default(size)
+    """Headlines and numbers in Space Grotesk; "Medium" (small text) in Instrument Sans."""
+    if weight == "Medium":
+        return brand.font(size, "Medium", "InstrumentSans")
+    return brand.font(size, "Bold" if weight == "Bold" else "Medium")
 
 
 def last_week_line():
@@ -57,16 +56,14 @@ def last_week_line():
 img = Image.new("RGB", (W, H), BG)
 d = ImageDraw.Draw(img)
 # Header
-d.rounded_rectangle((56, 44, 92, 80), radius=8, fill=ORANGE)
-d.text((74, 62), "G", font=font("Bold", 28), fill=BG, anchor="mm")
-d.text((106, 62), "GRIDLINE", font=font("Bold", 34), fill=TEXT, anchor="lm")
-d.text((W - 56, 62), f"{season} · WEEK {week}", font=font("SemiBold", 28), fill=MUTED, anchor="rm")
-d.text((56, 100), "Anytime touchdown picks", font=font("Bold", 54), fill=TEXT, anchor="lt")
+brand.wordmark(img, 56, 62, 38, TEXT)
+d.text((W - 56, 62), f"{season} · WEEK {week}", font=font("SemiBold", 26), fill=ORANGE, anchor="rm")
+d.text((56, 100), "Anytime touchdown picks", font=font("Bold", 50), fill=TEXT, anchor="lt")
 d.text((56, 160), "Chance each player scores, from our model", font=font("Medium", 24), fill=MUTED, anchor="lt")
 
 # Two columns of five
 col_w, row_h, top = (W - 56 * 2 - 24) // 2, 60, 202
-name_font, meta_font, pct_font, rank_font = font("Bold", 27), font("Medium", 19), font("Bold", 36), font("SemiBold", 24)
+name_font, meta_font, pct_font, rank_font = font("Bold", 24), font("Medium", 18), font("Bold", 32), font("SemiBold", 22)
 for i, pick in enumerate(picks):
     col, row = divmod(i, 5)
     x = 56 + col * (col_w + 24)
@@ -86,7 +83,7 @@ for i, pick in enumerate(picks):
 # Footer
 foot_y = H - 38
 d.line((56, foot_y - 26, W - 56, foot_y - 26), fill=LINE, width=1)
-d.text((56, foot_y), "gridelineanalytics.com/touchdowns", font=font("SemiBold", 26), fill=TEXT, anchor="lm")
+d.text((56, foot_y), "probablesports.com/touchdowns", font=font("Bold", 24), fill=TEXT, anchor="lm")
 record = last_week_line()
 right = "Model estimates, not guarantees · 21+" if not record else f"{record} · 21+"
 d.text((W - 56, foot_y), right, font=font("Medium", 24), fill=MUTED, anchor="rm")

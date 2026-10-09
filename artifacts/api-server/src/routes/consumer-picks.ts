@@ -685,13 +685,13 @@ router.get("/share/td-card.png", async (req, res): Promise<void> => {
       .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
     const png = typeof latest?.payload.png === "string" ? Buffer.from(latest.payload.png, "base64") : null;
     if (!png?.length) {
-      res.redirect(302, "/gridline-share.png");
+      res.redirect(302, "/probable-share.png");
       return;
     }
     res.set({ "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" }).send(png);
   } catch (error) {
     req.log.error({ error }, "Share card read failed");
-    res.redirect(302, "/gridline-share.png");
+    res.redirect(302, "/probable-share.png");
   }
 });
 

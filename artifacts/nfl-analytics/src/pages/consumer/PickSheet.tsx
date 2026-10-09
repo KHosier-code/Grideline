@@ -132,8 +132,8 @@ export default function PickSheet() {
     <header className="gl-hero">
       <div>
         <p className="gl-label">{week ? `${week.season} season · Week ${week.week}` : 'NFL picks'}</p>
-        <h1 className="gl-title">This week&apos;s <span>picks</span></h1>
-        <p className="gl-lede">Who&apos;s most likely to score a touchdown, and our projected score for every game, adjusted for who&apos;s playing quarterback. Built from NFL play-by-play data and updated through the week.</p>
+        <h1 className="gl-title">Who&apos;s likely to score, <span>priced against the books.</span></h1>
+        <p className="gl-lede">Anytime touchdown chances for every player and a projected score for every game, from NFL play-by-play data. Every pick is timestamped before kickoff.</p>
       </div>
       <HeroStats season={week?.season} />
     </header>

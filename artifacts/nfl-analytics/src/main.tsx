@@ -29,7 +29,7 @@ function GridlineProviders() {
         logoImageUrl: `${window.location.origin}${import.meta.env.BASE_URL}logo-icon.png`,
       },
       variables: {
-        colorPrimary: theme === 'dark' ? 'hsl(222, 95%, 72%)' : 'hsl(229, 75%, 43%)',
+        colorPrimary: theme === 'dark' ? 'hsl(17, 100%, 68%)' : 'hsl(15, 76%, 45%)',
         colorForeground: theme === 'dark' ? 'hsl(225, 25%, 95%)' : 'hsl(226, 35%, 16%)',
         colorMutedForeground: theme === 'dark' ? 'hsl(222, 15%, 73%)' : 'hsl(222, 16%, 38%)',
         colorBackground: theme === 'dark' ? 'hsl(228, 24%, 13%)' : 'hsl(0, 0%, 100%)',
@@ -40,8 +40,8 @@ function GridlineProviders() {
       },
     }}
     localization={{
-      signIn: { start: { title: 'Sign in to Gridline', subtitle: 'Welcome back. Continue to NFL analytics.' } },
-      signUp: { start: { title: 'Create your Gridline account', subtitle: 'Set up access to NFL analytics.' } },
+      signIn: { start: { title: 'Sign in to Probable', subtitle: 'Welcome back. Continue to NFL analytics.' } },
+      signUp: { start: { title: 'Create your Probable account', subtitle: 'Set up access to NFL analytics.' } },
     }}
   ><ErrorBoundary><App /></ErrorBoundary></ClerkProvider>;
 }

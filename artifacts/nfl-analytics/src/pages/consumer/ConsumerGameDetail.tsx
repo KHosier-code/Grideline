@@ -85,10 +85,10 @@ export default function ConsumerGameDetail() {
     if (query.data) {
       const away = query.data.matchup.away.name;
       const home = query.data.matchup.home.name;
-      setPublicMetadata(`/games/${encodeURIComponent(gameId)}`, `${away} at ${home} | Gridline Game Detail`,
-        `${away} at ${home}: Gridline's projected score, line and total next to Vegas, the quarterback matchup and the top touchdown picks for this game.`);
+      setPublicMetadata(`/games/${encodeURIComponent(gameId)}`, `${away} at ${home} | Probable`,
+        `${away} at ${home}: our projected score, line and total next to Vegas, the quarterback matchup and the top touchdown picks for this game.`);
     } else if (query.isError) {
-      setPublicMetadata(`/games/${encodeURIComponent(gameId)}`, 'Game unavailable | Gridline', 'This matchup could not be verified.', false);
+      setPublicMetadata(`/games/${encodeURIComponent(gameId)}`, 'Game unavailable | Probable', 'This matchup could not be verified.', false);
     }
   }, [gameId, query.data, query.isError]);
   if (query.isLoading) return <ConsumerLoading label="Loading matchup details…" />;
@@ -146,7 +146,7 @@ function GameProjectionPanel({ view }: { view: GameView }) {
   const away = game.matchup.away.abbreviation;
   if (!p) return <div className="gl-empty"><strong>Our projection for this game is being prepared.</strong>It usually posts by Tuesday morning.</div>;
   return <section className="gl-section" aria-labelledby="projection-heading">
-    <div className="gl-section-head"><h2 id="projection-heading">Gridline projection</h2>
+    <div className="gl-section-head"><h2 id="projection-heading">Our projection</h2>
       <p>Adjusted for the starting quarterbacks{game.finalScore ? '' : ' · updates through the week'}</p></div>
     <div className="gl-card gl-projection">
       <div className="gl-projection-score">
@@ -157,9 +157,9 @@ function GameProjectionPanel({ view }: { view: GameView }) {
         <span style={{ width: `${(1 - p.homeWin) * 100}%` }} />
       </div>
       <div className="gl-edge-compare">
-        <div><span className="gl-label">Spread · Gridline</span><b>{lineText(p.margin, home, away)}</b></div>
+        <div><span className="gl-label">Spread · ours</span><b>{lineText(p.margin, home, away)}</b></div>
         <div><span className="gl-label">Spread · Vegas</span><b>{vegas.homeLine !== null ? vegasLineText(vegas.homeLine, home, away) : '—'}</b></div>
-        <div><span className="gl-label">Total · Gridline</span><b>{p.total.toFixed(1)}</b></div>
+        <div><span className="gl-label">Total · ours</span><b>{p.total.toFixed(1)}</b></div>
         <div><span className="gl-label">Total · Vegas</span><b>{vegas.total ?? '—'}</b></div>
       </div>
       {view.result && <p className="gl-note">Our projected winner was {view.result === 'win' ? 'right' : view.result === 'loss' ? 'wrong' : 'tied'}.</p>}

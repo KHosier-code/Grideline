@@ -18,8 +18,8 @@ function Row({ pick, points, now }: { pick: LinePick; points: number; now: numbe
     ? `Book: ${vegasLineText(pick.view.vegas.homeLine!, home, away)}`
     : `Book total: ${pick.view.vegas.total}`;
   const ours = pick.market === 'spread'
-    ? `Gridline: ${pick.view.projection!.margin >= 0 ? home : away} by ${Math.abs(pick.view.projection!.margin).toFixed(1)}`
-    : `Gridline: ${pick.view.projection!.total.toFixed(1)}`;
+    ? `Ours: ${pick.view.projection!.margin >= 0 ? home : away} by ${Math.abs(pick.view.projection!.margin).toFixed(1)}`
+    : `Ours: ${pick.view.projection!.total.toFixed(1)}`;
   const team = pick.market === 'spread' ? game.matchup[pick.side].abbreviation : null;
   return <div className={`gl-card gl-line-row${started ? ' locked' : ''}`}>
     <span className="gl-pool-points" title="Confidence points">{points}</span>
@@ -47,7 +47,7 @@ export function LinePicks({ market, views, visible, now, label, season }: { mark
   const graded = record.wins + record.losses;
   const title = market === 'spread' ? 'Spread picks' : 'Over/under picks';
   if (!ranked.length) return <div className="gl-empty"><strong>No {market === 'spread' ? 'spread' : 'over/under'} picks yet.</strong>They appear once our projections and the sportsbook lines are both posted.</div>;
-  const copyText = [`Gridline ${label} ${title.toLowerCase()}`, ...ranked.map(({ pick, points }) => `${points}  ${linePickLabel(pick)} (${pick.edge.toFixed(1)} pt gap)`), 'gridelineanalytics.com/pickem'].join('\n');
+  const copyText = [`Probable ${label} ${title.toLowerCase()}`, ...ranked.map(({ pick, points }) => `${points}  ${linePickLabel(pick)} (${pick.edge.toFixed(1)} pt gap)`), 'probablesports.com/pickem'].join('\n');
   return <>
     <div className="gl-pool-controls">
       <p className="gl-line-record">{graded ? <><b>{record.wins}-{record.losses}{record.pushes ? `-${record.pushes}` : ''}</b> so far this week</> : 'Ranked by how far our number is from the sportsbook\'s.'}</p>
@@ -58,7 +58,7 @@ export function LinePicks({ market, views, visible, now, label, season }: { mark
         <button type="button" className="gl-button ghost" onClick={() => void shareCardImage({
           eyebrow: `${season ?? ''} ${label}`.trim(), title,
           rows: ranked.map(({ pick, points }) => ({ left: `${points}  ${linePickLabel(pick)}`, right: `${pick.edge.toFixed(1)} pts` })),
-          footer: 'gridelineanalytics.com/pickem',
+          footer: 'probablesports.com/pickem',
         }, `gridline-${market}.png`)}>Share image</button>
       </div>
     </div>

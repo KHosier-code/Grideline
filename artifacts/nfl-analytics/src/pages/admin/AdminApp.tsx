@@ -354,7 +354,7 @@ function Shell({ children }: { children: ReactNode }) {
       <aside className={cx('sidebar', mobileOpen && 'sidebar-open')}>
         <div className="sidebar-top">
           <Link href="/admin" className="brand" data-testid="link-home">
-            <span className="brand-wordmark-frame"><img src={`${import.meta.env.BASE_URL}logo-wordmark.png`} alt="Gridline NFL Analytics" /></span>
+            <span className="brand-wordmark-frame"><img src={`${import.meta.env.BASE_URL}logo-wordmark.png`} alt="Probable" /></span>
           </Link>
           <button type="button" className="mobile-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation" data-testid="button-close-navigation"><X className="h-5 w-5" /></button>
         </div>
@@ -389,7 +389,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-shell">
         <div className="mobile-topbar">
           <button type="button" className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation" data-testid="button-open-navigation"><Menu className="h-5 w-5" /></button>
-          <Link href="/admin" className="brand brand-mobile" data-testid="link-mobile-home"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Gridline" className="h-5 w-5" /><strong>Gridline</strong></Link>
+          <Link href="/admin" className="brand brand-mobile" data-testid="link-mobile-home"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Probable" className="h-5 w-5" /><strong>Gridline</strong></Link>
           <span className="ml-auto"><ThemeToggle /></span>
         </div>
         <div className="topbar">
@@ -602,7 +602,7 @@ function LineHistory({ gameId }: { gameId: string }) {
         ))}
       </div>
       {data.changes.length ? <div className="odds-table"><div className="odds-head"><span>When</span><span>Book / market</span><span>Selection</span><span>Change</span><span>Source time</span></div>{data.changes.map((change, index) => <div className="odds-row" key={`${change.sportsbook}-${change.market}-${change.selection}-${change.capturedAt}-${index}`}><span>{formatDate(String(change.capturedAt), true)}</span><span>{change.sportsbook} · {marketLabel(change.market)}</span><span>{change.selection}</span><span className="font-mono">{change.previousPoint ?? '—'} {formatPrice(change.previousPrice)} → {change.point ?? '—'} {formatPrice(change.price)}</span><span>{change.sourceTimestamp ? formatDate(String(change.sourceTimestamp), true) : 'Not provided'}</span></div>)}</div> : <EmptyPanel title="No line changes captured" detail="Only the first observed state is available so far. Repeated identical captures are intentionally not added." icon={LineChart} />}
-      <p className="mt-4 text-[11px] leading-5 text-muted-foreground">“First observed by Gridline” is not an official sportsbook opening line. The closing set is the last immutable pre-kickoff state and cannot be replaced after kickoff.</p>
+      <p className="mt-4 text-[11px] leading-5 text-muted-foreground">“First observed by Probable” is not an official sportsbook opening line. The closing set is the last immutable pre-kickoff state and cannot be replaced after kickoff.</p>
     </Panel>
   );
 }
@@ -1120,7 +1120,7 @@ function PersonnelContextPage() {
           </Panel>
           <Panel eyebrow="Immutable sportsbook observations" title="Market movement" className="mt-5" action={<span className="section-meta">{data.market?.observations ?? 0} observations</span>}>
             {data.market?.current?.length ? <div className="overflow-x-auto"><table className="w-full min-w-[880px] text-left text-xs"><thead><tr className="border-b border-border text-[10px] uppercase tracking-[0.14em] text-muted-foreground"><th className="px-3 py-3">Book / market</th><th className="px-3 py-3">Selection</th><th className="px-3 py-3">First observed</th><th className="px-3 py-3">Current</th><th className="px-3 py-3">Movement</th><th className="px-3 py-3">Last capture</th></tr></thead><tbody>{data.market.current.map((line: any) => <tr className="border-b border-border/70" key={line.key}><td className="px-3 py-3 font-semibold text-ink">{line.sportsbook} · {line.market}</td><td className="px-3 py-3">{line.selection}</td><td className="px-3 py-3 font-mono">{line.firstObserved?.point ?? 'ML'} {formatPrice(line.firstObserved?.price)}</td><td className="px-3 py-3 font-mono">{line.current?.point ?? 'ML'} {formatPrice(line.current?.price)}</td><td className="px-3 py-3 font-mono">{line.pointMovement ?? '—'} pts · {line.priceMovement ?? '—'} price</td><td className="px-3 py-3">{formatDate(line.current?.capturedAt, true)}</td></tr>)}</tbody></table></div> : <EmptyPanel title="No market observations before cutoff" detail={data.market?.unavailableReason ?? 'No immutable sportsbook history is available.'} icon={LineChart} />}
-            <p className="mt-4 text-[11px] leading-5 text-muted-foreground">“First observed by Gridline” is not an official sportsbook opener. Missing markets stay unavailable and do not invalidate football-model predictions.</p>
+            <p className="mt-4 text-[11px] leading-5 text-muted-foreground">“First observed by Probable” is not an official sportsbook opener. Missing markets stay unavailable and do not invalidate football-model predictions.</p>
           </Panel>
           <Panel eyebrow="Audit boundary" title="Sources and limitations" className="mt-5">
             <div className="grid gap-5 lg:grid-cols-2"><div><p className="eyebrow">Source tables</p><div className="mt-2 flex flex-wrap gap-2">{(data.sources ?? []).map((source: string) => <span className="rounded-full border border-border bg-secondary/30 px-2.5 py-1 text-xs font-medium text-ink" key={source}>{source}</span>)}</div></div><div><p className="eyebrow">Explicit limitations</p><ul className="mt-2 space-y-2 text-xs leading-5 text-muted-foreground">{(data.limitations ?? []).map((item: string) => <li className="flex gap-2" key={item}><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />{item}</li>)}</ul></div></div>

@@ -10,7 +10,19 @@ const mime = { '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png'
 const base = `/${(process.env.BASE_PATH || '/').split('/').filter(Boolean).join('/')}`;
 const prefix = base === '/' ? '' : base;
 
+// Once PUBLIC_SITE_URL names the live domain (https://probablesports.com), visits
+// to the old domain and to www forward to it permanently. /api never reaches
+// this server, so scheduled jobs posting to the old domain keep working.
+const canonical = process.env.PUBLIC_SITE_URL ? new URL(process.env.PUBLIC_SITE_URL) : null;
+const forwardedHosts = new Set(['gridelineanalytics.com', 'www.gridelineanalytics.com',
+  ...(canonical && !canonical.hostname.startsWith('www.') ? [`www.${canonical.hostname}`] : [])]);
+
 createServer(async (req, res) => {
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase().replace(/:\d+$/, '');
+  if (canonical && host !== canonical.hostname && forwardedHosts.has(host)) {
+    res.writeHead(301, { Location: `${canonical.origin}${req.url || '/'}`, 'Cache-Control': 'public, max-age=86400' }).end();
+    return;
+  }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405).end(); return; }
   let pathname;
   try { pathname = decodeURIComponent(new URL(req.url || '/', 'http://localhost').pathname); }

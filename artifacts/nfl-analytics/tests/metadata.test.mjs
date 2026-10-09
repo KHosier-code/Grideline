@@ -3,13 +3,14 @@ import { test } from 'node:test';
 import { documentForPath, injectMetadata } from '../metadata.mjs';
 
 test('public routes have distinct crawler-visible metadata', async () => {
-  for (const [path, fragment] of [['/', 'Model Evidence'], ['/games', 'Saved Matchups'], ['/methodology', 'Limitations'], ['/performance', 'Performance']]) {
+  for (const [path, fragment] of [['/', 'Touchdown Picks'], ['/games', 'Projections and Lines'], ['/methodology', 'How Probable Makes Its Picks'], ['/performance', 'Model Performance']]) {
     const result = await documentForPath(path);
     assert.equal(result.status, 200);
     assert.match(result.tags, new RegExp(fragment));
     assert.match(result.tags, /name="robots" content="index, follow"/);
     assert.match(result.tags, new RegExp(`rel="canonical" href="https://gridelineanalytics.com${path}"`));
-    assert.match(result.tags, /og:image.*gridline-share.png/);
+    // Home and TD pages preview this week's picks card; the rest use the brand image.
+    assert.match(result.tags, path === '/' ? /og:image.*td-card.png/ : /og:image.*probable-share.png/);
     assert.match(injectMetadata('<!-- GRIDLINE_META -->', result), /<title>/);
   }
 });

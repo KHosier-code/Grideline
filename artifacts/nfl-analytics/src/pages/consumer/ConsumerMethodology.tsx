@@ -75,7 +75,7 @@ export default function ConsumerMethodology() {
     <header className="gl-hero">
       <div>
         <p className="gl-label">How it works</p>
-        <h1 className="gl-title">How Gridline <span>picks</span></h1>
+        <h1 className="gl-title">How Probable <span>picks</span></h1>
         <p className="gl-lede">What goes into our touchdown picks and game projections, how we test them, and what the tests say.</p>
       </div>
     </header>

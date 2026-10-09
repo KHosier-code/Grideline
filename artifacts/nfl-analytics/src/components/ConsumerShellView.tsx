@@ -83,7 +83,7 @@ export function ConsumerShellView({
 
   return <div className="consumer-shell gl-app">
     <aside className="gl-sidebar">
-      <Link href="/" className="gl-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="" />Gridline</Link>
+      <Link href="/" className="gl-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.svg`} alt="" />probable</Link>
       <nav className="gl-side-nav" aria-label="Primary navigation">
         {nav()}
         <div className="gl-side-group"><ConsumerWorkspaceLink verified={account.adminVerified} /></div>
@@ -99,9 +99,9 @@ export function ConsumerShellView({
         <button ref={menuButton} className="gl-icon-button gl-menu-toggle" type="button"
           aria-label={open ? 'Close navigation' : 'Open navigation'} aria-controls="consumer-mobile-navigation"
           aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}</button>
-        <Link href="/" className="gl-brand gl-brand-mobile"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="" />Gridline</Link>
+        <Link href="/" className="gl-brand gl-brand-mobile"><img src={`${import.meta.env.BASE_URL}logo-icon.svg`} alt="" />probable</Link>
         <ol className="gl-crumbs" aria-label="Breadcrumb">
-          <li><Link href="/">Gridline</Link></li>
+          <li><Link href="/">Probable</Link></li>
           {trail.map((crumb, index) => <li key={crumb} aria-current={index === trail.length - 1 ? 'page' : undefined}>{crumb}</li>)}
         </ol>
       </header>
@@ -118,7 +118,7 @@ export function ConsumerShellView({
       <main className="gl-shell-main">{children}</main>
       <footer className="gl-footer">
         <div className="gl-footer-inner">
-          <p><b>Gridline</b>NFL power ratings, game projections and touchdown picks built from play-by-play data, updated through the week.</p>
+          <p><b>Probable</b>Anytime TD picks priced against the books, game projections and power ratings, built from play-by-play data and updated through the week.</p>
           <p><b>Projections, not promises</b>Every number is a model estimate. Lines move, so check your sportsbook before betting. <Link href="/methodology">How the model works</Link>.</p>
           <p><b>Bet responsibly</b>21+ where sports betting is legal. If gambling stops being fun, call or text 1-800-GAMBLER.</p>
         </div>
