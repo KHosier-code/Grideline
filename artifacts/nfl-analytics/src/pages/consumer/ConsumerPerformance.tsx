@@ -1,5 +1,6 @@
 import { Link } from 'wouter';
 import { CountUp } from '@/components/CountUp';
+import { unitsShort, weeksText } from '@/components/TrackRecord';
 import { CircleCheck, Crosshair, Target, Trophy } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
@@ -209,12 +210,10 @@ export default function ConsumerPerformance() {
     {(games.isLoading || touchdowns.isLoading) && <ConsumerLoading label="Loading performance…" />}
 
     <div className="gl-summary-grid">
-      <SummaryCard title="Winners picked" icon={<CircleCheck />} value={winners !== null ? pct(winners) : '—'}
-        caption={`Straight-up winners, ${typeof e.testedOn === 'string' ? '2021–2025' : 'in testing'}`}
-        rows={[
-          ['Always taking the Vegas favorite', favorite !== null ? pct(favorite) : '—'],
-          ['Difference', <Delta key="d" value={winners !== null && favorite !== null ? winners - favorite : null} unit="%" />],
-        ]} />
+      <SummaryCard title="Touchdown picks" icon={<Trophy />} value={td?.evaluation.topTenHitRate != null ? pct(td.evaluation.topTenHitRate) : '—'}
+        caption="Each week's top 10 who scored, in testing"
+        rows={[['This season', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topTenHits}/${tdRecord.topTenPicks}` : 'After the first graded week'],
+          ['Ranking accuracy (AUC)', td?.evaluation.auc != null ? td.evaluation.auc.toFixed(3) : '—']]} />
       <SummaryCard title="Against the spread" icon={<Target />} value={ats !== null ? pct(ats) : '—'}
         caption="Taking our side of the Vegas closing line"
         rows={[['Break-even at -110', '52.4%'], ['Spread picks on the site', 'Off until we beat the line']]} />
@@ -222,11 +221,59 @@ export default function ConsumerPerformance() {
         caption="Average miss on the final margin, in points"
         rows={[['Vegas closing line', missLine !== null ? missLine.toFixed(2) : '—'],
           ['Difference', <Delta key="m" value={miss !== null && missLine !== null ? miss - missLine : null} unit="pts" betterWhenLower />]]} />
-      <SummaryCard title="Touchdown picks" icon={<Trophy />} value={td?.evaluation.topTenHitRate != null ? pct(td.evaluation.topTenHitRate) : '—'}
-        caption="Each week's top 10 who scored, in testing"
-        rows={[['This season', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topTenHits}/${tdRecord.topTenPicks}` : 'After the first graded week'],
-          ['Ranking accuracy (AUC)', td?.evaluation.auc != null ? td.evaluation.auc.toFixed(3) : '—']]} />
+      <SummaryCard title="Straight-up winners" icon={<CircleCheck />} value={winners !== null ? pct(winners) : '—'}
+        caption={`For pick'em pools, ${typeof e.testedOn === 'string' ? '2021–2025' : 'in testing'}`}
+        rows={[
+          ['Always taking the Vegas favorite', favorite !== null ? pct(favorite) : '—'],
+          ['Difference', <Delta key="d" value={winners !== null && favorite !== null ? winners - favorite : null} unit="%" />],
+        ]} />
     </div>
+
+    <section className="gl-section" aria-labelledby="this-season">
+      <div className="gl-section-head"><h2 id="this-season">This season, live</h2><p>Picks posted before kickoff, graded as games finish{tdRecord && tdRecord.weeksGraded > 0 ? ` · ${weeksText(tdRecord.weeksGraded)} graded so far, so expect big swings` : ''}</p></div>
+      <div className="gl-record-grid gl-four">
+        <div className="gl-card gl-record-card">
+          <span className="gl-label">TD picks, profit at book prices</span>
+          {tdRecord && tdRecord.priced.picks > 0 ? <><b className={tdRecord.priced.units >= 0 ? 'gl-good' : 'gl-bad'}><CountUp text={unitsShort(tdRecord.priced.units)} /></b>
+            <p>1 unit on each top-10 pick at the best DraftKings or FanDuel anytime-TD price we captured before kickoff. {tdRecord.priced.hits} of {tdRecord.priced.picks} priced picks scored.</p></>
+            : <><b>—</b><p>Starts with the first graded week that has captured sportsbook prices.</p></>}
+        </div>
+        <div className="gl-card gl-record-card">
+          <span className="gl-label">TD top 10 that scored</span>
+          {tdRecord && tdRecord.weeksGraded > 0 ? <><b><CountUp text={`${tdRecord.topTenHits}/${tdRecord.topTenPicks}`} /></b>
+            <p>Our probabilities expected {tdRecord.expectedHits.toFixed(1)}. Beating the expected count says the model is sharp; profit at book prices says whether the books already knew.</p></>
+            : <><b>—</b><p>The first graded week appears after this week&apos;s games.</p></>}
+        </div>
+        <div className="gl-card gl-record-card">
+          <span className="gl-label">Line value</span>
+          {clv && clv.leans > 0 ? <>
+            <b>{moved ? <CountUp text={`${clv.movedToward}/${moved}`} /> : '—'}</b>
+            <p>Times Vegas moved toward our number after we disagreed with the opener by {clv.threshold}+ points
+              ({clv.leans} {clv.leans === 1 ? 'game' : 'games'}, {clv.unchanged} unchanged{clv.averageMove !== null ? `, average ${clv.averageMove > 0 ? '+' : ''}${clv.averageMove.toFixed(2)} pts` : ''}).
+              Against the spread: {record(clv.atsOpen)} at the opener, {record(clv.atsClose)} at the close; 52.4% breaks even at -110.</p>
+          </> : <><b>—</b><p>Appears once we have an opening and closing line for games where we disagreed with the opener.</p></>}
+        </div>
+        <div className="gl-card gl-record-card">
+          <span className="gl-label">Straight-up winners (pools)</span>
+          {decided > 0 ? <><b><CountUp text={`${seasonWinners!.wins}–${seasonWinners!.losses}`} /></b><p>Useful for pick&apos;em pools, not betting: favorites can cost -300 or more.{favoriteDecided > 0
+            ? ` The Vegas favorite went ${seasonFavorite!.wins}–${seasonFavorite!.losses} on the same games.` : ''}</p></>
+            : <><b>—</b><p>The first graded games appear after this week&apos;s games.</p></>}
+        </div>
+      </div>
+      <BookComparisonCard comparison={td?.bookComparison} />
+      {(tdRecord?.weeks?.length ?? 0) > 0 && <div className="gl-card gl-table-wrap">
+        <table className="gl-table">
+          <thead><tr><th scope="col">Week</th><th scope="col">TD top 10 scored</th><th scope="col">Expected</th><th scope="col">TD profit at book prices</th><th scope="col">Straight-up winners</th></tr></thead>
+          <tbody>{tdRecord!.weeks.map(week => {
+            const games = game?.weeks.find(item => item.week === week.week);
+            return <tr key={week.week}><td>Week {week.week}</td><td>{week.hits} of {week.picks}</td><td>{week.expectedHits.toFixed(1)}</td>
+              <td className={week.pricedPicks ? (week.units >= 0 ? 'gl-good' : 'gl-bad') : ''}>{week.pricedPicks ? `${unitsShort(week.units)} (${week.pricedPicks} priced)` : 'No prices captured'}</td>
+              <td>{games ? `${games.wins}-${games.losses}` : '—'}</td></tr>;
+          })}</tbody>
+        </table>
+      </div>}
+    </section>
+
 
     <section className="gl-section" aria-labelledby="season-detail">
       <div className="gl-section-head"><h2 id="season-detail">Season detail</h2><p>Game model, each season predicted before it was played</p></div>
@@ -257,41 +304,6 @@ export default function ConsumerPerformance() {
       </div> : <div className="gl-empty"><strong>Season results appear after the next model run.</strong></div>}
     </section>
 
-    <section className="gl-section" aria-labelledby="this-season">
-      <div className="gl-section-head"><h2 id="this-season">This season</h2><p>Graded from the last projection published before each kickoff</p></div>
-      <div className="gl-record-grid">
-        <div className="gl-card gl-record-card">
-          <span className="gl-label">Game winners</span>
-          {decided > 0 ? <><b><CountUp text={`${seasonWinners!.wins}–${seasonWinners!.losses}`} /></b><p>{pct(seasonWinners!.wins / decided)} of winners picked.{favoriteDecided > 0
-            ? ` The Vegas favorite went ${seasonFavorite!.wins}–${seasonFavorite!.losses} (${pct(seasonFavorite!.wins / favoriteDecided)}) on the same games.` : ''}</p></>
-            : <><b>—</b><p>The first graded games appear after this week&apos;s games.</p></>}
-        </div>
-        <div className="gl-card gl-record-card">
-          <span className="gl-label">Closing line value</span>
-          {clv && clv.leans > 0 ? <>
-            <b>{moved ? `${clv.movedToward}/${moved}` : '—'}</b>
-            <p>Times the line moved toward our side after the opener, when we disagreed with it by {clv.threshold}+ points
-              ({clv.leans} {clv.leans === 1 ? 'game' : 'games'}, {clv.unchanged} unchanged{clv.averageMove !== null ? `, average ${clv.averageMove > 0 ? '+' : ''}${clv.averageMove.toFixed(2)} pts` : ''}).
-              Against the spread: {record(clv.atsOpen)} at the opener, {record(clv.atsClose)} at the close.</p>
-          </> : <><b>—</b><p>Appears once we have an opening and closing line for games where we disagreed with the opener.</p></>}
-        </div>
-        <div className="gl-card gl-record-card">
-          <span className="gl-label">Touchdown top 10</span>
-          {tdRecord && tdRecord.weeksGraded > 0 ? <><b>{tdRecord.topTenHits}/{tdRecord.topTenPicks}</b><p>{pct(tdRecord.topTenHits / tdRecord.topTenPicks)} scored over {tdRecord.weeksGraded} {tdRecord.weeksGraded === 1 ? 'week' : 'weeks'}.</p></>
-            : <><b>—</b><p>The first graded week appears after this week&apos;s games.</p></>}
-        </div>
-      </div>
-      <BookComparisonCard comparison={td?.bookComparison} />
-      {(tdRecord?.weeks?.length ?? 0) > 0 && <div className="gl-card gl-table-wrap">
-        <table className="gl-table">
-          <thead><tr><th scope="col">Week</th><th scope="col">Top-10 TD picks that scored</th><th scope="col">Game winners right</th></tr></thead>
-          <tbody>{tdRecord!.weeks.map(week => {
-            const games = game?.weeks.find(item => item.week === week.week);
-            return <tr key={week.week}><td>Week {week.week}</td><td>{week.hits} of {week.picks}</td><td>{games ? `${games.wins}-${games.losses}` : '—'}</td></tr>;
-          })}</tbody>
-        </table>
-      </div>}
-    </section>
 
     <p className="gl-note">Every pick counted here was locked in before kickoff. <Link href="/receipts" className="gl-link">See the receipts</Link>, with the time each one was posted.</p>
 

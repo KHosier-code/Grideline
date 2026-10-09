@@ -198,6 +198,7 @@ export * from './consumerTouchdownPickBookOdds';
 export * from './consumerTouchdownPickBookOddsBooksItem';
 export * from './consumerTouchdownPickPosition';
 export * from './consumerTouchdownRecord';
+export * from './consumerTouchdownRecordPriced';
 export * from './consumerTouchdownRecordWeeksItem';
 export * from './consumerTouchdowns';
 export * from './consumerTouchdownsEvaluation';

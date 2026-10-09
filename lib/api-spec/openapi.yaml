@@ -1676,20 +1676,32 @@ components:
               units: { type: number }
     ConsumerTouchdownRecord:
       type: object
-      required: [weeksGraded, topTenPicks, topTenHits, weeks]
+      required: [weeksGraded, topTenPicks, topTenHits, expectedHits, priced, weeks]
       properties:
         weeksGraded: { type: integer }
         topTenPicks: { type: integer }
         topTenHits: { type: integer }
+        expectedHits: { type: number, description: Sum of the model's probabilities for the graded top-10 picks. }
+        priced:
+          type: object
+          description: 1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price.
+          required: [picks, hits, units]
+          properties:
+            picks: { type: integer }
+            hits: { type: integer }
+            units: { type: number }
         weeks:
           type: array
           items:
             type: object
-            required: [week, picks, hits]
+            required: [week, picks, hits, expectedHits, pricedPicks, units]
             properties:
               week: { type: integer }
               picks: { type: integer }
               hits: { type: integer }
+              expectedHits: { type: number }
+              pricedPicks: { type: integer }
+              units: { type: number }
     ConsumerTouchdowns:
       type: object
       required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record, valueRecord, bookComparison]

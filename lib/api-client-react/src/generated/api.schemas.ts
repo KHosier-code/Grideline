@@ -594,16 +594,32 @@ export interface ConsumerTouchdownValueRecord {
   weeks: ConsumerTouchdownValueRecordWeeksItem[];
 }
 
+/**
+ * 1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price.
+ */
+export type ConsumerTouchdownRecordPriced = {
+  picks: number;
+  hits: number;
+  units: number;
+};
+
 export type ConsumerTouchdownRecordWeeksItem = {
   week: number;
   picks: number;
   hits: number;
+  expectedHits: number;
+  pricedPicks: number;
+  units: number;
 };
 
 export interface ConsumerTouchdownRecord {
   weeksGraded: number;
   topTenPicks: number;
   topTenHits: number;
+  /** Sum of the model's probabilities for the graded top-10 picks. */
+  expectedHits: number;
+  /** 1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price. */
+  priced: ConsumerTouchdownRecordPriced;
   weeks: ConsumerTouchdownRecordWeeksItem[];
 }
 

@@ -5,11 +5,16 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerTouchdownRecordPriced } from './consumerTouchdownRecordPriced';
 import type { ConsumerTouchdownRecordWeeksItem } from './consumerTouchdownRecordWeeksItem';
 
 export interface ConsumerTouchdownRecord {
   weeksGraded: number;
   topTenPicks: number;
   topTenHits: number;
+  /** Sum of the model's probabilities for the graded top-10 picks. */
+  expectedHits: number;
+  /** 1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price. */
+  priced: ConsumerTouchdownRecordPriced;
   weeks: ConsumerTouchdownRecordWeeksItem[];
 }

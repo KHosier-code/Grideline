@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ConsumerTouchdownRecordWeeksItem = {
-  week: number;
+/**
+ * 1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price.
+ */
+export type ConsumerTouchdownRecordPriced = {
   picks: number;
   hits: number;
-  expectedHits: number;
-  pricedPicks: number;
   units: number;
 };
