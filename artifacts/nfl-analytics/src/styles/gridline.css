@@ -771,6 +771,7 @@
 .gl-share-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .gl-share-head h2 { margin: 0; font-size: 18px; }
 .gl-share-card { width: 100%; max-width: 720px; border-radius: 10px; border: 1px solid hsl(var(--border)); }
+.gl-share-clip { display: block; width: 100%; max-width: 320px; aspect-ratio: 9 / 16; border-radius: 10px; border: 1px solid hsl(var(--border)); background: #141414; }
 .gl-share-box textarea { width: 100%; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
 
 /* ---------- Slates ---------- */
@@ -1031,3 +1032,28 @@
 /* Home page "Updated" line: when each feed last refreshed */
 .gl-freshness { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: -8px 0 4px; color: hsl(var(--muted-foreground)); font-size: 12px; }
 .gl-freshness b { color: hsl(var(--foreground)); font-weight: 700; }
+
+/* Motion: bars grow in, lists reveal in order, headline numbers count up (CountUp).
+   Everything here is off for visitors who ask their device for reduced motion. */
+.gl-countup { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) {
+  .gl-bar i b, .gl-winbar span, .gl-meter-fill { transform-origin: left center; animation: gl-grow .9s cubic-bezier(.2, .8, .2, 1) .15s both; }
+  .gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card {
+    animation: gl-rise .5s cubic-bezier(.2, .8, .2, 1) both;
+    animation-delay: calc(var(--gl-i, 0) * 45ms);
+  }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(2) { --gl-i: 1; }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(3) { --gl-i: 2; }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(4) { --gl-i: 3; }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(5) { --gl-i: 4; }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(6) { --gl-i: 5; }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(7) { --gl-i: 6; }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(8) { --gl-i: 7; }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(9) { --gl-i: 8; }
+  :is(.gl-td, .gl-td-grid > li, .gl-summary-card, .gl-record-card, .gl-stat, .gl-game-card):nth-child(n + 10) { --gl-i: 9; }
+  .gl-td-card, .gl-summary-card, .gl-record-card { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .gl-td-card:hover, .gl-summary-card:hover, .gl-record-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px hsl(0 0% 0% / .12); }
+  .gl-td[open] .gl-why { animation: gl-rise .3s ease both; }
+}
+@keyframes gl-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes gl-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }

@@ -15,6 +15,7 @@ import playerProjectionsRouter from "./player-projections";
 import gameAlertsRouter from "./game-alerts";
 import userPicksRouter from "./user-picks";
 import verifiedImageryRouter from "./verified-imagery";
+import opsRouter from "./ops";
 
 const router: IRouter = Router();
 
@@ -34,4 +35,5 @@ router.use(playerProjectionsRouter);
 router.use(gameAlertsRouter);
 router.use(userPicksRouter);
 router.use(verifiedImageryRouter);
+router.use(opsRouter);
 export default router;

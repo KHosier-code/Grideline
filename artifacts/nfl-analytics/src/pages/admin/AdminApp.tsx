@@ -1,7 +1,7 @@
 import { lazy, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { UserButton, useAuth } from '@clerk/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Bell, CalendarDays, Check, ChevronRight, Clock3, Database, FileSearch, ChartNoAxesColumnIncreasing, LayoutDashboard, LineChart, ListFilter, Loader2, LockKeyhole, Menu, RefreshCw, Save, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, TrendingUp, UserRound, X } from 'lucide-react';
+import { Activity, AlertTriangle, Bell, CalendarDays, Check, ChevronRight, Clock3, Database, FileSearch, ChartNoAxesColumnIncreasing, LayoutDashboard, LineChart, ListFilter, Loader2, Radio, LockKeyhole, Menu, RefreshCw, Save, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, TrendingUp, UserRound, X } from 'lucide-react';
 import {
   getGetDashboardSummaryQueryKey,
   getGetDataHealthQueryKey,
@@ -40,6 +40,7 @@ import { useAdminStatus } from '@/hooks/use-admin-status';
 import { ConsumerLoadingFallback, ConsumerShell, ThemeToggle } from '@/components/ConsumerShell';
 
 const UsageAnalytics = lazy(() => import('@/pages/admin/UsageAnalytics'));
+const OpsPage = lazy(() => import('@/pages/admin/Ops'));
 
 const ImageryReview = lazy(() => import('@/pages/admin/ImageryReview'));
 const AdminDepthChart = lazy(() => import('@/components/AdminDepthChart').then(module => ({ default: module.AdminDepthChart })));
@@ -53,6 +54,7 @@ const navGroups = [
     label: 'Workspace',
     items: [
       { href: '/', label: 'Overview', icon: LayoutDashboard },
+      { href: '/ops', label: 'Ops', icon: Radio },
       { href: '/this-week', label: 'This week', icon: CalendarDays },
       { href: '/odds', label: 'Odds board', icon: SlidersHorizontal },
       { href: '/line-movement', label: 'Line movement', icon: LineChart },
@@ -1160,6 +1162,7 @@ function SettingsPage() {
 export default function AdminRoutes() {
   return <AdminOnly><Switch>
     <Route path="/admin" component={Dashboard} /><Route path="/admin/this-week" component={ThisWeek} /><Route path="/admin/games/:gameId" component={GameDetail} />
+    <Route path="/admin/ops" component={OpsPage} />
     <Route path="/admin/data-health"><HealthPage kind="data-health" eyebrow="System / Observability" title="Data health" detail="Freshness, configuration, and capture status for every provider." /></Route>
     <Route path="/admin/imagery-review" component={ImageryReview} />
     <Route path="/admin/feature-audit" component={FeatureAuditPage} /><Route path="/admin/personnel-context" component={PersonnelContextPage} /><Route path="/admin/usage-analytics" component={UsageAnalytics} /><Route path="/admin/odds" component={OddsBoard} />

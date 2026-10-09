@@ -82,6 +82,43 @@ export function dueClockTasks(now: Date, kickoffs: Date[], done: ReadonlySet<str
   return tasks.filter((task) => !done.has(task.key));
 }
 
+export type ClockPlanItem = { kind: ClockTask["kind"]; at: string; kickoff: string };
+
+/**
+ * When each upcoming task is scheduled to start, for the Ops dashboard. Mirrors
+ * the windows in dueClockTasks; score refreshes are listed once per window.
+ */
+export function upcomingClockPlan(now: Date, kickoffs: Date[], limit = 12): ClockPlanItem[] {
+  const items: ClockPlanItem[] = [];
+  const times = [...new Set(kickoffs.map((kickoff) => kickoff.getTime()))].sort((a, b) => a - b);
+  for (const time of times) {
+    const kickoff = new Date(time).toISOString();
+    items.push({ kind: "odds", at: new Date(time - 40 * MINUTE).toISOString(), kickoff });
+    items.push({ kind: "weather", at: new Date(time - 80 * MINUTE).toISOString(), kickoff });
+    items.push({ kind: "injuries", at: new Date(time - 80 * MINUTE).toISOString(), kickoff });
+  }
+  for (const window of kickoffWindows(kickoffs)) {
+    const kickoff = new Date(window[0]).toISOString();
+    items.push({ kind: "picks", at: new Date(window[0] - 75 * MINUTE).toISOString(), kickoff });
+    items.push({ kind: "scores", at: kickoff, kickoff });
+  }
+  return items.filter((item) => Date.parse(item.at) >= now.getTime() - MINUTE)
+    .sort((a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind)).slice(0, limit);
+}
+
+export type ClockLogEntry = { key: string; kind: ClockTask["kind"]; at: string; ok: boolean; outcome: string };
+const clockLog: ClockLogEntry[] = [];
+
+/** The clock's most recent task outcomes (since the last restart), newest first. */
+export function recentClockLog() {
+  return [...clockLog].reverse();
+}
+
+function remember(task: ClockTask, ok: boolean, outcome: string) {
+  clockLog.push({ key: task.key, kind: task.kind, at: new Date().toISOString(), ok, outcome: outcome.slice(0, 200) });
+  if (clockLog.length > 60) clockLog.splice(0, clockLog.length - 60);
+}
+
 /** The latest successful Odds API capture, if it happened within `withinMs`. */
 export async function recentOddsCapture(withinMs: number, now = new Date()) {
   const [row] = await db.select({ requestedAt: oddsApiRequestsTable.requestedAt }).from(oddsApiRequestsTable)
@@ -155,6 +192,10 @@ export function kickoffClockEnabled(environment: NodeJS.ProcessEnv = process.env
 
 let timer: NodeJS.Timeout | null = null;
 
+export function kickoffClockRunning() {
+  return timer !== null;
+}
+
 export function startKickoffClock() {
   if (timer || !kickoffClockEnabled()) return;
   const done = new Set<string>();
@@ -174,9 +215,13 @@ export function startKickoffClock() {
         // Marked first: a failing task is logged once, not retried every minute.
         done.add(task.key);
         try {
-          logger.info({ task: task.key, outcome: await runTask(task, now) }, "Kickoff clock task");
+          const outcome = await runTask(task, now);
+          remember(task, true, outcome);
+          logger.info({ task: task.key, outcome }, "Kickoff clock task");
         } catch (error) {
-          logger.warn({ task: task.key, error: error instanceof Error ? error.message : String(error) }, "Kickoff clock task failed");
+          const message = error instanceof Error ? error.message : String(error);
+          remember(task, false, message);
+          logger.warn({ task: task.key, error: message }, "Kickoff clock task failed");
         }
       }
       if (done.size > 500) for (const key of [...done].slice(0, 250)) done.delete(key);

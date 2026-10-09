@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getGetConsumerTouchdownsQueryKey, useGetConsumerTouchdowns, type ConsumerTouchdownPick } from '@workspace/api-client-react';
 import { formatPrice } from '@/lib/pick-sheet';
 import { ConsumerLoading } from './consumer-ui';
@@ -17,6 +18,26 @@ function reason(pick: ConsumerTouchdownPick) {
   return parts.join(', ');
 }
 
+/** The animated picks (share_clip.py), shown once a clip exists for this week. */
+function ClipBox({ week }: { week: number | null | undefined }) {
+  const clip = useQuery({
+    queryKey: ['share-clip', week],
+    enabled: typeof week === 'number',
+    queryFn: async () => (await fetch(`/api/share/td-clip.mp4?week=${week}`, { method: 'HEAD' })).ok,
+    staleTime: 5 * 60_000,
+  });
+  if (!clip.data) return null;
+  return <section className="gl-card gl-share-box">
+    <div className="gl-share-head">
+      <h2>Video clip</h2>
+      <a className="gl-button" href={`/api/share/td-clip.mp4?week=${week}&download=1`} download={`gridline-week-${week}-td-picks.mp4`}>Download</a>
+    </div>
+    <video className="gl-share-clip" src={`/api/share/td-clip.mp4?week=${week}`} controls muted playsInline loop preload="metadata"
+      aria-label={`Week ${week} anytime touchdown picks, animated`} />
+    <p className="gl-note">A 9-second vertical video for Reels, TikTok, Shorts and X. Made with each Tuesday&apos;s picks.</p>
+  </section>;
+}
+
 function CopyBox({ label, text }: { label: string; text: string }) {
   const [copied, setCopied] = useState(false);
   return <section className="gl-card gl-share-box">
@@ -30,7 +51,7 @@ function CopyBox({ label, text }: { label: string; text: string }) {
   </section>;
 }
 
-/** Ready-made weekly posts: the picks card, an X post and an email. Not linked from the menu. */
+/** Ready-made weekly posts: the picks card, a video clip, an X post and an email. Not linked from the menu. */
 export default function SharePicks() {
   const query = useGetConsumerTouchdowns(undefined, { query: { queryKey: getGetConsumerTouchdownsQueryKey() } });
   const data = query.data;
@@ -62,7 +83,7 @@ export default function SharePicks() {
       <div>
         <p className="gl-label">{data?.season ? `${data.season} · week ${data.week}` : 'Share'}</p>
         <h1 className="gl-title">Share this <span>week</span></h1>
-        <p className="gl-lede">The picks card, a post and an email, filled in from this week&apos;s TD picks. Copy, paste, send.</p>
+        <p className="gl-lede">The picks card, a video clip, a post and an email, filled in from this week&apos;s TD picks. Copy, paste, send.</p>
       </div>
     </header>
     {query.isLoading && <ConsumerLoading label="Loading this week…" />}
@@ -76,6 +97,7 @@ export default function SharePicks() {
         <img className="gl-share-card" src={`/api/share/td-card.png?week=${data?.week}`} alt={`Week ${data?.week} anytime touchdown picks card`} />
         <p className="gl-note">This image is also the preview when someone shares a link to TD Picks.</p>
       </section>
+      <ClipBox week={data?.week} />
       <CopyBox label="Post for X or Threads" text={post} />
       <CopyBox label="Weekly email" text={email} />
     </>}

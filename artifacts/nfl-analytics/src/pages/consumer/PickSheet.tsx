@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { CountUp } from '@/components/CountUp';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import {
@@ -47,11 +48,11 @@ function HeroStats({ season }: { season: number | undefined }) {
   const favoriteDecided = favorite ? favorite.wins + favorite.losses : 0;
   return <div className="gl-stats" aria-label="How the models are doing">
     {td?.record && td.record.weeksGraded > 0
-      ? <div className="gl-stat"><b>{td.record.topTenHits}/{td.record.topTenPicks}</b><small>Top-10 TD picks that scored this season</small></div>
-      : td?.evaluation.topTenHitRate != null && <div className="gl-stat"><b>{percent(td.evaluation.topTenHitRate)}</b><small>of top-10 TD picks scored in testing</small></div>}
+      ? <div className="gl-stat"><b><CountUp text={`${td.record.topTenHits}/${td.record.topTenPicks}`} /></b><small>Top-10 TD picks that scored this season</small></div>
+      : td?.evaluation.topTenHitRate != null && <div className="gl-stat"><b><CountUp text={percent(td.evaluation.topTenHitRate)} /></b><small>of top-10 TD picks scored in testing</small></div>}
     {decided > 0
-      ? <div className="gl-stat"><b>{winners!.wins}–{winners!.losses}</b><small>Winners picked this season{favoriteDecided > 0 ? ` (Vegas favorite ${favorite!.wins}–${favorite!.losses})` : ''}</small></div>
-      : typeof games?.evaluation.winnersModel === 'number' && <div className="gl-stat"><b>{percent(games.evaluation.winnersModel)}</b><small>of winners picked in testing{typeof games.evaluation.winnersFavorite === 'number' ? ` (Vegas favorite ${percent(games.evaluation.winnersFavorite)})` : ''}</small></div>}
+      ? <div className="gl-stat"><b><CountUp text={`${winners!.wins}–${winners!.losses}`} /></b><small>Winners picked this season{favoriteDecided > 0 ? ` (Vegas favorite ${favorite!.wins}–${favorite!.losses})` : ''}</small></div>
+      : typeof games?.evaluation.winnersModel === 'number' && <div className="gl-stat"><b><CountUp text={percent(games.evaluation.winnersModel)} /></b><small>of winners picked in testing{typeof games.evaluation.winnersFavorite === 'number' ? ` (Vegas favorite ${percent(games.evaluation.winnersFavorite)})` : ''}</small></div>}
     <p className="gl-stats-note">Tested on past seasons the models never trained on. <Link href="/methodology" className="gl-link">How we test</Link></p>
   </div>;
 }

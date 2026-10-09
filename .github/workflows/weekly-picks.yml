@@ -62,6 +62,12 @@ jobs:
               "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-$weight.ttf" || true
           done
           python share_card.py td_payload.json
+      - name: Animated share clip
+        if: ${{ !cancelled() && steps.touchdowns.outcome == 'success' }}
+        # A missing clip never holds up the picks.
+        continue-on-error: true
+        working-directory: research/td-model
+        run: python share_clip.py td_payload.json td_clip.mp4
       - name: Usage, defense vs position and red zone report
         if: ${{ !cancelled() }}
         working-directory: research/td-model
