@@ -211,3 +211,6 @@ channel = "stable-25_05"
 
 [userenv.production]
 ADDITIONAL_ADMIN_USER_IDS = "user_3JKTsuZeSJyBHBDeKX1xOOK93nU"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-7cd97bd7-dcd4-4cb2-907b-68bce2c39781"
