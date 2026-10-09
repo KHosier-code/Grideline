@@ -136,7 +136,7 @@ function Slip({ legs, onRemove, onClear }: { legs: ParlayLeg[]; onRemove: (id: s
     </aside>;
   }
   const text = [`My parlay (${legs.length} legs)`, ...legs.map(leg => `• ${leg.label} (${pctText(leg.probability)}%)`),
-    `Gridline: hits ${pctText(quote.probability)} of 100, fair ${price(quote.fairOdds)}`, 'gridelineanalytics.com/parlays'].join('\n');
+    `Probable: hits ${pctText(quote.probability)} of 100, fair ${price(quote.fairOdds)}`, 'probablesports.com/parlays'].join('\n');
   return <aside id="parlay-slip" className="gl-card gl-slip" aria-label="Parlay slip">
     <div className="gl-slip-head"><span className="gl-label">Your parlay · {legs.length} {legs.length === 1 ? 'leg' : 'legs'}</span><button type="button" className="gl-link" onClick={onClear}>Clear</button></div>
     <ul className="gl-slip-legs">{legs.map(leg => <li key={leg.id}>
@@ -166,7 +166,7 @@ function Slip({ legs, onRemove, onClear }: { legs: ParlayLeg[]; onRemove: (id: s
         eyebrow: `${legs.length}-leg parlay`, title: 'My parlay',
         grid: { wins: hitCount, caption: `hits ${pctText(quote.probability)} of 100 · fair ${price(quote.fairOdds)}` },
         rows: legs.map(leg => ({ left: leg.label, right: `${pctText(leg.probability)}%` })),
-        footer: 'gridelineanalytics.com/parlays',
+        footer: 'probablesports.com/parlays',
       }, 'gridline-parlay.png')}>Share image</button>
     </div>
     {runs && <p className="gl-slip-run" aria-live="polite">Hit <b>{hits}</b> times. Missed by just one leg <b>{oneAway}</b> times.</p>}

@@ -46,12 +46,12 @@ export function GameRow({ view, now }: { view: GameView; now: number }) {
     </div>
     <div className="gl-mkt">
       <span className="gl-label m-label">Spread</span>
-      <span className="line">Gridline <b>{projection ? lineText(projection.margin, home.abbreviation, away.abbreviation) : '—'}</b></span>
+      <span className="line">Ours <b>{projection ? lineText(projection.margin, home.abbreviation, away.abbreviation) : '—'}</b></span>
       <span className="line">Vegas <b>{vegas.homeLine !== null ? vegasLineText(vegas.homeLine, home.abbreviation, away.abbreviation) : '—'}</b></span>
     </div>
     <div className="gl-mkt">
       <span className="gl-label m-label">Total</span>
-      <span className="line">Gridline <b>{projection ? projection.total.toFixed(1) : '—'}</b></span>
+      <span className="line">Ours <b>{projection ? projection.total.toFixed(1) : '—'}</b></span>
       <span className="line">Vegas <b>{vegas.total ?? '—'}</b></span>
     </div>
     <span className="gl-go" aria-hidden="true">›</span>
@@ -94,7 +94,7 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
     <div className="gl-gc-head">
       <span>{final ? 'Final' : started ? 'Live' : game.kickoffTime ? time(game.kickoffTime) : 'TBD'}</span>
       {final ? <span>{result ? (result === 'win' ? 'Our winner ✓' : result === 'loss' ? 'Our winner ✗' : 'Tie') : ''}</span>
-        : <><span>Open</span><span>Current</span><span>Gridline</span></>}
+        : <><span>Open</span><span>Current</span><span>Ours</span></>}
     </div>
     {sides.map(item => {
       const homeFactor = item.side === 'home' ? 1 : -1;
@@ -117,7 +117,7 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
       </div>;
     })}
     {final && projection && <p className="gl-gc-foot">We projected {game.matchup.away.abbreviation} {projection.away.toFixed(1)}, {game.matchup.home.abbreviation} {projection.home.toFixed(1)}</p>}
-    {!final && projection && <p className="gl-gc-foot">Total: Gridline {projection.total.toFixed(1)} · Vegas {view.vegas.total ?? '—'}</p>}
+    {!final && projection && <p className="gl-gc-foot">Total: ours {projection.total.toFixed(1)} · Vegas {view.vegas.total ?? '—'}</p>}
     {!final && projection && <GapNote view={view} open={open?.line ?? null} />}
     {!final && <BestNumbers books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />}
     {!final && !projection && <p className="gl-gc-foot gl-muted">Projection pending: our quarterback-adjusted line usually posts by Tuesday morning.</p>}
@@ -128,11 +128,11 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
 export function GapNote({ view, open }: { view: GameView; open: number | null }) {
   const gap = lineGap(view, open);
   if (!gap) return null;
-  if (gap.side === null) return <p className="gl-gc-foot">Gridline matches the current line</p>;
+  if (gap.side === null) return <p className="gl-gc-foot">We match the current line</p>;
   const team = view.game.matchup[gap.side].abbreviation;
   const moved = gap.moved === null || gap.moved === 0 ? null
     : `line moved ${Math.abs(gap.moved)} ${gap.moved > 0 ? 'toward' : 'away from'} us since it opened`;
-  return <p className="gl-gc-foot gl-gc-gap">Gridline likes <b>{team}</b> by {gap.points} more than Vegas{moved ? ` · ${moved}` : ''}</p>;
+  return <p className="gl-gc-foot gl-gc-gap">We like <b>{team}</b> by {gap.points} more than Vegas{moved ? ` · ${moved}` : ''}</p>;
 }
 
 /** Every game in a week, grouped by slate (Thursday, Sunday early, Sunday afternoon, Monday), as cards. */

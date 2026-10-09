@@ -48,7 +48,7 @@ const authBasePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 function AuthPageShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background lg:flex-row">
-      <section className="relative isolate flex min-h-[340px] flex-col overflow-hidden bg-[#17213b] text-[#f0f3fc] sm:min-h-[390px] lg:min-h-[100dvh] lg:w-[52%]" aria-label="About Gridline">
+      <section className="relative isolate flex min-h-[340px] flex-col overflow-hidden bg-[#17213b] text-[#f0f3fc] sm:min-h-[390px] lg:min-h-[100dvh] lg:w-[52%]" aria-label="About Probable">
         <img
           src={`${import.meta.env.BASE_URL}gridline-auth-field.svg`}
           alt=""
@@ -57,8 +57,8 @@ function AuthPageShell({ children }: { children: ReactNode }) {
         />
         <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-[#11192e]/65 via-[#11192e]/10 to-[#11192e]/95 lg:from-[#11192e]/45 lg:via-transparent lg:to-[#11192e]/95" />
         <header className="flex items-start justify-between gap-4 px-6 pt-6 sm:px-10 sm:pt-9 lg:px-12 lg:pt-12">
-          <Link href="/" aria-label="Gridline home" data-testid="link-auth-brand-home" className="inline-flex shrink-0 rounded-lg focus-visible:outline-offset-4">
-            <span className="brand-wordmark-frame brand-wordmark-auth !w-[145px] !min-h-0 sm:!w-[192px]"><img src={`${import.meta.env.BASE_URL}logo-wordmark.png`} alt="Gridline NFL Analytics" /></span>
+          <Link href="/" aria-label="Probable home" data-testid="link-auth-brand-home" className="inline-flex shrink-0 rounded-lg focus-visible:outline-offset-4">
+            <span className="brand-wordmark-frame brand-wordmark-auth !w-[145px] !min-h-0 sm:!w-[192px]"><img src={`${import.meta.env.BASE_URL}logo-wordmark.png`} alt="Probable" /></span>
           </Link>
           <Link href="/" data-testid="link-auth-return-home" className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap border-b border-[#aec5f7]/50 text-[11px] font-bold tracking-[.03em] text-[#e7edfb] transition-colors hover:border-[#e7edfb] hover:text-white sm:text-xs">
             Return home <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
@@ -79,7 +79,7 @@ function AuthPageShell({ children }: { children: ReactNode }) {
       <main className="flex min-h-[500px] flex-1 flex-col justify-center border-t border-border bg-background px-5 py-10 sm:px-10 lg:w-[48%] lg:border-l lg:border-t-0 lg:px-12 lg:py-16">
         <div className="mx-auto w-full max-w-[440px]">
           <div className="mb-7 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[.19em] text-muted-foreground sm:mb-9">
-            <span className="h-px w-7 bg-accent" aria-hidden="true" /> Your Gridline account
+            <span className="h-px w-7 bg-accent" aria-hidden="true" /> Your Probable account
           </div>
           {children}
           <p className="mt-8 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">

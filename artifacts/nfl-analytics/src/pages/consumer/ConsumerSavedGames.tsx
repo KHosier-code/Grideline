@@ -126,7 +126,7 @@ export function ConsumerSavedGamesView({ isLoaded, userId, games, isLoading, isE
 
       <footer className="sv-footnote">
         <span><strong>Read the signals separately.</strong> Projections are model outputs; market lines are observed quotes when available. Neither is a guarantee.</span>
-        <Link href="/methodology" data-testid="link-saved-games-methodology">How Gridline reads a game</Link>
+        <Link href="/methodology" data-testid="link-saved-games-methodology">How Probable reads a game</Link>
       </footer>
     </div>
   );

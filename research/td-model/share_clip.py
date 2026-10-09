@@ -18,7 +18,9 @@ import urllib.request
 from datetime import datetime, timezone
 
 import imageio_ffmpeg
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
+
+import brand
 
 PAYLOAD, OUT = sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None
 payload = json.load(open(PAYLOAD))
@@ -26,23 +28,15 @@ picks = payload["picks"][:10]
 season, week = payload["season"], payload["week"]
 
 W, H, FPS, SECONDS = 1080, 1920, 30, 9
-BG, CARD, LINE, TRACK = (20, 20, 20), (30, 30, 30), (48, 48, 48), (44, 44, 44)
-TEXT, MUTED, ORANGE = (240, 240, 240), (150, 150, 150), (249, 115, 22)
-FONT_DIR = os.environ.get("GRIDLINE_FONT_DIR", "fonts")
-_fonts = {}
+BG, CARD, LINE, TRACK = brand.NAVY, brand.CARD, brand.LINE, brand.LINE
+TEXT, MUTED, ORANGE = brand.TEXT, brand.MUTED, brand.CORAL
 
 
 def font(weight, size):
-    key = (weight, size)
-    if key not in _fonts:
-        for path in (f"{FONT_DIR}/BarlowCondensed-{weight}.ttf",
-                     "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf"):
-            if os.path.exists(path):
-                _fonts[key] = ImageFont.truetype(path, size)
-                break
-        else:
-            _fonts[key] = ImageFont.load_default(size)
-    return _fonts[key]
+    """Headlines and numbers in Space Grotesk; "Medium" (small text) in Instrument Sans."""
+    if weight == "Medium":
+        return brand.font(size, "Medium", "InstrumentSans")
+    return brand.font(size, "Bold" if weight == "Bold" else "Medium")
 
 
 def last_week_line():
@@ -94,20 +88,22 @@ def frame(now):
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
 
-    # Brand: badge pops, wordmark slides in.
+    # Brand: the logo tile grows in, the wordmark slides in.
     a = progress(now, 0.0, 0.5)
-    size = 72 * (0.6 + 0.4 * a)
+    size = round(72 * (0.6 + 0.4 * a))
     cx, cy = MARGIN + 36, 150
-    d.rounded_rectangle((cx - size / 2, cy - size / 2, cx + size / 2, cy + size / 2), radius=14, fill=mix(ORANGE, a))
-    d.text((cx, cy), "G", font=font("Bold", round(54 * (0.6 + 0.4 * a))), fill=mix(BG, a, ORANGE) if a > 0.05 else BG, anchor="mm")
+    if a > 0:
+        tile = brand.icon(size)
+        tile.putalpha(tile.getchannel("A").point(lambda v: round(v * a)))
+        img.paste(tile, (int(cx - size / 2), int(cy - size / 2)), tile)
     b = progress(now, 0.15, 0.5)
-    d.text((MARGIN + 92 - 30 * (1 - b), cy), "GRIDLINE", font=font("Bold", 64), fill=mix(TEXT, b), anchor="lm")
+    d.text((MARGIN + 92 - 30 * (1 - b), cy + 3), "probable", font=font("Bold", 66), fill=mix(TEXT, b), anchor="lm")
 
     # Eyebrow and title rise in.
     c = progress(now, 0.45, 0.6)
     d.text((MARGIN, 250 + 24 * (1 - c)), f"{season} · WEEK {week}", font=font("SemiBold", 44), fill=mix(ORANGE, c), anchor="lt")
     e = progress(now, 0.6, 0.6)
-    d.text((MARGIN, 306 + 30 * (1 - e)), "Anytime TD picks", font=font("Bold", 104), fill=mix(TEXT, e), anchor="lt")
+    d.text((MARGIN, 306 + 30 * (1 - e)), "Anytime TD picks", font=font("Bold", 96), fill=mix(TEXT, e), anchor="lt")
     d.text((MARGIN, 420 + 20 * (1 - e)), "Chance each player scores, from our model", font=font("Medium", 36), fill=mix(MUTED, e), anchor="lt")
 
     # Rows slide in from the right, then the bar fills and the number counts up.
@@ -139,7 +135,7 @@ def frame(now):
     f = progress(now, ROW_START + len(picks) * ROW_STAGGER + 0.5, 0.6)
     foot = H - 170
     d.line((MARGIN, foot, MARGIN + (W - 2 * MARGIN) * f, foot), fill=LINE, width=2)
-    d.text((MARGIN, foot + 34 + 16 * (1 - f)), "gridelineanalytics.com", font=font("Bold", 52), fill=mix(TEXT, f), anchor="lt")
+    d.text((MARGIN, foot + 34 + 16 * (1 - f)), "probablesports.com", font=font("Bold", 52), fill=mix(TEXT, f), anchor="lt")
     detail = f"{record} · 21+" if record else "Model estimates, not guarantees · 21+"
     d.text((MARGIN, foot + 100 + 16 * (1 - f)), detail, font=font("Medium", 34), fill=mix(MUTED, f), anchor="lt")
     return img

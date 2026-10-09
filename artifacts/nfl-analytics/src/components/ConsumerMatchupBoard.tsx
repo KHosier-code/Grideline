@@ -36,7 +36,7 @@ export function ConsumerMatchupBoard({ board, home, away }: {
   if (!supported.length) return null;
   return <section className="matchup-board-section" data-section="matchup-board">
     <div className="consumer-section-heading"><div><p className="consumer-eyebrow">Pregame matchup evidence</p><h2>Matchup Board</h2></div></div>
-    <p className="consumer-note">Only supported evidence available before kickoff is used. These assessments do not change the Gridline prediction.</p>
+    <p className="consumer-note">Only supported evidence available before kickoff is used. These assessments do not change our prediction.</p>
     <div className="matchup-team-labels" aria-hidden="true"><span>{away.abbreviation}</span><span>Assessment</span><span>{home.abbreviation}</span></div>
     <div className="matchup-assessments">{supported.map((assessment) =>
       <Assessment assessment={assessment} home={home} away={away} key={assessment.category} />)}</div>

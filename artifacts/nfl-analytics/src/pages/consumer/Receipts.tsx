@@ -34,7 +34,7 @@ function WeekReceipts({ season, week }: { season: number; week: Week }) {
     <div className="gl-table-wrap">
       <table className="gl-table">
         <caption className="gl-table-caption">Game projections<small>last version received before kickoff</small></caption>
-        <thead><tr><th scope="col">Game</th><th scope="col">Locked in</th><th scope="col">Gridline</th><th scope="col">Line then</th><th scope="col">Final</th><th scope="col">Winner</th></tr></thead>
+        <thead><tr><th scope="col">Game</th><th scope="col">Locked in</th><th scope="col">Ours</th><th scope="col">Line then</th><th scope="col">Final</th><th scope="col">Winner</th></tr></thead>
         <tbody>{week.games.map(game => <tr key={game.gameId}>
           <td>{game.awayTeam} at {game.homeTeam}</td>
           <td className="gl-receipt-meta">{stamp(game.lockedAt)}</td>

@@ -2,7 +2,7 @@
 
 Usage: publish.py <dataset.parquet> <data dir> <metrics.json>
 Environment:
-  GRIDLINE_INGEST_URL    site origin, e.g. https://gridelineanalytics.com
+  GRIDLINE_INGEST_URL    site origin, e.g. https://probablesports.com
   GRIDLINE_INGEST_TOKEN  shared secret (same value as the site's secret)
 Without both variables the payload is written to td_payload.json and not sent.
 """

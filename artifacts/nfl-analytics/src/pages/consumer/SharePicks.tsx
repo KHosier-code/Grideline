@@ -4,7 +4,7 @@ import { getGetConsumerTouchdownsQueryKey, useGetConsumerTouchdowns, type Consum
 import { formatPrice } from '@/lib/pick-sheet';
 import { ConsumerLoading } from './consumer-ui';
 
-const SITE = 'gridelineanalytics.com';
+const SITE = 'probablesports.com';
 const pct = (value: number) => `${Math.round(value * 100)}%`;
 
 function reason(pick: ConsumerTouchdownPick) {

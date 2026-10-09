@@ -39,7 +39,7 @@ function PoolRow({ game, points, records, now }: { game: PoolGame; points: numbe
       <span className="gl-pool-meta">
         <span>{final ? `Final ${final.away}-${final.home}` : started ? 'Live' : kickoff}</span>
         {final && winner && <span className={`gl-pill ${winner === game.pick ? 'win' : 'loss'}`}>{winner === game.pick ? 'Pick right' : 'Upset'}</span>}
-        {!final && disagree && <span className="gl-flag" title="Gridline's model picks the other side">Gridline: {abbr(game, game.modelPick!)}</span>}
+        {!final && disagree && <span className="gl-flag" title="Our model picks the other side">Ours: {abbr(game, game.modelPick!)}</span>}
       </span>
       <span className="gl-pool-wins"><b>{game.wins}</b><small>of 100</small></span>
       <HundredGrid wins={game.wins} winColor={winColor} lossColor={lossColor} label={`${abbr(game, game.pick)} wins ${game.wins} of 100`} />
@@ -94,15 +94,15 @@ export default function Pickem() {
   const disagreements = ranked.filter(game => game.modelPick && game.modelPick !== game.pick && game.source !== 'gridline');
   const slateLabel = slate === 'all' ? `Week ${week?.week}` : slates.find(group => group.slate.key === slate)?.slate.label ?? '';
 
-  const copyText = [`Gridline ${slateLabel} confidence picks`, ...ranked.map(game =>
-    `${points(game)}  ${abbr(game, game.pick)} over ${abbr(game, other(game.pick))} (${game.wins} of 100)`), 'gridelineanalytics.com/pickem'].join('\n');
+  const copyText = [`Probable ${slateLabel} confidence picks`, ...ranked.map(game =>
+    `${points(game)}  ${abbr(game, game.pick)} over ${abbr(game, other(game.pick))} (${game.wins} of 100)`), 'probablesports.com/pickem'].join('\n');
 
   return <div className="gl-page">
     <header className="gl-hero">
       <div>
         <p className="gl-label">{week ? `${week.season} season · Week ${week.week}` : 'Pool Picks'}</p>
         <h1 className="gl-title">Pool <span>Picks</span></h1>
-        <p className="gl-lede">Every game ranked for your office pool: straight-up winners from surest thing to coin flip, plus Gridline&apos;s side of every spread and total.</p>
+        <p className="gl-lede">Every game ranked for your office pool: straight-up winners from surest thing to coin flip, plus our side of every spread and total.</p>
       </div>
       {(() => {
         const su = projections.data?.record; const fav = projections.data?.favoriteRecord;
@@ -140,7 +140,7 @@ export default function Pickem() {
         <div className="gl-card"><span className="gl-label">Closest calls</span>
           {closest.map(game => <p key={game.view.game.gameId}><TeamLogo team={abbr(game, game.pick)} size={22} /><b>{abbr(game, game.pick)}</b> over {abbr(game, other(game.pick))}<span className="gl-pool-sum-value">{game.wins}</span></p>)}
           <small>Put your fewest points here</small></div>
-        <div className="gl-card"><span className="gl-label">Gridline disagrees</span>
+        <div className="gl-card"><span className="gl-label">Our model disagrees</span>
           {disagreements.length ? disagreements.slice(0, 3).map(game => <p key={game.view.game.gameId}><TeamLogo team={abbr(game, game.modelPick!)} size={22} /><b>{abbr(game, game.modelPick!)}</b> over {abbr(game, other(game.modelPick!))}<span className="gl-pool-sum-value">{game.modelWins}</span></p>)
             : <p className="gl-muted">Our model agrees with the market on every favorite this week.</p>}
           <small>Our model&apos;s upset leans, for tiebreakers</small></div>
@@ -158,7 +158,7 @@ export default function Pickem() {
           <button type="button" className="gl-button ghost" onClick={() => void shareCardImage({
             eyebrow: `${week?.season ?? ''} ${slateLabel}`.trim(), title: 'Confidence picks',
             rows: ranked.map(game => ({ left: `${points(game)}  ${abbr(game, game.pick)} over ${abbr(game, other(game.pick))}`, right: `${game.wins} of 100` })),
-            footer: 'gridelineanalytics.com/pickem',
+            footer: 'probablesports.com/pickem',
           }, 'gridline-pickem.png')}>Share image</button>
         </div>
       </div>

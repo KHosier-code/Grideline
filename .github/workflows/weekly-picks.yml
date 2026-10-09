@@ -57,10 +57,10 @@ jobs:
         working-directory: research/td-model
         run: |
           mkdir -p fonts
-          for weight in Medium SemiBold Bold; do
-            curl -fsSL -o "fonts/BarlowCondensed-$weight.ttf" \
-              "https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-$weight.ttf" || true
-          done
+          curl -fsSL -o fonts/SpaceGrotesk.ttf \
+            "https://raw.githubusercontent.com/google/fonts/main/ofl/spacegrotesk/SpaceGrotesk%5Bwght%5D.ttf" || true
+          curl -fsSL -o fonts/InstrumentSans.ttf \
+            "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentsans/InstrumentSans%5Bwdth,wght%5D.ttf" || true
           python share_card.py td_payload.json
       - name: Animated share clip
         if: ${{ !cancelled() && steps.touchdowns.outcome == 'success' }}

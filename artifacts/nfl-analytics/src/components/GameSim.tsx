@@ -84,7 +84,7 @@ export function Simulator({ game, showLink = true, title = 'If they played 100 t
   const spread = game.view.game.market?.spread;
   const lineSource = game.source === 'sportsbook'
     ? [spread?.sportsbook ?? 'DraftKings/FanDuel', capturedText(spread?.capturedAt)].filter(Boolean).join(' ')
-    : game.source === 'consensus' ? 'consensus' : 'no line yet: Gridline model';
+    : game.source === 'consensus' ? 'consensus' : 'no line yet: our model';
   const playOut = () => {
     const next = Math.floor(Math.random() * 2 ** 31);
     const wins = simulateMargins(game.expectedHomeMargin, next).filter(margin => margin * pickSign > 0).length;
@@ -133,7 +133,7 @@ export function Simulator({ game, showLink = true, title = 'If they played 100 t
     <div className="gl-pool-lines">
       <span>Line <b>{game.view.vegas.homeLine !== null ? vegasLineText(game.view.vegas.homeLine, home, away) : lineText(game.expectedHomeMargin, home, away)}</b>
         <small>{lineSource}</small></span>
-      {game.view.projection && <span>Gridline <b>{lineText(game.view.projection.margin, home, away)}</b><small>{game.modelWins !== null && game.modelPick ? `${abbr(game, game.modelPick)} ${game.modelWins} of 100` : ''}</small></span>}
+      {game.view.projection && <span>Ours <b>{lineText(game.view.projection.margin, home, away)}</b><small>{game.modelWins !== null && game.modelPick ? `${abbr(game, game.modelPick)} ${game.modelWins} of 100` : ''}</small></span>}
       {showLink && <Link href={`/games/${game.view.game.gameId}`} className="gl-link">Full game breakdown ›</Link>}
     </div>
   </div>;
