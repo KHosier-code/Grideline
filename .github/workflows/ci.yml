@@ -1,0 +1,54 @@
+name: CI
+
+# Checks every pull request before it can reach Replit: types, unit tests,
+# the production web build and the Python model scripts. Nothing here needs a
+# secret or a database.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  site:
+    name: Typecheck, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Unit tests
+        run: bash scripts/ci-tests.sh
+      - name: Build the website
+        run: pnpm --filter @workspace/nfl-analytics run build
+        env:
+          NODE_ENV: production
+
+  models:
+    name: Python model scripts compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Byte-compile
+        run: python -m py_compile research/*.py research/td-model/*.py research/game-model/*.py

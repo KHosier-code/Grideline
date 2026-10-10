@@ -1,39 +1,37 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  BarChart3, BookOpen, Bookmark, CalendarDays, Crosshair, Gauge, Grid3x3, Layers, ListOrdered, Menu, Receipt, ShieldHalf, Star, Trophy, UserRound, Users, X,
+  BarChart3, BookOpen, Bookmark, CalendarDays, ChevronDown, Crosshair, Gauge, Grid3x3, Layers, ListOrdered, Menu, Receipt, ShieldHalf, Star, Trophy, UserRound, Users, X,
 } from 'lucide-react';
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from './ConsumerAccountNavigation';
 import type { consumerAccountState } from '@/lib/consumer-account-state';
 
-/** `newUntil` is the last day (UTC) the item shows a NEW badge, so badges retire on their own. */
-type NavItem = { href: string; label: string; icon: typeof Gauge; newUntil?: string; signedInOnly?: boolean };
+type NavItem = { href: string; label: string; icon: typeof Gauge; signedInOnly?: boolean };
+/** `collapsible` groups fold away until opened, or while you're on one of their pages. */
+type NavGroup = { label: string; items: NavItem[]; collapsible?: boolean };
 
-const isNew = (item: NavItem, now = Date.now()) => item.newUntil !== undefined && now < Date.parse(`${item.newUntil}T23:59:59Z`);
-type NavGroup = { label: string; items: NavItem[] };
-
+/**
+ * Five things most visitors come for, then everything else under Research.
+ * Breadcrumbs read the group labels below.
+ */
 export const consumerNavGroups: NavGroup[] = [
   { label: 'Picks', items: [
     { href: '/', label: 'This week', icon: Star },
     { href: '/touchdowns', label: 'TD Picks', icon: Trophy },
-    { href: '/pickem', label: 'Pool Picks', icon: Grid3x3, newUntil: '2026-10-14' },
-    { href: '/parlays', label: 'Parlay Builder', icon: Layers, newUntil: '2026-10-14' },
-    { href: '/my-picks', label: 'My Picks', icon: Bookmark, newUntil: '2026-10-21' },
+    { href: '/games', label: 'Game lines', icon: CalendarDays },
+    { href: '/pickem', label: 'Pool Picks', icon: Grid3x3 },
+    { href: '/performance', label: 'Record', icon: BarChart3 },
   ] },
-  { label: 'Model', items: [
-    { href: '/games', label: 'Games', icon: CalendarDays },
+  { label: 'Research', collapsible: true, items: [
     { href: '/power-ratings', label: 'Power Ratings', icon: ListOrdered },
     { href: '/qb-rankings', label: 'QB Rankings', icon: UserRound },
-    { href: '/performance', label: 'Model Performance', icon: BarChart3 },
-    { href: '/receipts', label: 'Receipts', icon: Receipt, newUntil: '2026-10-21' },
-  ] },
-  { label: 'Teams & players', items: [
     { href: '/teams', label: 'Team Charts', icon: Gauge },
     { href: '/usage', label: 'Player Usage', icon: Users },
     { href: '/defense-vs-position', label: 'Defense vs Position', icon: ShieldHalf },
     { href: '/red-zone', label: 'Red Zone', icon: Crosshair },
-  ] },
-  { label: 'About', items: [
+    { href: '/receipts', label: 'Receipts', icon: Receipt },
+    { href: '/parlays', label: 'Parlay Builder', icon: Layers },
+    { href: '/my-picks', label: 'My Picks', icon: Bookmark },
     { href: '/methodology', label: 'How it works', icon: BookOpen },
   ] },
 ];
@@ -69,15 +67,23 @@ export function ConsumerShellView({
   const nav = (onNavigate?: () => void) => consumerNavGroups.map(group => {
     const items = group.items.filter(item => !item.signedInOnly || account.signedIn);
     if (!items.length) return null;
+    const links = items.map(item => {
+      const Icon = item.icon;
+      const active = isActive(location, item.href);
+      return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
+        <Icon aria-hidden="true" />{item.label}
+      </Link>;
+    });
+    if (group.collapsible) {
+      const holdsCurrent = items.some(item => isActive(location, item.href));
+      return <details key={`${group.label}-${holdsCurrent}`} className="gl-side-group gl-side-fold" open={holdsCurrent}>
+        <summary className="gl-side-label">{group.label}<ChevronDown aria-hidden="true" /></summary>
+        {links}
+      </details>;
+    }
     return <div key={group.label} className="gl-side-group">
       <p className="gl-side-label">{group.label}</p>
-      {items.map(item => {
-        const Icon = item.icon;
-        const active = isActive(location, item.href);
-        return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
-          <Icon aria-hidden="true" />{item.label}{isNew(item) && <span className="gl-new">NEW</span>}
-        </Link>;
-      })}
+      {links}
     </div>;
   });
 

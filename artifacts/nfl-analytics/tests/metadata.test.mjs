@@ -8,7 +8,7 @@ test('public routes have distinct crawler-visible metadata', async () => {
     assert.equal(result.status, 200);
     assert.match(result.tags, new RegExp(fragment));
     assert.match(result.tags, /name="robots" content="index, follow"/);
-    assert.match(result.tags, new RegExp(`rel="canonical" href="https://gridelineanalytics.com${path}"`));
+    assert.match(result.tags, new RegExp(`rel="canonical" href="https://probablesports.com${path}"`));
     // Home and TD pages preview this week's picks card; the rest use the brand image.
     assert.match(result.tags, path === '/' ? /og:image.*td-card.png/ : /og:image.*probable-share.png/);
     assert.match(injectMetadata('<!-- GRIDLINE_META -->', result), /<title>/);

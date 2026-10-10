@@ -55,6 +55,8 @@ export function useRouteMetadata() {
   useEffect(() => {
     const path = location.split('?')[0].replace(/\/$/, '') || '/';
     const page = pages[path];
+    // Player pages set their own title and description once their data loads.
+    if (path.startsWith('/td/')) return;
     if (page) setPublicMetadata(path, page[0], page[1]);
     else if (path === '/share') setPublicMetadata(path, 'Share This Week | Probable', 'This week\'s TD picks card, post and email.', false);
     else setPublicMetadata(path, 'Probable | Private or unavailable page', 'This page is not included in public search results.', false);

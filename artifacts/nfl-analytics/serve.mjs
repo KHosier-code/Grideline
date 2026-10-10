@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
-import { documentForPath, injectMetadata } from './metadata.mjs';
+import { documentForPath, injectMetadata, playerSitemapPaths } from './metadata.mjs';
 
 const root = resolve(import.meta.dirname, 'dist/public');
 const port = Number(process.env.PORT);
@@ -34,8 +34,9 @@ createServer(async (req, res) => {
   if (filename !== root && !filename.startsWith(root + sep)) { res.writeHead(404).end(); return; }
   try {
     if (relative === 'sitemap.xml') {
-      const origin = new URL(process.env.PUBLIC_SITE_URL || 'https://gridelineanalytics.com').origin;
-      const urls = ['/', '/touchdowns', '/pickem', '/parlays', '/power-ratings', '/qb-rankings', '/games', '/teams', '/usage', '/defense-vs-position', '/red-zone', '/performance', '/methodology']
+      const origin = new URL(process.env.PUBLIC_SITE_URL || 'https://probablesports.com').origin;
+      const pages = ['/', '/touchdowns', '/pickem', '/parlays', '/power-ratings', '/qb-rankings', '/games', '/teams', '/usage', '/defense-vs-position', '/red-zone', '/performance', '/methodology'];
+      const urls = [...pages, ...await playerSitemapPaths()]
         .map(path => `<url><loc>${origin}${prefix}${path}</loc></url>`).join('');
       res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
       res.end(req.method === 'HEAD' ? undefined : `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
