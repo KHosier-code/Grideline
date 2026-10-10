@@ -15,6 +15,7 @@ import {
 } from "../lib/touchdown-board";
 import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecision } from "../lib/odds";
 import { ODDS_BACKUP_RECENT_MS, recentOddsCapture } from "../lib/kickoff-clock";
+import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEmail, subscribe } from "../lib/newsletter";
 import { bestBookPrice, captureTouchdownProps, touchdownPropsForSeason } from "../lib/td-props";
 import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
@@ -733,6 +734,79 @@ router.get("/share/td-clip.mp4", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Share clip read failed");
     res.status(503).json({ error: "Clip unavailable" });
+  }
+});
+
+/** Whether the "Get Tuesday's picks" signup is switched on (BUTTONDOWN_API_KEY set). */
+router.get("/newsletter/status", (_req, res): void => {
+  res.set("Cache-Control", "public, max-age=300").json({ enabled: newsletterConfigured() });
+});
+
+const subscribeLimiter = createRateLimiter(5, 60 * 60_000);
+const newsletterSubscribeSchema = zod.object({
+  email: zod.string().max(320),
+  source: zod.string().max(40).optional(),
+  // Honeypot: hidden from people, filled in by bots.
+  website: zod.string().max(200).optional(),
+});
+
+router.post("/newsletter/subscribe", async (req, res): Promise<void> => {
+  const parsed = newsletterSubscribeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ status: "invalid", message: "Enter a valid email address." });
+    return;
+  }
+  if (parsed.data.website) {
+    res.json({ status: "subscribed" });
+    return;
+  }
+  const email = normalizeEmail(parsed.data.email);
+  if (!email) {
+    res.status(400).json({ status: "invalid", message: "Enter a valid email address." });
+    return;
+  }
+  const ip = String(req.headers["x-forwarded-for"] ?? req.ip ?? "").split(",")[0].trim() || "unknown";
+  if (!subscribeLimiter(ip)) {
+    res.status(429).json({ status: "limited", message: "Too many tries. Please wait a few minutes." });
+    return;
+  }
+  try {
+    const { result, detail } = await subscribe(email, parsed.data.source ?? "site");
+    if (result === "subscribed") res.json({ status: "subscribed" });
+    else if (result === "invalid") res.status(400).json({ status: "invalid", message: "That email address was not accepted." });
+    else if (result === "not_configured") res.status(503).json({ status: "unavailable", message: "Signups open soon." });
+    else {
+      req.log.error({ detail }, "Newsletter subscribe failed");
+      res.status(502).json({ status: "failed", message: "Something went wrong. Please try again." });
+    }
+  } catch (error) {
+    req.log.error({ error: describeError(error) }, "Newsletter subscribe failed");
+    res.status(502).json({ status: "failed", message: "Something went wrong. Please try again." });
+  }
+});
+
+const newsletterDraftSchema = zod.object({
+  season: zod.number().int().min(2000).max(2200),
+  week: zod.number().int().min(1).max(22),
+  subject: zod.string().min(1).max(200),
+  body: zod.string().min(1).max(50_000),
+});
+
+/** This week's Tuesday email as a Buttondown draft (Weekly picks workflow), once per week. */
+router.post("/newsletter/draft", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const parsed = newsletterDraftSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid draft", issues: parsed.error.issues.slice(0, 5) });
+    return;
+  }
+  try {
+    const result = await createWeeklyDraft(parsed.data);
+    res.status(result.status === "failed" ? 502 : 200).json(result);
+  } catch (error) {
+    const reason = describeError(error);
+    req.log.error({ error: reason }, "Newsletter draft failed");
+    res.status(502).json({ status: "failed", detail: reason });
   }
 });
 

@@ -68,6 +68,12 @@ jobs:
         continue-on-error: true
         working-directory: research/td-model
         run: python share_clip.py td_payload.json td_clip.mp4
+      - name: Tuesday email draft
+        if: ${{ !cancelled() && steps.touchdowns.outcome == 'success' }}
+        # Saves this week's email as a Buttondown draft (once per week); never holds up the picks.
+        continue-on-error: true
+        working-directory: research/td-model
+        run: python newsletter.py td_payload.json
       - name: Usage, defense vs position and red zone report
         if: ${{ !cancelled() }}
         working-directory: research/td-model
