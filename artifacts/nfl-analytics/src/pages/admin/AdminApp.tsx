@@ -404,8 +404,22 @@ function Shell({ children }: { children: ReactNode }) {
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const admin = useAdminStatus();
-  if (admin.isLoading) return <ConsumerLoadingFallback />;
-  if (admin.data !== true) return <ConsumerShell><div className="consumer-state"><LockKeyhole className="h-7 w-7" /><h2>Administrator access required</h2><p>This workspace is available only to authorized administrators.</p><Link className="button button-primary" href="/">Return home</Link></div></ConsumerShell>;
+  const { isLoaded, isSignedIn } = useAuth();
+  if (admin.isLoading || !isLoaded) return <ConsumerLoadingFallback />;
+  if (admin.data !== true) {
+    // Signed out: offer sign-in and come straight back here afterwards.
+    const signInHref = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`;
+    return <ConsumerShell><div className="consumer-state"><LockKeyhole className="h-7 w-7" />
+      <h2>{isSignedIn ? 'Administrator access required' : 'Sign in to continue'}</h2>
+      <p>{isSignedIn
+        ? 'You are signed in, but this account is not on the administrator list. Add its user ID (shown at /api/auth/admin-status) to ADMIN_USER_IDS.'
+        : 'This workspace is available only to administrators. Sign in with your administrator account.'}</p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {!isSignedIn && <a className="button button-primary" href={signInHref}>Sign in</a>}
+        <Link className="button button-subtle" href="/">Return home</Link>
+      </div>
+    </div></ConsumerShell>;
+  }
   return <Shell>{children}</Shell>;
 }
 
