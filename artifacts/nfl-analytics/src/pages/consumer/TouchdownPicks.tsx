@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { CountUp } from '@/components/CountUp';
 import { TouchdownStat } from '@/components/TrackRecord';
 import { Link } from 'wouter';
@@ -132,6 +133,8 @@ export default function TouchdownPicks() {
       {picks.slice(0, limit).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} />)}
     </div>}
     {picks.length > limit && <button type="button" className="gl-card" style={{ padding: 12, fontWeight: 600, cursor: 'pointer', color: 'inherit' }} onClick={() => setLimit(limit + 60)}>Show more players ({picks.length - limit} left)</button>}
+
+    <NewsletterSignup source="touchdowns" />
 
     {data?.generatedAt && <p className="gl-note">Updated {new Date(data.generatedAt).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. Players ruled out on the injury report are removed; questionable players are flagged. Check final inactives before kickoff.</p>}
 

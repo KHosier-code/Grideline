@@ -1057,3 +1057,18 @@
 }
 @keyframes gl-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes gl-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* "Get Tuesday's picks" newsletter signup (components/NewsletterSignup.tsx). Coral: it's the main thing to act on. */
+.gl-signup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 24px; align-items: center; margin: 28px 0; padding: 24px; border-radius: 16px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.gl-signup h2 { margin: 0 0 6px; font-family: var(--gl-display); font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+.gl-signup-copy p { margin: 0; font-size: 14px; line-height: 1.5; }
+.gl-signup-form label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+.gl-signup-row { display: flex; gap: 8px; }
+.gl-signup-row input { flex: 1; min-width: 0; height: 46px; padding: 0 12px; border: 1px solid hsl(var(--primary-foreground) / .6); border-radius: 10px; background: #fff; color: #0B1A2C; font: inherit; font-size: 15px; }
+.gl-signup-row input:focus-visible { outline: 2px solid hsl(var(--primary-foreground)); outline-offset: 2px; }
+.gl-signup-row button { height: 46px; padding: 0 18px; border: 0; border-radius: 10px; background: #0B1A2C; color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.gl-signup-row button:disabled { opacity: .88; cursor: default; }
+.gl-signup-msg { min-height: 18px; margin: 8px 0 0; font-size: 12px; }
+.gl-signup-done { margin: 0; font-size: 15px; line-height: 1.5; }
+.gl-signup-trap { position: absolute; left: -10000px; width: 1px; height: 1px; opacity: 0; }
+@media (max-width: 760px) { .gl-signup { grid-template-columns: 1fr; padding: 20px; } }

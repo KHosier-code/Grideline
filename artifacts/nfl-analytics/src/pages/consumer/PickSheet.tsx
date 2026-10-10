@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { LineValueStat, TouchdownStat, TrackRecordNote } from '@/components/TrackRecord';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
@@ -155,6 +156,8 @@ export default function PickSheet() {
       </section> },
       { id: 'vegas', label: 'Vs Vegas', content: <BiggestGaps views={views} now={now} /> },
     ]} />}
+
+    <NewsletterSignup source="home" />
 
     {!dashboard.isLoading && !dashboard.isError && !week && <div className="gl-empty"><strong>No games on the schedule right now.</strong>Picks return when the next week&apos;s schedule is posted. <Link href="/games" className="gl-link">Browse past games</Link>.</div>}
 
