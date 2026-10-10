@@ -3,7 +3,7 @@ import test from "node:test";
 import type { GameProjectionRow } from "@workspace/db";
 import {
   favoriteRecord, lineValueGames, lineValueSummary, lockedAt, openerWatch, openerWatchSummary, projectionsBeforeKickoff, watchAlerts,
-  winnerRecord, type SpreadQuote,
+  winnerRecord, lockTime, spreadLocks, spreadLockSummary, type SpreadQuote,
 } from "./game-projections";
 
 const qb = { name: "QB", value: 0, listed: true, newStarter: false };
@@ -146,4 +146,69 @@ test("watch alerts: new flags and moves of a point or more since a time", () => 
   const all = watchAlerts(watch, quotes, new Date("2026-09-28T00:00:00Z"));
   assert.deepEqual(all.map((alert) => alert.kind), ["moved-toward", "flagged"]);
   assert.match(all[1].message, /Gridline has BUF -6, the opener is KC -1 at DraftKings/);
+});
+
+test("lock times: Saturday noon ET for Sunday and Monday games, six hours ahead otherwise", () => {
+  // Sunday 1:00 PM ET -> Saturday 16:00 UTC.
+  assert.equal(lockTime(new Date("2026-10-11T17:00:00Z")).toISOString(), "2026-10-10T16:00:00.000Z");
+  // Monday 8:15 PM ET is Tuesday 00:15 UTC -> still Saturday.
+  assert.equal(lockTime(new Date("2026-10-13T00:15:00Z")).toISOString(), "2026-10-10T16:00:00.000Z");
+  // Sunday 9:30 AM ET London game -> Saturday.
+  assert.equal(lockTime(new Date("2026-10-11T13:30:00Z")).toISOString(), "2026-10-10T16:00:00.000Z");
+  // Thursday 8:15 PM ET -> six hours before.
+  assert.equal(lockTime(new Date("2026-10-09T00:15:00Z")).toISOString(), "2026-10-08T18:15:00.000Z");
+});
+
+const sunday = "2026-10-11T17:00:00Z";
+const quotes = (rows: Array<[string, string, number]>): SpreadQuote[] =>
+  rows.map(([sportsbook, at, homeLine]) => ({ sportsbook, capturedAt: new Date(at), homeLine }));
+
+test("locked pick: the away dog at the best number, graded there, with closing line value", () => {
+  // Home favored by 7 at DK, 6.5 at FD; we say home by 5.5 -> away +7 at DK, a 1.5-point lean.
+  const runs = [{ generatedAt: new Date("2026-10-10T15:20:00Z"), games: [game("g", 5.5, sunday)] }];
+  const q = new Map([["g", quotes([
+    ["DraftKings", "2026-10-10T14:07:00Z", -7], ["FanDuel", "2026-10-10T14:07:00Z", -6.5],
+    ["DraftKings", "2026-10-11T16:22:00Z", -6],
+  ])]]);
+  const before = spreadLocks(runs, q, new Map(), new Date("2026-10-10T12:00:00Z"));
+  assert.equal(before.length, 0, "no projection before the lock yet");
+  const [lock] = spreadLocks(runs, q, new Map([["g", { home: 24, away: 20, week: 6 }]]), new Date("2026-10-12T12:00:00Z"));
+  assert.equal(lock.locked, true);
+  assert.equal(lock.side, "away");
+  assert.equal(lock.line, 7);
+  assert.equal(lock.sportsbook, "DraftKings");
+  assert.equal(lock.tier, "lean");
+  assert.equal(lock.closeLine, 6);
+  assert.equal(lock.clv, 1);
+  assert.equal(lock.result, "win"); // lost by 4, covered +7
+  const summary = spreadLockSummary([lock]);
+  assert.deepEqual(summary.leans, { wins: 1, losses: 0, pushes: 0 });
+  assert.equal(summary.beatClose, 1);
+});
+
+test("locked pick ignores runs and lines after the lock; small gaps are no pick", () => {
+  const runs = [
+    { generatedAt: new Date("2026-10-10T15:20:00Z"), games: [game("g", 10, sunday)] },
+    { generatedAt: new Date("2026-10-11T15:45:00Z"), games: [game("g", 3, sunday)] },
+  ];
+  const q = new Map([["g", quotes([["DraftKings", "2026-10-10T14:07:00Z", -3], ["DraftKings", "2026-10-11T12:07:00Z", -9]])]]);
+  const [lock] = spreadLocks(runs, q, new Map(), new Date("2026-10-11T16:00:00Z"));
+  assert.equal(lock.tier, "play"); // home by 10 vs -3: a 7-point play on home -3
+  assert.equal(lock.line, -3);
+  assert.equal(lock.gridlineMargin, 10);
+  const [small] = spreadLocks([{ generatedAt: new Date("2026-10-10T15:20:00Z"), games: [game("g", 3.5, sunday)] }], q,
+    new Map(), new Date("2026-10-11T16:00:00Z"));
+  assert.equal(small.tier, null);
+  assert.equal(small.side, null);
+});
+
+test("before the lock the pick is the current lean, not graded", () => {
+  const runs = [{ generatedAt: new Date("2026-10-08T15:20:00Z"), games: [game("g", -6, sunday)] }];
+  const q = new Map([["g", quotes([["FanDuel", "2026-10-08T14:07:00Z", 1]])]]);
+  const [lock] = spreadLocks(runs, q, new Map(), new Date("2026-10-09T12:00:00Z"));
+  assert.equal(lock.locked, false);
+  assert.equal(lock.side, "away");
+  assert.equal(lock.line, -1);
+  assert.equal(lock.tier, "play");
+  assert.equal(lock.result, null);
 });

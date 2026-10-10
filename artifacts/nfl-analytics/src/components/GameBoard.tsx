@@ -118,10 +118,40 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
     })}
     {final && projection && <p className="gl-gc-foot">We projected {game.matchup.away.abbreviation} {projection.away.toFixed(1)}, {game.matchup.home.abbreviation} {projection.home.toFixed(1)}</p>}
     {!final && projection && <p className="gl-gc-foot">Total: ours {projection.total.toFixed(1)} · Vegas {view.vegas.total ?? '—'}</p>}
-    {!final && projection && <GapNote view={view} open={open?.line ?? null} />}
+    {view.lock ? <LockNote view={view} /> : !final && projection && <GapNote view={view} open={open?.line ?? null} />}
     {!final && <BestNumbers books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />}
     {!final && !projection && <p className="gl-gc-foot gl-muted">Projection pending: our quarterback-adjusted line usually posts by Tuesday morning.</p>}
   </Link>;
+}
+
+const BOOK_SHORT: Record<string, string> = { DraftKings: 'DK', FanDuel: 'FD' };
+const signed = (line: number) => (line > 0 ? `+${line}` : line === 0 ? 'PK' : `${line}`);
+const lockClock = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+
+/**
+ * Our spread pick on a card. Before the lock it's the current lean and can
+ * change; after, it's fixed at the number and book we took, then graded.
+ */
+export function LockNote({ view }: { view: GameView }) {
+  const lock = view.lock!;
+  if (!lock.tier || !lock.side || lock.line === null) {
+    return <p className="gl-gc-foot gl-muted">No spread pick{lock.locked ? '' : ' yet'}: our number is within {Math.max(0, lock.gap).toFixed(1)} points of Vegas{lock.locked ? '' : ` · locks ${lockClock(lock.locksAt)} ET`}</p>;
+  }
+  const team = view.game.matchup[lock.side].abbreviation;
+  const label = lock.tier === 'play' ? 'Play' : 'Lean';
+  const pick = <b>{team} {signed(lock.line)}</b>;
+  const book = lock.sportsbook ? ` (${BOOK_SHORT[lock.sportsbook] ?? lock.sportsbook})` : '';
+  if (!lock.locked) {
+    return <p className="gl-gc-foot gl-gc-lock pending" title={`Our number is ${lock.gap} points past the book's. It can change until the lock.`}>
+      <span className={`gl-lock-tag ${lock.tier}`}>{label}</span>{pick}{book} now · locks {lockClock(lock.locksAt)} ET</p>;
+  }
+  const result = lock.result === 'win' ? 'Covered ✓' : lock.result === 'loss' ? 'Didn’t cover' : lock.result === 'push' ? 'Push' : null;
+  const clv = lock.clv === null || lock.closeLine === null ? null
+    : lock.clv === 0 ? `closed ${signed(lock.closeLine)}` : `closed ${signed(lock.closeLine)}, ${Math.abs(lock.clv)} ${lock.clv > 0 ? 'in our favor' : 'against us'}`;
+  return <p className="gl-gc-foot gl-gc-lock" title={`Locked ${lockClock(lock.locksAt)} ET, ${lock.gap} points past the book's number`}>
+    <span className={`gl-lock-tag ${lock.tier}`}>🔒 {label}</span>{pick}{book}
+    {result && <> · <span className={lock.result === 'win' ? 'gl-good' : lock.result === 'loss' ? 'gl-miss' : ''}>{result}</span></>}
+    {clv && <span className="gl-muted"> · {clv}</span>}</p>;
 }
 
 /** "Gridline likes BUF by 2.5 more than Vegas · line moved 1 toward us since open". */

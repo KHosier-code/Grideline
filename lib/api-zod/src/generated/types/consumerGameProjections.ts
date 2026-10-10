@@ -11,6 +11,7 @@ import type { ConsumerGameProjectionsStatus } from './consumerGameProjectionsSta
 import type { ConsumerGameProjectionsWeeksItem } from './consumerGameProjectionsWeeksItem';
 import type { ConsumerLineValue } from './consumerLineValue';
 import type { ConsumerRecordLine } from './consumerRecordLine';
+import type { ConsumerSpreadLocks } from './consumerSpreadLocks';
 import type { ConsumerWatchList } from './consumerWatchList';
 
 export interface ConsumerGameProjections {
@@ -28,5 +29,6 @@ export interface ConsumerGameProjections {
   favoriteRecord: ConsumerRecordLine;
   lineValue: ConsumerLineValue;
   watch: ConsumerWatchList;
+  locks: ConsumerSpreadLocks;
   weeks: ConsumerGameProjectionsWeeksItem[];
 }

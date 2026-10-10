@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import {
   getGetConsumerGameProjectionsQueryKey, getGetConsumerReplayQueryKey, getGetConsumerWatchAlertsQueryKey, useGetConsumerGameProjections,
   useGetConsumerReplay, useGetConsumerTouchdowns, useGetConsumerWatchAlerts,
-  type ConsumerTouchdownBookComparison, type ConsumerWatchList,
+  type ConsumerSpreadLocks, type ConsumerTouchdownBookComparison, type ConsumerWatchList,
 } from '@workspace/api-client-react';
 import { TeamLogo } from '@/components/TeamLogo';
 import { bookShort } from '@/lib/line-shopping';
@@ -113,6 +113,39 @@ function Cover({ value }: { value: Ats }) {
 }
 
 /** The 4+ point opener gap, tracked live: the one rule that held up in back-testing, graded at three numbers. */
+const signedLine = (line: number) => (line > 0 ? `+${line}` : line === 0 ? 'PK' : `${line}`);
+
+/** One spread pick per game, locked Saturday noon ET at the best number, graded at that number. */
+function SpreadLocksSection({ locks }: { locks: ConsumerSpreadLocks }) {
+  const picks = locks.games.filter(lock => lock.locked && lock.tier && lock.side && lock.line !== null).reverse();
+  const clvGames = locks.beatClose + locks.lostClose + locks.sameClose;
+  const date = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return <section className="gl-section" id="spread-picks" aria-labelledby="spread-picks-head">
+    <div className="gl-section-head"><h2 id="spread-picks-head">Spread picks</h2><p>Locked Saturday noon ET at the best DraftKings or FanDuel number, graded at that number</p></div>
+    <div className="gl-record-grid">
+      <div className="gl-card gl-record-card"><span className="gl-label">Plays · {locks.playThreshold}+ pts off Vegas</span><b>{recordText(locks.plays)}</b><p>{coverRate(locks.plays)}. Break-even at -110 is 52.4%.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">Leans · {locks.leanThreshold}–{locks.playThreshold} pts</span><b>{recordText(locks.leans)}</b><p>{coverRate(locks.leans)}. In testing, small gaps hit about 51–53%: close to a coin flip.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">Beat the closing line</span><b>{clvGames ? `${locks.beatClose}/${clvGames}` : '—'}</b><p>How often the line moved our way after we locked. The earliest sign of a real edge.</p></div>
+    </div>
+    {picks.length > 0 ? <div className="gl-card gl-table-wrap">
+      <table className="gl-table gl-watch-table">
+        <thead><tr><th scope="col">Game</th><th scope="col">Pick</th><th scope="col">Ours</th><th scope="col">Close<small>same book</small></th><th scope="col">Result</th></tr></thead>
+        <tbody>{picks.map(lock => {
+          const team = lock.side === 'home' ? lock.homeTeam : lock.awayTeam;
+          return <tr key={lock.gameId}>
+            <td>{lock.awayTeam} at {lock.homeTeam} <small className="gl-muted">{date(lock.kickoff)}</small></td>
+            <td><span className="gl-inline-team"><TeamLogo team={team} size={18} /><b>{team} {signedLine(lock.line!)}</b></span>
+              <small className="gl-muted"> {lock.tier === 'play' ? 'Play' : 'Lean'} · {lock.sportsbook ? bookShort(lock.sportsbook) : ''}</small></td>
+            <td>{lineText(lock.gridlineMargin, lock.homeTeam, lock.awayTeam)}</td>
+            <td>{lock.closeLine !== null ? <>{signedLine(lock.closeLine)} {lock.clv ? <small className={lock.clv > 0 ? 'gl-good' : 'gl-bad'}>{lock.clv > 0 ? '+' : ''}{lock.clv}</small> : null}</> : <span className="gl-muted">—</span>}</td>
+            <td><Cover value={lock.result as Ats} /></td>
+          </tr>;
+        })}</tbody>
+      </table>
+    </div> : <div className="gl-empty"><strong>The first spread picks lock Saturday at noon ET.</strong>Every game gets one: a play when our number is {locks.playThreshold}+ points off the best line, a lean at {locks.leanThreshold}+, no pick when we&apos;re closer than that. Once locked, a pick never changes.</div>}
+  </section>;
+}
+
 function WatchListSection({ watch, topic }: { watch: ConsumerWatchList; topic: string | null }) {
   const moved = watch.movedToward + watch.movedAway;
   const date = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -306,6 +339,8 @@ export default function ConsumerPerformance() {
 
 
     <p className="gl-note">Every pick counted here was locked in before kickoff. <Link href="/receipts" className="gl-link">See the receipts</Link>, with the time each one was posted.</p>
+
+    {game?.locks && <SpreadLocksSection locks={game.locks} />}
 
     {game?.watch && <WatchListSection watch={game.watch} topic={alerts.data?.ntfyTopic ?? null} />}
 

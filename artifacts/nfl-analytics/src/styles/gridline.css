@@ -947,6 +947,13 @@
 
 /* Gridline vs Vegas gaps */
 .gl-gc-gap b { color: hsl(var(--primary)); }
+.gl-gc-lock { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.gl-gc-lock b { color: hsl(var(--foreground)); }
+.gl-gc-lock.pending b { color: hsl(var(--primary)); }
+.gl-lock-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+  border: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+.gl-lock-tag.play { border-color: hsl(var(--primary) / .6); color: hsl(var(--primary)); background: hsl(var(--primary) / .1); }
+.gl-miss { color: hsl(var(--muted-foreground)); }
 .gl-gap-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .gl-gap-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: inherit; text-decoration: none; }
 .gl-gap-card span { display: grid; gap: 2px; }
