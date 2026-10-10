@@ -99,10 +99,18 @@ export default function TouchdownPicks() {
   const query = useGetConsumerTouchdowns(selected, { query: { queryKey: getGetConsumerTouchdownsQueryKey(selected), staleTime: 60_000 } });
   const data = query.data;
   const inPosition = (data?.picks ?? []).filter(pick => position === 'All' || pick.position === position);
-  // Best value: players with a captured price, biggest edge over the book first.
+  // Best value: players with a captured price, biggest edge over the book
+  // first. While the week is still being played, games that have kicked off
+  // drop out: their value is gone.
+  const now = Date.now();
+  const started = (pick: { kickoff: string | null }) => pick.kickoff !== null && Date.parse(pick.kickoff) <= now;
+  const weekLive = (data?.picks ?? []).some(pick => !started(pick));
   const picks = order === 'likely' ? inPosition
-    : inPosition.filter(pick => bookEdge(pick) !== null).sort((a, b) => bookEdge(b)! - bookEdge(a)!);
-  const pricedCount = (data?.picks ?? []).filter(pick => pick.bookOdds).length;
+    : inPosition.filter(pick => bookEdge(pick) !== null && !(weekLive && started(pick))).sort((a, b) => bookEdge(b)! - bookEdge(a)!);
+  const gameKey = (pick: { team: string; opponent: string }) => [pick.team, pick.opponent].sort().join('-');
+  const openGames = new Set((data?.picks ?? []).filter(pick => !weekLive || !started(pick)).map(gameKey));
+  const pricedGames = new Set((data?.picks ?? []).filter(pick => pick.bookOdds && (!weekLive || !started(pick))).map(gameKey));
+  const waitingGames = [...openGames].filter(game => !pricedGames.has(game)).length;
   const max = Math.max(0.01, ...(data?.picks ?? []).map(pick => pick.probability));
   const record = data?.record;
   const value = data?.valueRecord;
@@ -148,9 +156,12 @@ export default function TouchdownPicks() {
     {data && data.status === 'unavailable' && <div className="gl-empty"><strong>This week&apos;s touchdown picks aren&apos;t posted yet.</strong>Rankings update Tuesday, Thursday, Friday after the injury report, Saturday, Sunday morning, after the 1:00 inactives, and before the Sunday and Monday night games.</div>}
 
     {order === 'value' && data?.status === 'available' && <p className="gl-note">
-      {pricedCount
+      {pricedGames.size
         ? <>Ranked by how far our chance is above the sportsbook&apos;s chance once its estimated cut (about 20% on these bets) is taken out, using the best DraftKings or FanDuel price we captured. This ranking is new and not yet proven: we track it from week 5 on <Link href="/performance" className="gl-link">the record page</Link>. Prices move, so check your book.</>
-        : <>No sportsbook prices captured for this week yet. They&apos;re checked Thursday and Saturday, and this list fills in then.</>}
+        : weekLive
+          ? <>No sportsbook prices yet for the games still to be played. We capture them Thursday morning for Thursday night and Saturday morning for Sunday and Monday, and this list fills in then.</>
+          : <>No sportsbook prices were captured for this week.</>}
+      {pricedGames.size > 0 && waitingGames > 0 && <> <b>Prices are in for {pricedGames.size} of {openGames.size} remaining games;</b> the rest arrive Saturday morning.</>}
     </p>}
 
     {picks.length > 0 && <div className="gl-td-list">
