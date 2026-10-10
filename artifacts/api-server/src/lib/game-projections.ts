@@ -322,3 +322,132 @@ export function watchAlerts(watch: WatchGame[], quotesByGame: Map<string, Spread
   }
   return alerts.sort((a, b) => b.at.getTime() - a.at.getTime());
 }
+
+/**
+ * Locked spread picks: one per game, at a number a reader could have bet.
+ *
+ * Sunday and Monday games lock Saturday at 16:00 UTC (noon ET in daylight
+ * time), after Friday's final injury report, Saturday morning's line capture
+ * and the Saturday model run. Earlier games (Thursday, Friday, Saturday) lock
+ * six hours before kickoff. At the lock we take our latest projection and the
+ * best DraftKings or FanDuel spread for each side; a gap of LOCK_PLAY points
+ * or more is a play, LOCK_LEAN or more a lean, anything smaller no pick.
+ * Graded at the locked number, plus closing line value: whether the line
+ * moved toward our side by kickoff.
+ */
+export const LOCK_LEAN = 1.5;
+export const LOCK_PLAY = 4;
+const LOCK_SATURDAY_UTC_HOUR = 16;
+const EARLY_LOCK_HOURS = 6;
+const PICK_BOOKS = ["DraftKings", "FanDuel"];
+/** Locked picks began with 2026 week 6's Sunday games; earlier games were never locked, so they don't count. */
+export const LOCKS_START = new Date("2026-10-10T00:00:00Z");
+
+export type SpreadLock = {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  kickoff: string;
+  /** When the pick locks (or locked). */
+  locksAt: Date;
+  /** True once locksAt has passed: the pick is final. Before that it's the current lean. */
+  locked: boolean;
+  tier: "play" | "lean" | null;
+  side: "home" | "away" | null;
+  /** The picked team's spread, e.g. 7 for "+7" or -3.5. */
+  line: number | null;
+  sportsbook: string | null;
+  /** Our expected home margin used for the pick. */
+  gridlineMargin: number;
+  /** Points our number is past the book's on the picked side. */
+  gap: number;
+  /** The picked team's closing spread at the same book, once the game starts. */
+  closeLine: number | null;
+  /** Points of closing line value: positive when the line moved our way. */
+  clv: number | null;
+  result: "win" | "loss" | "push" | null;
+};
+
+const ET_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" });
+
+/** The lock time for a game kicking off at `kickoff`. */
+export function lockTime(kickoff: Date) {
+  const parts = Object.fromEntries(ET_DATE.formatToParts(kickoff).map((part) => [part.type, part.value]));
+  const early = new Date(kickoff.getTime() - EARLY_LOCK_HOURS * 3_600_000);
+  const back = parts.weekday === "Sun" ? 1 : parts.weekday === "Mon" ? 2 : null;
+  if (back === null) return early;
+  // Saturday of the same Eastern-time weekend, at the lock hour in UTC.
+  const saturday = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - back, LOCK_SATURDAY_UTC_HOUR));
+  return saturday < early ? saturday : early;
+}
+
+export function spreadLocks(
+  runs: ProjectionRun[],
+  quotesByGame: Map<string, SpreadQuote[]>,
+  finals: Map<string, { home: number; away: number; week: number }>,
+  now: Date,
+): SpreadLock[] {
+  const ordered = [...runs].sort((a, b) => lockedAt(a).getTime() - lockedAt(b).getTime());
+  const games = new Map<string, GameProjectionRow>();
+  for (const run of ordered) for (const game of run.games) games.set(game.gameId, game);
+  const locks: SpreadLock[] = [];
+  for (const [gameId, latestGame] of games) {
+    const kickoff = kickoffDate(latestGame.kickoff);
+    if (!kickoff || kickoff < LOCKS_START) continue;
+    const locksAt = lockTime(kickoff);
+    const locked = now >= locksAt;
+    const asOf = locked ? locksAt : now;
+    // The newest projection the site had received by the lock (or by now, before it).
+    let projection: GameProjectionRow | null = null;
+    for (const run of ordered) {
+      if (lockedAt(run) > asOf || lockedAt(run) >= kickoff) break;
+      projection = run.games.find((game) => game.gameId === gameId) ?? projection;
+    }
+    if (!projection) continue;
+    const quotes = quotesByGame.get(gameId) ?? [];
+    const atLock = PICK_BOOKS.flatMap((sportsbook) => {
+      const quote = bookQuotes(quotes, sportsbook, kickoff).filter((item) => item.capturedAt <= asOf).at(-1);
+      return quote ? [quote] : [];
+    });
+    const base = {
+      gameId, homeTeam: projection.homeTeam, awayTeam: projection.awayTeam, kickoff: kickoff.toISOString(),
+      locksAt, locked, gridlineMargin: projection.projectedMargin,
+    };
+    const none = { ...base, tier: null, side: null, line: null, sportsbook: null, gap: 0, closeLine: null, clv: null, result: null };
+    if (!atLock.length) { locks.push(none); continue; }
+    // Best number for each side: the home team wants the highest home line, the away team the lowest.
+    const bestHome = atLock.reduce((best, quote) => (quote.homeLine > best.homeLine ? quote : best));
+    const bestAway = atLock.reduce((best, quote) => (quote.homeLine < best.homeLine ? quote : best));
+    const homeGap = projection.projectedMargin + bestHome.homeLine;
+    const awayGap = -(projection.projectedMargin + bestAway.homeLine);
+    const side = homeGap >= awayGap ? "home" as const : "away" as const;
+    const gap = Math.round(Math.max(homeGap, awayGap) * 10) / 10;
+    if (gap < LOCK_LEAN) { locks.push({ ...none, gap }); continue; }
+    const quote = side === "home" ? bestHome : bestAway;
+    const close = bookQuotes(quotes, quote.sportsbook, kickoff).at(-1)!;
+    const started = now >= kickoff;
+    const final = finals.get(gameId);
+    const sideLine = (homeLine: number) => (side === "home" ? homeLine : -homeLine);
+    locks.push({
+      ...base, tier: gap >= LOCK_PLAY ? "play" : "lean", side, line: sideLine(quote.homeLine), sportsbook: quote.sportsbook, gap,
+      closeLine: started ? sideLine(close.homeLine) : null,
+      // Taking +7 when it closes +6 (or -3 when it closes -4) is a point of value.
+      clv: started ? sideLine(quote.homeLine) - sideLine(close.homeLine) : null,
+      result: locked && final ? coverResult(side, quote.homeLine, final) : null,
+    });
+  }
+  return locks.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+}
+
+export function spreadLockSummary(locks: SpreadLock[]) {
+  const plays = emptyRecordLine();
+  const leans = emptyRecordLine();
+  let beatClose = 0; let lostClose = 0; let sameClose = 0;
+  for (const lock of locks) {
+    if (!lock.locked || !lock.tier) continue;
+    if (lock.result) addResult(lock.tier === "play" ? plays : leans, lock.result);
+    if (lock.clv === null) continue;
+    if (lock.clv > 0) beatClose += 1; else if (lock.clv < 0) lostClose += 1; else sameClose += 1;
+  }
+  return { leanThreshold: LOCK_LEAN, playThreshold: LOCK_PLAY, plays, leans, beatClose, lostClose, sameClose };
+}

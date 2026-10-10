@@ -1526,7 +1526,7 @@ components:
               receivedAt: { type: string, format: date-time }
     ConsumerGameProjections:
       type: object
-      required: [status, season, modelVersion, generatedAt, evaluation, games, record, favoriteRecord, lineValue, watch, weeks]
+      required: [status, season, modelVersion, generatedAt, evaluation, games, record, favoriteRecord, lineValue, watch, locks, weeks]
       properties:
         status: { type: string, enum: [available, unavailable] }
         season: { type: ["integer", "null"] }
@@ -1569,6 +1569,7 @@ components:
           $ref: "#/components/schemas/ConsumerRecordLine"
         lineValue: { $ref: "#/components/schemas/ConsumerLineValue" }
         watch: { $ref: "#/components/schemas/ConsumerWatchList" }
+        locks: { $ref: "#/components/schemas/ConsumerSpreadLocks" }
         weeks:
           type: array
           items:
@@ -1579,6 +1580,38 @@ components:
               wins: { type: integer }
               losses: { type: integer }
               pushes: { type: integer }
+    ConsumerSpreadLock:
+      type: object
+      required: [gameId, homeTeam, awayTeam, kickoff, locksAt, locked, tier, side, line, sportsbook, gridlineMargin, gap, closeLine, clv, result]
+      properties:
+        gameId: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        kickoff: { type: string, format: date-time }
+        locksAt: { type: string, format: date-time }
+        locked: { type: boolean, description: "True once locksAt has passed; before that the pick is the current lean and can change." }
+        tier: { type: ["string", "null"], enum: [play, lean, null] }
+        side: { type: ["string", "null"], enum: [home, away, null] }
+        line: { type: ["number", "null"], description: "The picked team's spread, e.g. 7 for +7" }
+        sportsbook: { type: ["string", "null"] }
+        gridlineMargin: { type: number }
+        gap: { type: number, description: "Points our number is past the book's on the picked side" }
+        closeLine: { type: ["number", "null"] }
+        clv: { type: ["number", "null"], description: "Points the line moved toward our side by kickoff" }
+        result: { type: ["string", "null"], enum: [win, loss, push, null] }
+    ConsumerSpreadLocks:
+      type: object
+      description: One spread pick per game, locked Saturday noon ET (earlier games six hours before kickoff) at the best DraftKings or FanDuel number.
+      required: [leanThreshold, playThreshold, plays, leans, beatClose, lostClose, sameClose, games]
+      properties:
+        leanThreshold: { type: number }
+        playThreshold: { type: number }
+        plays: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        leans: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        beatClose: { type: integer }
+        lostClose: { type: integer }
+        sameClose: { type: integer }
+        games: { type: array, items: { $ref: "#/components/schemas/ConsumerSpreadLock" } }
     ConsumerLineValue:
       type: object
       description: >-

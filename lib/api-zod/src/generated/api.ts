@@ -3102,6 +3102,40 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "atsClose": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable()
 }))
 }).describe('Games where Gridline\'s first pregame line is `threshold`+ points off the opening spread'),
+  "locks": zod.object({
+  "leanThreshold": zod.number(),
+  "playThreshold": zod.number(),
+  "plays": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "leans": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "beatClose": zod.number().int(),
+  "lostClose": zod.number().int(),
+  "sameClose": zod.number().int(),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "homeTeam": zod.string(),
+  "awayTeam": zod.string(),
+  "kickoff": zod.coerce.date(),
+  "locksAt": zod.coerce.date(),
+  "locked": zod.boolean().describe('True once locksAt has passed; before that the pick is the current lean and can change.'),
+  "tier": zod.union([zod.literal('play'),zod.literal('lean'),zod.literal(null)]).nullable(),
+  "side": zod.union([zod.literal('home'),zod.literal('away'),zod.literal(null)]).nullable(),
+  "line": zod.number().nullable().describe('The picked team\'s spread, e.g. 7 for +7'),
+  "sportsbook": zod.string().nullable(),
+  "gridlineMargin": zod.number(),
+  "gap": zod.number().describe('Points our number is past the book\'s on the picked side'),
+  "closeLine": zod.number().nullable(),
+  "clv": zod.number().nullable().describe('Points the line moved toward our side by kickoff'),
+  "result": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable()
+}))
+}).describe('One spread pick per game, locked Saturday noon ET (earlier games six hours before kickoff) at the best DraftKings or FanDuel number.'),
   "weeks": zod.array(zod.object({
   "week": zod.number().int(),
   "wins": zod.number().int(),

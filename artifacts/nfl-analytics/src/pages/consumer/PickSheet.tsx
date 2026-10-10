@@ -126,7 +126,8 @@ export default function PickSheet() {
   const projections = useGetConsumerGameProjections(params, { query: { queryKey: getGetConsumerGameProjectionsQueryKey(params), enabled: week !== null } });
   const views = useMemo(() => {
     const byGame = new Map((projections.data?.games ?? []).map(projection => [projection.gameId, projection]));
-    return (week?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId)));
+    const locks = new Map((projections.data?.locks.games ?? []).map(lock => [lock.gameId, lock]));
+    return (week?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId), locks.get(game.gameId)));
   }, [week, projections.data]);
   const linesAt = views.map(view => view.game.market?.spread?.capturedAt ?? view.game.market?.total?.capturedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
 

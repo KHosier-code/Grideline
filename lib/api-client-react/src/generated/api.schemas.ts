@@ -476,6 +476,87 @@ export interface ConsumerLineValue {
   atsClose: ConsumerRecordLine;
 }
 
+/**
+ * @nullable
+ */
+export type ConsumerSpreadLockTier = typeof ConsumerSpreadLockTier[keyof typeof ConsumerSpreadLockTier] | null;
+
+
+export const ConsumerSpreadLockTier = {
+  play: 'play',
+  lean: 'lean',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerSpreadLockSide = typeof ConsumerSpreadLockSide[keyof typeof ConsumerSpreadLockSide] | null;
+
+
+export const ConsumerSpreadLockSide = {
+  home: 'home',
+  away: 'away',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerSpreadLockResult = typeof ConsumerSpreadLockResult[keyof typeof ConsumerSpreadLockResult] | null;
+
+
+export const ConsumerSpreadLockResult = {
+  win: 'win',
+  loss: 'loss',
+  push: 'push',
+} as const;
+
+export interface ConsumerSpreadLock {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  kickoff: string;
+  locksAt: string;
+  /** True once locksAt has passed; before that the pick is the current lean and can change. */
+  locked: boolean;
+  /** @nullable */
+  tier: ConsumerSpreadLockTier;
+  /** @nullable */
+  side: ConsumerSpreadLockSide;
+  /**
+     * The picked team's spread, e.g. 7 for +7
+     * @nullable
+     */
+  line: number | null;
+  /** @nullable */
+  sportsbook: string | null;
+  gridlineMargin: number;
+  /** Points our number is past the book's on the picked side */
+  gap: number;
+  /** @nullable */
+  closeLine: number | null;
+  /**
+     * Points the line moved toward our side by kickoff
+     * @nullable
+     */
+  clv: number | null;
+  /** @nullable */
+  result: ConsumerSpreadLockResult;
+}
+
+/**
+ * One spread pick per game, locked Saturday noon ET (earlier games six hours before kickoff) at the best DraftKings or FanDuel number.
+ */
+export interface ConsumerSpreadLocks {
+  leanThreshold: number;
+  playThreshold: number;
+  plays: ConsumerRecordLine;
+  leans: ConsumerRecordLine;
+  beatClose: number;
+  lostClose: number;
+  sameClose: number;
+  games: ConsumerSpreadLock[];
+}
+
 export interface ConsumerGameProjections {
   status: ConsumerGameProjectionsStatus;
   /** @nullable */
@@ -491,6 +572,7 @@ export interface ConsumerGameProjections {
   favoriteRecord: ConsumerRecordLine;
   lineValue: ConsumerLineValue;
   watch: ConsumerWatchList;
+  locks: ConsumerSpreadLocks;
   weeks: ConsumerGameProjectionsWeeksItem[];
 }
 
