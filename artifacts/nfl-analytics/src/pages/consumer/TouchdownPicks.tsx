@@ -7,6 +7,7 @@ import {
   getGetConsumerTouchdownsQueryKey, useGetConsumerTouchdowns, type ConsumerTouchdownPick,
 } from '@workspace/api-client-react';
 import { formatPrice } from '@/lib/pick-sheet';
+import { playerSlug } from '@/lib/player-slug';
 import { impliedProbability, tdFairProbability } from '@/lib/market';
 import { ConsumerLoading } from './consumer-ui';
 import { TeamChip } from '@/components/GameBoard';
@@ -19,15 +20,15 @@ const pct = (value: number | null | undefined) => value === null || value === un
 const fixed = (value: number | null | undefined, digits = 1) => value === null || value === undefined ? '—' : value.toFixed(digits);
 const level = (value: number | null | undefined, high: number, low: number): Level =>
   value === null || value === undefined ? 'mid' : value >= high ? 'hi' : value <= low ? 'lo' : 'mid';
-const LEVEL_TEXT: Record<Level, string> = { hi: 'Strong', mid: 'Average', lo: 'Weak' };
+export const LEVEL_TEXT: Record<Level, string> = { hi: 'Strong', mid: 'Average', lo: 'Weak' };
 
-function kickoffText(iso: string | null) {
+export function kickoffText(iso: string | null) {
   if (!iso) return 'Time TBD';
   const date = new Date(iso);
   return `${date.toLocaleDateString('en-US', { weekday: 'short' })} ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 }
 
-function factors(pick: ConsumerTouchdownPick) {
+export function factors(pick: ConsumerTouchdownPick) {
   const f = pick.factors;
   const receiver = (f.targetShare ?? 0) >= (f.carryShare ?? 0);
   return [
@@ -44,16 +45,24 @@ function factors(pick: ConsumerTouchdownPick) {
   ];
 }
 
-function PickRow({ pick, rank, max }: { pick: ConsumerTouchdownPick; rank: number; max: number }) {
+/** Our chance minus the book's chance after its estimated cut, in percentage points; null without a price. */
+export function bookEdge(pick: ConsumerTouchdownPick) {
+  return pick.bookOdds ? pick.probability - tdFairProbability(pick.bookOdds.price) : null;
+}
+
+function PickRow({ pick, rank, max, showEdge = false }: { pick: ConsumerTouchdownPick; rank: number; max: number; showEdge?: boolean }) {
+  const edge = showEdge ? bookEdge(pick) : null;
   const injury = pick.injuryStatus;
   return <details className="gl-card gl-td">
     <summary>
       <span className="gl-rank">{rank}</span>
       <span className="gl-who">
-        <strong>{pick.name}</strong>
+        <strong><Link href={`/td/${playerSlug(pick.name)}`} className="gl-td-name" onClick={event => event.stopPropagation()}>{pick.name}</Link></strong>
         <span>
           <span className="pos">{pick.position}</span><TeamChip team={pick.team} />{pick.isHome ? 'vs' : 'at'} {pick.opponent} · {kickoffText(pick.kickoff)}
           {pick.value && <span className="gl-flag value" title="Top-5 pick priced longer than our fair odds">Value</span>}
+          {edge !== null && <span className={`gl-flag ${edge > 0 ? 'value' : ''}`} title="Our chance minus the book's chance after its estimated cut">
+            {edge > 0 ? '+' : '−'}{Math.abs(Math.round(edge * 100))} pts vs book</span>}
           {injury && <span className={`gl-flag${/^out$/i.test(injury) ? ' out' : ''}`}>{injury}</span>}
           {pick.scored !== null && <span className={`gl-scored ${pick.scored ? 'yes' : 'no'}`}>{pick.scored ? 'Scored ✓' : 'No TD'}</span>}
         </span>
@@ -86,9 +95,14 @@ export default function TouchdownPicks() {
   const [selected, setSelected] = useState<{ season: number; week: number } | undefined>();
   const [position, setPosition] = useState<(typeof POSITIONS)[number]>('All');
   const [limit, setLimit] = useState(40);
+  const [order, setOrder] = useState<'likely' | 'value'>('likely');
   const query = useGetConsumerTouchdowns(selected, { query: { queryKey: getGetConsumerTouchdownsQueryKey(selected), staleTime: 60_000 } });
   const data = query.data;
-  const picks = (data?.picks ?? []).filter(pick => position === 'All' || pick.position === position);
+  const inPosition = (data?.picks ?? []).filter(pick => position === 'All' || pick.position === position);
+  // Best value: players with a captured price, biggest edge over the book first.
+  const picks = order === 'likely' ? inPosition
+    : inPosition.filter(pick => bookEdge(pick) !== null).sort((a, b) => bookEdge(b)! - bookEdge(a)!);
+  const pricedCount = (data?.picks ?? []).filter(pick => pick.bookOdds).length;
   const max = Math.max(0.01, ...(data?.picks ?? []).map(pick => pick.probability));
   const record = data?.record;
   const value = data?.valueRecord;
@@ -113,6 +127,10 @@ export default function TouchdownPicks() {
     </header>
 
     <div className="gl-section-head">
+      <div className="gl-filters" role="group" aria-label="Sort players">
+        <button type="button" aria-pressed={order === 'likely'} onClick={() => setOrder('likely')}>Most likely</button>
+        <button type="button" aria-pressed={order === 'value'} onClick={() => setOrder('value')}>Best value</button>
+      </div>
       <div className="gl-filters" role="group" aria-label="Filter by position">
         {POSITIONS.map(item => <button key={item} type="button" aria-pressed={position === item} onClick={() => setPosition(item)}>{item}</button>)}
       </div>
@@ -129,8 +147,14 @@ export default function TouchdownPicks() {
     {query.isError && <div className="gl-empty"><strong>We couldn&apos;t load touchdown picks.</strong>Refresh the page in a minute.</div>}
     {data && data.status === 'unavailable' && <div className="gl-empty"><strong>This week&apos;s touchdown picks aren&apos;t posted yet.</strong>Rankings update Tuesday, Thursday, Friday after the injury report, Saturday, Sunday morning, after the 1:00 inactives, and before the Sunday and Monday night games.</div>}
 
+    {order === 'value' && data?.status === 'available' && <p className="gl-note">
+      {pricedCount
+        ? <>Ranked by how far our chance is above the sportsbook&apos;s chance once its estimated cut (about 20% on these bets) is taken out, using the best DraftKings or FanDuel price we captured. This ranking is new and not yet proven: we track it from week 5 on <Link href="/performance" className="gl-link">the record page</Link>. Prices move, so check your book.</>
+        : <>No sportsbook prices captured for this week yet. They&apos;re checked Thursday and Saturday, and this list fills in then.</>}
+    </p>}
+
     {picks.length > 0 && <div className="gl-td-list">
-      {picks.slice(0, limit).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} />)}
+      {picks.slice(0, limit).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} showEdge={order === 'value'} />)}
     </div>}
     {picks.length > limit && <button type="button" className="gl-card" style={{ padding: 12, fontWeight: 600, cursor: 'pointer', color: 'inherit' }} onClick={() => setLimit(limit + 60)}>Show more players ({picks.length - limit} left)</button>}
 

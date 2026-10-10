@@ -60,26 +60,10 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
       res.json(empty);
       return;
     }
-    const seasonRuns = await db.select().from(touchdownPickRunsTable)
-      .where(eq(touchdownPickRunsTable.season, selected.season))
-      .orderBy(asc(touchdownPickRunsTable.generatedAt));
-    const results = await db.select().from(touchdownPickResultsTable)
-      .where(eq(touchdownPickResultsTable.season, selected.season));
-    const resultsByWeek = new Map<number, Map<string, boolean>>();
-    for (const row of results) {
-      const map = resultsByWeek.get(row.week) ?? new Map<string, boolean>();
-      map.set(row.playerId, row.scored);
-      resultsByWeek.set(row.week, map);
-    }
-    const now = new Date();
-    const boards = new Map<number, ReturnType<typeof boardForWeek>>();
-    for (const weekNumber of new Set(seasonRuns.map((run) => run.week))) {
-      boards.set(weekNumber, boardForWeek(seasonRuns.filter((run) => run.week === weekNumber), now));
-    }
+    const { seasonRuns, boards, resultsByWeek, propsByWeek } = await loadSeasonBoards(selected.season);
     const board = boards.get(selected.week) ?? [];
     const latest = seasonRuns.filter((run) => run.week === selected.week).at(-1)!;
     const weekResults = resultsByWeek.get(selected.week) ?? new Map<string, boolean>();
-    const propsByWeek = await touchdownPropsForSeason(selected.season).catch(() => new Map());
     const props = propsByWeek.get(selected.week) ?? null;
     const evaluation = latest.evaluation as Record<string, unknown>;
     const numberOrNull = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -94,27 +78,7 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
         auc: numberOrNull(evaluation.auc),
         testedOn: typeof evaluation.testedOn === "string" ? evaluation.testedOn : null,
       },
-      picks: board.map((entry, index) => {
-        const bookOdds = bestBookPrice(props, entry.name, entry.team);
-        return {
-          rank: index + 1,
-          playerId: entry.playerId,
-          name: entry.name,
-          position: entry.position,
-          team: entry.team,
-          opponent: entry.opponent,
-          isHome: entry.isHome,
-          kickoff: entry.kickoff,
-          probability: entry.probability,
-          fairOdds: fairAmericanOdds(entry.probability),
-          injuryStatus: entry.injuryStatus,
-          factors: entry.factors,
-          scored: weekResults.has(entry.playerId) ? weekResults.get(entry.playerId)! : null,
-          bookOdds,
-          expectedValue: bookOdds ? Math.round(expectedValue(entry.probability, bookOdds.price) * 1000) / 1000 : null,
-          value: isValuePick(index + 1, entry.probability, bookOdds?.price),
-        };
-      }),
+      picks: board.map((entry, index) => pickView(entry, index, weekResults, props)),
       weeks: available,
       record: topTenRecord([...boards.entries()].map(([weekNumber, weekBoard]) => ({
         week: weekNumber, board: weekBoard, results: resultsByWeek.get(weekNumber) ?? new Map(),
@@ -136,6 +100,132 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
     });
   } catch (error) {
     req.log.error({ error }, "Consumer touchdown picks read failed");
+    res.status(503).json({ error: "Touchdown picks are being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+type SeasonBoards = Awaited<ReturnType<typeof loadSeasonBoards>>;
+
+/** Every week's board for a season, with graded results and captured TD prices. */
+async function loadSeasonBoards(season: number, now = new Date()) {
+  const seasonRuns = await db.select().from(touchdownPickRunsTable)
+    .where(eq(touchdownPickRunsTable.season, season))
+    .orderBy(asc(touchdownPickRunsTable.generatedAt));
+  const results = await db.select().from(touchdownPickResultsTable)
+    .where(eq(touchdownPickResultsTable.season, season));
+  const resultsByWeek = new Map<number, Map<string, boolean>>();
+  for (const row of results) {
+    const map = resultsByWeek.get(row.week) ?? new Map<string, boolean>();
+    map.set(row.playerId, row.scored);
+    resultsByWeek.set(row.week, map);
+  }
+  const boards = new Map<number, ReturnType<typeof boardForWeek>>();
+  for (const weekNumber of new Set(seasonRuns.map((run) => run.week))) {
+    boards.set(weekNumber, boardForWeek(seasonRuns.filter((run) => run.week === weekNumber), now));
+  }
+  const propsByWeek = await touchdownPropsForSeason(season).catch(() => new Map());
+  return { seasonRuns, boards, resultsByWeek, propsByWeek };
+}
+
+/** One player's row as the TD Picks page shows it. */
+function pickView(entry: ReturnType<typeof boardForWeek>[number], index: number, weekResults: Map<string, boolean>,
+  props: Parameters<typeof bestBookPrice>[0]) {
+  const bookOdds = bestBookPrice(props, entry.name, entry.team);
+  return {
+    rank: index + 1,
+    playerId: entry.playerId,
+    name: entry.name,
+    position: entry.position,
+    team: entry.team,
+    opponent: entry.opponent,
+    isHome: entry.isHome,
+    kickoff: entry.kickoff,
+    probability: entry.probability,
+    fairOdds: fairAmericanOdds(entry.probability),
+    injuryStatus: entry.injuryStatus,
+    factors: entry.factors,
+    scored: weekResults.has(entry.playerId) ? weekResults.get(entry.playerId)! : null,
+    bookOdds,
+    expectedValue: bookOdds ? Math.round(expectedValue(entry.probability, bookOdds.price) * 1000) / 1000 : null,
+    value: isValuePick(index + 1, entry.probability, bookOdds?.price),
+  };
+}
+
+/** "D.J. Moore Jr." -> "dj-moore-jr": the player's page address on /td/. */
+export function playerSlug(name: string) {
+  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/['’.]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+async function latestTouchdownWeek() {
+  const [latest] = await db.select({ season: touchdownPickRunsTable.season, week: touchdownPickRunsTable.week })
+    .from(touchdownPickRunsTable).orderBy(desc(touchdownPickRunsTable.season), desc(touchdownPickRunsTable.week)).limit(1);
+  return latest ?? null;
+}
+
+/** Players on this week's board, for the sitemap and links (chance of 10%+). */
+router.get("/consumer/touchdowns/players", async (req, res): Promise<void> => {
+  try {
+    const latest = await latestTouchdownWeek();
+    if (!latest) {
+      res.json({ season: null, week: null, players: [] });
+      return;
+    }
+    const { boards } = await loadSeasonBoards(latest.season);
+    const players = (boards.get(latest.week) ?? []).filter((entry) => entry.probability >= 0.1)
+      .map((entry) => ({ slug: playerSlug(entry.name), name: entry.name, team: entry.team, position: entry.position, probability: entry.probability }));
+    res.set("Cache-Control", "public, max-age=600").json({ season: latest.season, week: latest.week, players });
+  } catch (error) {
+    req.log.error({ error }, "Touchdown player list failed");
+    res.status(503).json({ error: "Touchdown picks are being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+/**
+ * One player's anytime-TD page (/td/:slug): this week's chance, price and
+ * reasons, plus every week this season they were on our board.
+ */
+router.get("/consumer/touchdowns/player/:slug", async (req, res): Promise<void> => {
+  const slug = String(req.params.slug ?? "").toLowerCase();
+  if (!/^[a-z0-9-]{2,80}$/.test(slug)) {
+    res.status(404).json({ status: "not_found" });
+    return;
+  }
+  try {
+    const latest = await latestTouchdownWeek();
+    if (!latest) {
+      res.status(404).json({ status: "not_found" });
+      return;
+    }
+    const data: SeasonBoards = await loadSeasonBoards(latest.season);
+    const thisWeek = data.boards.get(latest.week) ?? [];
+    // Two players can share a name; the one with the higher chance this week wins the address.
+    const matches = thisWeek.map((entry, index) => ({ entry, index })).filter(({ entry }) => playerSlug(entry.name) === slug);
+    const current = matches.sort((a, b) => b.entry.probability - a.entry.probability)[0] ?? null;
+    const history = [...data.boards.entries()].sort(([a], [b]) => a - b).flatMap(([weekNumber, board]) => {
+      const index = board.findIndex((entry) => current ? entry.playerId === current.entry.playerId : playerSlug(entry.name) === slug);
+      if (index < 0) return [];
+      const entry = board[index];
+      const results = data.resultsByWeek.get(weekNumber);
+      const price = bestBookPrice(data.propsByWeek.get(weekNumber) ?? null, entry.name, entry.team)?.price ?? null;
+      return [{ week: weekNumber, rank: index + 1, probability: entry.probability, opponent: entry.opponent, isHome: entry.isHome,
+        scored: results?.has(entry.playerId) ? results.get(entry.playerId)! : null, bookPrice: price }];
+    });
+    if (!current && !history.length) {
+      res.status(404).json({ status: "not_found" });
+      return;
+    }
+    const identity = current?.entry ?? data.boards.get(history.at(-1)!.week)!.find((entry) => playerSlug(entry.name) === slug)!;
+    res.set("Cache-Control", "public, max-age=300").json({
+      status: "available", slug, season: latest.season, week: latest.week,
+      name: identity.name, team: identity.team, position: identity.position,
+      generatedAt: data.seasonRuns.filter((run) => run.week === latest.week).at(-1)?.generatedAt.toISOString() ?? null,
+      pick: current ? pickView(current.entry, current.index, data.resultsByWeek.get(latest.week) ?? new Map(), data.propsByWeek.get(latest.week) ?? null) : null,
+      boardSize: thisWeek.length,
+      history,
+    });
+  } catch (error) {
+    req.log.error({ error }, "Touchdown player page failed");
     res.status(503).json({ error: "Touchdown picks are being refreshed", code: "consumer_data_unavailable" });
   }
 });

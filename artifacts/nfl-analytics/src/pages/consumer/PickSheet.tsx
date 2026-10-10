@@ -7,6 +7,7 @@ import {
   getGetConsumerDashboardQueryKey, getGetConsumerGameProjectionsQueryKey, useGetConsumerDashboard,
   useGetConsumerGameProjections, useGetConsumerTouchdowns,
 } from '@workspace/api-client-react';
+import { playerSlug } from '@/lib/player-slug';
 import { buildGameView, currentWeek, formatPrice, lineGap } from '@/lib/pick-sheet';
 import { GameBoard, TeamChip, openHomeLine } from '@/components/GameBoard';
 import { HundredGrid, abbr, toPoolGame } from '@/components/GameSim';
@@ -27,7 +28,7 @@ function TopTouchdowns({ now }: { now: number }) {
     <div className="gl-section-head"><h2 id="td-heading">Top touchdown picks</h2><Link href="/touchdowns" className="gl-link">All players and the reasons behind each pick ›</Link></div>
     <ol className="gl-td-grid">
       {picks.map((pick, index) => <li key={pick.playerId}>
-        <Link href="/touchdowns" className="gl-card gl-td-card">
+        <Link href={`/td/${playerSlug(pick.name)}`} className="gl-card gl-td-card">
           <span className="gl-rank">{index + 1}</span>
           <span className="gl-who"><strong>{pick.name}</strong><span><span className="pos">{pick.position}</span><TeamChip team={pick.team} />{pick.isHome ? 'vs' : 'at'} {pick.opponent}</span></span>
           <span className="gl-td-card-odds"><b className="gl-pct">{percent(pick.probability)}</b><small>Fair {formatPrice(pick.fairOdds)}</small></span>

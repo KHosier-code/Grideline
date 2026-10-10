@@ -1,5 +1,5 @@
 // Public document metadata, shared by Vite development and the production web server.
-const configuredOrigin = process.env.PUBLIC_SITE_URL || 'https://gridelineanalytics.com';
+const configuredOrigin = process.env.PUBLIC_SITE_URL || 'https://probablesports.com';
 const origin = new URL(configuredOrigin).origin;
 const defaultApiOrigin = process.env.INTERNAL_API_ORIGIN || 'http://127.0.0.1:80';
 const base = `/${(process.env.BASE_PATH || '/').split('/').filter(Boolean).join('/')}`;
@@ -50,6 +50,31 @@ function tags({ title, description, path, index }) {
   ].filter(Boolean).join('\n    ');
 }
 
+async function fetchApi(endpoint, apiOrigin) {
+  try {
+    return await fetch(new URL(endpoint, apiOrigin), { signal: AbortSignal.timeout(6000) });
+  } catch (error) {
+    if (apiOrigin === origin || apiOrigin !== defaultApiOrigin) throw error;
+    // Deployment layouts need not expose the workspace's local proxy.
+    return fetch(new URL(endpoint, origin), { signal: AbortSignal.timeout(6000) });
+  }
+}
+
+const pct = value => `${Math.round(value * 100)}%`;
+const price = value => value > 0 ? `+${value}` : String(value);
+
+/** This week's player pages (/td/:slug) for the sitemap; empty if the API is unreachable. */
+export async function playerSitemapPaths({ apiOrigin = defaultApiOrigin } = {}) {
+  try {
+    const response = await fetchApi('/api/consumer/touchdowns/players', apiOrigin);
+    if (!response.ok) return [];
+    const body = await response.json();
+    return [...new Set((body.players ?? []).map(player => player.slug).filter(slug => /^[a-z0-9-]{2,80}$/.test(slug)))].map(slug => `/td/${slug}`);
+  } catch {
+    return [];
+  }
+}
+
 export async function documentForPath(pathname, { apiOrigin = defaultApiOrigin } = {}) {
   const path = pathname.slice(prefix.length) || '/';
   if (pathname !== `${prefix}${path}` || (!pathname.startsWith(`${prefix}/`) && pathname !== prefix)) {
@@ -62,6 +87,29 @@ export async function documentForPath(pathname, { apiOrigin = defaultApiOrigin }
   }
   if (normalized === '/share') {
     return { status: 200, tags: tags({ title: 'Share This Week | Probable', description: 'This week\'s TD picks card, post and email.', path: '/touchdowns', index: false }) };
+  }
+  const player = /^\/td\/([^/]+)$/.exec(normalized);
+  if (player) {
+    const slug = player[1];
+    const missing = { status: 404, tags: tags({ title: 'Player not found | Probable', description: 'This player is not on our touchdown board.', path: '/touchdowns', index: false }) };
+    if (!/^[a-z0-9-]{2,80}$/.test(slug)) return missing;
+    try {
+      const response = await fetchApi(`/api/consumer/touchdowns/player/${slug}`, apiOrigin);
+      if (response.status === 404) return missing;
+      if (!response.ok) throw new Error(`Player lookup failed: ${response.status}`);
+      const data = await response.json();
+      if (data?.slug !== slug || typeof data.name !== 'string') throw new Error('Incomplete player identity');
+      const pick = data.pick;
+      const title = pick
+        ? `Will ${data.name} Score a TD in Week ${data.week}? ${pct(pick.probability)} Chance | Probable`
+        : `${data.name} Anytime TD Picks | Probable`;
+      const description = pick
+        ? `${data.name} (${data.position}, ${data.team}) has a ${pct(pick.probability)} chance to score an anytime touchdown ${pick.isHome ? 'vs' : 'at'} ${pick.opponent} in week ${data.week}, by our model. Fair odds ${price(pick.fairOdds)}${pick.bookOdds ? `; best book price ${price(pick.bookOdds.price)}` : ''}.`
+        : `Every week ${data.name} has been on Probable's anytime touchdown board this season, with our chance and the result.`;
+      return { status: 200, tags: tags({ title, description, path: normalized, index: true }) };
+    } catch {
+      return { status: 503, tags: tags({ title: 'Player unavailable | Probable', description: 'Touchdown picks are being refreshed.', path: '/touchdowns', index: false }) };
+    }
   }
   const match = /^\/games\/([^/]+)$/.exec(normalized);
   if (match) {

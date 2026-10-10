@@ -74,8 +74,18 @@ test("consumer API is public and read-only", () => {
     const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assert.match(source, new RegExp(`router\\.get\\(\\s*["']${escapedPath}["']`));
   }
-  assert.doesNotMatch(source, /router\.(post|put|patch|delete)\s*\(/);
-  assert.doesNotMatch(source, /\brequireAdmin\b/);
+  // The only writes are a signed-in user's own saved games, and each one
+  // checks the session before doing anything.
+  const writes = [...source.matchAll(/router\.(post|put|patch|delete)\(\s*["']([^"']+)["'][^\n]*\n([^\n]*)/g)];
+  assert.deepEqual(writes.map((m) => `${m[1]} ${m[2]}`), [
+    "put /consumer/saved-games/:gameId",
+    "delete /consumer/saved-games/:gameId",
+  ]);
+  for (const write of writes) assert.match(write[3], /savedGameUser\(req, res\)/, `${write[2]} must require a signed-in user`);
+  // Admin-only reads must say so.
+  const adminRoutes = [...source.matchAll(/router\.get\(\s*["']([^"']+)["']\s*,\s*requireAdmin\b/g)].map((m) => m[1]);
+  for (const path of adminRoutes) assert.match(path, /^\/admin\//, `${path} uses requireAdmin outside /admin`);
+  assert.equal((source.match(/\brequireAdmin\b/g) ?? []).length, adminRoutes.length + 1, "requireAdmin is only imported and used on /admin routes");
   // Internal availability interpretation may read supplemental provider status,
   // but must not serialize provider identifiers or identity diagnostics.
   assert.doesNotMatch(
