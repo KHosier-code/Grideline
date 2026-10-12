@@ -1094,3 +1094,9 @@
 .gl-td-name { color: inherit; text-decoration: none; }
 .gl-td-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .gl-paused { border-left: 3px solid hsl(var(--primary)); padding-left: 12px; }
+.gl-td-played { padding: 14px 16px; }
+.gl-td-played > summary { cursor: pointer; list-style: none; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.gl-td-played > summary::-webkit-details-marker { display: none; }
+.gl-td-played > summary::after { content: '▾'; margin-left: auto; color: hsl(var(--muted-foreground)); }
+.gl-td-played[open] > summary::after { content: '▴'; }
+.gl-td-played[open] > .gl-td-list { margin-top: 12px; }

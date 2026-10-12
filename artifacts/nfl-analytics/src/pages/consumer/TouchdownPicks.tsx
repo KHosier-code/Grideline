@@ -105,8 +105,12 @@ export default function TouchdownPicks() {
   const now = Date.now();
   const started = (pick: { kickoff: string | null }) => pick.kickoff !== null && Date.parse(pick.kickoff) <= now;
   const weekLive = (data?.picks ?? []).some(pick => !started(pick));
-  const picks = order === 'likely' ? inPosition
-    : inPosition.filter(pick => bookEdge(pick) !== null && !(weekLive && started(pick))).sort((a, b) => bookEdge(b)! - bookEdge(a)!);
+  // While the week is being played, rank only players still to play; the
+  // ones whose games have kicked off move to "Already played" below.
+  const upcoming = inPosition.filter(pick => !(weekLive && started(pick)));
+  const played = weekLive ? inPosition.filter(started) : [];
+  const picks = order === 'likely' ? upcoming
+    : upcoming.filter(pick => bookEdge(pick) !== null).sort((a, b) => bookEdge(b)! - bookEdge(a)!);
   const gameKey = (pick: { team: string; opponent: string }) => [pick.team, pick.opponent].sort().join('-');
   const openGames = new Set((data?.picks ?? []).filter(pick => !weekLive || !started(pick)).map(gameKey));
   const pricedGames = new Set((data?.picks ?? []).filter(pick => pick.bookOdds && (!weekLive || !started(pick))).map(gameKey));
@@ -168,6 +172,13 @@ export default function TouchdownPicks() {
       {picks.slice(0, limit).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} showEdge={order === 'value'} />)}
     </div>}
     {picks.length > limit && <button type="button" className="gl-card" style={{ padding: 12, fontWeight: 600, cursor: 'pointer', color: 'inherit' }} onClick={() => setLimit(limit + 60)}>Show more players ({picks.length - limit} left)</button>}
+
+    {order === 'likely' && played.length > 0 && <details className="gl-card gl-td-played">
+      <summary><b>Already played this week</b> <span className="gl-muted">{played.length} players · {played.filter(pick => pick.scored).length} scored so far</span></summary>
+      <div className="gl-td-list">
+        {played.slice(0, 40).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} />)}
+      </div>
+    </details>}
 
     <NewsletterSignup source="touchdowns" />
 
