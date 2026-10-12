@@ -340,7 +340,7 @@ export const LOCK_PLAY = 4;
 const LOCK_SATURDAY_UTC_HOUR = 16;
 const EARLY_LOCK_HOURS = 6;
 const PICK_BOOKS = ["DraftKings", "FanDuel"];
-/** Locked picks began with 2026 week 6's Sunday games; earlier games were never locked, so they don't count. */
+/** Locked picks began with 2026 week 5's Sunday games; earlier games were never locked, so they don't count. */
 export const LOCKS_START = new Date("2026-10-10T00:00:00Z");
 
 export type SpreadLock = {

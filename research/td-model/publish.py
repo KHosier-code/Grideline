@@ -32,6 +32,12 @@ if upcoming.empty:
     print("No upcoming week with lines; nothing to publish.")
     sys.exit(0)
 season, week = int(upcoming.season.iloc[0]), int(upcoming.week.iloc[0])
+# A feature that is blank for every upcoming player means the dataset build
+# couldn't compute it for unplayed games. The model would quietly treat it as
+# "no history" and skew every probability, so stop instead of publishing.
+blank = [c for c in ALL if upcoming[c].isna().all()]
+if blank:
+    sys.exit(f"Refusing to publish: {', '.join(blank)} missing for every upcoming player.")
 
 # Availability: active roster for this week, then this week's injury report if it exists.
 rosters = pd.read_parquet(f"{DATA}/rosters_{season}.parquet")
