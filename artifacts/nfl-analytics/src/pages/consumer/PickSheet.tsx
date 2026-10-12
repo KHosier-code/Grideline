@@ -127,7 +127,8 @@ export default function PickSheet() {
   const views = useMemo(() => {
     const byGame = new Map((projections.data?.games ?? []).map(projection => [projection.gameId, projection]));
     const locks = new Map((projections.data?.locks.games ?? []).map(lock => [lock.gameId, lock]));
-    return (week?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId), locks.get(game.gameId)));
+    const early = new Map((projections.data?.early.games ?? []).map(pick => [pick.gameId, pick]));
+    return (week?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId), locks.get(game.gameId), early.get(game.gameId)));
   }, [week, projections.data]);
   const linesAt = views.map(view => view.game.market?.spread?.capturedAt ?? view.game.market?.total?.capturedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
 

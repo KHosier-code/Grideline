@@ -96,7 +96,7 @@ export default function ConsumerGameDetail() {
   const game = query.data;
   const beforeKickoff = Boolean(game.kickoffTime && new Date(game.kickoffTime).getTime() > now
     && (game.gameState === 'pregame' || game.gameState === 'scheduled'));
-  const view = buildGameView(game, qbProjection, projections.data?.locks.games.find(item => item.gameId === gameId));
+  const view = buildGameView(game, qbProjection, projections.data?.locks.games.find(item => item.gameId === gameId), projections.data?.early.games.find(item => item.gameId === gameId));
   const injuries = injuryNames(game.context);
 
   return <div className="gl-page consumer-detail">

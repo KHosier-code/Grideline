@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import {
   getGetConsumerGameProjectionsQueryKey, getGetConsumerReplayQueryKey, getGetConsumerWatchAlertsQueryKey, useGetConsumerGameProjections,
   useGetConsumerReplay, useGetConsumerTouchdowns, useGetConsumerWatchAlerts,
-  type ConsumerSpreadLocks, type ConsumerTouchdownBookComparison, type ConsumerWatchList,
+  type ConsumerEarlyLinePicks, type ConsumerSpreadLocks, type ConsumerTouchdownBookComparison, type ConsumerWatchList,
 } from '@workspace/api-client-react';
 import { TeamLogo } from '@/components/TeamLogo';
 import { bookShort } from '@/lib/line-shopping';
@@ -114,6 +114,41 @@ function Cover({ value }: { value: Ats }) {
 
 /** The 4+ point opener gap, tracked live: the one rule that held up in back-testing, graded at three numbers. */
 const signedLine = (line: number) => (line > 0 ? `+${line}` : line === 0 ? 'PK' : `${line}`);
+
+/** Early-line spread picks (testing): 4+ points off Monday morning's line, graded at that line. */
+function EarlyLineSection({ early }: { early: ConsumerEarlyLinePicks }) {
+  const picks = [...early.games].reverse();
+  const clvGames = early.beatClose + early.lostClose + early.sameClose;
+  const date = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const posted = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+  return <section className="gl-section" id="early-line" aria-labelledby="early-line-head">
+    <div className="gl-section-head"><h2 id="early-line-head">Early-line picks <span className="gl-pill small">Testing</span></h2>
+      <p>Posted Monday morning when our number is {early.gap}+ points off the line, graded at that line</p></div>
+    {early.stopped && <p className="gl-note gl-paused"><b>Stopped.</b> The first {early.stopAfter} picks won under {Math.round(early.stopRate * 100)}%, so we stopped making new ones, as we said we would before the first pick.</p>}
+    <div className="gl-record-grid">
+      <div className="gl-card gl-record-card"><span className="gl-label">Record at the posted line</span><b>{recordText(early.record)}</b><p>{coverRate(early.record)}. Break-even at -110 is 52.4%.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">Beat the closing line</span><b>{clvGames ? `${early.beatClose}/${clvGames}` : '—'}</b><p>How often the line moved toward our pick after we posted. The fastest sign of a real edge.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">In testing</span><b>55–57%</b><p>What we expect. 4+ point gaps went 62% in 2023–24 and 70% in 2025 at the opening line; after adjusting for fitting, and since Monday&apos;s line is later than the opener, expect less.</p></div>
+    </div>
+    <p className="gl-note">The rule, set before the first pick: our first projection after Monday 8 AM ET, compared with the DraftKings or FanDuel line captured closest to it. A pick needs a gap of {early.gap}+ points, and it&apos;s graded at that number, not the opener or the close. If the first {early.stopAfter} graded picks win under {Math.round(early.stopRate * 100)}%, we stop. Expect one to three a week.</p>
+    {picks.length > 0 ? <div className="gl-card gl-table-wrap">
+      <table className="gl-table gl-watch-table">
+        <thead><tr><th scope="col">Game</th><th scope="col">Pick<small>posted</small></th><th scope="col">Ours</th><th scope="col">Now<small>or the close</small></th><th scope="col">Result</th></tr></thead>
+        <tbody>{picks.map(pick => {
+          const team = pick.side === 'home' ? pick.homeTeam : pick.awayTeam;
+          return <tr key={pick.gameId}>
+            <td>{pick.awayTeam} at {pick.homeTeam} <small className="gl-muted">{date(pick.kickoff)}</small></td>
+            <td><span className="gl-inline-team"><TeamLogo team={team} size={18} /><b>{team} {signedLine(pick.line)}</b></span>
+              <small className="gl-muted"> {bookShort(pick.sportsbook)} · {posted(pick.postedAt)}</small></td>
+            <td>{lineText(pick.gridlineMargin, pick.homeTeam, pick.awayTeam)}</td>
+            <td>{signedLine(pick.currentLine)} {pick.clv ? <small className={pick.clv > 0 ? 'gl-good' : 'gl-bad'}>{pick.clv > 0 ? '+' : ''}{pick.clv}</small> : null}</td>
+            <td>{pick.result ? <Cover value={pick.result as Ats} /> : <span className="gl-muted">{pick.started ? 'Live' : 'Upcoming'}</span>}</td>
+          </tr>;
+        })}</tbody>
+      </table>
+    </div> : <div className="gl-empty"><strong>The first early-line picks post Monday, October 19, around 9 AM ET.</strong>Only games where our number is {early.gap}+ points off the line qualify, so some weeks there may be none.</div>}
+  </section>;
+}
 
 /** One spread pick per game, locked Saturday noon ET at the best number, graded at that number. */
 function SpreadLocksSection({ locks }: { locks: ConsumerSpreadLocks }) {
@@ -340,6 +375,8 @@ export default function ConsumerPerformance() {
 
 
     <p className="gl-note">Every pick counted here was locked in before kickoff. <Link href="/receipts" className="gl-link">See the receipts</Link>, with the time each one was posted.</p>
+
+    {game?.early && <EarlyLineSection early={game.early} />}
 
     {game?.locks && <SpreadLocksSection locks={game.locks} />}
 

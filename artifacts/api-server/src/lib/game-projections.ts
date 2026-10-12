@@ -461,3 +461,141 @@ export function spreadLockSummary(locks: SpreadLock[]) {
     pausedFrom: LOCKS_PAUSED_FROM.toISOString(),
   };
 }
+
+/**
+ * Early-line picks (testing). The one spread signal that held up in research
+ * (research/algo-sweep): our number 4+ points off the line early in the week.
+ * Each game's pick comes from our first projection posted on or after the
+ * Monday 12:00 UTC (8 AM ET) before kickoff, against the DraftKings or
+ * FanDuel spread captured closest to that post (within EARLY_QUOTE_WINDOW),
+ * so it's a number a reader could bet. Graded there, with closing line value.
+ * Stop rule, set before any results: if the first EARLY_STOP_AFTER graded
+ * picks win under EARLY_STOP_RATE, no new picks are made.
+ */
+export const EARLY_GAP = 4;
+export const EARLY_START = new Date("2026-10-19T12:00:00Z");
+export const EARLY_STOP_AFTER = 30;
+export const EARLY_STOP_RATE = 0.5;
+const EARLY_QUOTE_BEFORE_MS = 3 * 3_600_000;
+const EARLY_QUOTE_AFTER_MS = 6 * 3_600_000;
+/** Days back from the kickoff's Eastern date to the Monday that opens its NFL week. */
+const DAYS_TO_WEEK_MONDAY: Record<string, number> = { Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6, Mon: 7 };
+
+/** 12:00 UTC on the Monday that starts the game's week (the Monday after the previous week's Sunday games). */
+export function earlyWindowOpens(kickoff: Date) {
+  const parts = Object.fromEntries(ET_DATE.formatToParts(kickoff).map((part) => [part.type, part.value]));
+  const back = DAYS_TO_WEEK_MONDAY[parts.weekday] ?? 7;
+  return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - back, 12));
+}
+
+export type EarlyPick = {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  kickoff: string;
+  /** When our projection went up (the pick time). */
+  postedAt: Date;
+  side: "home" | "away";
+  /** The picked team's spread at posting, e.g. 7 for "+7". */
+  line: number;
+  sportsbook: string;
+  quotedAt: Date;
+  gridlineMargin: number;
+  gap: number;
+  /** Latest spread for the picked team at the same book (the close once started). */
+  currentLine: number;
+  /** Whether the latest line is still EARLY_GAP+ points off our posted number. */
+  stillPick: boolean;
+  started: boolean;
+  clv: number | null;
+  result: "win" | "loss" | "push" | null;
+};
+
+export function earlyLinePicks(
+  runs: ProjectionRun[],
+  quotesByGame: Map<string, SpreadQuote[]>,
+  finals: Map<string, { home: number; away: number; week: number }>,
+  now: Date,
+): EarlyPick[] {
+  const ordered = [...runs].sort((a, b) => lockedAt(a).getTime() - lockedAt(b).getTime());
+  const first = new Map<string, { game: GameProjectionRow; postedAt: Date }>();
+  for (const run of ordered) {
+    const posted = lockedAt(run);
+    for (const game of run.games) {
+      const kickoff = kickoffDate(game.kickoff);
+      if (!kickoff || kickoff < EARLY_START || first.has(game.gameId)) continue;
+      if (posted < earlyWindowOpens(kickoff) || posted >= kickoff) continue;
+      first.set(game.gameId, { game, postedAt: posted });
+    }
+  }
+  const picks: EarlyPick[] = [];
+  for (const [gameId, { game, postedAt }] of first) {
+    const kickoff = kickoffDate(game.kickoff)!;
+    const quotes = quotesByGame.get(gameId) ?? [];
+    // Each book's quote closest to the post, within the window.
+    const near = PICK_BOOKS.flatMap((sportsbook) => {
+      const inWindow = bookQuotes(quotes, sportsbook, kickoff).filter((quote) => {
+        const offset = quote.capturedAt.getTime() - postedAt.getTime();
+        return offset >= -EARLY_QUOTE_BEFORE_MS && offset <= EARLY_QUOTE_AFTER_MS;
+      });
+      const best = inWindow.sort((a, b) => Math.abs(a.capturedAt.getTime() - postedAt.getTime()) - Math.abs(b.capturedAt.getTime() - postedAt.getTime()))[0];
+      return best ? [best] : [];
+    });
+    if (!near.length) continue;
+    const bestHome = near.reduce((best, quote) => (quote.homeLine > best.homeLine ? quote : best));
+    const bestAway = near.reduce((best, quote) => (quote.homeLine < best.homeLine ? quote : best));
+    const homeGap = game.projectedMargin + bestHome.homeLine;
+    const awayGap = -(game.projectedMargin + bestAway.homeLine);
+    const side = homeGap >= awayGap ? "home" as const : "away" as const;
+    const gap = Math.round(Math.max(homeGap, awayGap) * 10) / 10;
+    if (gap < EARLY_GAP) continue;
+    const quote = side === "home" ? bestHome : bestAway;
+    const sideLine = (homeLine: number) => (side === "home" ? homeLine : -homeLine);
+    const latest = bookQuotes(quotes, quote.sportsbook, kickoff).at(-1) ?? quote;
+    const started = now >= kickoff;
+    const final = finals.get(gameId);
+    const ourSideLine = side === "home" ? -game.projectedMargin : game.projectedMargin;
+    picks.push({
+      gameId, homeTeam: game.homeTeam, awayTeam: game.awayTeam, kickoff: kickoff.toISOString(), postedAt,
+      side, line: sideLine(quote.homeLine), sportsbook: quote.sportsbook, quotedAt: quote.capturedAt,
+      gridlineMargin: game.projectedMargin, gap,
+      currentLine: sideLine(latest.homeLine),
+      stillPick: !started && sideLine(latest.homeLine) - ourSideLine >= EARLY_GAP,
+      started,
+      clv: started ? sideLine(quote.homeLine) - sideLine(latest.homeLine) : null,
+      result: final ? coverResult(side, quote.homeLine, final) : null,
+    });
+  }
+  picks.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+  const stoppedAt = earlyStopTime(picks);
+  return stoppedAt ? picks.filter((pick) => pick.postedAt <= stoppedAt) : picks;
+}
+
+/** Kickoff of the EARLY_STOP_AFTER-th graded pick if the picks up to it won under EARLY_STOP_RATE, else null. */
+export function earlyStopTime(picks: EarlyPick[]) {
+  let graded = 0; let wins = 0; let losses = 0;
+  for (const pick of [...picks].sort((a, b) => a.kickoff.localeCompare(b.kickoff))) {
+    if (!pick.result) continue;
+    graded += 1;
+    if (pick.result === "win") wins += 1; else if (pick.result === "loss") losses += 1;
+    if (graded === EARLY_STOP_AFTER) {
+      return wins + losses > 0 && wins / (wins + losses) < EARLY_STOP_RATE ? new Date(pick.kickoff) : null;
+    }
+  }
+  return null;
+}
+
+export function earlyLineSummary(picks: EarlyPick[]) {
+  const record = emptyRecordLine();
+  let beatClose = 0; let lostClose = 0; let sameClose = 0;
+  for (const pick of picks) {
+    if (pick.result) addResult(record, pick.result);
+    if (pick.clv === null) continue;
+    if (pick.clv > 0) beatClose += 1; else if (pick.clv < 0) lostClose += 1; else sameClose += 1;
+  }
+  return {
+    gap: EARLY_GAP, start: EARLY_START.toISOString(), stopAfter: EARLY_STOP_AFTER, stopRate: EARLY_STOP_RATE,
+    stopped: earlyStopTime(picks) !== null,
+    record, beatClose, lostClose, sameClose,
+  };
+}

@@ -3137,6 +3137,39 @@ export const GetConsumerGameProjectionsResponse = zod.object({
   "result": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable()
 }))
 }).describe('One spread pick per game, locked Saturday noon ET (earlier games six hours before kickoff) at the best DraftKings or FanDuel number.'),
+  "early": zod.object({
+  "gap": zod.number(),
+  "start": zod.coerce.date(),
+  "stopAfter": zod.number().int(),
+  "stopRate": zod.number(),
+  "stopped": zod.boolean(),
+  "record": zod.object({
+  "wins": zod.number().int(),
+  "losses": zod.number().int(),
+  "pushes": zod.number().int()
+}),
+  "beatClose": zod.number().int(),
+  "lostClose": zod.number().int(),
+  "sameClose": zod.number().int(),
+  "games": zod.array(zod.object({
+  "gameId": zod.string(),
+  "homeTeam": zod.string(),
+  "awayTeam": zod.string(),
+  "kickoff": zod.coerce.date(),
+  "postedAt": zod.coerce.date().describe('When our projection went up: the pick time'),
+  "side": zod.enum(['home', 'away']),
+  "line": zod.number().describe('The picked team\'s spread when posted, e.g. 7 for +7'),
+  "sportsbook": zod.string(),
+  "quotedAt": zod.coerce.date(),
+  "gridlineMargin": zod.number(),
+  "gap": zod.number(),
+  "currentLine": zod.number().describe('Latest spread for the picked team at the same book (the close once started)'),
+  "stillPick": zod.boolean().describe('Latest line still 4+ points off our posted number'),
+  "started": zod.boolean(),
+  "clv": zod.number().nullable(),
+  "result": zod.union([zod.literal('win'),zod.literal('loss'),zod.literal('push'),zod.literal(null)]).nullable()
+}))
+}).describe('Early-line spread picks (testing). Our first projection posted after Monday 8 AM ET, 4+ points off the DraftKings or FanDuel line captured closest to it, graded at that line.'),
   "weeks": zod.array(zod.object({
   "week": zod.number().int(),
   "wins": zod.number().int(),

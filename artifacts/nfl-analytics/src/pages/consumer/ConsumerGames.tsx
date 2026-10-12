@@ -39,7 +39,8 @@ export default function ConsumerGames() {
   const views = useMemo(() => {
     const byGame = new Map((projections.data?.games ?? []).map(projection => [projection.gameId, projection]));
     const locks = new Map((projections.data?.locks.games ?? []).map(lock => [lock.gameId, lock]));
-    return (query.data?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId), locks.get(game.gameId)));
+    const early = new Map((projections.data?.early.games ?? []).map(pick => [pick.gameId, pick]));
+    return (query.data?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId), locks.get(game.gameId), early.get(game.gameId)));
   }, [query.data, projections.data]);
 
   return <div className="gl-page">
