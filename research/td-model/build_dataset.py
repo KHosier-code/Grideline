@@ -172,8 +172,11 @@ def main():
     df = df.merge(allowed[["game_id", "opponent", "position", "opp_pos_tds8_shrunk", "opp_pos_tds_ratio"]],
                   on=["game_id", "opponent", "position"], how="left")
 
-    # Opponent red-zone plays allowed and points allowed (last 8).
-    trz = team_rz.merge(games[["game_id", "team", "opponent", "kickoff_order"]], on=["game_id", "team"])
+    # Opponent red-zone plays allowed and points allowed (last 8). Built on the full
+    # schedule, upcoming games included, so the coming week's rows get the averages
+    # of each team's previous games instead of a blank (a blank reads to the model
+    # like a team with no history and pulled the best red-zone players down).
+    trz = games[["game_id", "team", "opponent", "kickoff_order"]].merge(team_rz, on=["game_id", "team"], how="left")
     trz = trz.sort_values(["opponent", "kickoff_order"])
     trz["team_rz20"] = trz.team_rz20_tgt + trz.team_rz20_car
     trz["opp_rz_allowed8"] = trz.groupby("opponent").team_rz20.transform(lambda x: x.shift(1).rolling(8, min_periods=1).mean())

@@ -3,7 +3,7 @@ import { getGetConsumerPowerRatingsQueryKey, useGetConsumerPowerRatings, type Co
 import { groupBySlate } from '@/lib/slates';
 import { TeamLogo } from './TeamLogo';
 import { BestNumbers } from './BookLines';
-import { lineGap, lineText, vegasLineText, type GameView } from '@/lib/pick-sheet';
+import { lineText, vegasLineText, type GameView } from '@/lib/pick-sheet';
 import { teamColor, teamTextColor } from '@/lib/team-colors';
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
@@ -118,7 +118,8 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
     })}
     {final && projection && <p className="gl-gc-foot">We projected {game.matchup.away.abbreviation} {projection.away.toFixed(1)}, {game.matchup.home.abbreviation} {projection.home.toFixed(1)}</p>}
     {!final && projection && <p className="gl-gc-foot">Total: ours {projection.total.toFixed(1)} · Vegas {view.vegas.total ?? '—'}</p>}
-    {view.lock ? <LockNote view={view} /> : !final && projection && <GapNote view={view} open={open?.line ?? null} />}
+    {view.lock && <LockNote view={view} />}
+    {view.early && <EarlyNote view={view} />}
     {!final && <BestNumbers books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />}
     {!final && !projection && <p className="gl-gc-foot gl-muted">Projection pending: our quarterback-adjusted line usually posts by Tuesday morning.</p>}
   </Link>;
@@ -154,15 +155,25 @@ export function LockNote({ view }: { view: GameView }) {
     {clv && <span className="gl-muted"> · {clv}</span>}</p>;
 }
 
-/** "Gridline likes BUF by 2.5 more than Vegas · line moved 1 toward us since open". */
-export function GapNote({ view, open }: { view: GameView; open: number | null }) {
-  const gap = lineGap(view, open);
-  if (!gap) return null;
-  if (gap.side === null) return <p className="gl-gc-foot">We match the current line</p>;
-  const team = view.game.matchup[gap.side].abbreviation;
-  const moved = gap.moved === null || gap.moved === 0 ? null
-    : `line moved ${Math.abs(gap.moved)} ${gap.moved > 0 ? 'toward' : 'away from'} us since it opened`;
-  return <p className="gl-gc-foot gl-gc-gap">We like <b>{team}</b> by {gap.points} more than Vegas{moved ? ` · ${moved}` : ''}</p>;
+/**
+ * Early-line pick (testing): posted Monday morning when our number is 4+
+ * points off the line, fixed at that number. Before kickoff it says whether
+ * today's line is still a pick; after, the result and the close.
+ */
+export function EarlyNote({ view }: { view: GameView }) {
+  const pick = view.early!;
+  const team = view.game.matchup[pick.side].abbreviation;
+  const book = BOOK_SHORT[pick.sportsbook] ?? pick.sportsbook;
+  const result = pick.result === 'win' ? 'Covered ✓' : pick.result === 'loss' ? 'Didn’t cover' : pick.result === 'push' ? 'Push' : null;
+  const moved = pick.currentLine !== pick.line;
+  return <p className="gl-gc-foot gl-gc-lock" title={`Our number was ${pick.gap} points past ${book}'s when we posted. Graded at ${signed(pick.line)}.`}>
+    <span className="gl-lock-tag play">🔒 Early line</span><b>{team} {signed(pick.line)}</b> ({book}, {lockClock(pick.postedAt)} ET)
+    {result ? <> · <span className={pick.result === 'win' ? 'gl-good' : pick.result === 'loss' ? 'gl-miss' : ''}>{result}</span>
+      {pick.clv !== null && pick.clv !== 0 && <span className="gl-muted"> · closed {signed(pick.currentLine)}</span>}</>
+      : pick.started ? <span className="gl-muted"> · in progress</span>
+      : moved ? <span className={pick.stillPick ? 'gl-good' : 'gl-muted'}> · now {signed(pick.currentLine)}{pick.stillPick ? ', still a pick' : ', value gone at this line'}</span>
+      : <span className="gl-good"> · still {signed(pick.line)}</span>}
+  </p>;
 }
 
 /** Every game in a week, grouped by slate (Thursday, Sunday early, Sunday afternoon, Monday), as cards. */

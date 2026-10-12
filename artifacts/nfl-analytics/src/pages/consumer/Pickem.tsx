@@ -129,6 +129,7 @@ export default function Pickem() {
           {slates.map(({ slate: item }) => <button key={item.key} type="button" aria-pressed={slate === item.key} onClick={() => setSlate(item.key)}>{item.label}</button>)}
         </div>
       </div>
+      <p className="gl-note gl-pool-caveat"><b>For pools, not betting.</b> Pools that make you pick every game against the {mode === 'spread' ? 'spread' : 'total'} need a side for each one, so this ranks them by how far our number is from the book&apos;s. In five seasons of testing, those sides won about 52–53% against closing lines, about a coin flip and below the 52.4% needed to profit at -110. That&apos;s why we don&apos;t post them as bets.</p>
       <LinePicks market={mode} views={all.map(game => game.view)} visible={slate === 'all' ? undefined : new Set(selected.map(game => game.view.game.gameId))} now={now} label={slateLabel} season={week?.season} />
     </>}
 

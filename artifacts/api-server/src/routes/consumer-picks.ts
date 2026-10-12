@@ -7,7 +7,7 @@ import {
   touchdownPickRunsTable, weeklyReportsTable, gamesTable, weatherForecastSnapshotsTable,
 } from "@workspace/db";
 import {
-  favoriteRecord, lineValueGames, lineValueSummary, openerWatch, openerWatchSummary, projectionsBeforeKickoff, spreadLocks, spreadLockSummary, winnerRecord,
+  favoriteRecord, lineValueGames, lineValueSummary, openerWatch, openerWatchSummary, projectionsBeforeKickoff, spreadLocks, spreadLockSummary, earlyLinePicks, earlyLineSummary, winnerRecord,
 } from "../lib/game-projections";
 import { loadSeasonProjectionData } from "../lib/projection-data";
 import {
@@ -389,7 +389,7 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
     if (selectedSeason === undefined) {
       res.json({ status: "unavailable", season: null, modelVersion: null, generatedAt: null, evaluation: {}, games: [],
         record: { wins: 0, losses: 0, pushes: 0 }, favoriteRecord: { wins: 0, losses: 0, pushes: 0 },
-        lineValue: lineValueSummary([]), watch: { ...openerWatchSummary([]), games: [] }, locks: { ...spreadLockSummary([]), games: [] }, weeks: [] });
+        lineValue: lineValueSummary([]), watch: { ...openerWatchSummary([]), games: [] }, locks: { ...spreadLockSummary([]), games: [] }, early: { ...earlyLineSummary([]), games: [] }, weeks: [] });
       return;
     }
     const { runs, finals, quotesByGame, booksByGame } = await loadSeasonProjectionData(selectedSeason);
@@ -399,6 +399,7 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
     const now = new Date();
     const watchGames = openerWatch(runs, quotesByGame, finals, now);
     const locks = spreadLocks(runs, quotesByGame, finals, now);
+    const early = earlyLinePicks(runs, quotesByGame, finals, now);
     const newest = runs.at(-1);
     res.json({
       status: runs.length ? "available" : "unavailable",
@@ -419,6 +420,10 @@ router.get("/consumer/game-projections", async (req, res): Promise<void> => {
         })),
       },
       locks: { ...spreadLockSummary(locks), games: locks.map((lock) => ({ ...lock, locksAt: lock.locksAt.toISOString() })) },
+      early: {
+        ...earlyLineSummary(early),
+        games: early.map((pick) => ({ ...pick, postedAt: pick.postedAt.toISOString(), quotedAt: pick.quotedAt.toISOString() })),
+      },
       weeks: [...record.weeks.entries()].sort(([a], [b]) => a - b).map(([week, line]) => ({ week, ...line })),
     });
   } catch (error) {

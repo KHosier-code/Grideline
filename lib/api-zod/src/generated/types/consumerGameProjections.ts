@@ -5,6 +5,7 @@
  * NFL Analytics Model API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsumerEarlyLinePicks } from './consumerEarlyLinePicks';
 import type { ConsumerGameProjection } from './consumerGameProjection';
 import type { ConsumerGameProjectionsEvaluation } from './consumerGameProjectionsEvaluation';
 import type { ConsumerGameProjectionsStatus } from './consumerGameProjectionsStatus';
@@ -30,5 +31,6 @@ export interface ConsumerGameProjections {
   lineValue: ConsumerLineValue;
   watch: ConsumerWatchList;
   locks: ConsumerSpreadLocks;
+  early: ConsumerEarlyLinePicks;
   weeks: ConsumerGameProjectionsWeeksItem[];
 }

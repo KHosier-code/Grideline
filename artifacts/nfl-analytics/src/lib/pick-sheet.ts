@@ -1,4 +1,4 @@
-import type { ConsumerBookLines, ConsumerGame, ConsumerGameProjection, ConsumerProjectionQb, ConsumerSpreadLock } from '@workspace/api-client-react';
+import type { ConsumerBookLines, ConsumerGame, ConsumerGameProjection, ConsumerEarlyPick, ConsumerProjectionQb, ConsumerSpreadLock } from '@workspace/api-client-react';
 
 /**
  * Game projections for the weekly page. These are projections, not picks:
@@ -35,6 +35,8 @@ export type GameView = {
   books: ConsumerBookLines[];
   /** Our spread pick for this game: the current lean, then locked Saturday noon ET. */
   lock: ConsumerSpreadLock | null;
+  /** Early-line pick (testing): posted Monday morning when we're 4+ points off the line. */
+  early: ConsumerEarlyPick | null;
 };
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -54,7 +56,7 @@ export function consistentHomeWin(margin: number, homeWin: number) {
  * The view for one game. The projection comes only from the QB-adjusted model
  * (game_projection_runs); a game without a row stays "projection pending".
  */
-export function buildGameView(game: ConsumerGame, qbModel?: ConsumerGameProjection, lock?: ConsumerSpreadLock): GameView {
+export function buildGameView(game: ConsumerGame, qbModel?: ConsumerGameProjection, lock?: ConsumerSpreadLock, early?: ConsumerEarlyPick): GameView {
   const projection: GameView['projection'] = qbModel ? {
     home: (qbModel.projectedTotal + qbModel.projectedMargin) / 2,
     away: (qbModel.projectedTotal - qbModel.projectedMargin) / 2,
@@ -78,7 +80,7 @@ export function buildGameView(game: ConsumerGame, qbModel?: ConsumerGameProjecti
     : qbModel && finite(qbModel.marketMargin)
       ? { homeMargin: qbModel.marketMargin, total: finite(qbModel.marketTotal) ? qbModel.marketTotal : null, source: 'consensus' }
       : null;
-  return { game, projection, winner, vegas: { homeLine, total: vegasTotal, favorite }, market, result, books: qbModel?.books ?? [], lock: lock ?? null };
+  return { game, projection, winner, vegas: { homeLine, total: vegasTotal, favorite }, market, result, books: qbModel?.books ?? [], lock: lock ?? null, early: early ?? null };
 }
 
 /** "BUF -7.5" style line for the team a margin favors (home-minus-away margin). */

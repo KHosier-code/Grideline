@@ -547,6 +547,11 @@ export interface ConsumerSpreadLock {
  * One spread pick per game, locked Saturday noon ET (earlier games six hours before kickoff) at the best DraftKings or FanDuel number.
  */
 export interface ConsumerSpreadLocks {
+  /**
+     * Games kicking off at or after this time get no locked pick (spread picks paused).
+     * @nullable
+     */
+  pausedFrom: string | null;
   leanThreshold: number;
   playThreshold: number;
   plays: ConsumerRecordLine;
@@ -555,6 +560,67 @@ export interface ConsumerSpreadLocks {
   lostClose: number;
   sameClose: number;
   games: ConsumerSpreadLock[];
+}
+
+export type ConsumerEarlyPickSide = typeof ConsumerEarlyPickSide[keyof typeof ConsumerEarlyPickSide];
+
+
+export const ConsumerEarlyPickSide = {
+  home: 'home',
+  away: 'away',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ConsumerEarlyPickResult = typeof ConsumerEarlyPickResult[keyof typeof ConsumerEarlyPickResult] | null;
+
+
+export const ConsumerEarlyPickResult = {
+  win: 'win',
+  loss: 'loss',
+  push: 'push',
+} as const;
+
+export interface ConsumerEarlyPick {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  kickoff: string;
+  /** When our projection went up: the pick time */
+  postedAt: string;
+  side: ConsumerEarlyPickSide;
+  /** The picked team's spread when posted, e.g. 7 for +7 */
+  line: number;
+  sportsbook: string;
+  quotedAt: string;
+  gridlineMargin: number;
+  gap: number;
+  /** Latest spread for the picked team at the same book (the close once started) */
+  currentLine: number;
+  /** Latest line still 4+ points off our posted number */
+  stillPick: boolean;
+  started: boolean;
+  /** @nullable */
+  clv: number | null;
+  /** @nullable */
+  result: ConsumerEarlyPickResult;
+}
+
+/**
+ * Early-line spread picks (testing). Our first projection posted after Monday 8 AM ET, 4+ points off the DraftKings or FanDuel line captured closest to it, graded at that line.
+ */
+export interface ConsumerEarlyLinePicks {
+  gap: number;
+  start: string;
+  stopAfter: number;
+  stopRate: number;
+  stopped: boolean;
+  record: ConsumerRecordLine;
+  beatClose: number;
+  lostClose: number;
+  sameClose: number;
+  games: ConsumerEarlyPick[];
 }
 
 export interface ConsumerGameProjections {
@@ -573,6 +639,7 @@ export interface ConsumerGameProjections {
   lineValue: ConsumerLineValue;
   watch: ConsumerWatchList;
   locks: ConsumerSpreadLocks;
+  early: ConsumerEarlyLinePicks;
   weeks: ConsumerGameProjectionsWeeksItem[];
 }
 

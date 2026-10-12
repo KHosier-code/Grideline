@@ -1526,7 +1526,7 @@ components:
               receivedAt: { type: string, format: date-time }
     ConsumerGameProjections:
       type: object
-      required: [status, season, modelVersion, generatedAt, evaluation, games, record, favoriteRecord, lineValue, watch, locks, weeks]
+      required: [status, season, modelVersion, generatedAt, evaluation, games, record, favoriteRecord, lineValue, watch, locks, early, weeks]
       properties:
         status: { type: string, enum: [available, unavailable] }
         season: { type: ["integer", "null"] }
@@ -1570,6 +1570,7 @@ components:
         lineValue: { $ref: "#/components/schemas/ConsumerLineValue" }
         watch: { $ref: "#/components/schemas/ConsumerWatchList" }
         locks: { $ref: "#/components/schemas/ConsumerSpreadLocks" }
+        early: { $ref: "#/components/schemas/ConsumerEarlyLinePicks" }
         weeks:
           type: array
           items:
@@ -1602,8 +1603,9 @@ components:
     ConsumerSpreadLocks:
       type: object
       description: One spread pick per game, locked Saturday noon ET (earlier games six hours before kickoff) at the best DraftKings or FanDuel number.
-      required: [leanThreshold, playThreshold, plays, leans, beatClose, lostClose, sameClose, games]
+      required: [leanThreshold, playThreshold, plays, leans, beatClose, lostClose, sameClose, pausedFrom, games]
       properties:
+        pausedFrom: { type: ["string", "null"], format: date-time, description: "Games kicking off at or after this time get no locked pick (spread picks paused)." }
         leanThreshold: { type: number }
         playThreshold: { type: number }
         plays: { $ref: "#/components/schemas/ConsumerRecordLine" }
@@ -1612,6 +1614,41 @@ components:
         lostClose: { type: integer }
         sameClose: { type: integer }
         games: { type: array, items: { $ref: "#/components/schemas/ConsumerSpreadLock" } }
+    ConsumerEarlyPick:
+      type: object
+      required: [gameId, homeTeam, awayTeam, kickoff, postedAt, side, line, sportsbook, quotedAt, gridlineMargin, gap, currentLine, stillPick, started, clv, result]
+      properties:
+        gameId: { type: string }
+        homeTeam: { type: string }
+        awayTeam: { type: string }
+        kickoff: { type: string, format: date-time }
+        postedAt: { type: string, format: date-time, description: "When our projection went up: the pick time" }
+        side: { type: string, enum: [home, away] }
+        line: { type: number, description: "The picked team's spread when posted, e.g. 7 for +7" }
+        sportsbook: { type: string }
+        quotedAt: { type: string, format: date-time }
+        gridlineMargin: { type: number }
+        gap: { type: number }
+        currentLine: { type: number, description: "Latest spread for the picked team at the same book (the close once started)" }
+        stillPick: { type: boolean, description: "Latest line still 4+ points off our posted number" }
+        started: { type: boolean }
+        clv: { type: ["number", "null"] }
+        result: { type: ["string", "null"], enum: [win, loss, push, null] }
+    ConsumerEarlyLinePicks:
+      type: object
+      description: Early-line spread picks (testing). Our first projection posted after Monday 8 AM ET, 4+ points off the DraftKings or FanDuel line captured closest to it, graded at that line.
+      required: [gap, start, stopAfter, stopRate, stopped, record, beatClose, lostClose, sameClose, games]
+      properties:
+        gap: { type: number }
+        start: { type: string, format: date-time }
+        stopAfter: { type: integer }
+        stopRate: { type: number }
+        stopped: { type: boolean }
+        record: { $ref: "#/components/schemas/ConsumerRecordLine" }
+        beatClose: { type: integer }
+        lostClose: { type: integer }
+        sameClose: { type: integer }
+        games: { type: array, items: { $ref: "#/components/schemas/ConsumerEarlyPick" } }
     ConsumerLineValue:
       type: object
       description: >-

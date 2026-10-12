@@ -1093,3 +1093,4 @@
 .gl-player-verdict b { font-family: var(--gl-display); font-size: 24px; }
 .gl-td-name { color: inherit; text-decoration: none; }
 .gl-td-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.gl-paused { border-left: 3px solid hsl(var(--primary)); padding-left: 12px; }

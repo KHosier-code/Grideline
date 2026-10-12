@@ -3,7 +3,7 @@ import test from "node:test";
 import type { GameProjectionRow } from "@workspace/db";
 import {
   favoriteRecord, lineValueGames, lineValueSummary, lockedAt, openerWatch, openerWatchSummary, projectionsBeforeKickoff, watchAlerts,
-  winnerRecord, lockTime, spreadLocks, spreadLockSummary, type SpreadQuote,
+  winnerRecord, lockTime, spreadLocks, spreadLockSummary, earlyWindowOpens, earlyLinePicks, earlyLineSummary, earlyStopTime, type EarlyPick, type SpreadQuote,
 } from "./game-projections";
 
 const qb = { name: "QB", value: 0, listed: true, newStarter: false };
@@ -211,4 +211,72 @@ test("before the lock the pick is the current lean, not graded", () => {
   assert.equal(lock.line, -1);
   assert.equal(lock.tier, "play");
   assert.equal(lock.result, null);
+});
+
+test("spread picks are paused: games from week 6 on get no lock", () => {
+  const later = "2026-10-18T17:00:00Z";
+  const runs = [{ generatedAt: new Date("2026-10-17T15:20:00Z"), games: [game("g6", 10, later)] }];
+  const q = new Map([["g6", quotes([["DraftKings", "2026-10-17T14:07:00Z", -3]])]]);
+  assert.equal(spreadLocks(runs, q, new Map(), new Date("2026-10-18T12:00:00Z")).length, 0);
+  assert.equal(spreadLockSummary([]).pausedFrom, "2026-10-13T12:00:00.000Z");
+});
+
+test("early window opens Monday 12:00 UTC of the game's week", () => {
+  // Week 7: Thursday Oct 22, Sunday Oct 25, Monday night Oct 26 (Oct 27 00:15 UTC).
+  for (const kickoff of ["2026-10-23T00:15:00Z", "2026-10-25T17:00:00Z", "2026-10-27T00:15:00Z"]) {
+    assert.equal(earlyWindowOpens(new Date(kickoff)).toISOString(), "2026-10-19T12:00:00.000Z", kickoff);
+  }
+});
+
+const wk7 = "2026-10-25T17:00:00Z";
+test("early pick: first post after Monday 8 AM, 4+ off the nearest line, graded there", () => {
+  const runs = [
+    { generatedAt: new Date("2026-10-18T23:20:00Z"), games: [game("e", -3, wk7)] }, // Sunday night: before the window
+    { generatedAt: new Date("2026-10-19T12:45:00Z"), games: [game("e", 4, wk7)] },  // Monday morning: the pick
+    { generatedAt: new Date("2026-10-20T14:20:00Z"), games: [game("e", 9, wk7)] },  // later runs don't change it
+  ];
+  // Home +1.5 at DK Monday 12:07 -> we say home by 4: a 5.5-point gap on home +1.5.
+  const q = new Map([["e", quotes([
+    ["DraftKings", "2026-10-19T03:07:00Z", 3], ["DraftKings", "2026-10-19T12:07:00Z", 1.5], ["FanDuel", "2026-10-19T12:07:00Z", 1],
+    ["DraftKings", "2026-10-25T16:22:00Z", -1],
+  ])]]);
+  const before = earlyLinePicks(runs, q, new Map(), new Date("2026-10-21T12:00:00Z"));
+  assert.equal(before.length, 1);
+  assert.equal(before[0].side, "home");
+  assert.equal(before[0].line, 1.5);
+  assert.equal(before[0].sportsbook, "DraftKings");
+  assert.equal(before[0].gap, 5.5);
+  assert.equal(before[0].result, null);
+  const [after] = earlyLinePicks(runs, q, new Map([["e", { home: 20, away: 21, week: 7 }]]), new Date("2026-10-26T12:00:00Z"));
+  assert.equal(after.result, "win"); // lost by 1 with +1.5
+  assert.equal(after.clv, 2.5);      // took +1.5, closed -1
+  assert.equal(after.stillPick, false);
+  assert.deepEqual(earlyLineSummary([after]).record, { wins: 1, losses: 0, pushes: 0 });
+});
+
+test("early pick needs a fresh line and a 4-point gap; nothing before week 7", () => {
+  const runs = [{ generatedAt: new Date("2026-10-19T12:45:00Z"), games: [game("e", 8, wk7)] }];
+  const stale = new Map([["e", quotes([["DraftKings", "2026-10-19T03:07:00Z", -1]])]]); // 9.6 h old
+  assert.equal(earlyLinePicks(runs, stale, new Map(), new Date("2026-10-20T00:00:00Z")).length, 0);
+  const small = new Map([["e", quotes([["DraftKings", "2026-10-19T12:07:00Z", -5]])]]); // gap 3
+  assert.equal(earlyLinePicks(runs, small, new Map(), new Date("2026-10-20T00:00:00Z")).length, 0);
+  const early = [{ generatedAt: new Date("2026-10-12T12:45:00Z"), games: [game("w6", 8, "2026-10-18T17:00:00Z")] }];
+  const q6 = new Map([["w6", quotes([["DraftKings", "2026-10-12T12:07:00Z", 1]])]]);
+  assert.equal(earlyLinePicks(early, q6, new Map(), new Date("2026-10-13T00:00:00Z")).length, 0);
+});
+
+test("stop rule: under 50% after the first 30 graded picks stops new ones", () => {
+  const pick = (i: number, result: "win" | "loss"): EarlyPick => ({
+    gameId: `p${i}`, homeTeam: "H", awayTeam: "A", kickoff: new Date(Date.UTC(2026, 9, 25 + i)).toISOString(),
+    postedAt: new Date(Date.UTC(2026, 9, 20 + i)), side: "home", line: 3, sportsbook: "DraftKings", quotedAt: new Date(),
+    gridlineMargin: 8, gap: 5, currentLine: 3, stillPick: false, started: true, clv: 0, result,
+  });
+  const losing = Array.from({ length: 30 }, (_, i) => pick(i, i < 14 ? "win" : "loss"));
+  assert.ok(earlyStopTime(losing));
+  assert.equal(earlyLineSummary(losing).stopped, true);
+  const winning = Array.from({ length: 30 }, (_, i) => pick(i, i < 16 ? "win" : "loss"));
+  assert.equal(earlyStopTime(winning), null);
+  // A later slump doesn't trip it: the rule is judged once, at pick 30.
+  const later = [...winning, ...Array.from({ length: 20 }, (_, i) => pick(30 + i, "loss"))];
+  assert.equal(earlyLineSummary(later).stopped, false);
 });
