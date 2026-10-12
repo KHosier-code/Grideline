@@ -3,7 +3,7 @@ import { getGetConsumerPowerRatingsQueryKey, useGetConsumerPowerRatings, type Co
 import { groupBySlate } from '@/lib/slates';
 import { TeamLogo } from './TeamLogo';
 import { BestNumbers } from './BookLines';
-import { lineGap, lineText, vegasLineText, type GameView } from '@/lib/pick-sheet';
+import { lineText, vegasLineText, type GameView } from '@/lib/pick-sheet';
 import { teamColor, teamTextColor } from '@/lib/team-colors';
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
@@ -118,7 +118,7 @@ export function GameCard({ view, now, records }: { view: GameView; now: number; 
     })}
     {final && projection && <p className="gl-gc-foot">We projected {game.matchup.away.abbreviation} {projection.away.toFixed(1)}, {game.matchup.home.abbreviation} {projection.home.toFixed(1)}</p>}
     {!final && projection && <p className="gl-gc-foot">Total: ours {projection.total.toFixed(1)} · Vegas {view.vegas.total ?? '—'}</p>}
-    {view.lock ? <LockNote view={view} /> : !final && projection && <GapNote view={view} open={open?.line ?? null} />}
+    {view.lock && <LockNote view={view} />}
     {!final && <BestNumbers books={view.books} home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />}
     {!final && !projection && <p className="gl-gc-foot gl-muted">Projection pending: our quarterback-adjusted line usually posts by Tuesday morning.</p>}
   </Link>;
@@ -152,17 +152,6 @@ export function LockNote({ view }: { view: GameView }) {
     <span className={`gl-lock-tag ${lock.tier}`}>🔒 {label}</span>{pick}{book}
     {result && <> · <span className={lock.result === 'win' ? 'gl-good' : lock.result === 'loss' ? 'gl-miss' : ''}>{result}</span></>}
     {clv && <span className="gl-muted"> · {clv}</span>}</p>;
-}
-
-/** "Gridline likes BUF by 2.5 more than Vegas · line moved 1 toward us since open". */
-export function GapNote({ view, open }: { view: GameView; open: number | null }) {
-  const gap = lineGap(view, open);
-  if (!gap) return null;
-  if (gap.side === null) return <p className="gl-gc-foot">We match the current line</p>;
-  const team = view.game.matchup[gap.side].abbreviation;
-  const moved = gap.moved === null || gap.moved === 0 ? null
-    : `line moved ${Math.abs(gap.moved)} ${gap.moved > 0 ? 'toward' : 'away from'} us since it opened`;
-  return <p className="gl-gc-foot gl-gc-gap">We like <b>{team}</b> by {gap.points} more than Vegas{moved ? ` · ${moved}` : ''}</p>;
 }
 
 /** Every game in a week, grouped by slate (Thursday, Sunday early, Sunday afternoon, Monday), as cards. */

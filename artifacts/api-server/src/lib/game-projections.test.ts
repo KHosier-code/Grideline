@@ -212,3 +212,11 @@ test("before the lock the pick is the current lean, not graded", () => {
   assert.equal(lock.tier, "play");
   assert.equal(lock.result, null);
 });
+
+test("spread picks are paused: games from week 6 on get no lock", () => {
+  const later = "2026-10-18T17:00:00Z";
+  const runs = [{ generatedAt: new Date("2026-10-17T15:20:00Z"), games: [game("g6", 10, later)] }];
+  const q = new Map([["g6", quotes([["DraftKings", "2026-10-17T14:07:00Z", -3]])]]);
+  assert.equal(spreadLocks(runs, q, new Map(), new Date("2026-10-18T12:00:00Z")).length, 0);
+  assert.equal(spreadLockSummary([]).pausedFrom, "2026-10-13T12:00:00.000Z");
+});

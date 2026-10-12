@@ -12,6 +12,11 @@ import type { ConsumerSpreadLock } from './consumerSpreadLock';
  * One spread pick per game, locked Saturday noon ET (earlier games six hours before kickoff) at the best DraftKings or FanDuel number.
  */
 export interface ConsumerSpreadLocks {
+  /**
+     * Games kicking off at or after this time get no locked pick (spread picks paused).
+     * @nullable
+     */
+  pausedFrom: Date | null;
   leanThreshold: number;
   playThreshold: number;
   plays: ConsumerRecordLine;

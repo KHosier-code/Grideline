@@ -122,6 +122,7 @@ function SpreadLocksSection({ locks }: { locks: ConsumerSpreadLocks }) {
   const date = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   return <section className="gl-section" id="spread-picks" aria-labelledby="spread-picks-head">
     <div className="gl-section-head"><h2 id="spread-picks-head">Spread picks</h2><p>Locked Saturday noon ET at the best DraftKings or FanDuel number, graded at that number</p></div>
+    {locks.pausedFrom && <p className="gl-note gl-paused"><b>Paused after week 5.</b> Our first week of locked spread picks went 1–7, and a five-season test showed our gap to the closing line doesn&apos;t predict covers. So we stopped posting spread picks instead of asking you to trust them. They come back only if a rule beats the closing line in a published backtest at prices you could bet. Every pick we made stays below.</p>}
     <div className="gl-record-grid">
       <div className="gl-card gl-record-card"><span className="gl-label">Plays · {locks.playThreshold}+ pts off Vegas</span><b>{recordText(locks.plays)}</b><p>{coverRate(locks.plays)}. Break-even at -110 is 52.4%.</p></div>
       <div className="gl-card gl-record-card"><span className="gl-label">Leans · {locks.leanThreshold}–{locks.playThreshold} pts</span><b>{recordText(locks.leans)}</b><p>{coverRate(locks.leans)}. In testing, small gaps hit about 51–53%: close to a coin flip.</p></div>
@@ -142,7 +143,7 @@ function SpreadLocksSection({ locks }: { locks: ConsumerSpreadLocks }) {
           </tr>;
         })}</tbody>
       </table>
-    </div> : <div className="gl-empty"><strong>The first spread picks lock Saturday at noon ET.</strong>Every game gets one: a play when our number is {locks.playThreshold}+ points off the best line, a lean at {locks.leanThreshold}+, no pick when we&apos;re closer than that. Once locked, a pick never changes.</div>}
+    </div> : locks.pausedFrom ? null : <div className="gl-empty"><strong>The first spread picks lock Saturday at noon ET.</strong>Every game gets one: a play when our number is {locks.playThreshold}+ points off the best line, a lean at {locks.leanThreshold}+, no pick when we&apos;re closer than that. Once locked, a pick never changes.</div>}
   </section>;
 }
 

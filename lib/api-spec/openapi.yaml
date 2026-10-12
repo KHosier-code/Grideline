@@ -1602,8 +1602,9 @@ components:
     ConsumerSpreadLocks:
       type: object
       description: One spread pick per game, locked Saturday noon ET (earlier games six hours before kickoff) at the best DraftKings or FanDuel number.
-      required: [leanThreshold, playThreshold, plays, leans, beatClose, lostClose, sameClose, games]
+      required: [leanThreshold, playThreshold, plays, leans, beatClose, lostClose, sameClose, pausedFrom, games]
       properties:
+        pausedFrom: { type: ["string", "null"], format: date-time, description: "Games kicking off at or after this time get no locked pick (spread picks paused)." }
         leanThreshold: { type: number }
         playThreshold: { type: number }
         plays: { $ref: "#/components/schemas/ConsumerRecordLine" }

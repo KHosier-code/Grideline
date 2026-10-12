@@ -45,7 +45,7 @@ export function LinePicks({ market, views, visible, now, label, season }: { mark
   const missing = views.filter(view => !visible || visible.has(view.game.gameId)).length - ranked.length;
   const record = linePickRecord(ranked.map(({ pick }) => pick));
   const graded = record.wins + record.losses;
-  const title = market === 'spread' ? 'Spread picks' : 'Over/under picks';
+  const title = market === 'spread' ? 'Pool sides against the spread' : 'Pool sides on the over/under';
   if (!ranked.length) return <div className="gl-empty"><strong>No {market === 'spread' ? 'spread' : 'over/under'} picks yet.</strong>They appear once our projections and the sportsbook lines are both posted.</div>;
   const copyText = [`Probable ${label} ${title.toLowerCase()}`, ...ranked.map(({ pick, points }) => `${points}  ${linePickLabel(pick)} (${pick.edge.toFixed(1)} pt gap)`), 'probablesports.com/pickem'].join('\n');
   return <>

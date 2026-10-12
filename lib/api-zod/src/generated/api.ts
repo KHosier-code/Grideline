@@ -3103,6 +3103,7 @@ export const GetConsumerGameProjectionsResponse = zod.object({
 }))
 }).describe('Games where Gridline\'s first pregame line is `threshold`+ points off the opening spread'),
   "locks": zod.object({
+  "pausedFrom": zod.coerce.date().nullable().describe('Games kicking off at or after this time get no locked pick (spread picks paused).'),
   "leanThreshold": zod.number(),
   "playThreshold": zod.number(),
   "plays": zod.object({

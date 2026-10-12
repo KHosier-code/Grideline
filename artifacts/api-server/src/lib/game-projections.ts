@@ -342,6 +342,13 @@ const EARLY_LOCK_HOURS = 6;
 const PICK_BOOKS = ["DraftKings", "FanDuel"];
 /** Locked picks began with 2026 week 5's Sunday games; earlier games were never locked, so they don't count. */
 export const LOCKS_START = new Date("2026-10-10T00:00:00Z");
+/**
+ * Spread picks went 1-7 in week 5, and the 2021-2025 walk-forward test shows
+ * our gap to the closing line doesn't predict covers (about 52-53%, under the
+ * 52.4% break-even). Paused from week 6 until a rule passes a backtest at
+ * bettable prices; week 5's locked picks stay on the record.
+ */
+export const LOCKS_PAUSED_FROM = new Date("2026-10-13T12:00:00Z");
 
 export type SpreadLock = {
   gameId: string;
@@ -393,7 +400,7 @@ export function spreadLocks(
   const locks: SpreadLock[] = [];
   for (const [gameId, latestGame] of games) {
     const kickoff = kickoffDate(latestGame.kickoff);
-    if (!kickoff || kickoff < LOCKS_START) continue;
+    if (!kickoff || kickoff < LOCKS_START || kickoff >= LOCKS_PAUSED_FROM) continue;
     const locksAt = lockTime(kickoff);
     const locked = now >= locksAt;
     const asOf = locked ? locksAt : now;
@@ -449,5 +456,8 @@ export function spreadLockSummary(locks: SpreadLock[]) {
     if (lock.clv === null) continue;
     if (lock.clv > 0) beatClose += 1; else if (lock.clv < 0) lostClose += 1; else sameClose += 1;
   }
-  return { leanThreshold: LOCK_LEAN, playThreshold: LOCK_PLAY, plays, leans, beatClose, lostClose, sameClose };
+  return {
+    leanThreshold: LOCK_LEAN, playThreshold: LOCK_PLAY, plays, leans, beatClose, lostClose, sameClose,
+    pausedFrom: LOCKS_PAUSED_FROM.toISOString(),
+  };
 }
