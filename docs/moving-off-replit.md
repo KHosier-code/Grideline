@@ -1,6 +1,6 @@
-# Moving Gridline off Replit (Railway + Neon)
+# Moving Probable off Replit (Railway + Neon)
 
-This guide moves the live site at gridelineanalytics.com from Replit to:
+This guide moves the live site at probablesports.com from Replit to:
 
 - **Neon**: the Postgres database (free tier to start, about $19/month if you outgrow it)
 - **Railway**: runs the API, the data worker and the website in one always-on service (about $5–10/month)
@@ -27,7 +27,7 @@ values. Copy each of these that exists into a password manager:
 | `CLERK_SECRET_KEY` | Sign-in (server side), starts with `sk_live_` | Yes |
 | `CLERK_PUBLISHABLE_KEY` | Sign-in (public), starts with `pk_live_` | Yes |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Usually the same value as above | Yes |
-| `VITE_CLERK_PROXY_URL` | Usually `https://gridelineanalytics.com/api/__clerk` | If present |
+| `VITE_CLERK_PROXY_URL` | Usually `https://probablesports.com/api/__clerk` | If present |
 | `ODDS_API_KEY` | Sportsbook odds | Yes |
 | `SPORTSDATAIO_API_KEY` | Depth charts | If present |
 | `NWS_USER_AGENT` | Weather | If present |
@@ -38,7 +38,7 @@ values. Copy each of these that exists into a password manager:
 can see the `sk_live_…` and `pk_live_…` keys, reuse them. Existing accounts and
 your admin login then keep working, because the site stays on the same domain.
 If Replit hides the keys, create a free account at clerk.com, add a production
-instance for `gridelineanalytics.com` with the proxy path `/api/__clerk`, and
+instance for `probablesports.com` with the proxy path `/api/__clerk`, and
 use its keys. In that case users (including you) sign up again. Afterwards, set
 `ADDITIONAL_ADMIN_USER_IDS` to your new Clerk user ID so Admin still works.
 
@@ -73,7 +73,7 @@ This is a trial copy for testing. You repeat it in step 6 so no data is lost.
 3. Under **Variables**, add:
    - `DATABASE_URL`: the **Neon** URL
    - every "Yes / If present" value from step 1
-   - `PUBLIC_SITE_URL` = `https://gridelineanalytics.com`
+   - `PUBLIC_SITE_URL` = `https://probablesports.com`
    - **Do not** add `GRIDLINE_NEW_WORKER_APPROVED` yet. See step 6.
 4. Deploy. When the deploy finishes, open **Settings → Networking → Generate
    Domain** to get a test URL (`something.up.railway.app`).
@@ -101,11 +101,11 @@ Pick a time with no games, because the worker should not be offline around kicko
 3. **Turn on the worker.** In Railway Variables, add `GRIDLINE_NEW_WORKER_APPROVED` = `1`.
    Railway redeploys automatically.
 4. **Move the domain.** In Railway, open **Settings → Networking → Custom Domain**
-   and add `gridelineanalytics.com` (and `www.` if you use it). Railway shows the
+   and add `probablesports.com` (and `www.` if you use it). Railway shows the
    DNS records. At your domain registrar, replace Replit's records with
    Railway's. The change usually takes effect within minutes, but can take up to a few hours.
 5. **Check it.** Once the domain loads from Railway:
-   - https://gridelineanalytics.com/api/healthz returns `{"status":"ok"}`
+   - https://probablesports.com/api/healthz returns `{"status":"ok"}`
    - you can sign in and open Admin
    - in Railway **Logs**, you see `Recurring data scheduler started`
    - in Admin → Data Health, new successful feed runs appear within a few hours

@@ -11,7 +11,7 @@ WORKDIR /app
 # present when the image is built (Railway passes service variables as build args).
 ARG VITE_CLERK_PUBLISHABLE_KEY
 ARG VITE_CLERK_PROXY_URL
-ARG PUBLIC_SITE_URL=https://gridelineanalytics.com
+ARG PUBLIC_SITE_URL=https://probablesports.com
 ARG RAILWAY_GIT_COMMIT_SHA
 
 COPY . .
