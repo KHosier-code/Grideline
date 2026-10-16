@@ -12,8 +12,13 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const publicPort = Number(process.env.PORT || 3000);
-const apiPort = Number(process.env.API_PORT || 8080);
-const webPort = Number(process.env.WEB_PORT || 21788);
+// Internal ports stay off the public one: Railway sets PORT=8080 by default.
+const apiPort = Number(process.env.API_PORT || 3101);
+const webPort = Number(process.env.WEB_PORT || 3102);
+if (new Set([publicPort, apiPort, webPort]).size !== 3) {
+  console.error('Port clash: PORT, API_PORT and WEB_PORT must all differ', { publicPort, apiPort, webPort });
+  process.exit(1);
+}
 
 const children = [];
 let stopping = false;
