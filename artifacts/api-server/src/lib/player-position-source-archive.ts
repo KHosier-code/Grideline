@@ -46,6 +46,13 @@ const localArchiveDir = () =>
     ? process.env.GRIDLINE_LOCAL_SOURCE_ARCHIVE_DIR || null
     : null;
 
+/**
+ * Whether source archiving is set up: Replit App Storage, or the local
+ * development folder. Hosts without App Storage (Railway) skip archiving
+ * instead of failing the data import.
+ */
+export const sourceArchiveConfigured = () => Boolean(process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID) || localArchiveDir() !== null;
+
 const validSha = (sha: string) => /^[a-f0-9]{64}$/.test(sha);
 const keyFor = (dataset: SourceArchive["dataset"], season: number, sha: string) =>
   `player-position/source-v1/${dataset}/${season}/${sha}.csv.gz`;

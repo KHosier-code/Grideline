@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { and, asc, eq, lte } from "drizzle-orm";
 import { db, playerPositionSourceReleasesTable } from "@workspace/db";
 import { readDefenseInputs, type DefenseInputs } from "./defense-vs-position";
-import { archivePlayerPositionSource, verifyArchivedSource, type SourceArchive } from "./player-position-source-archive";
+import { archivePlayerPositionSource, sourceArchiveConfigured, verifyArchivedSource, type SourceArchive } from "./player-position-source-archive";
 
 export type PositionRelease = {
   capturedAt: Date;
@@ -106,6 +106,8 @@ async function publisherEvidence(input: DefenseInputs, season: number, capturedA
 /** A capture is an observed, immutable local release, NOT a historical
  * publisher timestamp. Never backdate it to a source-file completion time. */
 export async function capturePlayerPositionRelease(season: number): Promise<boolean> {
+  // Releases are certified against archived sources; without archive storage there is nothing to certify.
+  if (!sourceArchiveConfigured()) return false;
   const observedAt = new Date();
   const input = await readDefenseInputs(season, observedAt);
   if (!["player_stats", "pbp"].every(dataset => input.sources.some(source =>

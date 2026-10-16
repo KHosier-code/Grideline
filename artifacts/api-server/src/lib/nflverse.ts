@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import { createHash } from "node:crypto";
 import { capturePlayerPositionRelease } from "./player-position-releases";
-import { archivePlayerPositionSource, replaceCachedSource } from "./player-position-source-archive";
+import { archivePlayerPositionSource, replaceCachedSource, sourceArchiveConfigured } from "./player-position-source-archive";
 import { mkdir, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { createGunzip } from "node:zlib";
@@ -248,7 +248,7 @@ async function acquireDataset(dataset: NflverseDataset, season: number, options?
     });
   try {
     const preserveSource = async (size: number, sha256: string) => {
-      if (dataset !== "pbp" && dataset !== "player_stats") return;
+      if ((dataset !== "pbp" && dataset !== "player_stats") || !sourceArchiveConfigured()) return;
       const archive = await archivePlayerPositionSource({
         dataset, season, sourceUrl: url, localPath: filePath, sha256, size,
       });
@@ -261,7 +261,7 @@ async function acquireDataset(dataset: NflverseDataset, season: number, options?
       const response = await fetchWithRetry(url);
       const bytes = Buffer.from(await response.arrayBuffer());
       await replaceCachedSource(filePath, bytes, async () => {
-        if (dataset !== "pbp" && dataset !== "player_stats") return;
+        if ((dataset !== "pbp" && dataset !== "player_stats") || !sourceArchiveConfigured()) return;
         const priorHash = createHash("sha256");
         for await (const chunk of createReadStream(filePath)) priorHash.update(chunk);
         await preserveSource((await stat(filePath)).size, priorHash.digest("hex"));
