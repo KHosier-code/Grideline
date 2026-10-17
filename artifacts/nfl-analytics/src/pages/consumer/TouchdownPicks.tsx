@@ -193,7 +193,11 @@ export default function TouchdownPicks() {
     {query.isError && <div className="gl-empty"><strong>We couldn&apos;t load touchdown picks.</strong>Refresh the page in a minute.</div>}
     {data && data.status === 'unavailable' && <div className="gl-empty"><strong>This week&apos;s touchdown picks aren&apos;t posted yet.</strong>Rankings update Tuesday, Thursday, Friday after the injury report, Saturday, Sunday morning, after the 1:00 inactives, and before the Sunday and Monday night games.</div>}
 
-    {order === 'likely' && data?.status === 'available' && <section className="gl-section gl-value-five" aria-labelledby="value-five">
+    {order === 'likely' && valueFive.length > 0 && <p className="gl-note">
+      Looking for longer odds? <button type="button" className="gl-link gl-link-button" onClick={() => setOrder('value')}>See this week&apos;s Value 5</button>: players at +150 to +400 where the book pays more than our chance says it should.
+    </p>}
+
+    {order === 'value' && data?.status === 'available' && <section className="gl-section gl-value-five" aria-labelledby="value-five">
       <div className="gl-section-head">
         <h2 id="value-five">Value 5</h2>
         <p>Longer odds where the book pays more than our chance says it should</p>
@@ -201,7 +205,7 @@ export default function TouchdownPicks() {
       {valueFive.length > 0
         ? <div className="gl-td-list">{valueFive.map(pick => <PickRow key={pick.playerId} pick={pick} rank={pick.rank} max={max} showEdge matchup={tones.get(pick.playerId)} />)}</div>
         : <p className="gl-note">{pricedGames.size
-          ? 'No player clears the bar right now: plus money (+150 or longer) and at least 5 cents of expected profit per $1 at the best price.'
+          ? 'No player clears the bar right now: a 20% chance or better, a price from +150 to +400, and at least 5 cents of expected profit per $1 at the best price.'
           : 'This fills in once sportsbook prices are captured: Thursday morning for Thursday night, Saturday morning for Sunday and Monday.'}</p>}
       <p className="gl-note">New and unproven: we couldn&apos;t test it on past prices, so every Value 5 pick is graded live, 1 unit at the price we picked it, on <Link href="/performance" className="gl-link">the record page</Link>. A pick is locked when its game kicks off. Prices move, so check your book.</p>
     </section>}
@@ -236,7 +240,7 @@ export default function TouchdownPicks() {
         <p><b>Fair odds</b>The price that matches our probability. In testing on 2022 through 2026, our top 5 players each week scored 58.5% of the time, and our percentages matched how often players actually scored. The model averages five fits so one random draw can&apos;t move the board.</p>
         <p><b>Book</b>The best anytime-TD price at DraftKings or FanDuel when we last checked. Books keep a cut of roughly 20% on these bets, so compare our chance with the book&apos;s chance after the cut, not the raw price.</p>
         <p><b>Top 5</b>Our five most likely scorers. In testing on 2022 through 2026 they scored 58.5% of the time, against 53.7% for the top 10. Graded as their own tier on the record page.</p>
-        <p><b>Value 5</b>Up to five players at +150 or longer whose best book price pays at least 5 cents per $1 more than our probability says it should. These lose more often than the Top 5 but pay more when they hit. We haven&apos;t been able to test this against past prices, so each pick is locked at kickoff and graded at the price we picked it, 1 unit each. Prices move; check your book before betting.</p>
+        <p><b>Value 5</b>Up to five players with a 20% chance or better, priced from +150 to +400, whose best book price pays at least 5 cents per $1 more than our probability says it should. These lose more often than the Top 5 but pay more when they hit. We haven&apos;t been able to test this against past prices, so each pick is locked at kickoff and graded at the price we picked it, 1 unit each. Prices move; check your book before betting.</p>
         <p><b>Favorable / Neutral / Tough</b>Half how many points Vegas expects the team to score, half the defense: touchdowns, yards and red-zone looks it allows to the position, red-zone trips and touchdown rate it allows, and how efficient offenses are against it on runs (RBs, QBs) or passes (WRs, TEs). Favorable is the top quarter of this week&apos;s players at the position, tough the bottom quarter. In 2022–2026, favorable players scored 23% of the time and tough ones 15%. Our probability already includes all of this; the tag shows which way the matchup leans.</p>
         <p><b>Red-zone touches</b>Targets plus carries inside the opponent&apos;s 20-yard line, per game over the player&apos;s last 8 games.</p>
         <p><b>Matchup</b>Touchdowns this defense allowed to the position over its last 8 games, compared with the league average. <Link href="/defense-vs-position" className="gl-link">See all matchups</Link>.</p>
