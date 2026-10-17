@@ -55,6 +55,36 @@ else:
     out_last_week = set(last[last.report_status.isin(["Out", "Doubtful"])].gsis_id)
     upcoming["injury"] = np.where(upcoming.player_id.isin(out_last_week), "Out last week", None)
 
+# nflverse posts the injury report days late (or not before the games), so
+# also read ESPN's live report and match players through nflverse's ESPN ids.
+# Entries older than 6 days are stale (ESPN never marks a player cleared).
+# Any failure keeps the picks publishing with what we have.
+RULED_OUT = {"out", "injured reserve", "suspension", "physically unable to perform", "pup", "non-football injury"}
+try:
+    request = urllib.request.Request("https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries",
+                                     headers={"User-Agent": "gridline-weekly-picks"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        feed = json.loads(response.read())
+    cutoff = datetime.now(timezone.utc) - pd.Timedelta(days=6)
+    espn_status = {}
+    for group in feed.get("injuries", []):
+        for entry in group.get("injuries", []):
+            athlete_id = str((entry.get("athlete") or {}).get("id") or "")
+            status = entry.get("status") or (entry.get("type") or {}).get("description")
+            reported = pd.to_datetime(entry.get("date"), utc=True, errors="coerce")
+            if athlete_id and status and (pd.isna(reported) or reported >= cutoff):
+                espn_status[athlete_id] = status
+    espn_ids = rosters.dropna(subset=["espn_id"]).sort_values("week").drop_duplicates("gsis_id", keep="last")
+    espn_by_gsis = dict(zip(espn_ids.gsis_id, espn_ids.espn_id.astype(str).str.replace(r"\.0$", "", regex=True)))
+    live = upcoming.player_id.map(lambda gsis: espn_status.get(espn_by_gsis.get(gsis, ""), None))
+    ruled_out = live.fillna("").str.lower().isin(RULED_OUT)
+    print(f"ESPN injury report: {len(espn_status)} listed, {int(live.notna().sum())} on the board, "
+          f"{int(ruled_out.sum())} ruled out: {', '.join(upcoming.loc[ruled_out, 'name'].tolist()) or 'none'}")
+    upcoming["injury"] = live.where(live.notna(), upcoming.injury)
+    upcoming = upcoming[~ruled_out]
+except Exception as error:  # noqa: BLE001 - never block the picks on this
+    print(f"ESPN injury report unavailable ({error}); using nflverse only.")
+
 upcoming["probability"] = model.predict_proba(upcoming[ALL])[:, 1]
 
 games = pd.read_csv(f"{DATA}/games.csv")

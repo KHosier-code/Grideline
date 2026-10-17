@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { TouchdownPickRow } from "@workspace/db";
 import {
-  boardForWeek, bookComparison, bookFairProbability, decimalOdds, expectedValue, fairAmericanOdds, isValueCandidate, mergePropReports, topTenRecord, valueFive, valueRecord,
+  boardForWeek, bookComparison, bookFairProbability, decimalOdds, expectedValue, fairAmericanOdds, isValueCandidate, mergePropReports, statusAt, topTenRecord, valueFive, valueRecord,
 } from "./touchdown-board";
 
 const factors = {
@@ -160,4 +160,31 @@ test("a week's price captures merge, newest per game, and can be read as of a ti
   const asOfFriday = mergePropReports([thursday, saturday, friday], new Date("2026-10-03T00:00:00Z"))!;
   assert.deepEqual(asOfFriday.events.map((item) => [item.eventId, item.players.x[0].price]).sort(), [["sun", 180], ["thu", 150]]);
   assert.equal(mergePropReports([saturday], new Date("2026-10-01T00:00:00Z")), null);
+});
+
+test("injury status counts for 6 days after it was seen, as of the time asked", () => {
+  const rows = [
+    { gameStatus: "Questionable", snapshotTimestamp: new Date("2026-10-15T15:00:00Z") },
+    { gameStatus: "Out", snapshotTimestamp: new Date("2026-10-16T19:00:00Z") },
+  ];
+  assert.equal(statusAt(rows, new Date("2026-10-16T12:00:00Z")), "Questionable");
+  assert.equal(statusAt(rows, new Date("2026-10-18T17:00:00Z")), "Out");
+  // Never cleared in the feed: a week later it no longer counts.
+  assert.equal(statusAt(rows, new Date("2026-10-25T17:00:00Z")), null);
+  assert.equal(statusAt(rows, new Date("2026-10-14T00:00:00Z")), null);
+});
+
+test("players ruled out before kickoff leave the board; a later injury never rewrites a played game", () => {
+  const runs = [{ generatedAt: new Date("2026-10-03T12:00:00Z"), picks: [pick("love", 0.3, SUN), pick("ok", 0.25, SUN), pick("q", 0.2, SUN)] }];
+  const injuryAt = (playerId: string, at: Date) => {
+    if (playerId === "love") return "Out";                                   // ruled out Friday
+    if (playerId === "ok") return at > new Date(SUN) ? "Out" : null;         // hurt in the game
+    if (playerId === "q") return "Questionable";
+    return null;
+  };
+  const before = boardForWeek(runs, new Date("2026-10-04T12:00:00Z"), injuryAt);
+  assert.deepEqual(before.map((entry) => entry.playerId), ["ok", "q"]);
+  assert.equal(before[1].injuryStatus, "Questionable");
+  const after = boardForWeek(runs, new Date("2026-10-06T12:00:00Z"), injuryAt);
+  assert.deepEqual(after.map((entry) => entry.playerId), ["ok", "q"]);
 });
