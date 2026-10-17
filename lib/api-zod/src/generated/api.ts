@@ -3317,3 +3317,15 @@ export const GetConsumerReplayResponse = zod.object({
   "generatedAt": zod.coerce.date().nullable(),
   "report": zod.record(zod.string(), zod.unknown()).nullable().describe('Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py')
 })
+
+
+/**
+ * @summary Read the latest offense and defense style report (pressure, blitzing, big plays, funnels, tackling)
+ */
+export const GetConsumerMatchupReportResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "season": zod.number().int().nullable(),
+  "week": zod.number().int().nullable().describe('Last completed week the report covers'),
+  "generatedAt": zod.coerce.date().nullable(),
+  "report": zod.record(zod.string(), zod.unknown()).nullable().describe('Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py')
+})

@@ -23,7 +23,7 @@ const TASK_LABEL: Record<TaskKind, string> = {
   odds: 'Sportsbook lines', weather: 'Kickoff weather', injuries: 'Injury report', picks: 'Weekly picks re-run', scores: 'Live scores',
 };
 const REPORT_LABEL: Record<string, string> = {
-  usage: 'Player usage', replay: 'Replay', 'share-td': 'Share card', 'share-clip': 'Share clip', 'td-props': 'TD prop prices',
+  usage: 'Player usage', replay: 'Replay', matchups: 'Matchup report', 'share-td': 'Share card', 'share-clip': 'Share clip', 'td-props': 'TD prop prices',
 };
 /** The Odds API free plan; the gauge reads against it. */
 const MONTHLY_CREDITS = 500;

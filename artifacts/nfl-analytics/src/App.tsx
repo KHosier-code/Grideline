@@ -30,6 +30,7 @@ const SharePicks = lazy(() => import('@/pages/consumer/SharePicks'));
 const Pickem = lazy(() => import('@/pages/consumer/Pickem'));
 const Parlays = lazy(() => import('@/pages/consumer/Parlays'));
 const AdminRoutes = lazy(() => import('@/pages/admin/AdminApp'));
+const Matchups = lazy(() => import('@/pages/consumer/Matchups'));
 
 const queryClient = new QueryClient();
 
@@ -134,7 +135,7 @@ function Router() {
     || location === '/saved-games' || location === '/my-picks' || location === '/touchdowns' || location === '/props'
     || location === '/power-ratings' || location === '/qb-rankings'
     || location === '/weekly-picks'
-    || location === '/red-zone' || location === '/share' || location === '/pickem' || location === '/parlays'
+    || location === '/red-zone' || location === '/matchups' || location === '/share' || location === '/pickem' || location === '/parlays'
     || location.startsWith('/td/');
   if (!isLoaded && !publicRoute) return <ConsumerLoadingFallback />;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
@@ -153,6 +154,7 @@ function Router() {
     <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
     <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
     <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
+    <Route path="/matchups"><ConsumerShell><Matchups /></ConsumerShell></Route>
     <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
@@ -176,6 +178,7 @@ function Router() {
       <Route path="/teams"><ConsumerShell><ConsumerTeams /></ConsumerShell></Route>
       <Route path="/usage"><ConsumerShell><ConsumerUsage /></ConsumerShell></Route>
       <Route path="/red-zone"><ConsumerShell><ConsumerRedZone /></ConsumerShell></Route>
+    <Route path="/matchups"><ConsumerShell><Matchups /></ConsumerShell></Route>
       <Route path="/performance"><ConsumerShell><ConsumerPerformance /></ConsumerShell></Route>
       <Route path="/receipts"><ConsumerShell><Receipts /></ConsumerShell></Route>
       <Route path="/td/:slug"><ConsumerShell><PlayerTouchdown /></ConsumerShell></Route>
