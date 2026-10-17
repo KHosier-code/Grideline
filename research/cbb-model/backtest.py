@@ -16,8 +16,6 @@ import pandas as pd
 from ratings import Params, Ratings, load_games
 
 DATA = sys.argv[1]
-FIRST = int(sys.argv[2]) if len(sys.argv) > 2 else 2021
-LAST = int(sys.argv[3]) if len(sys.argv) > 3 else 2026
 
 
 def run_season(season: int, prior, params: Params):
@@ -66,6 +64,8 @@ def evaluate(params: Params, seasons, verbose=False):
 
 
 if __name__ == "__main__":
+    FIRST = int(sys.argv[2]) if len(sys.argv) > 2 else 2021
+    LAST = int(sys.argv[3]) if len(sys.argv) > 3 else 2026
     # Tune on 2021-2023 only, then report 2024-2026 with the chosen settings.
     tune = list(range(FIRST, FIRST + 3))
     best = None

@@ -18,7 +18,7 @@ import pandas as pd
 import backtest_roster as br
 
 LINES = sys.argv[2]
-SEASONS = [2024, 2025, 2026]
+SEASONS = [int(s) for s in sys.argv[3].split(",")] if len(sys.argv) > 3 else [2023, 2026]
 
 lines = pd.concat([pd.read_csv(path, dtype={"game_id": str}) for path in glob.glob(f"{LINES}/lines_*.csv")])
 # Prefer the closing number; fall back to the single line ESPN shows.

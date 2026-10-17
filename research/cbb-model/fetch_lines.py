@@ -7,6 +7,7 @@ For every completed game in the schedule, reads the game summary's
 writes one row per game: provider, home spread, total, moneylines, and the
 opening and closing numbers when ESPN has both. Games without a line are
 written with blanks so a rerun can tell "no line" from "not fetched".
+When the page has no pickcenter block, ESPN's odds API for the game is tried.
 """
 import csv
 import json
@@ -18,16 +19,22 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 
 URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event={}"
+# Fallback for games whose page has no pickcenter block (2023-24 and 2024-25).
+CORE = "https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball/events/{0}/competitions/{0}/odds"
 FIELDS = ["game_id", "provider", "details", "spread", "over_under", "home_ml", "away_ml",
           "home_spread_open", "home_spread_close", "total_open", "total_close"]
 
 
-def get(game_id):
+def get(game_id, url=URL):
     for attempt in range(4):
         try:
-            req = urllib.request.Request(URL.format(game_id), headers={"User-Agent": "Mozilla/5.0"})
+            req = urllib.request.Request(url.format(game_id), headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=20) as resp:
                 return json.load(resp)
+        except urllib.error.HTTPError as err:
+            if err.code == 404:
+                return None
+            time.sleep(2 ** attempt)
         except Exception:
             time.sleep(2 ** attempt)
     return None
@@ -44,6 +51,8 @@ def line(game_id):
     data = get(game_id)
     row = {"game_id": game_id}
     picks = (data or {}).get("pickcenter") or []
+    if not picks:
+        picks = (get(game_id, CORE) or {}).get("items") or []
     if not picks:
         return row
     p = picks[0]
