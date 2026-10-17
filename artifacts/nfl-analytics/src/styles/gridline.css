@@ -1074,3 +1074,4 @@
 .gl-glossary dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 20px; margin: 14px 0 0; }
 .gl-glossary dt { font-size: 13px; font-weight: 700; }
 .gl-glossary dd { margin: 2px 0 0; color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.5; }
+.gl-link-button { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }

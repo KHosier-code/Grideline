@@ -79,7 +79,10 @@ def load_player_games():
 
 
 def upcoming_rows(games, players):
-    """Candidate rows for the next unplayed week: anyone who played for the team in its last two games."""
+    """Candidate rows for the next unplayed week: anyone with a target or carry
+    for the team in its last two games. Appearing in the stats isn't enough:
+    special-teams players listed at RB or TE (a tackle on a kick) would
+    otherwise land on the board on the strength of old seasons."""
     unplayed = games[games.points.isna() & (games.season == games.season.max())]
     if unplayed.empty:
         return pd.DataFrame()
@@ -89,6 +92,7 @@ def upcoming_rows(games, players):
     recent = players[players.season == season]
     last_games = recent[["team", "week"]].drop_duplicates().sort_values("week").groupby("team").tail(2)
     cand = recent.merge(last_games, on=["team", "week"])
+    cand = cand[(cand.targets + cand.carries) > 0]
     cand = cand.sort_values("week").groupby("player_id").tail(1)[["player_id", "name", "position", "team"]]
     rows = cand.merge(slate, on="team")
     for c in ["targets", "carries", "receptions", "receiving_yards", "rushing_yards", "rushing_tds", "receiving_tds", "tds"]:

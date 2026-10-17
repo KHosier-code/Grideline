@@ -74,7 +74,7 @@ test("top-10 profit uses each pick's book price and skips unpriced picks", () =>
   assert.equal(record.weeks[0].pricedPicks, 9);
 });
 
-test("value candidates need plus money and a 5-cent edge", () => {
+test("value candidates need +150 to +400, a 20% chance and a 5-cent edge", () => {
   assert.equal(decimalOdds(150), 2.5);
   assert.equal(decimalOdds(-200), 1.5);
   assert.ok(Math.abs(expectedValue(0.6, -120) - 0.1) < 1e-9);
@@ -83,6 +83,9 @@ test("value candidates need plus money and a 5-cent edge", () => {
   assert.equal(isValueCandidate(0.6, -120), false);  // favorites belong to the Top 5, not Value 5
   assert.equal(isValueCandidate(0.6, 140), false);   // shorter than +150
   assert.equal(isValueCandidate(0.35, null), false); // no price captured
+  assert.equal(isValueCandidate(0.12, 1500), false);  // extreme long shot: big "edge", tiny chance
+  assert.equal(isValueCandidate(0.22, 450), false);   // longer than +400
+  assert.equal(isValueCandidate(0.22, 400), true);    // +400 and 22%: 10 cents per $1
 });
 
 test("Value 5 locks each pick at its kickoff, so a Thursday loss can't drop off later", () => {

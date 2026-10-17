@@ -159,14 +159,18 @@ export function expectedValue(probability: number, american: number) {
 
 /**
  * Value 5: the five players, among games not yet started, whose best book
- * price beats our probability by the most. Plus money only (+150 or longer),
- * and at least 5 cents of expected profit per dollar so a rounding-sized
- * edge never makes the list. Untested against past prices: graded live.
+ * price beats our probability by the most. Prices from +150 to +400 and a
+ * chance of 20% or better: below that the model's small errors look like big
+ * edges at long odds, so extreme long shots are left out. At least 5 cents
+ * of expected profit per dollar so a rounding-sized edge never makes the
+ * list. Untested against past prices: graded live.
  */
-export const VALUE_FIVE = { size: 5, minPrice: 150, minEdge: 0.05 } as const;
+export const VALUE_FIVE = { size: 5, minPrice: 150, maxPrice: 400, minProbability: 0.2, minEdge: 0.05 } as const;
 
 export function isValueCandidate(probability: number, bookPrice: number | null | undefined) {
-  return typeof bookPrice === "number" && Number.isFinite(bookPrice) && bookPrice >= VALUE_FIVE.minPrice
+  return typeof bookPrice === "number" && Number.isFinite(bookPrice)
+    && bookPrice >= VALUE_FIVE.minPrice && bookPrice <= VALUE_FIVE.maxPrice
+    && probability >= VALUE_FIVE.minProbability
     && expectedValue(probability, bookPrice) >= VALUE_FIVE.minEdge;
 }
 
