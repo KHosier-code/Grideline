@@ -1,0 +1,60 @@
+name: College basketball lines (research)
+
+# One-off research job: collects the betting line ESPN shows for every past
+# college basketball game so the ratings model can be tested against the
+# spread. Results are committed to research/cbb-model/lines/ on the branch
+# that ran it. Runs when the fetch script changes, or by hand.
+on:
+  push:
+    paths:
+      - research/cbb-model/fetch_lines.py
+      - .github/workflows/cbb-lines.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        season: [2023, 2024, 2025, 2026]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas pyarrow
+      - name: Fetch lines
+        working-directory: research/cbb-model
+        run: |
+          curl -sSfL -o schedule.parquet \
+            "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_mens_college_basketball_schedules/mbb_schedule_${{ matrix.season }}.parquet"
+          python fetch_lines.py schedule.parquet lines_${{ matrix.season }}.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lines-${{ matrix.season }}
+          path: research/cbb-model/lines_${{ matrix.season }}.csv
+
+  commit:
+    needs: fetch
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: research/cbb-model/lines
+          merge-multiple: true
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add research/cbb-model/lines
+          git diff --cached --quiet && exit 0
+          git commit -m "College basketball lines from ESPN (research data)"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
