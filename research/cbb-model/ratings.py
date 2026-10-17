@@ -20,9 +20,9 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class Params:
-    half_life_days: float = 45.0  # recency: a game this many days old counts half
-    ridge: float = 6.0            # pull toward the prior (in games' worth of weight)
-    carryover: float = 0.6        # share of last season's rating kept as this season's prior
+    half_life_days: float = 200.0  # recency: a game this many days old counts half
+    ridge: float = 3.0            # pull toward the prior (in games' worth of weight)
+    carryover: float = 0.9        # share of last season's rating kept as this season's prior
     min_games: int = 8            # a team needs this many games in a season to count as D-I
 
 

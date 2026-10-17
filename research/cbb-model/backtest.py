@@ -69,9 +69,9 @@ if __name__ == "__main__":
     # Tune on 2021-2023 only, then report 2024-2026 with the chosen settings.
     tune = list(range(FIRST, FIRST + 3))
     best = None
-    for half_life in (30, 45, 75):
-        for ridge in (3, 6, 12):
-            for carry in (0.4, 0.6, 0.8):
+    for half_life in (75, 120, 200, 10000):
+        for ridge in (1, 2, 3):
+            for carry in (0.8, 0.9, 1.0):
                 params = Params(half_life_days=half_life, ridge=ridge, carryover=carry)
                 score = evaluate(params, tune)[0]["margin_mae"]
                 print(f"half-life {half_life:>3} ridge {ridge:>2} carryover {carry}: margin MAE {score:.3f} (2021-23)", flush=True)
