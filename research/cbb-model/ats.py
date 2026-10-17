@@ -59,7 +59,7 @@ for season in SEASONS:
     show(graded[graded.season == season], f"season {season}")
 for name, months in [("November", [11]), ("December", [12]), ("Jan-Feb", [1, 2]), ("March-April", [3, 4])]:
     show(graded[graded.date.dt.month.isin(months)], name)
-show(graded[graded.edge >= 4][graded.home_spread.abs() >= 10], "disagree 4+, big spreads")
+show(graded[(graded.edge >= 4) & (graded.home_spread.abs() >= 10)], "disagree 4+, big spreads")
 
 # Totals.
 t = tot.assign(edge=tot.pred_total - tot.total_line, res=total.loc[tot.index] - tot.total_line)
@@ -68,3 +68,18 @@ print(f"\n{'total picks':28}{'games':>7}{'win %':>9}")
 show(t, "all")
 for lo, hi in [(0, 3), (3, 6), (6, 99)]:
     show(t[(t.edge.abs() >= lo) & (t.edge.abs() < hi)], f"disagree {lo}-{hi if hi < 99 else '+'} pts")
+
+# Opening lines (2025-26 has both open and close): win rate against the
+# number you could bet early, and whether the line then moved toward the
+# model (closing line value, in points; positive = moved our way).
+o = df.dropna(subset=["home_spread_open"])
+o_edge = o.pred_margin + o.home_spread_open
+o_res = (o.home_pts - o.away_pts) + o.home_spread_open
+o = o.assign(edge=o_edge.abs(), win=np.sign(o_edge) == np.sign(o_res),
+             clv=np.sign(o_edge) * (o.home_spread_open - o.home_spread))[(o_res != 0) & (o_edge != 0)]
+print(f"\n{'vs opening line':28}{'games':>7}{'win %':>9}{'line move':>11}")
+for lo, hi in [(0, 99), (0, 2), (2, 4), (4, 6), (6, 99)]:
+    part = o[(o.edge >= lo) & (o.edge < hi)]
+    if len(part):
+        label = "all" if (lo, hi) == (0, 99) else f"disagree {lo}-{hi if hi < 99 else '+'} pts"
+        print(f"{label:28}{len(part):>7,}{part.win.mean():>9.1%}{part.clv.mean():>+11.2f}")
