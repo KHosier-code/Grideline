@@ -55,6 +55,10 @@ test("top-10 record only counts fully graded weeks", () => {
   assert.deepEqual([record.weeksGraded, record.topTenPicks, record.topTenHits], [1, 10, 5]);
   assert.ok(Math.abs(record.expectedHits - 4.55) < 0.06, `${record.expectedHits}`);
   assert.deepEqual(record.priced, { picks: 0, hits: 0, units: 0 });
+  // The top 5 inside it: p0, p2, p4 scored.
+  assert.deepEqual([record.topFive.picks, record.topFive.hits], [5, 3]);
+  assert.ok(Math.abs(record.topFive.expectedHits - 2.4) < 0.06, `${record.topFive.expectedHits}`);
+  assert.equal(record.weeks[0].topFiveHits, 3);
   const partial = new Map([...results].slice(0, 5));
   assert.equal(topTenRecord([{ board, results: partial }]).weeksGraded, 0);
 });
@@ -65,6 +69,8 @@ test("top-10 profit uses each pick's book price and skips unpriced picks", () =>
   // Hits at -150 pay 0.667 each; misses lose 1; p9 has no price.
   const record = topTenRecord([{ week: 5, board, results, price: (entry) => entry.playerId === "p9" ? null : -150 }]);
   assert.deepEqual(record.priced, { picks: 9, hits: 4, units: -2.33 });
+  // Top 5: p0-p3 hit at -150 (+0.667 each), p4 missed.
+  assert.deepEqual(record.topFive.priced, { picks: 5, hits: 4, units: 1.67 });
   assert.equal(record.weeks[0].pricedPicks, 9);
 });
 

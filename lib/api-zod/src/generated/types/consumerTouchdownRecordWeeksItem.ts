@@ -13,4 +13,5 @@ export type ConsumerTouchdownRecordWeeksItem = {
   expectedHits: number;
   pricedPicks: number;
   units: number;
+  topFiveHits: number;
 };

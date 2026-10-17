@@ -52,7 +52,8 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
     const empty = {
       status: "unavailable" as const, season: selected?.season ?? season ?? null, week: selected?.week ?? week ?? null,
       generatedAt: null, modelVersion: null, evaluation: { topTenHitRate: null, auc: null, testedOn: null },
-      picks: [], weeks: available, record: { weeksGraded: 0, topTenPicks: 0, topTenHits: 0, expectedHits: 0, priced: { picks: 0, hits: 0, units: 0 }, weeks: [] },
+      picks: [], weeks: available, record: { weeksGraded: 0, topTenPicks: 0, topTenHits: 0, expectedHits: 0, priced: { picks: 0, hits: 0, units: 0 },
+        topFive: { picks: 0, hits: 0, expectedHits: 0, priced: { picks: 0, hits: 0, units: 0 } }, weeks: [] },
       valueRecord: { picks: 0, hits: 0, units: 0, weeks: [] },
       bookComparison: bookComparison([]),
     };

@@ -60,6 +60,7 @@ function PickRow({ pick, rank, max, showEdge = false }: { pick: ConsumerTouchdow
         <strong><Link href={`/td/${playerSlug(pick.name)}`} className="gl-td-name" onClick={event => event.stopPropagation()}>{pick.name}</Link></strong>
         <span>
           <span className="pos">{pick.position}</span><TeamChip team={pick.team} />{pick.isHome ? 'vs' : 'at'} {pick.opponent} · {kickoffText(pick.kickoff)}
+          {pick.rank <= 5 && <span className="gl-flag top" title="Our five most likely scorers this week, graded as their own tier on the record page">Top 5</span>}
           {pick.value && <span className="gl-flag value" title="Top-5 pick priced longer than our fair odds">Value</span>}
           {edge !== null && <span className={`gl-flag ${edge > 0 ? 'value' : ''}`} title="Our chance minus the book's chance after its estimated cut">
             {edge > 0 ? '+' : '−'}{Math.abs(Math.round(edge * 100))} pts vs book</span>}

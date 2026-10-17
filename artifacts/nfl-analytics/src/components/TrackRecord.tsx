@@ -22,16 +22,18 @@ const pct = (value: number) => `${Math.round(value * 100)}%`;
 export const ATS_BREAK_EVEN = 110 / 210;
 
 export function TouchdownStat({ record, testingHitRate }: { record: ConsumerTouchdownRecord | undefined; testingHitRate?: number | null }) {
-  if (record && record.priced.picks > 0) {
+  // The top 5 leads; the top 10 it sits inside stays beside it so nothing is hidden.
+  const five = record?.topFive;
+  if (record && five && five.priced.picks > 0) {
     return <div className="gl-stat">
-      <b className={record.priced.units >= 0 ? 'gl-good' : 'gl-bad'}><CountUp text={units(record.priced.units)} /></b>
-      <small>Top-10 TD picks, 1 unit each at the best book price · {record.priced.hits}/{record.priced.picks} scored · {weeksText(record.weeksGraded)}</small>
+      <b className={five.priced.units >= 0 ? 'gl-good' : 'gl-bad'}><CountUp text={units(five.priced.units)} /></b>
+      <small>Top-5 TD picks, 1 unit each at the best book price · {five.priced.hits}/{five.priced.picks} scored · top 10: {units(record.priced.units)} · {weeksText(record.weeksGraded)}</small>
     </div>;
   }
-  if (record && record.weeksGraded > 0) {
+  if (record && five && record.weeksGraded > 0) {
     return <div className="gl-stat">
-      <b><CountUp text={`${record.topTenHits}/${record.topTenPicks}`} /></b>
-      <small>Top-10 TD picks scored ({record.expectedHits.toFixed(1)} expected) · {weeksText(record.weeksGraded)} · profit at book prices starts once prices are captured</small>
+      <b><CountUp text={`${five.hits}/${five.picks}`} /></b>
+      <small>Top-5 TD picks scored ({five.expectedHits.toFixed(1)} expected) · top 10: {record.topTenHits}/{record.topTenPicks} · {weeksText(record.weeksGraded)}</small>
     </div>;
   }
   if (typeof testingHitRate === 'number') {

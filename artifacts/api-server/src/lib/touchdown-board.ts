@@ -41,7 +41,10 @@ export function fairAmericanOdds(probability: number) {
   return p >= 0.5 ? -Math.round((100 * p) / (1 - p)) : Math.round((100 * (1 - p)) / p);
 }
 
-/** Top-10 record over weeks where every top-10 player has a graded result. */
+/** The featured tier on the TD page, graded on its own. In 2022-2026 testing the top 5 scored 58.5% vs 53.7% for the top 10. */
+export const TOP_TIER = 5;
+
+/** Top-10 record (and the top 5 within it) over weeks where every top-10 player has a graded result. */
 export function topTenRecord(
   weeks: Array<{ week?: number; board: BoardEntry[]; results: Map<string, boolean>; price?: (entry: BoardEntry) => number | null }>,
 ) {
@@ -50,7 +53,8 @@ export function topTenRecord(
   let topTenHits = 0;
   let expectedHits = 0;
   const priced = { picks: 0, hits: 0, units: 0 };
-  const byWeek: Array<{ week: number; picks: number; hits: number; expectedHits: number; pricedPicks: number; units: number }> = [];
+  const topFive = { picks: 0, hits: 0, expectedHits: 0, priced: { picks: 0, hits: 0, units: 0 } };
+  const byWeek: Array<{ week: number; picks: number; hits: number; expectedHits: number; pricedPicks: number; units: number; topFiveHits: number }> = [];
   for (const { week, board, results, price } of weeks) {
     const top = board.slice(0, 10);
     if (top.length < 10 || top.some((entry) => !results.has(entry.playerId))) continue;
@@ -59,13 +63,25 @@ export function topTenRecord(
     // 1 unit on each top-10 pick that had a captured DraftKings/FanDuel price.
     let pricedPicks = 0;
     let units = 0;
-    for (const entry of top) {
+    top.forEach((entry, index) => {
       const odds = price?.(entry);
-      if (typeof odds !== "number" || !Number.isFinite(odds) || odds === 0) continue;
+      if (typeof odds !== "number" || !Number.isFinite(odds) || odds === 0) return;
+      const won = results.get(entry.playerId)!;
+      const unit = won ? decimalOdds(odds) - 1 : -1;
       pricedPicks += 1;
-      units += results.get(entry.playerId) ? decimalOdds(odds) - 1 : -1;
-      if (results.get(entry.playerId)) priced.hits += 1;
-    }
+      units += unit;
+      if (won) priced.hits += 1;
+      if (index < TOP_TIER) {
+        topFive.priced.picks += 1;
+        topFive.priced.units += unit;
+        if (won) topFive.priced.hits += 1;
+      }
+    });
+    const tier = top.slice(0, TOP_TIER);
+    const tierHits = tier.filter((entry) => results.get(entry.playerId)).length;
+    topFive.picks += tier.length;
+    topFive.hits += tierHits;
+    topFive.expectedHits += tier.reduce((sum, entry) => sum + entry.probability, 0);
     weeksGraded += 1;
     topTenPicks += top.length;
     topTenHits += hits;
@@ -73,13 +89,17 @@ export function topTenRecord(
     priced.picks += pricedPicks;
     priced.units += units;
     if (week !== undefined) {
-      byWeek.push({ week, picks: top.length, hits, expectedHits: Math.round(expected * 10) / 10, pricedPicks, units: Math.round(units * 100) / 100 });
+      byWeek.push({ week, picks: top.length, hits, expectedHits: Math.round(expected * 10) / 10, pricedPicks, units: Math.round(units * 100) / 100, topFiveHits: tierHits });
     }
   }
   return {
     weeksGraded, topTenPicks, topTenHits,
     expectedHits: Math.round(expectedHits * 10) / 10,
     priced: { ...priced, units: Math.round(priced.units * 100) / 100 },
+    topFive: {
+      picks: topFive.picks, hits: topFive.hits, expectedHits: Math.round(topFive.expectedHits * 10) / 10,
+      priced: { ...topFive.priced, units: Math.round(topFive.priced.units * 100) / 100 },
+    },
     weeks: byWeek.sort((a, b) => a.week - b.week),
   };
 }

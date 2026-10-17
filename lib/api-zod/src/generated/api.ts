@@ -2898,13 +2898,24 @@ export const GetConsumerTouchdownsResponse = zod.object({
   "hits": zod.number().int(),
   "units": zod.number()
 }).describe('1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price.'),
+  "topFive": zod.object({
+  "picks": zod.number().int(),
+  "hits": zod.number().int(),
+  "expectedHits": zod.number(),
+  "priced": zod.object({
+  "picks": zod.number().int(),
+  "hits": zod.number().int(),
+  "units": zod.number()
+})
+}).describe('The featured top 5 inside each graded top 10, graded the same way.'),
   "weeks": zod.array(zod.object({
   "week": zod.number().int(),
   "picks": zod.number().int(),
   "hits": zod.number().int(),
   "expectedHits": zod.number(),
   "pricedPicks": zod.number().int(),
-  "units": zod.number()
+  "units": zod.number(),
+  "topFiveHits": zod.number().int()
 }))
 }),
   "valueRecord": zod.object({

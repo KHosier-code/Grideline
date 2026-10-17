@@ -752,6 +752,22 @@ export type ConsumerTouchdownRecordPriced = {
   units: number;
 };
 
+export type ConsumerTouchdownRecordTopFivePriced = {
+  picks: number;
+  hits: number;
+  units: number;
+};
+
+/**
+ * The featured top 5 inside each graded top 10, graded the same way.
+ */
+export type ConsumerTouchdownRecordTopFive = {
+  picks: number;
+  hits: number;
+  expectedHits: number;
+  priced: ConsumerTouchdownRecordTopFivePriced;
+};
+
 export type ConsumerTouchdownRecordWeeksItem = {
   week: number;
   picks: number;
@@ -759,6 +775,7 @@ export type ConsumerTouchdownRecordWeeksItem = {
   expectedHits: number;
   pricedPicks: number;
   units: number;
+  topFiveHits: number;
 };
 
 export interface ConsumerTouchdownRecord {
@@ -769,6 +786,8 @@ export interface ConsumerTouchdownRecord {
   expectedHits: number;
   /** 1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price. */
   priced: ConsumerTouchdownRecordPriced;
+  /** The featured top 5 inside each graded top 10, graded the same way. */
+  topFive: ConsumerTouchdownRecordTopFive;
   weeks: ConsumerTouchdownRecordWeeksItem[];
 }
 

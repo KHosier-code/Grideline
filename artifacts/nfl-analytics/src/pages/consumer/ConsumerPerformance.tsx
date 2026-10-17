@@ -281,7 +281,8 @@ export default function ConsumerPerformance() {
     <div className="gl-summary-grid">
       <SummaryCard title="Touchdown picks" icon={<Trophy />} value={td?.evaluation.topTenHitRate != null ? pct(td.evaluation.topTenHitRate) : '—'}
         caption="Each week's top 10 who scored, in testing"
-        rows={[['This season', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topTenHits}/${tdRecord.topTenPicks}` : 'After the first graded week'],
+        rows={[['This season, top 5', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topFive.hits}/${tdRecord.topFive.picks}` : 'After the first graded week'],
+          ['This season, top 10', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topTenHits}/${tdRecord.topTenPicks}` : 'After the first graded week'],
           ['Ranking accuracy (AUC)', td?.evaluation.auc != null ? td.evaluation.auc.toFixed(3) : '—']]} />
       <SummaryCard title="Against the spread" icon={<Target />} value={ats !== null ? pct(ats) : '—'}
         caption="Taking our side of the Vegas closing line"
@@ -308,9 +309,10 @@ export default function ConsumerPerformance() {
             : <><b>—</b><p>Starts with the first graded week that has captured sportsbook prices.</p></>}
         </div>
         <div className="gl-card gl-record-card">
-          <span className="gl-label">TD top 10 that scored</span>
-          {tdRecord && tdRecord.weeksGraded > 0 ? <><b><CountUp text={`${tdRecord.topTenHits}/${tdRecord.topTenPicks}`} /></b>
-            <p>Our probabilities expected {tdRecord.expectedHits.toFixed(1)}. Beating the expected count says the model is sharp; profit at book prices says whether the books already knew.</p></>
+          <span className="gl-label">TD top 5 / top 10 that scored</span>
+          {tdRecord && tdRecord.weeksGraded > 0 ? <><b><CountUp text={`${tdRecord.topFive.hits}/${tdRecord.topFive.picks}`} /></b>
+            <p>Top 5: our probabilities expected {tdRecord.topFive.expectedHits.toFixed(1)}{tdRecord.topFive.priced.picks > 0 ? `, ${unitsShort(tdRecord.topFive.priced.units)} at book prices` : ''}.
+              Top 10: {tdRecord.topTenHits}/{tdRecord.topTenPicks} ({tdRecord.expectedHits.toFixed(1)} expected). In 2022–2026 testing the top 5 scored 58.5% and the top 10 53.7%. Beating the expected count says the model is sharp; profit at book prices says whether the books already knew.</p></>
             : <><b>—</b><p>The first graded week appears after this week&apos;s games.</p></>}
         </div>
         <div className="gl-card gl-record-card">
