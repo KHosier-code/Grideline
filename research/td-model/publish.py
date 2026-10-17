@@ -8,6 +8,7 @@ Without both variables the payload is written to td_payload.json and not sent.
 """
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -69,7 +70,15 @@ try:
     espn_status = {}
     for group in feed.get("injuries", []):
         for entry in group.get("injuries", []):
-            athlete_id = str((entry.get("athlete") or {}).get("id") or "")
+            athlete = entry.get("athlete") or {}
+            athlete_id = str(athlete.get("id") or "")
+            if not athlete_id:
+                # ESPN usually carries the id only in the athlete's links (.../id/4870808/...).
+                for link in athlete.get("links") or []:
+                    found = re.search(r"/id/(\d+)", (link or {}).get("href") or "")
+                    if found:
+                        athlete_id = found.group(1)
+                        break
             status = entry.get("status") or (entry.get("type") or {}).get("description")
             reported = pd.to_datetime(entry.get("date"), utc=True, errors="coerce")
             if athlete_id and status and (pd.isna(reported) or reported >= cutoff):
