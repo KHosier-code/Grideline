@@ -116,6 +116,12 @@ function SignUpPage() {
   );
 }
 
+// Clerk's path-routed <SignIn> renders nothing off its own path, so a signed-out
+// visit to /admin (or any private URL) goes to /sign-in and comes back after.
+function SignInRedirect() {
+  return <Redirect to={`/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`} replace />;
+}
+
 function Router() {
   useRouteMetadata();
   const [location] = useLocation();
@@ -155,7 +161,7 @@ function Router() {
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
     <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/"><ConsumerShell><PickSheet /></ConsumerShell></Route>
-    <Route component={SignInPage} />
+    <Route component={SignInRedirect} />
   </Switch></RoutedErrorBoundary>;
   return <RoutedErrorBoundary><Switch>
       <Route path="/admin" component={AdminRoutes} />
