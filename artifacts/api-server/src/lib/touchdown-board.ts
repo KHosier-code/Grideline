@@ -12,7 +12,49 @@ export type BoardEntry = TouchdownPickRow & { generatedAt: Date; lockedAt: Date 
  * before Thursday). Before kickoff, the latest run wins. A player whose game
  * started before every run that includes them is left out.
  */
-export function boardForWeek(runs: TouchdownRun[], now: Date): BoardEntry[] {
+/** Game status before a time, from the injury report, or null when the player isn't listed then. */
+export type InjuryStatusAt = (playerId: string, at: Date) => string | null;
+
+/**
+ * ESPN's injury feed only records changes, never a player coming off the
+ * report, so a status counts for 6 days after it was seen. The weekly report
+ * re-lists anyone still hurt, which keeps a current status fresh.
+ */
+export const INJURY_STATUS_WINDOW_MS = 6 * 24 * 60 * 60 * 1000;
+
+export type StatusRow = { gameStatus: string | null; snapshotTimestamp: Date };
+
+/** Status at `at` from one player's snapshots, oldest first. */
+export function statusAt(rows: StatusRow[], at: Date) {
+  let latest: StatusRow | null = null;
+  for (const row of rows) {
+    if (row.snapshotTimestamp > at) break;
+    latest = row;
+  }
+  if (!latest || at.getTime() - latest.snapshotTimestamp.getTime() > INJURY_STATUS_WINDOW_MS) return null;
+  return latest.gameStatus?.trim() || null;
+}
+
+/** Statuses that mean the player won't play. */
+export const RULED_OUT = /^(out|injured reserve|suspension|physically unable to perform|pup|non-football injury)$/i;
+
+/**
+ * Drops players the injury report ruled out before their kickoff (or before
+ * now, for games still to come) and shows the latest listed status. Reading the
+ * status as of kickoff means a later injury never rewrites a played week.
+ */
+function applyInjuries(board: BoardEntry[], now: Date, injuryAt?: InjuryStatusAt): BoardEntry[] {
+  if (!injuryAt) return board;
+  return board.flatMap((entry) => {
+    const kickoff = entry.kickoff ? new Date(entry.kickoff) : null;
+    const at = kickoff && !Number.isNaN(kickoff.getTime()) && kickoff < now ? kickoff : now;
+    const status = injuryAt(entry.playerId, at);
+    if (status && RULED_OUT.test(status.trim())) return [];
+    return [status ? { ...entry, injuryStatus: status } : entry];
+  });
+}
+
+export function boardForWeek(runs: TouchdownRun[], now: Date, injuryAt?: InjuryStatusAt): BoardEntry[] {
   const ordered = [...runs].sort((a, b) => lockedAt(a).getTime() - lockedAt(b).getTime());
   const byPlayer = new Map<string, BoardEntry>();
   for (const run of ordered) {
@@ -28,12 +70,12 @@ export function boardForWeek(runs: TouchdownRun[], now: Date): BoardEntry[] {
   const latestIds = new Set(latestRun?.picks.map((pick) => pick.playerId) ?? []);
   // A player dropped from the latest run (for example ruled out) before their
   // game started should not stay on the board.
-  return [...byPlayer.values()].filter((entry) => {
+  return applyInjuries([...byPlayer.values()].filter((entry) => {
     const kickoff = entry.kickoff ? new Date(entry.kickoff) : null;
     const started = kickoff !== null && !Number.isNaN(kickoff.getTime()) && kickoff <= now;
     const coveredByLatest = latestRun !== undefined && kickoff !== null && lockedAt(latestRun) < kickoff;
     return started || !coveredByLatest || latestIds.has(entry.playerId);
-  }).sort((a, b) => b.probability - a.probability || a.name.localeCompare(b.name));
+  }), now, injuryAt).sort((a, b) => b.probability - a.probability || a.name.localeCompare(b.name));
 }
 
 /** American odds that match a probability (no bookmaker margin). */
@@ -152,7 +194,8 @@ function valueListAt(board: BoardEntry[], at: Date, price: (entry: BoardEntry) =
  * hindsight. Games still to come use the current board and prices.
  * `priceAt(entry, before)` gives the best price captured before that time.
  */
-export function valueFive(runs: TouchdownRun[], now: Date, priceAt: (entry: BoardEntry, before: Date) => number | null) {
+export function valueFive(runs: TouchdownRun[], now: Date, priceAt: (entry: BoardEntry, before: Date) => number | null,
+  injuryAt?: InjuryStatusAt) {
   const picks = new Map<string, ValuePick>();
   const kickoffs = [...new Set(runs.flatMap((run) => run.picks.map((pick) => startsAt(pick)?.getTime() ?? NaN))
     .filter((time) => Number.isFinite(time) && time <= now.getTime()))].sort((a, b) => a - b);
@@ -160,12 +203,12 @@ export function valueFive(runs: TouchdownRun[], now: Date, priceAt: (entry: Boar
     const at = new Date(time);
     const before = runs.filter((run) => lockedAt(run) < at);
     if (!before.length) continue;
-    for (const pick of valueListAt(boardForWeek(before, at), at, (entry) => priceAt(entry, at))) {
+    for (const pick of valueListAt(boardForWeek(before, at, injuryAt), at, (entry) => priceAt(entry, at))) {
       if (startsAt(pick.entry)!.getTime() === time) picks.set(pick.entry.playerId, pick);
     }
   }
   const upcoming = new Date(now.getTime() + 1);
-  for (const pick of valueListAt(boardForWeek(runs, now), upcoming, (entry) => priceAt(entry, now))) {
+  for (const pick of valueListAt(boardForWeek(runs, now, injuryAt), upcoming, (entry) => priceAt(entry, now))) {
     picks.set(pick.entry.playerId, pick);
   }
   return picks;

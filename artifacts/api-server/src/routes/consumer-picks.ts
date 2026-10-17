@@ -17,6 +17,7 @@ import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecisio
 import { ODDS_BACKUP_RECENT_MS, recentOddsCapture } from "../lib/kickoff-clock";
 import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEmail, subscribe } from "../lib/newsletter";
 import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
+import { injuryTimeline } from "../lib/td-injuries";
 import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
 import { footballTime } from "../lib/feed-schedule";
@@ -120,9 +121,14 @@ async function loadSeasonBoards(season: number, now = new Date()) {
     map.set(row.playerId, row.scored);
     resultsByWeek.set(row.week, map);
   }
+  // The site's own ESPN injury capture: players ruled out before kickoff leave the board.
+  const injuryAt = seasonRuns.length
+    ? await injuryTimeline([...new Set(seasonRuns.flatMap((run) => run.picks.map((pick) => pick.playerId)))], seasonRuns[0].generatedAt)
+      .catch(() => undefined)
+    : undefined;
   const boards = new Map<number, ReturnType<typeof boardForWeek>>();
   for (const weekNumber of new Set(seasonRuns.map((run) => run.week))) {
-    boards.set(weekNumber, boardForWeek(seasonRuns.filter((run) => run.week === weekNumber), now));
+    boards.set(weekNumber, boardForWeek(seasonRuns.filter((run) => run.week === weekNumber), now, injuryAt));
   }
   const captures = await touchdownPropCaptures(season).catch(() => new Map<number, TouchdownPropsReport[]>());
   const propsByWeek = new Map<number, TouchdownPropsReport>();
@@ -132,7 +138,7 @@ async function loadSeasonBoards(season: number, now = new Date()) {
     const merged = mergePropReports(weekCaptures);
     if (merged) propsByWeek.set(weekNumber, merged);
     valueByWeek.set(weekNumber, valueFive(seasonRuns.filter((run) => run.week === weekNumber), now,
-      (entry, before) => bestBookPrice(mergePropReports(weekCaptures, before), entry.name, entry.team)?.price ?? null));
+      (entry, before) => bestBookPrice(mergePropReports(weekCaptures, before), entry.name, entry.team)?.price ?? null, injuryAt));
   }
   return { seasonRuns, boards, resultsByWeek, propsByWeek, valueByWeek };
 }
