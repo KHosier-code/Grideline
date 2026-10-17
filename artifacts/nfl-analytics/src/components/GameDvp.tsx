@@ -8,10 +8,10 @@ import { fixed, pct, useUsageReport, type UsageReport } from '@/lib/usage-report
 const PILL: Record<MatchupTone, string> = { favorable: 'win', tough: 'loss', neutral: 'small' };
 
 /** "Favorable" / "Tough" / "Neutral" for a defense's rank against a position. */
-export function MatchupTag({ rank, prefix, measure = 'PPR points' }: { rank: number | null | undefined; prefix?: string; measure?: string }) {
+export function MatchupTag({ rank, prefix }: { rank: number | null | undefined; prefix?: string }) {
   const tone = matchupTone(rank);
   if (!tone) return <span className="gl-muted">—</span>;
-  return <span className={`gl-pill ${PILL[tone]}`} title={`Defense ranks #${rank} of 32 in ${measure} allowed to this position (1 allows the most)`}>
+  return <span className={`gl-pill ${PILL[tone]}`} title={`Defense ranks #${rank} of 32 in PPR points allowed to this position (1 allows the most)`}>
     {prefix ? `${prefix} · ` : ''}{TONE_LABEL[tone]}
   </span>;
 }
