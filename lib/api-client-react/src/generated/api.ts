@@ -5187,3 +5187,80 @@ export function useGetConsumerReplay<TData = Awaited<ReturnType<typeof getConsum
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
+export const getGetConsumerMatchupReportUrl = () => {
+
+
+
+
+  return `/api/consumer/matchup-report`
+}
+
+/**
+ * @summary Read the latest offense and defense style report (pressure, blitzing, big plays, funnels, tackling)
+ */
+export const getConsumerMatchupReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerUsageReport> => {
+
+  return customFetch<ConsumerUsageReport>(getGetConsumerMatchupReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerMatchupReportQueryKey = () => {
+    return [
+    `/api/consumer/matchup-report`
+    ] as const;
+    }
+
+
+export const getGetConsumerMatchupReportQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerMatchupReport>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerMatchupReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerMatchupReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerMatchupReport>>> = ({ signal }) => getConsumerMatchupReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerMatchupReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerMatchupReportQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerMatchupReport>>>
+export type GetConsumerMatchupReportQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read the latest offense and defense style report (pressure, blitzing, big plays, funnels, tackling)
+ */
+
+export function useGetConsumerMatchupReport<TData = Awaited<ReturnType<typeof getConsumerMatchupReport>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerMatchupReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerMatchupReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

@@ -469,7 +469,7 @@ router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
 });
 
 const reportIngestSchema = zod.object({
-  kind: zod.enum(["usage", "replay", "share-td", "share-clip"]),
+  kind: zod.enum(["usage", "replay", "matchups", "share-td", "share-clip"]),
   season: zod.number().int().min(2000).max(2200),
   week: zod.number().int().min(0).max(22),
   generatedAt: zod.string().datetime({ offset: true }),
@@ -496,7 +496,7 @@ router.post("/reports/ingest", async (req, res): Promise<void> => {
   }
 });
 
-async function latestReport(kind: "usage" | "replay", req: import("express").Request, res: import("express").Response) {
+async function latestReport(kind: "usage" | "replay" | "matchups", req: import("express").Request, res: import("express").Response) {
   try {
     const [latest] = await db.select().from(weeklyReportsTable)
       .where(eq(weeklyReportsTable.kind, kind))
@@ -527,6 +527,7 @@ async function latestReport(kind: "usage" | "replay", req: import("express").Req
 
 router.get("/consumer/usage-report", (req, res) => latestReport("usage", req, res));
 router.get("/consumer/replay", (req, res) => latestReport("replay", req, res));
+router.get("/consumer/matchup-report", (req, res) => latestReport("matchups", req, res));
 
 /**
  * The failure message for the token-protected capture routes, so the workflow

@@ -1100,3 +1100,30 @@
 .gl-td-played > summary::after { content: '▾'; margin-left: auto; color: hsl(var(--muted-foreground)); }
 .gl-td-played[open] > summary::after { content: '▴'; }
 .gl-td-played[open] > .gl-td-list { margin-top: 12px; }
+
+/* Matchups page and game matchup edges */
+.gl-edges { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-bottom: 10px; }
+.gl-edges-side { padding: 14px 16px; }
+.gl-edges-side h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 14px; font-weight: 700; }
+.gl-edges-side h3 span { color: hsl(var(--muted-foreground)); font-weight: 500; }
+.gl-edges-side ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.gl-edge { padding: 10px 12px; border-left: 3px solid hsl(var(--border)); border-radius: 6px; background: hsl(var(--muted) / .35); }
+.gl-edge-offense { border-left-color: hsl(var(--status-good)); }
+.gl-edge-defense { border-left-color: hsl(var(--accent)); }
+.gl-edge-tag { display: block; margin-bottom: 3px; color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.gl-edge p, .gl-edges-none { margin: 0; font-size: 13px; line-height: 1.5; }
+.gl-edges-none { color: hsl(var(--muted-foreground)); }
+.gl-th-note { display: block; color: hsl(var(--muted-foreground)); font-size: 10px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.gl-league-row td { color: hsl(var(--muted-foreground)); font-size: 13px; text-align: center; }
+.gl-league-row td:first-child { text-align: left; }
+.gl-team-button { display: inline-flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.gl-team-button span { display: grid; }
+.gl-team-button small { color: hsl(var(--muted-foreground)); font-size: 11px; }
+.gl-profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.gl-select-label { display: inline-flex; align-items: center; gap: 8px; color: hsl(var(--muted-foreground)); font-size: 13px; }
+.gl-select-label select { padding: 6px 10px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--card)); color: hsl(var(--foreground)); font: inherit; }
+.gl-glossary { padding: 14px 16px; }
+.gl-glossary summary { font-weight: 700; cursor: pointer; }
+.gl-glossary dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 20px; margin: 14px 0 0; }
+.gl-glossary dt { font-size: 13px; font-weight: 700; }
+.gl-glossary dd { margin: 2px 0 0; color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.5; }

@@ -1282,6 +1282,18 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerUsageReport" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/matchup-report:
+    get:
+      operationId: getConsumerMatchupReport
+      tags: [nfl]
+      summary: Read the latest offense and defense style report (pressure, blitzing, big plays, funnels, tackling)
+      responses:
+        "200":
+          description: The newest report from research/td-model/matchup_report.py, or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerUsageReport" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:

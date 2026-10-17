@@ -79,6 +79,10 @@ jobs:
         if: ${{ !cancelled() }}
         working-directory: research/td-model
         run: python weekly_report.py data
+      - name: Offense and defense matchup report
+        if: ${{ !cancelled() }}
+        working-directory: research/td-model
+        run: python matchup_report.py data
       - name: Game projections
         id: games
         if: ${{ !cancelled() }}

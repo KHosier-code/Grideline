@@ -20,6 +20,7 @@ import { useEffect, type ReactNode } from 'react';
 import { setPublicMetadata } from '../../lib/public-metadata';
 import { TeamChip } from '../../components/GameBoard';
 import { MatchupRanks } from '../../components/MatchupRanks';
+import { MatchupEdges } from '../../components/MatchupEdges';
 import { buildGameView, formatPrice, lineText, vegasLineText, type GameView } from '../../lib/pick-sheet';
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;
@@ -120,6 +121,7 @@ export default function ConsumerGameDetail() {
       { id: 'overview', label: 'Overview', content: <>
         <GamePicks game={game} />
         <GameWhy view={view} projection={qbProjection} />
+        <MatchupEdges home={game.matchup.home.abbreviation} away={game.matchup.away.abbreviation} />
         <ConsumerPlayerMatchups matchups={game.context.projectedMatchups} />
         <GameTouchdowns teams={[game.matchup.away.abbreviation, game.matchup.home.abbreviation]} />
         <GameAlerts gameId={game.gameId} upcoming={beforeKickoff} />
