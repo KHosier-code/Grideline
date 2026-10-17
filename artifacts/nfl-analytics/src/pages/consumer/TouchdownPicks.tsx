@@ -11,9 +11,17 @@ import { playerSlug } from '@/lib/player-slug';
 import { impliedProbability, tdFairProbability } from '@/lib/market';
 import { ConsumerLoading } from './consumer-ui';
 import { TeamChip } from '@/components/GameBoard';
-import { MatchupTag } from '@/components/GameDvp';
-import { defenseLine, type Position } from '@/lib/dvp-matchups';
-import { useUsageReport, type UsageReport } from '@/lib/usage-report';
+import { TONE_LABEL, defenseLine, type MatchupTone, type Position } from '@/lib/dvp-matchups';
+import { cell, findTeam } from '@/lib/matchup-edges';
+import { useMatchupReport } from '@/lib/matchup-report';
+import { normalizeTeam } from '@/lib/parlay';
+import { tdMatchupTones } from '@/lib/td-matchup';
+import { useUsageReport } from '@/lib/usage-report';
+
+type ToneInfo = { tone: MatchupTone; vegas: number | null; defense: number | null };
+const TONE_PILL: Record<MatchupTone, string> = { favorable: 'win', tough: 'loss', neutral: 'small' };
+const leaning = (value: number | null, easy: string, hard: string) =>
+  value === null ? 'unknown' : value >= 0.6 ? easy : value <= 0.4 ? hard : 'about average';
 
 type Level = 'hi' | 'mid' | 'lo';
 const BOOK_SHORT: Record<string, string> = { draftkings: 'DK', fanduel: 'FD' };
@@ -53,10 +61,8 @@ export function bookEdge(pick: ConsumerTouchdownPick) {
   return pick.bookOdds ? pick.probability - tdFairProbability(pick.bookOdds.price) : null;
 }
 
-function PickRow({ pick, rank, max, showEdge = false, defense }: { pick: ConsumerTouchdownPick; rank: number; max: number; showEdge?: boolean; defense: UsageReport | null }) {
+function PickRow({ pick, rank, max, showEdge = false, matchup }: { pick: ConsumerTouchdownPick; rank: number; max: number; showEdge?: boolean; matchup?: ToneInfo }) {
   const edge = showEdge ? bookEdge(pick) : null;
-  // Touchdowns this defense allows to the position, season to date (1 allows the most).
-  const tdRank = defense ? defenseLine(defense, pick.opponent, pick.position as Position)?.tdsRank : null;
   const injury = pick.injuryStatus;
   return <details className="gl-card gl-td">
     <summary>
@@ -65,7 +71,9 @@ function PickRow({ pick, rank, max, showEdge = false, defense }: { pick: Consume
         <strong><Link href={`/td/${playerSlug(pick.name)}`} className="gl-td-name" onClick={event => event.stopPropagation()}>{pick.name}</Link></strong>
         <span>
           <span className="pos">{pick.position}</span><TeamChip team={pick.team} />{pick.isHome ? 'vs' : 'at'} {pick.opponent} · {kickoffText(pick.kickoff)}
-          {tdRank != null && <MatchupTag rank={tdRank} measure="touchdowns" />}
+          {matchup && <span className={`gl-pill ${TONE_PILL[matchup.tone]}`}
+            title={`Team scoring (Vegas total): ${leaning(matchup.vegas, 'high this week', 'low this week')} · Defense: ${leaning(matchup.defense, 'easier than most', 'harder than most')}`}>
+            {TONE_LABEL[matchup.tone]}</span>}
           {pick.rank <= 5 && <span className="gl-flag top" title="Our five most likely scorers this week, graded as their own tier on the record page">Top 5</span>}
           {pick.value && <span className="gl-flag value" title="Plus-money price that beats our chance by 5 cents or more per $1">Value 5</span>}
           {edge !== null && <span className={`gl-flag ${edge > 0 ? 'value' : ''}`} title="Our chance minus the book's chance after its estimated cut">
@@ -125,7 +133,22 @@ export default function TouchdownPicks() {
   const max = Math.max(0.01, ...(data?.picks ?? []).map(pick => pick.probability));
   const record = data?.record;
   const value = data?.valueRecord;
-  const { report: defense } = useUsageReport();
+  const { report: usage } = useUsageReport();
+  const { report: styles } = useMatchupReport();
+  // Favorable / Neutral / Tough: half the Vegas team total, half the defense (see lib/td-matchup).
+  const tones = tdMatchupTones((data?.picks ?? []).map(pick => {
+    const dvp = usage ? defenseLine(usage, pick.opponent, pick.position as Position) : null;
+    const redZone = usage?.redZoneTeams.find(team => normalizeTeam(team.team) === normalizeTeam(pick.opponent));
+    const style = styles ? findTeam(styles, pick.opponent)?.season.defense : undefined;
+    return {
+      key: pick.playerId, position: pick.position, implied: pick.factors.teamImpliedPoints,
+      defense: {
+        tdsRank: dvp?.tdsRank, yardsRank: dvp?.yardsRank, redZoneOppsRank: dvp?.redZoneOppsRank,
+        allowedTripsPerGameRank: redZone?.allowedTripsPerGameRank, allowedTdRateRank: redZone?.allowedTdRateRank,
+        epaRank: cell(style, pick.position === 'RB' || pick.position === 'QB' ? 'epa_rush' : 'epa_pass')?.rank,
+      },
+    };
+  }));
   // Value 5 is chosen on the server; show the ones still to play, best edge first.
   const valueFive = upcoming.filter(pick => pick.value)
     .sort((a, b) => (b.expectedValue ?? 0) - (a.expectedValue ?? 0));
@@ -176,7 +199,7 @@ export default function TouchdownPicks() {
         <p>Longer odds where the book pays more than our chance says it should</p>
       </div>
       {valueFive.length > 0
-        ? <div className="gl-td-list">{valueFive.map(pick => <PickRow key={pick.playerId} pick={pick} rank={pick.rank} max={max} showEdge defense={defense} />)}</div>
+        ? <div className="gl-td-list">{valueFive.map(pick => <PickRow key={pick.playerId} pick={pick} rank={pick.rank} max={max} showEdge matchup={tones.get(pick.playerId)} />)}</div>
         : <p className="gl-note">{pricedGames.size
           ? 'No player clears the bar right now: plus money (+150 or longer) and at least 5 cents of expected profit per $1 at the best price.'
           : 'This fills in once sportsbook prices are captured: Thursday morning for Thursday night, Saturday morning for Sunday and Monday.'}</p>}
@@ -193,14 +216,14 @@ export default function TouchdownPicks() {
     </p>}
 
     {picks.length > 0 && <div className="gl-td-list">
-      {picks.slice(0, limit).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} showEdge={order === 'value'} defense={defense} />)}
+      {picks.slice(0, limit).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} showEdge={order === 'value'} matchup={tones.get(pick.playerId)} />)}
     </div>}
     {picks.length > limit && <button type="button" className="gl-card" style={{ padding: 12, fontWeight: 600, cursor: 'pointer', color: 'inherit' }} onClick={() => setLimit(limit + 60)}>Show more players ({picks.length - limit} left)</button>}
 
     {order === 'likely' && played.length > 0 && <details className="gl-card gl-td-played">
       <summary><b>Already played this week</b> <span className="gl-muted">{played.length} players · {played.filter(pick => pick.scored).length} scored so far</span></summary>
       <div className="gl-td-list">
-        {played.slice(0, 40).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} defense={defense} />)}
+        {played.slice(0, 40).map((pick, index) => <PickRow key={pick.playerId} pick={pick} rank={index + 1} max={max} matchup={tones.get(pick.playerId)} />)}
       </div>
     </details>}
 
@@ -214,7 +237,7 @@ export default function TouchdownPicks() {
         <p><b>Book</b>The best anytime-TD price at DraftKings or FanDuel when we last checked. Books keep a cut of roughly 20% on these bets, so compare our chance with the book&apos;s chance after the cut, not the raw price.</p>
         <p><b>Top 5</b>Our five most likely scorers. In testing on 2022 through 2026 they scored 58.5% of the time, against 53.7% for the top 10. Graded as their own tier on the record page.</p>
         <p><b>Value 5</b>Up to five players at +150 or longer whose best book price pays at least 5 cents per $1 more than our probability says it should. These lose more often than the Top 5 but pay more when they hit. We haven&apos;t been able to test this against past prices, so each pick is locked at kickoff and graded at the price we picked it, 1 unit each. Prices move; check your book before betting.</p>
-        <p><b>Favorable / Neutral / Tough</b>How many touchdowns the opposing defense has allowed to the player&apos;s position this season: favorable is the 8 defenses that allow the most, tough the 8 that allow the fewest. Our probability already accounts for the matchup; the tag shows which way it leans.</p>
+        <p><b>Favorable / Neutral / Tough</b>Half how many points Vegas expects the team to score, half the defense: touchdowns, yards and red-zone looks it allows to the position, red-zone trips and touchdown rate it allows, and how efficient offenses are against it on runs (RBs, QBs) or passes (WRs, TEs). Favorable is the top quarter of this week&apos;s players at the position, tough the bottom quarter. In 2022–2026, favorable players scored 23% of the time and tough ones 15%. Our probability already includes all of this; the tag shows which way the matchup leans.</p>
         <p><b>Red-zone touches</b>Targets plus carries inside the opponent&apos;s 20-yard line, per game over the player&apos;s last 8 games.</p>
         <p><b>Matchup</b>Touchdowns this defense allowed to the position over its last 8 games, compared with the league average. <Link href="/defense-vs-position" className="gl-link">See all matchups</Link>.</p>
       </div>
