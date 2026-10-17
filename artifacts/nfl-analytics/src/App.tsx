@@ -28,7 +28,6 @@ const DefenseVsPositionLeague = lazy(() => import('@/pages/consumer/DefenseVsPos
 const ConsumerTeams = lazy(() => import('@/pages/consumer/ConsumerTeams'));
 const SharePicks = lazy(() => import('@/pages/consumer/SharePicks'));
 const Pickem = lazy(() => import('@/pages/consumer/Pickem'));
-const Parlays = lazy(() => import('@/pages/consumer/Parlays'));
 const AdminRoutes = lazy(() => import('@/pages/admin/AdminApp'));
 const Matchups = lazy(() => import('@/pages/consumer/Matchups'));
 
@@ -158,7 +157,7 @@ function Router() {
     <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
-    <Route path="/parlays"><ConsumerShell><Parlays /></ConsumerShell></Route>
+    <Route path="/parlays"><Redirect to="/" replace /></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
     <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
@@ -185,7 +184,7 @@ function Router() {
       <Route path="/touchdowns"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
-    <Route path="/parlays"><ConsumerShell><Parlays /></ConsumerShell></Route>
+    <Route path="/parlays"><Redirect to="/" replace /></Route>
       <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
       <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>

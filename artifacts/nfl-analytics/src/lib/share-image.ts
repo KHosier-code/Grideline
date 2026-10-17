@@ -1,6 +1,6 @@
 /**
  * Share cards drawn in the browser: a 1080x1350 PNG with a title, a 100-square
- * grid and a list of rows, for Pick'em sheets and parlays. Uses the phone's
+ * grid and a list of rows, for Pick'em sheets. Uses the phone's
  * share sheet when it can take files, otherwise downloads the image.
  */
 export type ShareCard = {
