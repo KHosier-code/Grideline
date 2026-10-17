@@ -1,5 +1,13 @@
 export const GLOBAL_WORKER_ADVISORY_LOCK_KEY = 731400;
 
+/** The lock is held by another live session (not a query or connection failure). */
+export class WorkerOwnershipBusyError extends Error {
+  constructor() {
+    super("Another Gridline data worker currently owns the global worker lock");
+    this.name = "WorkerOwnershipBusyError";
+  }
+}
+
 export type WorkerOwnershipClient = {
   query(
     queryText: string,
@@ -59,7 +67,7 @@ export async function acquireGlobalWorkerOwnership(
     locked = result.rows[0]?.locked === true;
     if (!locked) {
       releaseClient();
-      throw new Error("Another Gridline data worker currently owns the global worker lock");
+      throw new WorkerOwnershipBusyError();
     }
     client.on?.("error", handleConnectionError);
     client.on?.("end", handleConnectionEnd);
@@ -84,6 +92,35 @@ export async function acquireGlobalWorkerOwnership(
     }
     releaseClient();
   };
+}
+
+/**
+ * Waits for the lock instead of failing on the first try. During a rolling
+ * deploy the outgoing container keeps the lock until it shuts down; exiting
+ * here would crash the incoming container (and the API alongside it).
+ * Only "busy" is retried: query and connection failures still fail closed.
+ */
+export async function waitForGlobalWorkerOwnership(
+  pool: WorkerOwnershipPool,
+  options: {
+    lockKey?: number;
+    onConnectionLost?: (error: Error) => void;
+    retryMs?: number;
+    onBusy?: (attempt: number) => void;
+    sleep?: (ms: number) => Promise<void>;
+  } = {},
+): Promise<() => Promise<void>> {
+  const retryMs = options.retryMs ?? 30_000;
+  const sleep = options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await acquireGlobalWorkerOwnership(pool, options);
+    } catch (error) {
+      if (!(error instanceof WorkerOwnershipBusyError)) throw error;
+      options.onBusy?.(attempt);
+      await sleep(retryMs);
+    }
+  }
 }
 
 export function isNewWorkerApproved(

@@ -6,6 +6,7 @@ import {
   acquireGlobalWorkerOwnership,
   isNewWorkerApproved,
   startWorkerOnlyWhenApproved,
+  waitForGlobalWorkerOwnership,
   type WorkerOwnershipClient,
   type WorkerOwnershipPool,
 } from "./worker-ownership";
@@ -109,6 +110,32 @@ test("explicit release and lost session both permit failover", async () => {
   assert.match(endReason, /session ended/);
   const afterSessionEnd = await acquireGlobalWorkerOwnership(pool);
   await afterSessionEnd();
+});
+
+test("waiting worker takes over once the outgoing owner releases", async () => {
+  const server = new AdvisoryLockServer();
+  const pool = server.pool();
+  const outgoing = await acquireGlobalWorkerOwnership(pool);
+  const busyAttempts: number[] = [];
+  const incoming = await waitForGlobalWorkerOwnership(pool, {
+    onBusy: (attempt) => busyAttempts.push(attempt),
+    sleep: async () => { if (busyAttempts.length === 2) await outgoing(); },
+  });
+  assert.deepEqual(busyAttempts, [1, 2]);
+  assert.equal(server.locked, true);
+  await incoming();
+  assert.equal(server.locked, false);
+});
+
+test("waiting does not retry lock query failures", async () => {
+  const server = new AdvisoryLockServer();
+  server.failAcquire = true;
+  let sleeps = 0;
+  await assert.rejects(
+    waitForGlobalWorkerOwnership(server.pool(), { sleep: async () => { sleeps += 1; } }),
+    /database lock query failed/,
+  );
+  assert.equal(sleeps, 0);
 });
 
 test("activation is exact-match and off leaves only an old uncooperative worker running", () => {

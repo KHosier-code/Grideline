@@ -50,12 +50,31 @@ export function classifyProductionDatabaseFailure(
   return "database_connection_failed";
 }
 
+/**
+ * The underlying error's code and a scrubbed message ("password authentication
+ * failed for user [name]", "getaddrinfo ENOTFOUND [host]"), so an operator can
+ * see why startup failed. Connection strings, quoted names, host names and IP
+ * addresses are removed.
+ */
+export function describeDatabaseFailure(error: unknown) {
+  const raw = error instanceof Error ? error.message : String(error);
+  const code = error instanceof Error ? (error as ErrorWithCode).code : undefined;
+  const message = raw
+    .replace(/postgres(ql)?:\/\/\S+/gi, "[connection string]")
+    .replace(/"[^"]*"|'[^']*'/g, "[name]")
+    .replace(/\b\d{1,3}(\.\d{1,3}){3}\b/g, "[host]")
+    .replace(/\b[\w-]+(\.[\w-]+)+\b/g, "[host]")
+    .slice(0, 300);
+  return { errorCode: typeof code === "string" ? code : null, errorMessage: message };
+}
+
 export function createProductionDatabaseAlert(error: unknown) {
   return {
     event: "production_database_startup_gate_failed",
     severity: "critical",
     service: "gridline",
     failureCategory: classifyProductionDatabaseFailure(error),
+    ...describeDatabaseFailure(error),
     deployment: process.env.REPL_ID ?? "current-production-deployment",
     monitoringChannel: "replit_app_monitoring_email",
     action: "api_and_worker_not_started",

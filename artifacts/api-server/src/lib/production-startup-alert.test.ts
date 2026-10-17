@@ -58,6 +58,8 @@ test("alert contains only allow-listed operational metadata", () => {
       severity: "critical",
       service: "gridline",
       failureCategory: "database_connection_failed",
+      errorCode: "ECONNREFUSED",
+      errorMessage: "connect [host] failed",
       deployment: "deployment-project-123",
       monitoringChannel: "replit_app_monitoring_email",
       action: "api_and_worker_not_started",
@@ -70,4 +72,17 @@ test("alert contains only allow-listed operational metadata", () => {
     if (originalReplId === undefined) delete process.env.REPL_ID;
     else process.env.REPL_ID = originalReplId;
   }
+});
+test("database alert keeps the reason but scrubs names, hosts and connection strings", async () => {
+  const { describeDatabaseFailure } = await import("./production-startup-alert");
+  assert.deepEqual(
+    describeDatabaseFailure(Object.assign(new Error('password authentication failed for user "neondb_owner"'), { code: "28P01" })),
+    { errorCode: "28P01", errorMessage: "password authentication failed for user [name]" },
+  );
+  assert.deepEqual(
+    describeDatabaseFailure(Object.assign(new Error("getaddrinfo ENOTFOUND ep-x-pooler.c-7.us-east-2.aws.neon.tech"), { code: "ENOTFOUND" })),
+    { errorCode: "ENOTFOUND", errorMessage: "getaddrinfo ENOTFOUND [host]" },
+  );
+  const leaked = describeDatabaseFailure(new Error("bad url postgresql://u:p@h.example/db and 10.0.0.1"));
+  assert.doesNotMatch(JSON.stringify(leaked), /u:p|h\.example|10\.0\.0\.1/);
 });
