@@ -37,16 +37,24 @@ if (recovery) {
 }
 
 const { logger } = await import("./lib/logger");
-const { acquireGlobalWorkerOwnership } = await import("./lib/worker-ownership");
+const { acquireGlobalWorkerOwnership, waitForGlobalWorkerOwnership } = await import("./lib/worker-ownership");
 
 let release;
 try {
-  release = await acquireGlobalWorkerOwnership(pool, {
-    onConnectionLost: (error) => {
+  const ownershipOptions = {
+    onConnectionLost: (error: Error) => {
       logger.error({ error }, "Global worker ownership connection lost; exiting fail-closed");
       process.exit(1);
     },
-  });
+  };
+  // Rehearsal and recovery are one-shot runs and must not queue behind a
+  // live worker; the long-running worker waits out a rolling deploy instead.
+  release = rehearsal || recovery
+    ? await acquireGlobalWorkerOwnership(pool, ownershipOptions)
+    : await waitForGlobalWorkerOwnership(pool, {
+      ...ownershipOptions,
+      onBusy: (attempt) => logger.warn({ attempt }, "Global worker lock is held by another worker; waiting"),
+    });
 } catch (error) {
   if (recovery) {
     process.stdout.write(`${JSON.stringify(playerRecoveryRefusal(process.env, "ownership_unavailable"))}\n`);
