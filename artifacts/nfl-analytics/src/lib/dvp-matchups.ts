@@ -1,5 +1,5 @@
 import type { ConsumerGame } from '@workspace/api-client-react';
-import { normalizeTeam } from './parlay';
+import { normalizeTeam } from './team-codes';
 import type { DefenseLine, UsageReport } from './usage-report';
 
 /**

@@ -14,7 +14,7 @@ import { TeamChip } from '@/components/GameBoard';
 import { TONE_LABEL, defenseLine, type MatchupTone, type Position } from '@/lib/dvp-matchups';
 import { cell, findTeam } from '@/lib/matchup-edges';
 import { useMatchupReport } from '@/lib/matchup-report';
-import { normalizeTeam } from '@/lib/parlay';
+import { normalizeTeam } from '@/lib/team-codes';
 import { tdMatchupTones } from '@/lib/td-matchup';
 import { useUsageReport } from '@/lib/usage-report';
 

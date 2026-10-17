@@ -6,7 +6,7 @@ import { rankCellStyle, teamName } from '@/lib/team-colors';
 import { fixed, pct, useUsageReport, type UsagePlayer, type UsageReport, type UsageWindow } from '@/lib/usage-report';
 import { getGetConsumerDashboardQueryKey, useGetConsumerDashboard } from '@workspace/api-client-react';
 import { MatchupTag } from '@/components/GameDvp';
-import { normalizeTeam } from '@/lib/parlay';
+import { normalizeTeam } from '@/lib/team-codes';
 import { nextGames, playerMatchup, type NextGame } from '@/lib/dvp-matchups';
 import { ConsumerLoading, useConsumerNow } from './consumer-ui';
 

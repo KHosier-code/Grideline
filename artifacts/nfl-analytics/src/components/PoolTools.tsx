@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ConsumerGame } from '@workspace/api-client-react';
 import { TeamLogo } from '@/components/TeamLogo';
 import { abbr, other, type PoolGame } from '@/components/GameSim';
-import { normalizeTeam } from '@/lib/parlay';
+import { normalizeTeam } from '@/lib/team-codes';
 import { contrarianOptions, expectedPoints, survivorOptions, type PoolPick } from '@/lib/pool-strategy';
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;

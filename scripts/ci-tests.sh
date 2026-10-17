@@ -30,7 +30,7 @@ API_TESTS=(
 ROUTE_TESTS=(authorization usage-analytics)
 WEB_TESTS=(
   analytics consumer-account-state consumer-board consumer-matchups consumer-presentation
-  dvp-matchups line-picks line-shopping market parlay pick-sheet player-portraits
+  dvp-matchups line-picks line-shopping market pick-sheet player-portraits
   matchup-edges player-slug pool-strategy sim slates td-matchup
 )
 

@@ -2,7 +2,7 @@ import { Link } from 'wouter';
 import { TeamLogo } from './TeamLogo';
 import { rankCellStyle, teamName } from '@/lib/team-colors';
 import { POSITIONS, TONE_LABEL, defenseLine, matchupTone, type MatchupTone, type Position } from '@/lib/dvp-matchups';
-import { normalizeTeam } from '@/lib/parlay';
+import { normalizeTeam } from '@/lib/team-codes';
 import { fixed, pct, useUsageReport, type UsageReport } from '@/lib/usage-report';
 
 const PILL: Record<MatchupTone, string> = { favorable: 'win', tough: 'loss', neutral: 'small' };

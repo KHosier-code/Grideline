@@ -7,7 +7,7 @@ import {
 } from '@workspace/api-client-react';
 import { TeamLogo } from '@/components/TeamLogo';
 import { PoolStrategy, SurvivorPlanner } from '@/components/PoolTools';
-import { normalizeTeam } from '@/lib/parlay';
+import { normalizeTeam } from '@/lib/team-codes';
 import { shareCardImage } from '@/lib/share-image';
 import { HundredGrid, Simulator, TeamSide, abbr, other, toPoolGame, type PoolGame, type Side } from '@/components/GameSim';
 import { buildGameView, currentWeek } from '@/lib/pick-sheet';
