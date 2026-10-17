@@ -283,6 +283,7 @@ export default function ConsumerPerformance() {
         caption="Each week's top 10 who scored, in testing"
         rows={[['This season, top 5', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topFive.hits}/${tdRecord.topFive.picks}` : 'After the first graded week'],
           ['This season, top 10', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topTenHits}/${tdRecord.topTenPicks}` : 'After the first graded week'],
+          ['Value 5 (longer odds)', td?.valueRecord && td.valueRecord.picks > 0 ? `${td.valueRecord.hits}/${td.valueRecord.picks}, ${unitsShort(td.valueRecord.units)}` : 'After the first graded pick'],
           ['Ranking accuracy (AUC)', td?.evaluation.auc != null ? td.evaluation.auc.toFixed(3) : '—']]} />
       <SummaryCard title="Against the spread" icon={<Target />} value={ats !== null ? pct(ats) : '—'}
         caption="Taking our side of the Vegas closing line"

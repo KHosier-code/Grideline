@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { TouchdownPickRow } from "@workspace/db";
 import {
-  boardForWeek, bookComparison, bookFairProbability, decimalOdds, expectedValue, fairAmericanOdds, isValuePick, topTenRecord, valueRecord,
+  boardForWeek, bookComparison, bookFairProbability, decimalOdds, expectedValue, fairAmericanOdds, isValueCandidate, mergePropReports, topTenRecord, valueFive, valueRecord,
 } from "./touchdown-board";
 
 const factors = {
@@ -74,23 +74,49 @@ test("top-10 profit uses each pick's book price and skips unpriced picks", () =>
   assert.equal(record.weeks[0].pricedPicks, 9);
 });
 
-test("value picks are top-5 picks priced longer than fair odds", () => {
+test("value candidates need plus money and a 5-cent edge", () => {
   assert.equal(decimalOdds(150), 2.5);
   assert.equal(decimalOdds(-200), 1.5);
   assert.ok(Math.abs(expectedValue(0.6, -120) - 0.1) < 1e-9);
-  assert.equal(isValuePick(1, 0.6, -120), true);   // fair is -150, book pays more
-  assert.equal(isValuePick(1, 0.6, -200), false);  // book pays less than fair
-  assert.equal(isValuePick(6, 0.6, -120), false);  // outside the top 5
-  assert.equal(isValuePick(1, 0.6, null), false);  // no price captured
+  assert.equal(isValueCandidate(0.36, 200), true);   // +8 cents per $1
+  assert.equal(isValueCandidate(0.35, 190), false);  // under the 5-cent floor
+  assert.equal(isValueCandidate(0.6, -120), false);  // favorites belong to the Top 5, not Value 5
+  assert.equal(isValueCandidate(0.6, 140), false);   // shorter than +150
+  assert.equal(isValueCandidate(0.35, null), false); // no price captured
 });
 
-test("value record counts graded value picks at 1 unit each", () => {
-  const board = ["a", "b", "c", "d", "e", "f"].map((id, index) => ({ ...pick(id, 0.6 - index * 0.01, SUN), generatedAt: new Date(), lockedAt: new Date() }));
-  const prices: Record<string, number> = { a: -120, b: 110, c: -300, d: 150, f: 400 };
-  const results = new Map([["a", true], ["b", false], ["c", true], ["f", true]]);
-  const record = valueRecord([{ week: 4, board, results, price: (entry) => prices[entry.playerId] ?? null }]);
-  // a wins at -120 (+0.83), b loses (-1); c isn't value; d has no result yet; e has no price; f is outside the top 5.
-  assert.deepEqual(record, { picks: 2, hits: 1, units: -0.17, weeks: [{ week: 4, picks: 2, hits: 1, units: -0.17 }] });
+test("Value 5 locks each pick at its kickoff, so a Thursday loss can't drop off later", () => {
+  const early = new Date("2026-10-01T12:00:00Z");
+  const runs = [{ generatedAt: early, picks: [pick("thu", 0.3, THU), ...["s1", "s2", "s3", "s4", "s5"].map((id) => pick(id, 0.3, SUN))] }];
+  // Thursday's capture priced only the Thursday game; Saturday's priced Sunday at longer odds.
+  const saturday = new Date("2026-10-03T14:00:00Z");
+  const priceAt = (entry: { playerId: string }, before: Date) =>
+    entry.playerId === "thu" ? 260 : before > saturday ? 400 : null;
+  const sundayMorning = new Date("2026-10-04T12:00:00Z");
+  const picks = valueFive(runs, sundayMorning, priceAt);
+  // Sunday's five now beat Thursday's edge, yet the Thursday pick stays at the price it was chosen at.
+  assert.deepEqual([...picks.keys()].sort(), ["s1", "s2", "s3", "s4", "s5", "thu"]);
+  assert.equal(picks.get("thu")!.price, 260);
+  assert.equal(picks.get("thu")!.selectedAt.toISOString(), THU.replace("Z", ".000Z"));
+  // Before Saturday's capture only the Thursday game had a price.
+  assert.deepEqual([...valueFive(runs, new Date("2026-10-01T13:00:00Z"), priceAt).keys()], ["thu"]);
+});
+
+test("Value 5 ignores runs posted after a game started", () => {
+  const late = { generatedAt: new Date("2026-10-04T18:00:00Z"), picks: [pick("s1", 0.5, SUN)] };
+  const early = { generatedAt: new Date("2026-10-04T12:00:00Z"), picks: [pick("s1", 0.2, SUN)] };
+  // At kickoff s1 was 20% at +300 (EV -0.2), so it was never a value pick, whatever the later run says.
+  const picks = valueFive([early, late], new Date("2026-10-05T00:00:00Z"), () => 300);
+  assert.equal(picks.size, 0);
+});
+
+test("value record grades each pick at the price it was chosen at", () => {
+  const chosen = (id: string, price: number) => [id, { entry: { ...pick(id, 0.3, SUN), generatedAt: new Date(), lockedAt: new Date() },
+    price, expectedValue: 0.1, selectedAt: new Date(SUN) }] as const;
+  const picks = new Map([chosen("a", 250), chosen("b", 300), chosen("c", 400)]);
+  const results = new Map([["a", true], ["b", false]]);
+  // a wins at +250 (+2.5), b loses (-1), c has no result yet.
+  assert.deepEqual(valueRecord([{ week: 4, picks, results }]), { picks: 2, hits: 1, units: 1.5, weeks: [{ week: 4, picks: 2, hits: 1, units: 1.5 }] });
 });
 
 test("book chance takes the cut out and averages the books", () => {
@@ -120,4 +146,18 @@ test("a touchdown run received after kickoff doesn't change that game's board", 
   const late = { generatedAt: new Date("2026-10-04T15:00:00Z"), receivedAt: new Date("2026-10-04T18:00:00Z"), picks: [pick("p", 0.9, SUN)] };
   const [entry] = boardForWeek([before, late], new Date("2026-10-05T00:00:00Z"));
   assert.equal(entry.probability, 0.3);
+});
+
+test("a week's price captures merge, newest per game, and can be read as of a time", () => {
+  const event = (eventId: string, price: number) => ({ eventId, teams: ["AAA", "BBB"], commence: SUN, players: { x: [{ book: "draftkings", price }] } });
+  const thursday = { capturedAt: "2026-10-01T14:00:00Z", creditsRemaining: 300, events: [event("thu", 150)] };
+  const friday = { capturedAt: "2026-10-02T14:00:00Z", creditsRemaining: 290, events: [event("sun", 180)] };
+  const saturday = { capturedAt: "2026-10-03T14:00:00Z", creditsRemaining: 280, events: [event("sun", 200)] };
+  const merged = mergePropReports([thursday, saturday, friday])!;
+  // Saturday's capture has no Thursday game; Thursday's prices must survive it.
+  assert.deepEqual(merged.events.map((item) => [item.eventId, item.players.x[0].price]).sort(), [["sun", 200], ["thu", 150]]);
+  assert.equal(merged.capturedAt, saturday.capturedAt);
+  const asOfFriday = mergePropReports([thursday, saturday, friday], new Date("2026-10-03T00:00:00Z"))!;
+  assert.deepEqual(asOfFriday.events.map((item) => [item.eventId, item.players.x[0].price]).sort(), [["sun", 180], ["thu", 150]]);
+  assert.equal(mergePropReports([saturday], new Date("2026-10-01T00:00:00Z")), null);
 });

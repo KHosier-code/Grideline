@@ -1737,11 +1737,11 @@ components:
           description: Expected profit per 1 unit staked at the best book price, using our probability; null without a price
         value:
           type: boolean
-          description: A top-5 pick whose best book price pays more than our probability says it should
+          description: In this week's Value 5 (+150 or longer, 5+ cents of expected profit per $1 at the best book price; locked at kickoff)
     ConsumerTouchdownValueRecord:
       type: object
       required: [picks, hits, units, weeks]
-      description: Graded value picks this season, 1 unit each at the captured price
+      description: Graded Value 5 picks this season (plus money, 5+ cents of expected profit per $1, locked at kickoff), 1 unit each at the price each was chosen at
       properties:
         picks: { type: integer }
         hits: { type: integer }

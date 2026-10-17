@@ -8,7 +8,7 @@
 import type { ConsumerTouchdownValueRecordWeeksItem } from './consumerTouchdownValueRecordWeeksItem';
 
 /**
- * Graded value picks this season, 1 unit each at the captured price
+ * Graded Value 5 picks this season (plus money, 5+ cents of expected profit per $1, locked at kickoff), 1 unit each at the price each was chosen at
  */
 export interface ConsumerTouchdownValueRecord {
   picks: number;

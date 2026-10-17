@@ -39,6 +39,6 @@ export interface ConsumerTouchdownPick {
      * @nullable
      */
   expectedValue: number | null;
-  /** A top-5 pick whose best book price pays more than our probability says it should */
+  /** In this week's Value 5 (+150 or longer, 5+ cents of expected profit per $1 at the best book price; locked at kickoff) */
   value: boolean;
 }

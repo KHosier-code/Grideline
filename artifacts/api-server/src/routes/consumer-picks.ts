@@ -11,12 +11,12 @@ import {
 } from "../lib/game-projections";
 import { loadSeasonProjectionData } from "../lib/projection-data";
 import {
-  bookComparison, bookFairProbability, boardForWeek, expectedValue, fairAmericanOdds, isValuePick, topTenRecord, valueRecord,
+  bookComparison, bookFairProbability, boardForWeek, expectedValue, fairAmericanOdds, mergePropReports, topTenRecord, valueFive, valueRecord,
 } from "../lib/touchdown-board";
 import { captureOddsSnapshots, getOddsSchedulingBalance, oddsCaptureQuotaDecision } from "../lib/odds";
 import { ODDS_BACKUP_RECENT_MS, recentOddsCapture } from "../lib/kickoff-clock";
 import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEmail, subscribe } from "../lib/newsletter";
-import { bestBookPrice, captureTouchdownProps, touchdownPropsForSeason } from "../lib/td-props";
+import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
 import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
 import { footballTime } from "../lib/feed-schedule";
@@ -61,11 +61,12 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
       res.json(empty);
       return;
     }
-    const { seasonRuns, boards, resultsByWeek, propsByWeek } = await loadSeasonBoards(selected.season);
+    const { seasonRuns, boards, resultsByWeek, propsByWeek, valueByWeek } = await loadSeasonBoards(selected.season);
     const board = boards.get(selected.week) ?? [];
     const latest = seasonRuns.filter((run) => run.week === selected.week).at(-1)!;
     const weekResults = resultsByWeek.get(selected.week) ?? new Map<string, boolean>();
     const props = propsByWeek.get(selected.week) ?? null;
+    const valuePicks = valueByWeek.get(selected.week) ?? new Map();
     const evaluation = latest.evaluation as Record<string, unknown>;
     const numberOrNull = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
     res.json({
@@ -79,15 +80,14 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
         auc: numberOrNull(evaluation.auc),
         testedOn: typeof evaluation.testedOn === "string" ? evaluation.testedOn : null,
       },
-      picks: board.map((entry, index) => pickView(entry, index, weekResults, props)),
+      picks: board.map((entry, index) => pickView(entry, index, weekResults, props, valuePicks.has(entry.playerId))),
       weeks: available,
       record: topTenRecord([...boards.entries()].map(([weekNumber, weekBoard]) => ({
         week: weekNumber, board: weekBoard, results: resultsByWeek.get(weekNumber) ?? new Map(),
         price: (entry) => bestBookPrice(propsByWeek.get(weekNumber) ?? null, entry.name, entry.team)?.price ?? null,
       }))),
-      valueRecord: valueRecord([...boards.entries()].map(([weekNumber, weekBoard]) => ({
-        week: weekNumber, board: weekBoard, results: resultsByWeek.get(weekNumber) ?? new Map(),
-        price: (entry) => bestBookPrice(propsByWeek.get(weekNumber) ?? null, entry.name, entry.team)?.price ?? null,
+      valueRecord: valueRecord([...valueByWeek.entries()].map(([weekNumber, picks]) => ({
+        week: weekNumber, picks, results: resultsByWeek.get(weekNumber) ?? new Map(),
       }))),
       bookComparison: bookComparison([...boards.entries()].flatMap(([weekNumber, weekBoard]) => {
         const weekResults = resultsByWeek.get(weekNumber);
@@ -124,13 +124,22 @@ async function loadSeasonBoards(season: number, now = new Date()) {
   for (const weekNumber of new Set(seasonRuns.map((run) => run.week))) {
     boards.set(weekNumber, boardForWeek(seasonRuns.filter((run) => run.week === weekNumber), now));
   }
-  const propsByWeek = await touchdownPropsForSeason(season).catch(() => new Map());
-  return { seasonRuns, boards, resultsByWeek, propsByWeek };
+  const captures = await touchdownPropCaptures(season).catch(() => new Map<number, TouchdownPropsReport[]>());
+  const propsByWeek = new Map<number, TouchdownPropsReport>();
+  const valueByWeek = new Map<number, ReturnType<typeof valueFive>>();
+  for (const weekNumber of boards.keys()) {
+    const weekCaptures = captures.get(weekNumber) ?? [];
+    const merged = mergePropReports(weekCaptures);
+    if (merged) propsByWeek.set(weekNumber, merged);
+    valueByWeek.set(weekNumber, valueFive(seasonRuns.filter((run) => run.week === weekNumber), now,
+      (entry, before) => bestBookPrice(mergePropReports(weekCaptures, before), entry.name, entry.team)?.price ?? null));
+  }
+  return { seasonRuns, boards, resultsByWeek, propsByWeek, valueByWeek };
 }
 
 /** One player's row as the TD Picks page shows it. */
 function pickView(entry: ReturnType<typeof boardForWeek>[number], index: number, weekResults: Map<string, boolean>,
-  props: Parameters<typeof bestBookPrice>[0]) {
+  props: Parameters<typeof bestBookPrice>[0], value = false) {
   const bookOdds = bestBookPrice(props, entry.name, entry.team);
   return {
     rank: index + 1,
@@ -148,7 +157,7 @@ function pickView(entry: ReturnType<typeof boardForWeek>[number], index: number,
     scored: weekResults.has(entry.playerId) ? weekResults.get(entry.playerId)! : null,
     bookOdds,
     expectedValue: bookOdds ? Math.round(expectedValue(entry.probability, bookOdds.price) * 1000) / 1000 : null,
-    value: isValuePick(index + 1, entry.probability, bookOdds?.price),
+    value,
   };
 }
 
@@ -221,7 +230,8 @@ router.get("/consumer/touchdowns/player/:slug", async (req, res): Promise<void> 
       status: "available", slug, season: latest.season, week: latest.week,
       name: identity.name, team: identity.team, position: identity.position,
       generatedAt: data.seasonRuns.filter((run) => run.week === latest.week).at(-1)?.generatedAt.toISOString() ?? null,
-      pick: current ? pickView(current.entry, current.index, data.resultsByWeek.get(latest.week) ?? new Map(), data.propsByWeek.get(latest.week) ?? null) : null,
+      pick: current ? pickView(current.entry, current.index, data.resultsByWeek.get(latest.week) ?? new Map(), data.propsByWeek.get(latest.week) ?? null,
+        data.valueByWeek.get(latest.week)?.has(current.entry.playerId) ?? false) : null,
       boardSize: thisWeek.length,
       history,
     });

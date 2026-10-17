@@ -2882,7 +2882,7 @@ export const GetConsumerTouchdownsResponse = zod.object({
   "capturedAt": zod.coerce.date()
 }).nullish().describe('Best DraftKings or FanDuel anytime-TD price from the latest capture, when the player was listed'),
   "expectedValue": zod.number().nullable().describe('Expected profit per 1 unit staked at the best book price, using our probability; null without a price'),
-  "value": zod.boolean().describe('A top-5 pick whose best book price pays more than our probability says it should')
+  "value": zod.boolean().describe('In this week\'s Value 5 (+150 or longer, 5+ cents of expected profit per $1 at the best book price; locked at kickoff)')
 })),
   "weeks": zod.array(zod.object({
   "season": zod.number().int(),
@@ -2928,7 +2928,7 @@ export const GetConsumerTouchdownsResponse = zod.object({
   "hits": zod.number().int(),
   "units": zod.number()
 }))
-}).describe('Graded value picks this season, 1 unit each at the captured price'),
+}).describe('Graded Value 5 picks this season (plus money, 5+ cents of expected profit per $1, locked at kickoff), 1 unit each at the price each was chosen at'),
   "bookComparison": zod.object({
   "players": zod.number().int(),
   "weeks": zod.number().int(),

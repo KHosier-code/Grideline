@@ -61,7 +61,7 @@ function PickRow({ pick, rank, max, showEdge = false }: { pick: ConsumerTouchdow
         <span>
           <span className="pos">{pick.position}</span><TeamChip team={pick.team} />{pick.isHome ? 'vs' : 'at'} {pick.opponent} · {kickoffText(pick.kickoff)}
           {pick.rank <= 5 && <span className="gl-flag top" title="Our five most likely scorers this week, graded as their own tier on the record page">Top 5</span>}
-          {pick.value && <span className="gl-flag value" title="Top-5 pick priced longer than our fair odds">Value</span>}
+          {pick.value && <span className="gl-flag value" title="Plus-money price that beats our chance by 5 cents or more per $1">Value 5</span>}
           {edge !== null && <span className={`gl-flag ${edge > 0 ? 'value' : ''}`} title="Our chance minus the book's chance after its estimated cut">
             {edge > 0 ? '+' : '−'}{Math.abs(Math.round(edge * 100))} pts vs book</span>}
           {injury && <span className={`gl-flag${/^out$/i.test(injury) ? ' out' : ''}`}>{injury}</span>}
@@ -83,7 +83,7 @@ function PickRow({ pick, rank, max, showEdge = false }: { pick: ConsumerTouchdow
         <span className="gl-label">Sportsbooks</span>
         <b>{pick.bookOdds.books.map(item => `${BOOK_SHORT[item.book] ?? item.book} ${formatPrice(item.price)}`).join(' · ')}</b>
         <p>Book implies {pctOf(impliedProbability(pick.bookOdds.price))} with its cut, about {pctOf(tdFairProbability(pick.bookOdds.price))} without; we say {pctOf(pick.probability)}</p>
-        {pick.expectedValue !== null && <p>At {formatPrice(pick.bookOdds.price)}, expected return {pick.expectedValue >= 0 ? '+' : '−'}{Math.abs(Math.round(pick.expectedValue * 100))}¢ per $1{pick.value ? ': a value pick.' : pick.rank > 5 ? '. Value picks come from our top 5 only.' : '.'}</p>}
+        {pick.expectedValue !== null && <p>At {formatPrice(pick.bookOdds.price)}, expected return {pick.expectedValue >= 0 ? '+' : '−'}{Math.abs(Math.round(pick.expectedValue * 100))}¢ per $1{pick.value ? ': one of this week\'s Value 5.' : '.'}</p>}
         <p>Captured {new Date(pick.bookOdds.capturedAt).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}. Prices move; check your book.</p>
       </div>}
     </div>
@@ -119,6 +119,9 @@ export default function TouchdownPicks() {
   const max = Math.max(0.01, ...(data?.picks ?? []).map(pick => pick.probability));
   const record = data?.record;
   const value = data?.valueRecord;
+  // Value 5 is chosen on the server; show the ones still to play, best edge first.
+  const valueFive = upcoming.filter(pick => pick.value)
+    .sort((a, b) => (b.expectedValue ?? 0) - (a.expectedValue ?? 0));
 
   return <div className="gl-page">
     <header className="gl-hero">
@@ -133,7 +136,7 @@ export default function TouchdownPicks() {
         </div>}
         {record && record.weeksGraded > 0 && <TouchdownStat record={record} />}
         {value && value.picks > 0 && <div className="gl-stat">
-          <b><CountUp text={`${value.hits}/${value.picks} · ${units(value.units)}`} /></b><small>value picks this season, 1 unit each</small>
+          <b><CountUp text={`${value.hits}/${value.picks} · ${units(value.units)}`} /></b><small>Value 5 picks this season, 1 unit each at the price we picked them</small>
         </div>}
         {data?.evaluation.testedOn && <p className="gl-stats-note">Tested on {data.evaluation.testedOn}.</p>}
       </div>
@@ -159,6 +162,19 @@ export default function TouchdownPicks() {
     {query.isLoading && <ConsumerLoading label="Loading touchdown picks…" />}
     {query.isError && <div className="gl-empty"><strong>We couldn&apos;t load touchdown picks.</strong>Refresh the page in a minute.</div>}
     {data && data.status === 'unavailable' && <div className="gl-empty"><strong>This week&apos;s touchdown picks aren&apos;t posted yet.</strong>Rankings update Tuesday, Thursday, Friday after the injury report, Saturday, Sunday morning, after the 1:00 inactives, and before the Sunday and Monday night games.</div>}
+
+    {order === 'likely' && data?.status === 'available' && <section className="gl-section gl-value-five" aria-labelledby="value-five">
+      <div className="gl-section-head">
+        <h2 id="value-five">Value 5</h2>
+        <p>Longer odds where the book pays more than our chance says it should</p>
+      </div>
+      {valueFive.length > 0
+        ? <div className="gl-td-list">{valueFive.map(pick => <PickRow key={pick.playerId} pick={pick} rank={pick.rank} max={max} showEdge />)}</div>
+        : <p className="gl-note">{pricedGames.size
+          ? 'No player clears the bar right now: plus money (+150 or longer) and at least 5 cents of expected profit per $1 at the best price.'
+          : 'This fills in once sportsbook prices are captured: Thursday morning for Thursday night, Saturday morning for Sunday and Monday.'}</p>}
+      <p className="gl-note">New and unproven: we couldn&apos;t test it on past prices, so every Value 5 pick is graded live, 1 unit at the price we picked it, on <Link href="/performance" className="gl-link">the record page</Link>. A pick is locked when its game kicks off. Prices move, so check your book.</p>
+    </section>}
 
     {order === 'value' && data?.status === 'available' && <p className="gl-note">
       {pricedGames.size
@@ -187,9 +203,10 @@ export default function TouchdownPicks() {
 
     <footer className="gl-card" style={{ padding: 18 }}>
       <div className="gl-footer-inner" style={{ padding: 0 }}>
-        <p><b>Fair odds</b>The price that matches our probability. In testing on 2021 through 2026, our top 5 players each week scored 55% of the time (43% to 64% depending on the season), and our percentages matched how often players actually scored. The model averages five fits so one random draw can&apos;t move the board.</p>
+        <p><b>Fair odds</b>The price that matches our probability. In testing on 2022 through 2026, our top 5 players each week scored 58.5% of the time, and our percentages matched how often players actually scored. The model averages five fits so one random draw can&apos;t move the board.</p>
         <p><b>Book</b>The best anytime-TD price at DraftKings or FanDuel when we last checked. Books keep a cut of roughly 20% on these bets, so compare our chance with the book&apos;s chance after the cut, not the raw price.</p>
-        <p><b>Value</b>A top-5 pick whose best book price pays more than our probability says it should, so it returns money on average if our numbers are right. We haven&apos;t been able to test this against past prices, so we track every value pick here at the price we captured, 1 unit each. Prices move; check your book before betting.</p>
+        <p><b>Top 5</b>Our five most likely scorers. In testing on 2022 through 2026 they scored 58.5% of the time, against 53.7% for the top 10. Graded as their own tier on the record page.</p>
+        <p><b>Value 5</b>Up to five players at +150 or longer whose best book price pays at least 5 cents per $1 more than our probability says it should. These lose more often than the Top 5 but pay more when they hit. We haven&apos;t been able to test this against past prices, so each pick is locked at kickoff and graded at the price we picked it, 1 unit each. Prices move; check your book before betting.</p>
         <p><b>Red-zone touches</b>Targets plus carries inside the opponent&apos;s 20-yard line, per game over the player&apos;s last 8 games.</p>
         <p><b>Matchup</b>Touchdowns this defense allowed to the position over its last 8 games, compared with the league average. <Link href="/defense-vs-position" className="gl-link">See all matchups</Link>.</p>
       </div>

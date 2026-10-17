@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db, touchdownPickRunsTable, weeklyReportsTable } from "@workspace/db";
+import { mergePropReports } from "./touchdown-board";
 
 /**
  * Anytime-touchdown prices from DraftKings and FanDuel via the Odds API.
@@ -150,14 +151,21 @@ export async function latestTouchdownProps(season: number, week: number): Promis
   return row ? (row.payload as unknown as TouchdownPropsReport) : null;
 }
 
-/** The latest captured prices for each week of a season. */
-export async function touchdownPropsForSeason(season: number): Promise<Map<number, TouchdownPropsReport>> {
+/** Every TD-price capture of a season, grouped by week. */
+export async function touchdownPropCaptures(season: number): Promise<Map<number, TouchdownPropsReport[]>> {
   const rows = await db.select().from(weeklyReportsTable)
     .where(and(eq(weeklyReportsTable.kind, "td-props"), eq(weeklyReportsTable.season, season)))
     .orderBy(desc(weeklyReportsTable.generatedAt));
-  const byWeek = new Map<number, TouchdownPropsReport>();
-  for (const row of rows) {
-    if (!byWeek.has(row.week)) byWeek.set(row.week, row.payload as unknown as TouchdownPropsReport);
-  }
+  const byWeek = new Map<number, TouchdownPropsReport[]>();
+  for (const row of rows) byWeek.set(row.week, [...(byWeek.get(row.week) ?? []), row.payload as unknown as TouchdownPropsReport]);
   return byWeek;
+}
+
+/** Each week's captures merged: the newest price for every game. */
+export async function touchdownPropsForSeason(season: number): Promise<Map<number, TouchdownPropsReport>> {
+  const captures = await touchdownPropCaptures(season);
+  return new Map([...captures].flatMap(([week, reports]) => {
+    const merged = mergePropReports(reports);
+    return merged ? [[week, merged] as const] : [];
+  }));
 }
