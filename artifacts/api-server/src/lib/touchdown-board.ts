@@ -1,5 +1,6 @@
 import type { TouchdownPickRow } from "@workspace/db";
 import { lockedAt } from "./game-projections";
+import type { PropEvent, TouchdownPropsReport } from "./td-props";
 
 /** `receivedAt` is the server's clock; a run counts from the later of the two (see lockedAt). */
 export type TouchdownRun = { generatedAt: Date; receivedAt?: Date; picks: TouchdownPickRow[] };
@@ -41,7 +42,10 @@ export function fairAmericanOdds(probability: number) {
   return p >= 0.5 ? -Math.round((100 * p) / (1 - p)) : Math.round((100 * (1 - p)) / p);
 }
 
-/** Top-10 record over weeks where every top-10 player has a graded result. */
+/** The featured tier on the TD page, graded on its own. In 2022-2026 testing the top 5 scored 58.5% vs 53.7% for the top 10. */
+export const TOP_TIER = 5;
+
+/** Top-10 record (and the top 5 within it) over weeks where every top-10 player has a graded result. */
 export function topTenRecord(
   weeks: Array<{ week?: number; board: BoardEntry[]; results: Map<string, boolean>; price?: (entry: BoardEntry) => number | null }>,
 ) {
@@ -50,7 +54,8 @@ export function topTenRecord(
   let topTenHits = 0;
   let expectedHits = 0;
   const priced = { picks: 0, hits: 0, units: 0 };
-  const byWeek: Array<{ week: number; picks: number; hits: number; expectedHits: number; pricedPicks: number; units: number }> = [];
+  const topFive = { picks: 0, hits: 0, expectedHits: 0, priced: { picks: 0, hits: 0, units: 0 } };
+  const byWeek: Array<{ week: number; picks: number; hits: number; expectedHits: number; pricedPicks: number; units: number; topFiveHits: number }> = [];
   for (const { week, board, results, price } of weeks) {
     const top = board.slice(0, 10);
     if (top.length < 10 || top.some((entry) => !results.has(entry.playerId))) continue;
@@ -59,13 +64,25 @@ export function topTenRecord(
     // 1 unit on each top-10 pick that had a captured DraftKings/FanDuel price.
     let pricedPicks = 0;
     let units = 0;
-    for (const entry of top) {
+    top.forEach((entry, index) => {
       const odds = price?.(entry);
-      if (typeof odds !== "number" || !Number.isFinite(odds) || odds === 0) continue;
+      if (typeof odds !== "number" || !Number.isFinite(odds) || odds === 0) return;
+      const won = results.get(entry.playerId)!;
+      const unit = won ? decimalOdds(odds) - 1 : -1;
       pricedPicks += 1;
-      units += results.get(entry.playerId) ? decimalOdds(odds) - 1 : -1;
-      if (results.get(entry.playerId)) priced.hits += 1;
-    }
+      units += unit;
+      if (won) priced.hits += 1;
+      if (index < TOP_TIER) {
+        topFive.priced.picks += 1;
+        topFive.priced.units += unit;
+        if (won) topFive.priced.hits += 1;
+      }
+    });
+    const tier = top.slice(0, TOP_TIER);
+    const tierHits = tier.filter((entry) => results.get(entry.playerId)).length;
+    topFive.picks += tier.length;
+    topFive.hits += tierHits;
+    topFive.expectedHits += tier.reduce((sum, entry) => sum + entry.probability, 0);
     weeksGraded += 1;
     topTenPicks += top.length;
     topTenHits += hits;
@@ -73,19 +90,20 @@ export function topTenRecord(
     priced.picks += pricedPicks;
     priced.units += units;
     if (week !== undefined) {
-      byWeek.push({ week, picks: top.length, hits, expectedHits: Math.round(expected * 10) / 10, pricedPicks, units: Math.round(units * 100) / 100 });
+      byWeek.push({ week, picks: top.length, hits, expectedHits: Math.round(expected * 10) / 10, pricedPicks, units: Math.round(units * 100) / 100, topFiveHits: tierHits });
     }
   }
   return {
     weeksGraded, topTenPicks, topTenHits,
     expectedHits: Math.round(expectedHits * 10) / 10,
     priced: { ...priced, units: Math.round(priced.units * 100) / 100 },
+    topFive: {
+      picks: topFive.picks, hits: topFive.hits, expectedHits: Math.round(topFive.expectedHits * 10) / 10,
+      priced: { ...topFive.priced, units: Math.round(topFive.priced.units * 100) / 100 },
+    },
     weeks: byWeek.sort((a, b) => a.week - b.week),
   };
 }
-
-/** Picks this high on the weekly board can be flagged as value. In testing on 2021-2026 the top 5 scored 55% of the time. */
-export const VALUE_TOP_N = 5;
 
 /** Total return per 1 staked (stake included) at American odds. */
 export function decimalOdds(american: number) {
@@ -97,33 +115,80 @@ export function expectedValue(probability: number, american: number) {
   return probability * decimalOdds(american) - 1;
 }
 
-/** A top-5 pick whose best book price pays more than our probability says it should. */
-export function isValuePick(rank: number, probability: number, bookPrice: number | null | undefined) {
-  return rank <= VALUE_TOP_N && typeof bookPrice === "number" && Number.isFinite(bookPrice) && bookPrice !== 0
-    && expectedValue(probability, bookPrice) > 0;
+/**
+ * Value 5: the five players, among games not yet started, whose best book
+ * price beats our probability by the most. Plus money only (+150 or longer),
+ * and at least 5 cents of expected profit per dollar so a rounding-sized
+ * edge never makes the list. Untested against past prices: graded live.
+ */
+export const VALUE_FIVE = { size: 5, minPrice: 150, minEdge: 0.05 } as const;
+
+export function isValueCandidate(probability: number, bookPrice: number | null | undefined) {
+  return typeof bookPrice === "number" && Number.isFinite(bookPrice) && bookPrice >= VALUE_FIVE.minPrice
+    && expectedValue(probability, bookPrice) >= VALUE_FIVE.minEdge;
+}
+
+export type ValuePick = { entry: BoardEntry; price: number; expectedValue: number; selectedAt: Date };
+
+function startsAt(entry: { kickoff: string | null }) {
+  const kickoff = entry.kickoff ? new Date(entry.kickoff) : null;
+  return kickoff && !Number.isNaN(kickoff.getTime()) ? kickoff : null;
+}
+
+/** The list a bettor could act on at `at`: players whose games start at or after it. */
+function valueListAt(board: BoardEntry[], at: Date, price: (entry: BoardEntry) => number | null) {
+  return board.flatMap((entry) => {
+    const kickoff = startsAt(entry);
+    const odds = price(entry);
+    if (!kickoff || kickoff < at || !isValueCandidate(entry.probability, odds)) return [];
+    return [{ entry, price: odds!, expectedValue: expectedValue(entry.probability, odds!), selectedAt: at }];
+  }).sort((a, b) => b.expectedValue - a.expectedValue || b.entry.probability - a.entry.probability).slice(0, VALUE_FIVE.size);
 }
 
 /**
- * Season record of value picks, 1 unit on each at the captured price. Only
- * graded picks count, so a week with games still to play adds what has finished.
+ * A week's Value 5 picks. Each player's membership is fixed at his own
+ * kickoff from the runs and prices that existed before it, so a pick that
+ * lost can never drop off the list later and nothing is chosen with
+ * hindsight. Games still to come use the current board and prices.
+ * `priceAt(entry, before)` gives the best price captured before that time.
  */
-export function valueRecord(
-  weeks: Array<{ week: number; board: BoardEntry[]; results: Map<string, boolean>; price: (entry: BoardEntry) => number | null }>,
-) {
+export function valueFive(runs: TouchdownRun[], now: Date, priceAt: (entry: BoardEntry, before: Date) => number | null) {
+  const picks = new Map<string, ValuePick>();
+  const kickoffs = [...new Set(runs.flatMap((run) => run.picks.map((pick) => startsAt(pick)?.getTime() ?? NaN))
+    .filter((time) => Number.isFinite(time) && time <= now.getTime()))].sort((a, b) => a - b);
+  for (const time of kickoffs) {
+    const at = new Date(time);
+    const before = runs.filter((run) => lockedAt(run) < at);
+    if (!before.length) continue;
+    for (const pick of valueListAt(boardForWeek(before, at), at, (entry) => priceAt(entry, at))) {
+      if (startsAt(pick.entry)!.getTime() === time) picks.set(pick.entry.playerId, pick);
+    }
+  }
+  const upcoming = new Date(now.getTime() + 1);
+  for (const pick of valueListAt(boardForWeek(runs, now), upcoming, (entry) => priceAt(entry, now))) {
+    picks.set(pick.entry.playerId, pick);
+  }
+  return picks;
+}
+
+/**
+ * Season record of Value 5 picks, 1 unit on each at the price it was chosen
+ * at. Only graded picks count, so a week still being played adds what has finished.
+ */
+export function valueRecord(weeks: Array<{ week: number; picks: Map<string, ValuePick>; results: Map<string, boolean> }>) {
   let picks = 0;
   let hits = 0;
   let units = 0;
   const byWeek: Array<{ week: number; picks: number; hits: number; units: number }> = [];
-  for (const { week, board, results, price } of weeks) {
+  for (const { week, picks: chosen, results } of weeks) {
     const line = { week, picks: 0, hits: 0, units: 0 };
-    board.slice(0, VALUE_TOP_N).forEach((entry, index) => {
-      const odds = price(entry);
-      if (!isValuePick(index + 1, entry.probability, odds) || !results.has(entry.playerId)) return;
-      const scored = results.get(entry.playerId)!;
+    for (const pick of chosen.values()) {
+      if (!results.has(pick.entry.playerId)) continue;
+      const scored = results.get(pick.entry.playerId)!;
       line.picks += 1;
       line.hits += scored ? 1 : 0;
-      line.units += scored ? decimalOdds(odds!) - 1 : -1;
-    });
+      line.units += scored ? decimalOdds(pick.price) - 1 : -1;
+    }
     if (!line.picks) continue;
     picks += line.picks;
     hits += line.hits;
@@ -175,4 +240,21 @@ export function bookComparison(rows: Array<{ week: number; probability: number; 
     modelBrier: model.brier, bookBrier: book.brier, modelLogLoss: model.logLoss, bookLogLoss: book.logLoss,
     hold: TD_PROP_HOLD,
   };
+}
+
+/**
+ * One week's captures as a single report: each game keeps its newest capture.
+ * Thursday's capture covers only Thursday night and Saturday's covers Sunday
+ * and Monday, so taking only the latest capture would drop Thursday's prices.
+ * With `before`, only captures made before that time count.
+ */
+export function mergePropReports(reports: TouchdownPropsReport[], before?: Date): TouchdownPropsReport | null {
+  const usable = reports.filter((report) => !before || new Date(report.capturedAt) < before)
+    .sort((a, b) => Date.parse(b.capturedAt) - Date.parse(a.capturedAt));
+  if (!usable.length) return null;
+  const events = new Map<string, PropEvent>();
+  for (const report of usable) {
+    for (const event of report.events) if (!events.has(event.eventId)) events.set(event.eventId, event);
+  }
+  return { capturedAt: usable[0].capturedAt, creditsRemaining: usable[0].creditsRemaining, events: [...events.values()] };
 }

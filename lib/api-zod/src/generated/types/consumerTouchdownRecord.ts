@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ConsumerTouchdownRecordPriced } from './consumerTouchdownRecordPriced';
+import type { ConsumerTouchdownRecordTopFive } from './consumerTouchdownRecordTopFive';
 import type { ConsumerTouchdownRecordWeeksItem } from './consumerTouchdownRecordWeeksItem';
 
 export interface ConsumerTouchdownRecord {
@@ -16,5 +17,7 @@ export interface ConsumerTouchdownRecord {
   expectedHits: number;
   /** 1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price. */
   priced: ConsumerTouchdownRecordPriced;
+  /** The featured top 5 inside each graded top 10, graded the same way. */
+  topFive: ConsumerTouchdownRecordTopFive;
   weeks: ConsumerTouchdownRecordWeeksItem[];
 }

@@ -722,7 +722,7 @@ export interface ConsumerTouchdownPick {
      * @nullable
      */
   expectedValue: number | null;
-  /** A top-5 pick whose best book price pays more than our probability says it should */
+  /** In this week's Value 5 (+150 or longer, 5+ cents of expected profit per $1 at the best book price; locked at kickoff) */
   value: boolean;
 }
 
@@ -734,7 +734,7 @@ export type ConsumerTouchdownValueRecordWeeksItem = {
 };
 
 /**
- * Graded value picks this season, 1 unit each at the captured price
+ * Graded Value 5 picks this season (plus money, 5+ cents of expected profit per $1, locked at kickoff), 1 unit each at the price each was chosen at
  */
 export interface ConsumerTouchdownValueRecord {
   picks: number;
@@ -752,6 +752,22 @@ export type ConsumerTouchdownRecordPriced = {
   units: number;
 };
 
+export type ConsumerTouchdownRecordTopFivePriced = {
+  picks: number;
+  hits: number;
+  units: number;
+};
+
+/**
+ * The featured top 5 inside each graded top 10, graded the same way.
+ */
+export type ConsumerTouchdownRecordTopFive = {
+  picks: number;
+  hits: number;
+  expectedHits: number;
+  priced: ConsumerTouchdownRecordTopFivePriced;
+};
+
 export type ConsumerTouchdownRecordWeeksItem = {
   week: number;
   picks: number;
@@ -759,6 +775,7 @@ export type ConsumerTouchdownRecordWeeksItem = {
   expectedHits: number;
   pricedPicks: number;
   units: number;
+  topFiveHits: number;
 };
 
 export interface ConsumerTouchdownRecord {
@@ -769,6 +786,8 @@ export interface ConsumerTouchdownRecord {
   expectedHits: number;
   /** 1 unit on each graded top-10 pick at its best captured DraftKings/FanDuel anytime-TD price. */
   priced: ConsumerTouchdownRecordPriced;
+  /** The featured top 5 inside each graded top 10, graded the same way. */
+  topFive: ConsumerTouchdownRecordTopFive;
   weeks: ConsumerTouchdownRecordWeeksItem[];
 }
 

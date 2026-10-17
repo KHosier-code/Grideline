@@ -1737,11 +1737,11 @@ components:
           description: Expected profit per 1 unit staked at the best book price, using our probability; null without a price
         value:
           type: boolean
-          description: A top-5 pick whose best book price pays more than our probability says it should
+          description: In this week's Value 5 (+150 or longer, 5+ cents of expected profit per $1 at the best book price; locked at kickoff)
     ConsumerTouchdownValueRecord:
       type: object
       required: [picks, hits, units, weeks]
-      description: Graded value picks this season, 1 unit each at the captured price
+      description: Graded Value 5 picks this season (plus money, 5+ cents of expected profit per $1, locked at kickoff), 1 unit each at the price each was chosen at
       properties:
         picks: { type: integer }
         hits: { type: integer }
@@ -1758,7 +1758,7 @@ components:
               units: { type: number }
     ConsumerTouchdownRecord:
       type: object
-      required: [weeksGraded, topTenPicks, topTenHits, expectedHits, priced, weeks]
+      required: [weeksGraded, topTenPicks, topTenHits, expectedHits, priced, topFive, weeks]
       properties:
         weeksGraded: { type: integer }
         topTenPicks: { type: integer }
@@ -1772,11 +1772,26 @@ components:
             picks: { type: integer }
             hits: { type: integer }
             units: { type: number }
+        topFive:
+          type: object
+          description: The featured top 5 inside each graded top 10, graded the same way.
+          required: [picks, hits, expectedHits, priced]
+          properties:
+            picks: { type: integer }
+            hits: { type: integer }
+            expectedHits: { type: number }
+            priced:
+              type: object
+              required: [picks, hits, units]
+              properties:
+                picks: { type: integer }
+                hits: { type: integer }
+                units: { type: number }
         weeks:
           type: array
           items:
             type: object
-            required: [week, picks, hits, expectedHits, pricedPicks, units]
+            required: [week, picks, hits, expectedHits, pricedPicks, units, topFiveHits]
             properties:
               week: { type: integer }
               picks: { type: integer }
@@ -1784,6 +1799,7 @@ components:
               expectedHits: { type: number }
               pricedPicks: { type: integer }
               units: { type: number }
+              topFiveHits: { type: integer }
     ConsumerTouchdowns:
       type: object
       required: [status, season, week, generatedAt, modelVersion, evaluation, picks, weeks, record, valueRecord, bookComparison]
