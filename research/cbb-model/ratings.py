@@ -72,7 +72,11 @@ def _solve(k, cols, vals, y, w, penalty, prior):
 class Ratings:
     """Offense, defense and tempo for every team, fit from games before a date."""
 
-    def __init__(self, teams: list[str], prior: dict[str, tuple[float, float, float]] | None, params: Params):
+    def __init__(self, teams: list[str], prior: dict[str, tuple[float, float, float]] | None, params: Params,
+                 league: tuple[float, float, float] | None = None, league_weight: float = 20.0):
+        """`league` (average efficiency, home edge, average tempo), when given,
+        anchors those three until this season has games enough to set them,
+        with `league_weight` games' worth of pull. Without it they are free."""
         self.teams = teams
         self.index = {team: i for i, team in enumerate(teams)}
         self.params = params
@@ -82,9 +86,9 @@ class Ratings:
             if team in self.index:
                 i = self.index[team]
                 self.prior[[i, n + i, 2 * n + i]] = np.array([off, dfn, tempo]) * params.carryover
-        self.mu = 103.0
-        self.hca = 3.0
-        self.pace = 68.0
+        self.league = league
+        self.league_weight = league_weight
+        self.mu, self.hca, self.pace = league or (103.0, 3.0, 68.0)
         self.coef = self.prior.copy()
 
     def fit(self, games: pd.DataFrame, as_of: pd.Timestamp):
@@ -113,9 +117,11 @@ class Ratings:
         vals = np.concatenate([np.stack([ones, ones, ones, site], axis=1), np.stack([ones, ones, ones, -site], axis=1)])
         y = np.concatenate([ppp_h, ppp_a])
         ww = np.concatenate([w, w])
-        prior = np.concatenate([self.prior[: 2 * n], [0, 0]])
+        league = self.league or (0.0, 0.0, 0.0)
+        anchor = self.league_weight if self.league else 1e-6
+        prior = np.concatenate([self.prior[: 2 * n], [league[0], league[1]]])
         penalty = np.full(k, self.params.ridge)
-        penalty[2 * n:] = 1e-6  # mean and home edge are free
+        penalty[2 * n:] = anchor  # mean and home edge: free, or anchored to `league`
         sol = _solve(k, cols, vals, y, ww, penalty, prior)
         self.mu, self.hca = sol[2 * n], sol[2 * n + 1]
 
@@ -123,8 +129,8 @@ class Ratings:
         tcols = np.stack([h, a, np.full_like(h, n)], axis=1)
         tvals = np.ones((len(h), 3))
         pen_t = np.full(n + 1, self.params.ridge)
-        pen_t[n] = 1e-6
-        prior_t = np.concatenate([self.prior[2 * n:], [0]])
+        pen_t[n] = anchor
+        prior_t = np.concatenate([self.prior[2 * n:], [league[2]]])
         tsol = _solve(n + 1, tcols, tvals, pace, w, pen_t, prior_t)
         self.pace = tsol[n]
         self.coef = np.concatenate([sol[: 2 * n], tsol[:n]])

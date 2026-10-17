@@ -3340,3 +3340,15 @@ export const GetConsumerMatchupReportResponse = zod.object({
   "generatedAt": zod.coerce.date().nullable(),
   "report": zod.record(zod.string(), zod.unknown()).nullable().describe('Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py')
 })
+
+
+/**
+ * @summary Read the latest college basketball run (ratings, upcoming games, picks) and the season's spread record
+ */
+export const GetConsumerCbbResponse = zod.object({
+  "status": zod.enum(['available', 'unavailable']),
+  "season": zod.number().int().nullable().describe('Named by the year the season ends (2027 = 2026-27)'),
+  "generatedAt": zod.coerce.date().nullable(),
+  "report": zod.record(zod.string(), zod.unknown()).nullable().describe('Teams, games, picks and recent results as built by research/cbb-model/daily.py'),
+  "record": zod.record(zod.string(), zod.unknown()).nullable().describe('Spread record graded from every run this season (see api-server lib/cbb-record.ts)')
+})

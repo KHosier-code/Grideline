@@ -1,0 +1,54 @@
+name: College basketball daily
+
+# Power ratings, today's and tomorrow's games, and spread picks for college
+# basketball (research/cbb-model/daily.py), sent to the site. Box scores of
+# finished games are cached between runs so each is read from ESPN once.
+# Off-season (May-September) runs exit right away. Times are UTC.
+on:
+  schedule:
+    - cron: "10 13 * * *"  # 08:10 ET - morning board with the day's opening lines
+    - cron: "10 17 * * *"  # 12:10 ET - before afternoon tips
+    - cron: "10 21 * * *"  # 16:10 ET - before evening tips
+    - cron: "40 0 * * *"   # 19:40 ET - before late tips
+  workflow_dispatch: {}
+
+concurrency:
+  group: cbb-daily
+  cancel-in-progress: false
+
+env:
+  GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+  GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: research/cbb-model
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: research/cbb-model/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Season label
+        run: echo "SEASON=$(( $(date -u +%-m) >= 7 ? $(date -u +%Y) + 1 : $(date -u +%Y) ))" >> "$GITHUB_ENV"
+      - name: Past seasons (cached for the season)
+        id: past
+        uses: actions/cache@v4
+        with:
+          path: research/cbb-model/data
+          key: cbb-data-${{ env.SEASON }}-v1
+      - if: steps.past.outputs.cache-hit != 'true'
+        run: ./fetch_data.sh
+      - name: This season's box scores
+        uses: actions/cache@v4
+        with:
+          path: research/cbb-model/cache
+          key: cbb-boxes-${{ env.SEASON }}-${{ github.run_id }}
+          restore-keys: cbb-boxes-${{ env.SEASON }}-
+      - run: python daily.py data cache cbb_payload.json

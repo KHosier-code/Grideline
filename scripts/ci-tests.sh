@@ -25,13 +25,13 @@ API_TESTS=(
   player-td-forecast-readiness player-td-model player-upcoming red-zone-opportunities
   scheduler sleeper touchdown-board user-picks pick-grading game-projections
   stadiums team-fixture-verification consumer-team-analytics verified-imagery
- worker-ownership worker-rehearsal player-feed-recovery player-projections
+ worker-ownership worker-rehearsal player-feed-recovery player-projections cbb-record
 )
 ROUTE_TESTS=(authorization usage-analytics)
 WEB_TESTS=(
   analytics consumer-account-state consumer-board consumer-matchups consumer-presentation
   dvp-matchups line-picks line-shopping market pick-sheet player-portraits
-  matchup-edges player-slug pool-strategy sim slates td-matchup
+  matchup-edges player-slug pool-strategy sim slates td-matchup cbb
 )
 
 files=()

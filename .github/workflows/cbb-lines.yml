@@ -3,13 +3,13 @@ name: College basketball lines (research)
 # One-off research job: collects the betting line ESPN shows for every past
 # college basketball game so the ratings model can be tested against the
 # spread. Results are committed to research/cbb-model/lines/ on the branch
-# that ran it. Runs when the fetch script changes, or by hand.
+# that ran it. Run by hand (Actions > this workflow > Run workflow).
 on:
-  push:
-    paths:
-      - research/cbb-model/fetch_lines.py
-      - .github/workflows/cbb-lines.yml
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: Seasons to fetch, as a JSON list (named by the year they end)
+        default: "[2023, 2024, 2025, 2026]"
 
 permissions:
   contents: write
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        season: [2024, 2025]
+        season: ${{ fromJSON(inputs.seasons) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
