@@ -16,6 +16,7 @@ const TouchdownPicks = lazy(() => import('@/pages/consumer/TouchdownPicks'));
 const PlayerTouchdown = lazy(() => import('@/pages/consumer/PlayerTouchdown'));
 const PowerRatings = lazy(() => import('@/pages/consumer/PowerRatings'));
 const QbRankings = lazy(() => import('@/pages/consumer/QbRankings'));
+import { CbbGate } from '@/pages/cbb/CbbGate';
 const CbbGames = lazy(() => import('@/pages/cbb/CbbGames'));
 const CbbRatings = lazy(() => import('@/pages/cbb/CbbRatings'));
 const CbbMethodology = lazy(() => import('@/pages/cbb/CbbMethodology'));
@@ -161,9 +162,9 @@ function Router() {
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/parlays"><Redirect to="/" replace /></Route>
-    <Route path="/cbb/ratings"><ConsumerShell><CbbRatings /></ConsumerShell></Route>
-    <Route path="/cbb/how-it-works"><ConsumerShell><CbbMethodology /></ConsumerShell></Route>
-    <Route path="/cbb"><ConsumerShell><CbbGames /></ConsumerShell></Route>
+    <Route path="/cbb/ratings"><ConsumerShell><CbbGate><CbbRatings /></CbbGate></ConsumerShell></Route>
+    <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
+    <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
     <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
@@ -191,9 +192,9 @@ function Router() {
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/parlays"><Redirect to="/" replace /></Route>
-      <Route path="/cbb/ratings"><ConsumerShell><CbbRatings /></ConsumerShell></Route>
-      <Route path="/cbb/how-it-works"><ConsumerShell><CbbMethodology /></ConsumerShell></Route>
-      <Route path="/cbb"><ConsumerShell><CbbGames /></ConsumerShell></Route>
+      <Route path="/cbb/ratings"><ConsumerShell><CbbGate><CbbRatings /></CbbGate></ConsumerShell></Route>
+      <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
+      <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
       <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
       <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>

@@ -18,6 +18,7 @@ import { ODDS_BACKUP_RECENT_MS, recentOddsCapture } from "../lib/kickoff-clock";
 import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEmail, subscribe } from "../lib/newsletter";
 import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
 import { injuryTimeline } from "../lib/td-injuries";
+import { requireAdmin } from "../middlewares/admin";
 import { cbbRecord, type CbbPick, type CbbResult } from "../lib/cbb-record";
 import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
@@ -554,8 +555,9 @@ let cbbRecordCache: { key: string; record: ReturnType<typeof cbbRecord> } | null
  * College basketball: the latest daily run (research/cbb-model/daily.py) with
  * ratings and upcoming games, plus the spread record graded from every run
  * this season. Only each run's picks and finals are read for the record.
+ * Admin-only while it's in preview: drop requireAdmin to open it to everyone.
  */
-router.get("/consumer/cbb", async (req, res): Promise<void> => {
+router.get("/consumer/cbb", requireAdmin, async (req, res): Promise<void> => {
   try {
     const [latest] = await db.select().from(weeklyReportsTable)
       .where(eq(weeklyReportsTable.kind, "cbb"))
@@ -574,7 +576,7 @@ router.get("/consumer/cbb", async (req, res): Promise<void> => {
         .where(and(eq(weeklyReportsTable.kind, "cbb"), eq(weeklyReportsTable.season, latest.season)));
       cbbRecordCache = { key, record: cbbRecord(runs) };
     }
-    res.set("Cache-Control", "public, max-age=120");
+    res.set("Cache-Control", "private, no-store");
     res.json({
       status: "available", season: latest.season, generatedAt: latest.generatedAt.toISOString(),
       report: latest.payload, record: cbbRecordCache.record,
