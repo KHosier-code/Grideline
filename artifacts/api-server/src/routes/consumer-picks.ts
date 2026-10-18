@@ -19,6 +19,7 @@ import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEm
 import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
 import { injuryTimeline } from "../lib/td-injuries";
 import { requireAdmin } from "../middlewares/admin";
+import { seasonCache } from "../lib/season-cache";
 import { cbbRecord, type CbbPick, type CbbResult } from "../lib/cbb-record";
 import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
@@ -108,10 +109,23 @@ router.get("/consumer/touchdowns", async (req, res): Promise<void> => {
   }
 });
 
-type SeasonBoards = Awaited<ReturnType<typeof loadSeasonBoards>>;
+type SeasonBoards = Awaited<ReturnType<typeof readSeasonBoards>>;
 
-/** Every week's board for a season, with graded results and captured TD prices. */
-async function loadSeasonBoards(season: number, now = new Date()) {
+/**
+ * Every week's board for a season, with graded results and captured TD
+ * prices, kept in memory until a new run, result or price capture arrives
+ * (see season-cache.ts).
+ */
+const loadSeasonBoards = seasonCache((season) => readSeasonBoards(season), async (season) => {
+  const [row] = await db.select({
+    runs: sql<string>`(select max(${touchdownPickRunsTable.generatedAt})::text from ${touchdownPickRunsTable} where ${touchdownPickRunsTable.season} = ${season})`,
+    results: sql<string>`(select count(*)::text from ${touchdownPickResultsTable} where ${touchdownPickResultsTable.season} = ${season})`,
+    props: sql<string>`(select max(${weeklyReportsTable.generatedAt})::text from ${weeklyReportsTable} where ${weeklyReportsTable.kind} = 'td-props' and ${weeklyReportsTable.season} = ${season})`,
+  }).from(sql`(select 1) as fingerprint`);
+  return `${row?.runs}|${row?.results}|${row?.props}`;
+});
+
+async function readSeasonBoards(season: number, now = new Date()) {
   const seasonRuns = await db.select().from(touchdownPickRunsTable)
     .where(eq(touchdownPickRunsTable.season, season))
     .orderBy(asc(touchdownPickRunsTable.generatedAt));
@@ -515,11 +529,27 @@ router.post("/reports/ingest", async (req, res): Promise<void> => {
   }
 });
 
+/**
+ * The newest report of a kind. Only its id is read from the database on each
+ * request; the full payload (up to ~0.5 MB for the share video) is read once
+ * per new report and kept in memory.
+ */
+const latestReportCache = new Map<string, typeof weeklyReportsTable.$inferSelect>();
+async function latestReportRow(kind: string) {
+  const [head] = await db.select({ id: weeklyReportsTable.id }).from(weeklyReportsTable)
+    .where(eq(weeklyReportsTable.kind, kind))
+    .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+  if (!head) return null;
+  const cached = latestReportCache.get(kind);
+  if (cached?.id === head.id) return cached;
+  const [row] = await db.select().from(weeklyReportsTable).where(eq(weeklyReportsTable.id, head.id));
+  if (row) latestReportCache.set(kind, row);
+  return row ?? null;
+}
+
 async function latestReport(kind: "usage" | "replay" | "matchups", req: import("express").Request, res: import("express").Response) {
   try {
-    const [latest] = await db.select().from(weeklyReportsTable)
-      .where(eq(weeklyReportsTable.kind, kind))
-      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    const latest = await latestReportRow(kind);
     if (!latest) {
       res.json({ status: "unavailable", season: null, week: null, generatedAt: null, report: null });
       return;
@@ -838,9 +868,7 @@ router.get("/personnel/refresh-status", (req, res): void => {
 /** This week's TD picks card (research/td-model/share_card.py), the TD Picks link preview. */
 router.get("/share/td-card.png", async (req, res): Promise<void> => {
   try {
-    const [latest] = await db.select({ payload: weeklyReportsTable.payload }).from(weeklyReportsTable)
-      .where(eq(weeklyReportsTable.kind, "share-td"))
-      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    const latest = await latestReportRow("share-td");
     const png = typeof latest?.payload.png === "string" ? Buffer.from(latest.payload.png, "base64") : null;
     if (!png?.length) {
       res.redirect(302, "/probable-share.png");
@@ -860,9 +888,7 @@ router.get("/share/td-card.png", async (req, res): Promise<void> => {
  */
 router.get("/share/td-clip.mp4", async (req, res): Promise<void> => {
   try {
-    const [latest] = await db.select({ payload: weeklyReportsTable.payload, season: weeklyReportsTable.season, week: weeklyReportsTable.week })
-      .from(weeklyReportsTable).where(eq(weeklyReportsTable.kind, "share-clip"))
-      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    const latest = await latestReportRow("share-clip");
     const video = typeof latest?.payload.mp4 === "string" ? Buffer.from(latest.payload.mp4, "base64") : null;
     const week = req.query.week === undefined ? null : Number(req.query.week);
     if (!latest || !video?.length || (week !== null && week !== latest.week)) {

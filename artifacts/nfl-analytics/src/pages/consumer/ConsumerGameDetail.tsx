@@ -77,7 +77,7 @@ export default function ConsumerGameDetail() {
   const { gameId = '' } = useParams();
   const detailSearch = useSearch();
   const backHref = detailSearch ? `/games?${detailSearch}` : '/games';
-  const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
+  const query = useGetConsumerGame(gameId, { query: { queryKey: getGetConsumerGameQueryKey(gameId), enabled: Boolean(gameId), staleTime: 60_000, refetchInterval: 120_000, refetchOnWindowFocus: true } });
   const now = useConsumerNow();
   const projectionParams = query.data ? { season: query.data.season } : undefined;
   const projections = useGetConsumerGameProjections(projectionParams, { query: { queryKey: getGetConsumerGameProjectionsQueryKey(projectionParams), enabled: Boolean(query.data) } });

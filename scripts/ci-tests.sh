@@ -25,7 +25,7 @@ API_TESTS=(
   player-td-forecast-readiness player-td-model player-upcoming red-zone-opportunities
   scheduler sleeper touchdown-board user-picks pick-grading game-projections
   stadiums team-fixture-verification consumer-team-analytics verified-imagery
- worker-ownership worker-rehearsal player-feed-recovery player-projections cbb-record
+ worker-ownership worker-rehearsal player-feed-recovery player-projections cbb-record season-cache
 )
 ROUTE_TESTS=(authorization usage-analytics)
 WEB_TESTS=(

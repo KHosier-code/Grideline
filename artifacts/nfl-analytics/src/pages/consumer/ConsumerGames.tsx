@@ -31,7 +31,7 @@ export default function ConsumerGames() {
   }, []);
   const choose = (next: Slate) => { setSelection(next); setManual(true); };
   const params = { season: season ?? 2020, week: week ?? 1 };
-  const query = useListConsumerGames(params, { query: { queryKey: getListConsumerGamesQueryKey(params), enabled: Boolean(resolved), staleTime: 0, refetchInterval: 15_000, refetchOnWindowFocus: true } });
+  const query = useListConsumerGames(params, { query: { queryKey: getListConsumerGamesQueryKey(params), enabled: Boolean(resolved), staleTime: 60_000, refetchInterval: 120_000, refetchOnWindowFocus: true } });
 
   const now = useConsumerNow();
   const projectionParams = season ? { season } : undefined;
