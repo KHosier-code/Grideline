@@ -1,6 +1,7 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, gameProjectionRunsTable, gamesTable, sportsbookOddsTable, teamsTable } from "@workspace/db";
 import type { SpreadQuote } from "./game-projections";
+import { seasonCache } from "./season-cache";
 
 const isFinal = (status: string | null) => /final|completed/i.test(status ?? "");
 const squash = (value: string | null | undefined) => (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -62,7 +63,20 @@ export function latestBookLines(rows: OddsRow[], sides: Sides): BookLines[] {
  * runs (with the server's receive time), final scores, every saved spread
  * quote as the home line, and each book's latest lines.
  */
-export async function loadSeasonProjectionData(season: number) {
+/**
+ * Every projection run, final score and saved line for a season, kept in
+ * memory until a new run, price or final arrives (see season-cache.ts).
+ */
+export const loadSeasonProjectionData = seasonCache(readSeasonProjectionData, async (season) => {
+  const [row] = await db.select({
+    run: sql<string>`(select max(${gameProjectionRunsTable.generatedAt})::text from ${gameProjectionRunsTable} where ${gameProjectionRunsTable.season} = ${season})`,
+    odds: sql<string>`(select max(${sportsbookOddsTable.id})::text from ${sportsbookOddsTable})`,
+    finals: sql<string>`(select count(${gamesTable.finalHomeScore})::text from ${gamesTable} where ${gamesTable.season} = ${season})`,
+  }).from(sql`(select 1) as fingerprint`);
+  return `${row?.run}|${row?.odds}|${row?.finals}`;
+});
+
+async function readSeasonProjectionData(season: number) {
   const runs = await db.select().from(gameProjectionRunsTable)
     .where(eq(gameProjectionRunsTable.season, season)).orderBy(asc(gameProjectionRunsTable.generatedAt));
   const ids = new Set(runs.flatMap((run) => run.games.map((game) => game.gameId)));

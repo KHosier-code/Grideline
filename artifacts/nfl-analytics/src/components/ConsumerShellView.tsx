@@ -74,9 +74,10 @@ export function ConsumerShellView({
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => setOpen(false), [location]);
-  const trail = crumbs(location);
-  const cbb = isCbbPath(location);
-  const sportSwitch = (onNavigate?: () => void) => <div className="gl-sport-switch" role="group" aria-label="Sport">
+  // College Hoops is an admin-only preview for now.
+  const cbb = isCbbPath(location) && account.adminVerified;
+  const trail = cbb || !isCbbPath(location) ? crumbs(location) : [];
+  const sportSwitch = (onNavigate?: () => void) => account.adminVerified && <div className="gl-sport-switch" role="group" aria-label="Sport">
     <Link href="/" aria-current={!cbb ? 'true' : undefined} onClick={onNavigate}>NFL</Link>
     <Link href="/cbb" aria-current={cbb ? 'true' : undefined} onClick={onNavigate}>College Hoops</Link>
   </div>;
