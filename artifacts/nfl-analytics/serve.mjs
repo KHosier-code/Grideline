@@ -35,7 +35,7 @@ createServer(async (req, res) => {
   try {
     if (relative === 'sitemap.xml') {
       const origin = new URL(process.env.PUBLIC_SITE_URL || 'https://probablesports.com').origin;
-      const pages = ['/', '/touchdowns', '/pickem', '/power-ratings', '/qb-rankings', '/games', '/teams', '/usage', '/defense-vs-position', '/red-zone', '/matchups', '/performance', '/methodology', '/cbb', '/cbb/ratings', '/cbb/how-it-works'];
+      const pages = ['/', '/touchdowns', '/pickem', '/power-ratings', '/qb-rankings', '/games', '/teams', '/usage', '/defense-vs-position', '/red-zone', '/matchups', '/performance', '/methodology'];
       const urls = [...pages, ...await playerSitemapPaths()]
         .map(path => `<url><loc>${origin}${prefix}${path}</loc></url>`).join('');
       res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
