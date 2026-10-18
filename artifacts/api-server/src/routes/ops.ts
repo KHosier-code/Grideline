@@ -18,7 +18,7 @@ const FEEDS = [
   { feed: "Weather", provider: "nws-weather", staleHours: 13 },
   { feed: "Player stats", provider: "nflverse", staleHours: 8 * 24 },
 ] as const;
-const REPORT_KINDS = ["usage", "replay", "matchups", "share-td", "share-clip", "td-props"] as const;
+const REPORT_KINDS = ["usage", "replay", "matchups", "share-td", "share-clip", "td-props", "cbb"] as const;
 
 type WorkflowRun = { name: string; status: string; conclusion: string | null; event: string; createdAt: string; url: string };
 let workflowCache: { at: number; runs: WorkflowRun[] | null; error: string | null } | null = null;

@@ -16,6 +16,9 @@ const TouchdownPicks = lazy(() => import('@/pages/consumer/TouchdownPicks'));
 const PlayerTouchdown = lazy(() => import('@/pages/consumer/PlayerTouchdown'));
 const PowerRatings = lazy(() => import('@/pages/consumer/PowerRatings'));
 const QbRankings = lazy(() => import('@/pages/consumer/QbRankings'));
+const CbbGames = lazy(() => import('@/pages/cbb/CbbGames'));
+const CbbRatings = lazy(() => import('@/pages/cbb/CbbRatings'));
+const CbbMethodology = lazy(() => import('@/pages/cbb/CbbMethodology'));
 const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
 const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
 const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
@@ -135,7 +138,7 @@ function Router() {
     || location === '/power-ratings' || location === '/qb-rankings'
     || location === '/weekly-picks'
     || location === '/red-zone' || location === '/matchups' || location === '/share' || location === '/pickem' || location === '/parlays'
-    || location.startsWith('/td/');
+    || location.startsWith('/td/') || location === '/cbb' || location.startsWith('/cbb/');
   if (!isLoaded && !publicRoute) return <ConsumerLoadingFallback />;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
     <Route path="/sign-up/*?" component={SignUpPage} />
@@ -158,6 +161,9 @@ function Router() {
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/parlays"><Redirect to="/" replace /></Route>
+    <Route path="/cbb/ratings"><ConsumerShell><CbbRatings /></ConsumerShell></Route>
+    <Route path="/cbb/how-it-works"><ConsumerShell><CbbMethodology /></ConsumerShell></Route>
+    <Route path="/cbb"><ConsumerShell><CbbGames /></ConsumerShell></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
     <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
@@ -185,6 +191,9 @@ function Router() {
     <Route path="/share"><ConsumerShell><SharePicks /></ConsumerShell></Route>
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/parlays"><Redirect to="/" replace /></Route>
+      <Route path="/cbb/ratings"><ConsumerShell><CbbRatings /></ConsumerShell></Route>
+      <Route path="/cbb/how-it-works"><ConsumerShell><CbbMethodology /></ConsumerShell></Route>
+      <Route path="/cbb"><ConsumerShell><CbbGames /></ConsumerShell></Route>
       <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
       <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>

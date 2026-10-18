@@ -78,6 +78,47 @@ export interface ConsumerUsageReport {
   report: ConsumerUsageReportReport;
 }
 
+export type ConsumerCbbStatus = typeof ConsumerCbbStatus[keyof typeof ConsumerCbbStatus];
+
+
+export const ConsumerCbbStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+/**
+ * Teams, games, picks and recent results as built by research/cbb-model/daily.py
+ * @nullable
+ */
+export type ConsumerCbbReport = { [key: string]: unknown } | null;
+
+/**
+ * Spread record graded from every run this season (see api-server lib/cbb-record.ts)
+ * @nullable
+ */
+export type ConsumerCbbRecord = { [key: string]: unknown } | null;
+
+export interface ConsumerCbb {
+  status: ConsumerCbbStatus;
+  /**
+     * Named by the year the season ends (2027 = 2026-27)
+     * @nullable
+     */
+  season: number | null;
+  /** @nullable */
+  generatedAt: string | null;
+  /**
+     * Teams, games, picks and recent results as built by research/cbb-model/daily.py
+     * @nullable
+     */
+  report: ConsumerCbbReport;
+  /**
+     * Spread record graded from every run this season (see api-server lib/cbb-record.ts)
+     * @nullable
+     */
+  record: ConsumerCbbRecord;
+}
+
 export type ConsumerPowerRatingsStatus = typeof ConsumerPowerRatingsStatus[keyof typeof ConsumerPowerRatingsStatus];
 
 

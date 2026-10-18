@@ -23,6 +23,7 @@ import type {
   AppSettings,
   AppSettingsUpdate,
   ChallengerReadinessReport,
+  ConsumerCbb,
   ConsumerDashboard,
   ConsumerDataUnavailableResponse,
   ConsumerDefenseVsPosition,
@@ -5259,6 +5260,83 @@ export function useGetConsumerMatchupReport<TData = Awaited<ReturnType<typeof ge
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetConsumerMatchupReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetConsumerCbbUrl = () => {
+
+
+
+
+  return `/api/consumer/cbb`
+}
+
+/**
+ * @summary Read the latest college basketball run (ratings, upcoming games, picks) and the season's spread record
+ */
+export const getConsumerCbb = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsumerCbb> => {
+
+  return customFetch<ConsumerCbb>(getGetConsumerCbbUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsumerCbbQueryKey = () => {
+    return [
+    `/api/consumer/cbb`
+    ] as const;
+    }
+
+
+export const getGetConsumerCbbQueryOptions = <TData = Awaited<ReturnType<typeof getConsumerCbb>>, TError = ErrorType<ConsumerDataUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerCbb>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsumerCbbQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsumerCbb>>> = ({ signal }) => getConsumerCbb({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsumerCbb>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsumerCbbQueryResult = NonNullable<Awaited<ReturnType<typeof getConsumerCbb>>>
+export type GetConsumerCbbQueryError = ErrorType<ConsumerDataUnavailableResponse>
+
+
+/**
+ * @summary Read the latest college basketball run (ratings, upcoming games, picks) and the season's spread record
+ */
+
+export function useGetConsumerCbb<TData = Awaited<ReturnType<typeof getConsumerCbb>>, TError = ErrorType<ConsumerDataUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsumerCbb>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsumerCbbQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

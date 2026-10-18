@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Router, type IRouter } from "express";
-import { and, asc, desc, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
   dataSyncRunsTable, db, gameProjectionRunsTable, touchdownPickResultsTable,
@@ -18,6 +18,7 @@ import { ODDS_BACKUP_RECENT_MS, recentOddsCapture } from "../lib/kickoff-clock";
 import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEmail, subscribe } from "../lib/newsletter";
 import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
 import { injuryTimeline } from "../lib/td-injuries";
+import { cbbRecord, type CbbPick, type CbbResult } from "../lib/cbb-record";
 import { syncNwsWeather } from "../lib/weather";
 import { withFeedLock } from "../lib/feed-lock";
 import { footballTime } from "../lib/feed-schedule";
@@ -486,7 +487,7 @@ router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
 });
 
 const reportIngestSchema = zod.object({
-  kind: zod.enum(["usage", "replay", "matchups", "share-td", "share-clip"]),
+  kind: zod.enum(["usage", "replay", "matchups", "share-td", "share-clip", "cbb"]),
   season: zod.number().int().min(2000).max(2200),
   week: zod.number().int().min(0).max(22),
   generatedAt: zod.string().datetime({ offset: true }),
@@ -545,6 +546,44 @@ async function latestReport(kind: "usage" | "replay" | "matchups", req: import("
 router.get("/consumer/usage-report", (req, res) => latestReport("usage", req, res));
 router.get("/consumer/replay", (req, res) => latestReport("replay", req, res));
 router.get("/consumer/matchup-report", (req, res) => latestReport("matchups", req, res));
+
+/** Graded record per season, rebuilt only when a new daily run arrives. */
+let cbbRecordCache: { key: string; record: ReturnType<typeof cbbRecord> } | null = null;
+
+/**
+ * College basketball: the latest daily run (research/cbb-model/daily.py) with
+ * ratings and upcoming games, plus the spread record graded from every run
+ * this season. Only each run's picks and finals are read for the record.
+ */
+router.get("/consumer/cbb", async (req, res): Promise<void> => {
+  try {
+    const [latest] = await db.select().from(weeklyReportsTable)
+      .where(eq(weeklyReportsTable.kind, "cbb"))
+      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    if (!latest) {
+      res.json({ status: "unavailable", season: null, generatedAt: null, report: null, record: null });
+      return;
+    }
+    const key = `${latest.season}:${latest.id}`;
+    if (cbbRecordCache?.key !== key) {
+      const runs = await db.select({
+        generatedAt: weeklyReportsTable.generatedAt,
+        picks: sql<CbbPick[] | null>`${weeklyReportsTable.payload}->'picks'`,
+        results: sql<CbbResult[] | null>`${weeklyReportsTable.payload}->'results'`,
+      }).from(weeklyReportsTable)
+        .where(and(eq(weeklyReportsTable.kind, "cbb"), eq(weeklyReportsTable.season, latest.season)));
+      cbbRecordCache = { key, record: cbbRecord(runs) };
+    }
+    res.set("Cache-Control", "public, max-age=120");
+    res.json({
+      status: "available", season: latest.season, generatedAt: latest.generatedAt.toISOString(),
+      report: latest.payload, record: cbbRecordCache.record,
+    });
+  } catch (error) {
+    req.log.error({ error }, "College basketball read failed");
+    res.status(503).json({ error: "College basketball is being refreshed", code: "consumer_data_unavailable" });
+  }
+});
 
 /**
  * The failure message for the token-protected capture routes, so the workflow

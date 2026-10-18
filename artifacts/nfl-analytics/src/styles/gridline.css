@@ -530,6 +530,12 @@
   overflow-y: auto;
 }
 .gl-sidebar .gl-brand { padding: 4px 10px 8px; }
+/* NFL / College Hoops switch above the menu. */
+.gl-sport-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px; border: 1px solid hsl(var(--border)); border-radius: 10px; }
+.gl-sport-switch a { padding: 6px 4px; border-radius: 7px; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 700; text-align: center; text-decoration: none; white-space: nowrap; }
+.gl-sport-switch a:hover { color: hsl(var(--foreground)); }
+.gl-sport-switch a[aria-current] { background: hsl(var(--foreground)); color: hsl(var(--background)); }
+.gl-mobile-nav .gl-sport-switch { margin-bottom: 10px; }
 .gl-side-nav { display: grid; gap: 16px; }
 .gl-side-group { display: grid; gap: 2px; }
 .gl-side-label { margin: 0 0 4px; padding: 0 10px; color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }

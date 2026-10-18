@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: nfl
     description: Live NFL schedule and team data
+  - name: cbb
+    description: College basketball ratings, games and picks
   - name: dashboard
     description: Dashboard summaries and data freshness
   - name: settings
@@ -1294,6 +1296,18 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ConsumerUsageReport" }
         "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
+  /consumer/cbb:
+    get:
+      operationId: getConsumerCbb
+      tags: [cbb]
+      summary: Read the latest college basketball run (ratings, upcoming games, picks) and the season's spread record
+      responses:
+        "200":
+          description: The newest run from research/cbb-model/daily.py and the graded record, or an explicit empty state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsumerCbb" }
+        "503": { $ref: "#/components/responses/ConsumerDataUnavailable" }
 components:
   responses:
     ConsumerDataUnavailable:
@@ -1353,6 +1367,21 @@ components:
           type: ["object", "null"]
           additionalProperties: true
           description: Players, defenses and redZoneTeams as built by research/td-model/weekly_report.py
+    ConsumerCbb:
+      type: object
+      required: [status, season, generatedAt, report, record]
+      properties:
+        status: { type: string, enum: [available, unavailable] }
+        season: { type: ["integer", "null"], description: "Named by the year the season ends (2027 = 2026-27)" }
+        generatedAt: { type: ["string", "null"], format: date-time }
+        report:
+          type: ["object", "null"]
+          additionalProperties: true
+          description: Teams, games, picks and recent results as built by research/cbb-model/daily.py
+        record:
+          type: ["object", "null"]
+          additionalProperties: true
+          description: Spread record graded from every run this season (see api-server lib/cbb-record.ts)
     ConsumerPowerRatings:
       type: object
       required: [status, season, week, generatedAt, teams]

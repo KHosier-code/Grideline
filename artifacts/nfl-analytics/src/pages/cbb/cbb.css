@@ -1,0 +1,55 @@
+/* College basketball pages. Built on the shared gl-* tokens and components. */
+.cbb-note { margin-bottom: 18px; padding: 14px 16px; font-size: 14px; line-height: 1.5; border-left: 3px solid hsl(var(--status-warn)); }
+.cbb-muted { margin: 0; color: hsl(var(--muted-foreground)); font-size: 13px; }
+.cbb-logo { flex: none; object-fit: contain; }
+.cbb-logo-blank { display: inline-block; flex: none; border-radius: 50%; background: hsl(var(--secondary)); }
+
+.cbb-day { margin-bottom: 22px; }
+.cbb-day-title { margin: 0 0 10px; font-family: var(--gl-display); font-size: 20px; }
+.cbb-day-title small { margin-left: 6px; color: hsl(var(--muted-foreground)); font-family: inherit; font-size: 13px; font-weight: 500; }
+.cbb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 12px; }
+
+.cbb-game { display: grid; gap: 12px; padding: 14px 16px; }
+.cbb-game.has-pick { border-color: hsl(var(--status-good) / .55); }
+.cbb-game-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 600; }
+.cbb-game-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 16px; }
+.cbb-teams { display: grid; gap: 10px; min-width: 0; }
+.cbb-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cbb-team > span { display: grid; min-width: 0; }
+.cbb-team b { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.cbb-team small { color: hsl(var(--muted-foreground)); font-size: 12px; }
+.cbb-ap { margin-right: 5px; color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 700; }
+.cbb-lines { display: grid; grid-template-columns: repeat(2, minmax(92px, auto)); gap: 6px; margin: 0; }
+.cbb-lines div { padding: 6px 9px; border-radius: 8px; background: hsl(var(--secondary)); }
+.cbb-lines div.ours { background: hsl(var(--primary) / .12); }
+.cbb-lines dt { color: hsl(var(--muted-foreground)); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.cbb-lines dd { margin: 2px 0 0; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cbb-lines dd small { color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 500; }
+.cbb-game-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; font-size: 12px; }
+.cbb-prob { display: flex; flex: 1 1 220px; align-items: center; gap: 8px; }
+.cbb-prob b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cbb-prob-bar { position: relative; flex: 1; height: 6px; overflow: hidden; border-radius: 999px; background: hsl(var(--primary) / .55); }
+.cbb-prob-bar i { position: absolute; inset: 0 auto 0 0; background: hsl(var(--muted-foreground) / .45); }
+.cbb-score { color: hsl(var(--muted-foreground)); }
+
+.cbb-record { display: grid; gap: 16px; margin-top: 8px; padding: 18px; }
+.cbb-record h2 { margin: 0; font-family: var(--gl-display); font-size: 22px; }
+.cbb-record h2 small { margin-left: 8px; color: hsl(var(--status-warn)); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.cbb-record .gl-stats { max-width: none; }
+.cbb-edge-table { max-width: 420px; }
+.cbb-recent td { white-space: nowrap; }
+.cbb-recent td small { color: hsl(var(--muted-foreground)); }
+
+.cbb-search { display: grid; gap: 6px; }
+.cbb-search input { width: min(280px, 100%); padding: 8px 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); color: inherit; font: inherit; font-size: 14px; }
+.cbb-more { padding: 12px 16px; text-align: center; }
+
+.cbb-prose .gl-card { margin-bottom: 14px; padding: 18px 20px; line-height: 1.6; }
+.cbb-prose h2 { margin: 0 0 8px; font-family: var(--gl-display); font-size: 20px; }
+.cbb-prose p, .cbb-prose li { max-width: 72ch; }
+.cbb-prose ul { padding-left: 20px; }
+
+@media (max-width: 560px) {
+  .cbb-game-body { grid-template-columns: 1fr; }
+  .cbb-lines { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
