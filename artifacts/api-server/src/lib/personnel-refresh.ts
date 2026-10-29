@@ -10,11 +10,12 @@ import { refreshSleeperIdentityMappings } from "./sleeper-identity";
  * player IDs. Game pages read depth from this; without it every role shows as
  * an inference from snap counts.
  */
-export async function syncSleeperDepth(options?: { jobKey?: string; scheduledFor?: Date }) {
+export async function syncSleeperDepth(options?: { jobKey?: string; scheduledFor?: Date; identity?: boolean }) {
   const result = await syncSleeperPlayers(options);
   const snapshotId = (result as { snapshotId?: string } | null)?.snapshotId;
   const sourceCapturedAt = (result as { sourceCapturedAt?: string } | null)?.sourceCapturedAt;
   if (!snapshotId || !sourceCapturedAt) return result;
+  if (options?.identity === false) return { ...result, identityMapping: { status: "skipped", reason: "weekly" } };
   try {
     const identityImport = await syncNflversePlayers();
     const crosswalk = await refreshPlayerIdentityCrosswalk(new Date(sourceCapturedAt));
@@ -44,6 +45,17 @@ type PersonnelRun = {
 
 let latestRun: PersonnelRun | null = null;
 
+/**
+ * The identity rebuild (nflverse IDs, crosswalk, Sleeper mapping) loads every
+ * player, game stat, snap count and depth-chart row at once, which pushed
+ * the server past its memory limit. IDs rarely change, so the daily job runs
+ * it once a week: Tuesday (Eastern), after Monday night's game. Depth charts
+ * and injuries still refresh every day.
+ */
+export function identityRebuildDue(now = new Date()) {
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "America/New_York" }).format(now) === "Tue";
+}
+
 export function personnelRefreshStatus() {
   return latestRun;
 }
@@ -58,7 +70,7 @@ const summarize = (value: unknown) => {
  * workflow. Both used to refresh only when the data worker ran. Returns false
  * when a refresh is already running in this process.
  */
-export function startPersonnelRefresh(jobKey = "github-players") {
+export function startPersonnelRefresh(jobKey = "github-players", identity = identityRebuildDue()) {
   if (latestRun?.status === "running") return false;
   const run: PersonnelRun = {
     status: "running", startedAt: new Date().toISOString(), completedAt: null, depth: null, injuries: null, error: null,
@@ -67,7 +79,7 @@ export function startPersonnelRefresh(jobKey = "github-players") {
   void (async () => {
     const errors: string[] = [];
     try {
-      run.depth = summarize(await syncSleeperDepth({ jobKey }));
+      run.depth = summarize(await syncSleeperDepth({ jobKey, identity }));
     } catch (error) {
       run.depth = "failed";
       errors.push(`Depth: ${error instanceof Error ? error.message : String(error)}`);
