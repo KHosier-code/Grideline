@@ -50,10 +50,14 @@ function shutdown(signal, exitCode = 0) {
 process.once('SIGTERM', () => shutdown('SIGTERM'));
 process.once('SIGINT', () => shutdown('SIGINT'));
 
-start('Gridline API', ['--enable-source-maps', process.env.GRIDLINE_API_ENTRY || 'artifacts/api-server/dist/production.mjs'], {
+// Node sizes its heap for the whole host machine, not this container, so
+// left alone it lets garbage build up until Railway kills the container for
+// using too much memory. A cap makes it clean up first (API_MAX_HEAP_MB).
+const apiHeapMb = Number(process.env.API_MAX_HEAP_MB || 640);
+start('Gridline API', ['--enable-source-maps', `--max-old-space-size=${apiHeapMb}`, process.env.GRIDLINE_API_ENTRY || 'artifacts/api-server/dist/production.mjs'], {
   PORT: String(apiPort),
 });
-start('Gridline web', ['artifacts/nfl-analytics/serve.mjs'], {
+start('Gridline web', ['--max-old-space-size=128', 'artifacts/nfl-analytics/serve.mjs'], {
   PORT: String(webPort),
   BASE_PATH: '/',
   INTERNAL_API_ORIGIN: `http://127.0.0.1:${apiPort}`,
