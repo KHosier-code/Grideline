@@ -1,0 +1,7928 @@
+{
+ "season": 2026,
+ "week": 8,
+ "generatedAt": "2026-10-30T22:25:54.684144Z",
+ "modelVersion": "gridline-td-gbm-v4-seed-avg",
+ "evaluation": {
+  "topTenHitRate": 0.596,
+  "auc": 0.7369,
+  "testedOn": "8,250 player-games from 2025\u20132026 the model never trained on"
+ },
+ "picks": [
+  {
+   "playerId": "00-0036997",
+   "name": "Javonte Williams",
+   "position": "RB",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.635,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.0,
+    "carriesPerGame": 15.38,
+    "targetShare": 0.079,
+    "carryShare": 0.603,
+    "redZoneTouchesPerGame": 4.75,
+    "redZoneShare": 0.714,
+    "goalLineShare": 0.947,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.584
+   }
+  },
+  {
+   "playerId": "00-0037248",
+   "name": "James Cook",
+   "position": "RB",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.6207,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.25,
+    "carriesPerGame": 17.38,
+    "targetShare": 0.081,
+    "carryShare": 0.552,
+    "redZoneTouchesPerGame": 3.25,
+    "redZoneShare": 0.436,
+    "goalLineShare": 0.375,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.497
+   }
+  },
+  {
+   "playerId": "00-0032764",
+   "name": "Derrick Henry",
+   "position": "RB",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.6025,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.62,
+    "carriesPerGame": 20.88,
+    "targetShare": 0.06,
+    "carryShare": 0.699,
+    "redZoneTouchesPerGame": 4.62,
+    "redZoneShare": 0.7,
+    "goalLineShare": 0.729,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.497
+   }
+  },
+  {
+   "playerId": "00-0039139",
+   "name": "Jahmyr Gibbs",
+   "position": "RB",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.5895,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.0,
+    "carriesPerGame": 21.25,
+    "targetShare": 0.169,
+    "carryShare": 0.773,
+    "redZoneTouchesPerGame": 6.0,
+    "redZoneShare": 0.83,
+    "goalLineShare": 0.765,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.65,
+    "recentTdRate": 0.541
+   }
+  },
+  {
+   "playerId": "00-0037840",
+   "name": "Kyren Williams",
+   "position": "RB",
+   "team": "LA",
+   "opponent": "LAC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.5824,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.75,
+    "carriesPerGame": 13.5,
+    "targetShare": 0.149,
+    "carryShare": 0.498,
+    "redZoneTouchesPerGame": 3.75,
+    "redZoneShare": 0.558,
+    "goalLineShare": 0.615,
+    "teamImpliedPoints": 26.0,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.541
+   }
+  },
+  {
+   "playerId": "00-0040719",
+   "name": "Bhayshul Tuten",
+   "position": "RB",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.5435,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.88,
+    "carriesPerGame": 12.5,
+    "targetShare": 0.065,
+    "carryShare": 0.461,
+    "redZoneTouchesPerGame": 2.75,
+    "redZoneShare": 0.429,
+    "goalLineShare": 0.4,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.411
+   }
+  },
+  {
+   "playerId": "00-0034857",
+   "name": "Josh Allen",
+   "position": "QB",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4972,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.12,
+    "carriesPerGame": 7.75,
+    "targetShare": 0.005,
+    "carryShare": 0.261,
+    "redZoneTouchesPerGame": 2.25,
+    "redZoneShare": 0.346,
+    "goalLineShare": 0.455,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 0.8,
+    "recentTdRate": 0.515
+   }
+  },
+  {
+   "playerId": "00-0038543",
+   "name": "Jaxon Smith-Njigba",
+   "position": "WR",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.4934,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 10.75,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.357,
+    "carryShare": 0.012,
+    "redZoneTouchesPerGame": 1.5,
+    "redZoneShare": 0.375,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.439
+   }
+  },
+  {
+   "playerId": "00-0039075",
+   "name": "Puka Nacua",
+   "position": "WR",
+   "team": "LA",
+   "opponent": "LAC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.488,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 12.38,
+    "carriesPerGame": 0.88,
+    "targetShare": 0.316,
+    "carryShare": 0.031,
+    "redZoneTouchesPerGame": 2.0,
+    "redZoneShare": 0.302,
+    "goalLineShare": 0.056,
+    "teamImpliedPoints": 26.0,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.482
+   }
+  },
+  {
+   "playerId": "00-0036875",
+   "name": "Rhamondre Stevenson",
+   "position": "RB",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.4746,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 10.5,
+    "targetShare": 0.114,
+    "carryShare": 0.353,
+    "redZoneTouchesPerGame": 1.5,
+    "redZoneShare": 0.345,
+    "goalLineShare": 0.444,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 1.6,
+    "recentTdRate": 0.411
+   }
+  },
+  {
+   "playerId": "00-0040122",
+   "name": "Ashton Jeanty",
+   "position": "RB",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.47,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.12,
+    "carriesPerGame": 16.5,
+    "targetShare": 0.176,
+    "carryShare": 0.657,
+    "redZoneTouchesPerGame": 4.38,
+    "redZoneShare": 0.714,
+    "goalLineShare": 0.833,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 1.39,
+    "recentTdRate": 0.367
+   }
+  },
+  {
+   "playerId": "00-0036358",
+   "name": "CeeDee Lamb",
+   "position": "WR",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4557,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 10.25,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.284,
+    "carryShare": 0.011,
+    "redZoneTouchesPerGame": 1.75,
+    "redZoneShare": 0.311,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.309
+   }
+  },
+  {
+   "playerId": "00-0038597",
+   "name": "Chase Brown",
+   "position": "RB",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4556,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.25,
+    "carriesPerGame": 14.62,
+    "targetShare": 0.148,
+    "carryShare": 0.603,
+    "redZoneTouchesPerGame": 3.12,
+    "redZoneShare": 0.5,
+    "goalLineShare": 0.545,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.324
+   }
+  },
+  {
+   "playerId": "00-0039361",
+   "name": "Bucky Irving",
+   "position": "RB",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4534,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.12,
+    "carriesPerGame": 18.25,
+    "targetShare": 0.114,
+    "carryShare": 0.579,
+    "redZoneTouchesPerGame": 3.62,
+    "redZoneShare": 0.561,
+    "goalLineShare": 0.5,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.367
+   }
+  },
+  {
+   "playerId": "00-0036275",
+   "name": "D'Andre Swift",
+   "position": "RB",
+   "team": "CHI",
+   "opponent": "SEA",
+   "isHome": false,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.4396,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.38,
+    "carriesPerGame": 15.75,
+    "targetShare": 0.107,
+    "carryShare": 0.477,
+    "redZoneTouchesPerGame": 3.88,
+    "redZoneShare": 0.453,
+    "goalLineShare": 0.577,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.411
+   }
+  },
+  {
+   "playerId": "00-0039064",
+   "name": "Zay Flowers",
+   "position": "WR",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4363,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 8.0,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.311,
+    "carryShare": 0.011,
+    "redZoneTouchesPerGame": 1.38,
+    "redZoneShare": 0.273,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.352
+   }
+  },
+  {
+   "playerId": "00-0036223",
+   "name": "Jonathan Taylor",
+   "position": "RB",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4264,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.5,
+    "carriesPerGame": 19.25,
+    "targetShare": 0.109,
+    "carryShare": 0.675,
+    "redZoneTouchesPerGame": 3.62,
+    "redZoneShare": 0.643,
+    "goalLineShare": 0.778,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.76,
+    "recentTdRate": 0.497
+   }
+  },
+  {
+   "playerId": "00-0036900",
+   "name": "Ja'Marr Chase",
+   "position": "WR",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4247,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 8.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.225,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.38,
+    "redZoneShare": 0.268,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.396
+   }
+  },
+  {
+   "playerId": "00-0037228",
+   "name": "Jaylen Warren",
+   "position": "RB",
+   "team": "PIT",
+   "opponent": "CLE",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4225,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.88,
+    "carriesPerGame": 14.5,
+    "targetShare": 0.135,
+    "carryShare": 0.641,
+    "redZoneTouchesPerGame": 2.25,
+    "redZoneShare": 0.5,
+    "goalLineShare": 0.429,
+    "teamImpliedPoints": 21.5,
+    "opponentTdsAllowedRatio": 0.86,
+    "recentTdRate": 0.324
+   }
+  },
+  {
+   "playerId": "00-0036963",
+   "name": "Amon-Ra St. Brown",
+   "position": "WR",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4221,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 12.0,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.338,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 2.5,
+    "redZoneShare": 0.357,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.71,
+    "recentTdRate": 0.352
+   }
+  },
+  {
+   "playerId": "00-0038606",
+   "name": "Parker Washington",
+   "position": "WR",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4102,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 8.12,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.271,
+    "carryShare": 0.009,
+    "redZoneTouchesPerGame": 1.25,
+    "redZoneShare": 0.244,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.352
+   }
+  },
+  {
+   "playerId": "00-0038797",
+   "name": "Emanuel Wilson",
+   "position": "RB",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.41,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.25,
+    "carriesPerGame": 16.12,
+    "targetShare": 0.044,
+    "carryShare": 0.535,
+    "redZoneTouchesPerGame": 2.62,
+    "redZoneShare": 0.513,
+    "goalLineShare": 0.5,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.28
+   }
+  },
+  {
+   "playerId": "00-0039794",
+   "name": "Braelon Allen",
+   "position": "RB",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.4098,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.5,
+    "carriesPerGame": 11.88,
+    "targetShare": 0.089,
+    "carryShare": 0.461,
+    "redZoneTouchesPerGame": 2.0,
+    "redZoneShare": 0.407,
+    "goalLineShare": 0.25,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.193
+   }
+  },
+  {
+   "playerId": "00-0036410",
+   "name": "Tee Higgins",
+   "position": "WR",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3962,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 8.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.225,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.171,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.482
+   }
+  },
+  {
+   "playerId": "00-0038134",
+   "name": "Kenneth Walker III",
+   "position": "RB",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.3949,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.12,
+    "carriesPerGame": 18.88,
+    "targetShare": 0.143,
+    "carryShare": 0.648,
+    "redZoneTouchesPerGame": 4.38,
+    "redZoneShare": 0.552,
+    "goalLineShare": 0.602,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.324
+   }
+  },
+  {
+   "playerId": "00-0038542",
+   "name": "Bijan Robinson",
+   "position": "RB",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3938,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 4.38,
+    "carriesPerGame": 18.25,
+    "targetShare": 0.158,
+    "carryShare": 0.632,
+    "redZoneTouchesPerGame": 3.38,
+    "redZoneShare": 0.568,
+    "goalLineShare": 0.656,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 0.65,
+    "recentTdRate": 0.411
+   }
+  },
+  {
+   "playerId": "00-0037744",
+   "name": "Trey McBride",
+   "position": "TE",
+   "team": "ARI",
+   "opponent": "DAL",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.393,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 10.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.287,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 2.12,
+    "redZoneShare": 0.283,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.8,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.475
+   }
+  },
+  {
+   "playerId": "00-0033293",
+   "name": "Aaron Jones",
+   "position": "RB",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3819,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 18.0,
+    "targetShare": 0.137,
+    "carryShare": 0.603,
+    "redZoneTouchesPerGame": 3.0,
+    "redZoneShare": 0.639,
+    "goalLineShare": 0.656,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.237
+   }
+  },
+  {
+   "playerId": "00-0035676",
+   "name": "A.J. Brown",
+   "position": "WR",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.3772,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 8.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.289,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.207,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.265
+   }
+  },
+  {
+   "playerId": "00-0039738",
+   "name": "Blake Corum",
+   "position": "RB",
+   "team": "LA",
+   "opponent": "LAC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.3649,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.88,
+    "carriesPerGame": 9.62,
+    "targetShare": 0.049,
+    "carryShare": 0.355,
+    "redZoneTouchesPerGame": 1.75,
+    "redZoneShare": 0.256,
+    "goalLineShare": 0.231,
+    "teamImpliedPoints": 26.0,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.367
+   }
+  },
+  {
+   "playerId": "00-0040784",
+   "name": "Quinshon Judkins",
+   "position": "RB",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3611,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.88,
+    "carriesPerGame": 13.75,
+    "targetShare": 0.13,
+    "carryShare": 0.547,
+    "redZoneTouchesPerGame": 2.38,
+    "redZoneShare": 0.483,
+    "goalLineShare": 0.556,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 0.76,
+    "recentTdRate": 0.237
+   }
+  },
+  {
+   "playerId": "00-0037247",
+   "name": "George Pickens",
+   "position": "WR",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3593,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 7.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.211,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.2,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.265
+   }
+  },
+  {
+   "playerId": "00-0036158",
+   "name": "J.K. Dobbins",
+   "position": "RB",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.3571,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.25,
+    "carriesPerGame": 13.12,
+    "targetShare": 0.045,
+    "carryShare": 0.528,
+    "redZoneTouchesPerGame": 1.75,
+    "redZoneShare": 0.56,
+    "goalLineShare": 0.571,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.86,
+    "recentTdRate": 0.367
+   }
+  },
+  {
+   "playerId": "00-0038559",
+   "name": "Michael Wilson",
+   "position": "WR",
+   "team": "ARI",
+   "opponent": "DAL",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3503,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 9.25,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.247,
+    "carryShare": 0.01,
+    "redZoneTouchesPerGame": 1.88,
+    "redZoneShare": 0.25,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.8,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.309
+   }
+  },
+  {
+   "playerId": "00-0037525",
+   "name": "Jordan Mason",
+   "position": "RB",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3499,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 10.12,
+    "targetShare": 0.021,
+    "carryShare": 0.368,
+    "redZoneTouchesPerGame": 1.75,
+    "redZoneShare": 0.424,
+    "goalLineShare": 0.286,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.324
+   }
+  },
+  {
+   "playerId": "00-0040666",
+   "name": "Omarion Hampton",
+   "position": "RB",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.3442,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.5,
+    "carriesPerGame": 13.75,
+    "targetShare": 0.087,
+    "carryShare": 0.491,
+    "redZoneTouchesPerGame": 2.88,
+    "redZoneShare": 0.611,
+    "goalLineShare": 0.7,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.65,
+    "recentTdRate": 0.45
+   }
+  },
+  {
+   "playerId": "00-0033090",
+   "name": "Hunter Henry",
+   "position": "TE",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.3424,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 4.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.157,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.176,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 1.71,
+    "recentTdRate": 0.302
+   }
+  },
+  {
+   "playerId": "00-0039065",
+   "name": "Sam LaPorta",
+   "position": "TE",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.337,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.181,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.38,
+    "redZoneShare": 0.193,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.345
+   }
+  },
+  {
+   "playerId": "00-0039901",
+   "name": "Keon Coleman",
+   "position": "WR",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3369,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.144,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.163,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.309
+   }
+  },
+  {
+   "playerId": "00-0038611",
+   "name": "Chris Rodriguez Jr.",
+   "position": "RB",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3322,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 8.75,
+    "targetShare": 0.019,
+    "carryShare": 0.3,
+    "redZoneTouchesPerGame": 2.62,
+    "redZoneShare": 0.412,
+    "goalLineShare": 0.5,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.411
+   }
+  },
+  {
+   "playerId": "00-0039373",
+   "name": "Audric Estim\u00e9",
+   "position": "RB",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3314,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.75,
+    "carriesPerGame": 9.5,
+    "targetShare": 0.058,
+    "carryShare": 0.333,
+    "redZoneTouchesPerGame": 1.25,
+    "redZoneShare": 0.294,
+    "goalLineShare": 0.556,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 0.76,
+    "recentTdRate": 0.237
+   }
+  },
+  {
+   "playerId": "00-0037240",
+   "name": "Jameson Williams",
+   "position": "WR",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3292,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.173,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.143,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.71,
+    "recentTdRate": 0.352
+   }
+  },
+  {
+   "playerId": "00-0039338",
+   "name": "Brock Bowers",
+   "position": "TE",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3277,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 8.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.257,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.38,
+    "redZoneShare": 0.26,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.345
+   }
+  },
+  {
+   "playerId": "00-0040198",
+   "name": "Ollie Gordon II",
+   "position": "RB",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.3233,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.12,
+    "carriesPerGame": 10.25,
+    "targetShare": 0.046,
+    "carryShare": 0.349,
+    "redZoneTouchesPerGame": 2.75,
+    "redZoneShare": 0.449,
+    "goalLineShare": 0.579,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.86,
+    "recentTdRate": 0.367
+   }
+  },
+  {
+   "playerId": "00-0031588",
+   "name": "Stefon Diggs",
+   "position": "WR",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.315,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 7.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.228,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.207,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.352
+   }
+  },
+  {
+   "playerId": "00-0037261",
+   "name": "Khalil Shakir",
+   "position": "WR",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3121,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 5.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.209,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.29,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0038935",
+   "name": "Brenton Strange",
+   "position": "TE",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3108,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 5.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.183,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.122,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0035261",
+   "name": "Tony Pollard",
+   "position": "RB",
+   "team": "TEN",
+   "opponent": "CIN",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3094,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 15.75,
+    "targetShare": 0.083,
+    "carryShare": 0.7,
+    "redZoneTouchesPerGame": 3.38,
+    "redZoneShare": 0.667,
+    "goalLineShare": 0.692,
+    "teamImpliedPoints": 17.0,
+    "opponentTdsAllowedRatio": 0.65,
+    "recentTdRate": 0.237
+   }
+  },
+  {
+   "playerId": "00-0039410",
+   "name": "Ryan Flournoy",
+   "position": "WR",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3056,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.163,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.156,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.265
+   }
+  },
+  {
+   "playerId": "00-0034960",
+   "name": "Jakobi Meyers",
+   "position": "WR",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3034,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 5.38,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.179,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.171,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.265
+   }
+  },
+  {
+   "playerId": "00-0037740",
+   "name": "Garrett Wilson",
+   "position": "WR",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.3029,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.26,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.13,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.396
+   }
+  },
+  {
+   "playerId": "00-0040126",
+   "name": "Colston Loveland",
+   "position": "TE",
+   "team": "CHI",
+   "opponent": "SEA",
+   "isHome": false,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.2951,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 6.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.217,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.5,
+    "redZoneShare": 0.316,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.345
+   }
+  },
+  {
+   "playerId": "00-0037238",
+   "name": "Drake London",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2948,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 8.0,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.29,
+    "carryShare": 0.009,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.145,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.309
+   }
+  },
+  {
+   "playerId": "00-0036244",
+   "name": "Colby Parkinson",
+   "position": "TE",
+   "team": "LA",
+   "opponent": "LAC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.2948,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 4.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.112,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.178,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 26.0,
+    "opponentTdsAllowedRatio": 0.56,
+    "recentTdRate": 0.345
+   }
+  },
+  {
+   "playerId": "00-0039910",
+   "name": "Jayden Daniels",
+   "position": "QB",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.2926,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 7.12,
+    "targetShare": 0.0,
+    "carryShare": 0.249,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.265,
+    "goalLineShare": 0.222,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 2.22,
+    "recentTdRate": 0.254
+   }
+  },
+  {
+   "playerId": "00-0034829",
+   "name": "Mike Gesicki",
+   "position": "TE",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2871,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.092,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.136,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.345
+   }
+  },
+  {
+   "playerId": "00-0041511",
+   "name": "Omar Cooper Jr.",
+   "position": "WR",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2805,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.33,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.16,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.67,
+    "redZoneShare": 0.167,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.344
+   }
+  },
+  {
+   "playerId": "00-0038933",
+   "name": "Dalton Kincaid",
+   "position": "TE",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2796,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 4.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.16,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.135,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.258
+   }
+  },
+  {
+   "playerId": "00-0036322",
+   "name": "Justin Jefferson",
+   "position": "WR",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2772,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.88,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.296,
+    "carryShare": 0.008,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.269,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0033110",
+   "name": "Tyler Higbee",
+   "position": "TE",
+   "team": "LA",
+   "opponent": "LAC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.2726,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.131,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.089,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 26.0,
+    "opponentTdsAllowedRatio": 0.56,
+    "recentTdRate": 0.258
+   }
+  },
+  {
+   "playerId": "00-0037263",
+   "name": "Tyler Allgeier",
+   "position": "RB",
+   "team": "ARI",
+   "opponent": "DAL",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2664,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 8.5,
+    "targetShare": 0.063,
+    "carryShare": 0.33,
+    "redZoneTouchesPerGame": 1.88,
+    "redZoneShare": 0.308,
+    "goalLineShare": 0.25,
+    "teamImpliedPoints": 23.8,
+    "opponentTdsAllowedRatio": 1.49,
+    "recentTdRate": 0.237
+   }
+  },
+  {
+   "playerId": "00-0038563",
+   "name": "Tre Tucker",
+   "position": "WR",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2619,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.62,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.191,
+    "carryShare": 0.015,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.167,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0035229",
+   "name": "T.J. Hockenson",
+   "position": "TE",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2571,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.19,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.226,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 2.85,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0041489",
+   "name": "Germie Bernard",
+   "position": "WR",
+   "team": "PIT",
+   "opponent": "CLE",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2554,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.17,
+    "carriesPerGame": 0.17,
+    "targetShare": 0.177,
+    "carryShare": 0.007,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.231,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.5,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.175
+   }
+  },
+  {
+   "playerId": "00-0040735",
+   "name": "Luther Burden III",
+   "position": "WR",
+   "team": "CHI",
+   "opponent": "SEA",
+   "isHome": false,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.2545,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 6.38,
+    "carriesPerGame": 1.12,
+    "targetShare": 0.202,
+    "carryShare": 0.034,
+    "redZoneTouchesPerGame": 1.5,
+    "redZoneShare": 0.237,
+    "goalLineShare": 0.038,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.71,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0035640",
+   "name": "DK Metcalf",
+   "position": "WR",
+   "team": "PIT",
+   "opponent": "CLE",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2531,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 8.38,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.236,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.118,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.5,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0036139",
+   "name": "Rico Dowdle",
+   "position": "RB",
+   "team": "PIT",
+   "opponent": "CLE",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2531,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.88,
+    "carriesPerGame": 9.38,
+    "targetShare": 0.125,
+    "carryShare": 0.401,
+    "redZoneTouchesPerGame": 1.38,
+    "redZoneShare": 0.45,
+    "goalLineShare": 0.5,
+    "teamImpliedPoints": 21.5,
+    "opponentTdsAllowedRatio": 0.86,
+    "recentTdRate": 0.28
+   }
+  },
+  {
+   "playerId": "00-0037157",
+   "name": "Bam Knight",
+   "position": "RB",
+   "team": "ARI",
+   "opponent": "DAL",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2519,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.62,
+    "carriesPerGame": 6.75,
+    "targetShare": 0.067,
+    "carryShare": 0.321,
+    "redZoneTouchesPerGame": 1.5,
+    "redZoneShare": 0.385,
+    "goalLineShare": 0.571,
+    "teamImpliedPoints": 23.8,
+    "opponentTdsAllowedRatio": 1.49,
+    "recentTdRate": 0.28
+   }
+  },
+  {
+   "playerId": "00-0034351",
+   "name": "Dallas Goedert",
+   "position": "TE",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.2515,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 5.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.197,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.25,
+    "redZoneShare": 0.417,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 2.62,
+    "recentTdRate": 0.345
+   }
+  },
+  {
+   "playerId": "00-0034844",
+   "name": "Saquon Barkley",
+   "position": "RB",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.2513,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.75,
+    "carriesPerGame": 13.12,
+    "targetShare": 0.067,
+    "carryShare": 0.447,
+    "redZoneTouchesPerGame": 3.0,
+    "redZoneShare": 0.414,
+    "goalLineShare": 0.444,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.324
+   }
+  },
+  {
+   "playerId": "00-0041037",
+   "name": "Denzel Boston",
+   "position": "WR",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2513,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.205,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.71,
+    "redZoneShare": 0.278,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.315
+   }
+  },
+  {
+   "playerId": "00-0039890",
+   "name": "Adonai Mitchell",
+   "position": "WR",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2476,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.38,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.217,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.182,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0040734",
+   "name": "TreVeyon Henderson",
+   "position": "RB",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2469,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 0.88,
+    "carriesPerGame": 10.5,
+    "targetShare": 0.031,
+    "carryShare": 0.346,
+    "redZoneTouchesPerGame": 1.5,
+    "redZoneShare": 0.297,
+    "goalLineShare": 0.333,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 1.6,
+    "recentTdRate": 0.28
+   }
+  },
+  {
+   "playerId": "00-0037256",
+   "name": "Rachaad White",
+   "position": "RB",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.2463,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.62,
+    "carriesPerGame": 6.25,
+    "targetShare": 0.087,
+    "carryShare": 0.214,
+    "redZoneTouchesPerGame": 1.38,
+    "redZoneShare": 0.161,
+    "goalLineShare": 0.25,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.193
+   }
+  },
+  {
+   "playerId": "00-0038117",
+   "name": "Wan'Dale Robinson",
+   "position": "WR",
+   "team": "TEN",
+   "opponent": "CIN",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2463,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 7.12,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.254,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 1.38,
+    "redZoneShare": 0.324,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.0,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0034753",
+   "name": "Mark Andrews",
+   "position": "TE",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2413,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.186,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.162,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0033526",
+   "name": "Samaje Perine",
+   "position": "RB",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2368,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.88,
+    "carriesPerGame": 5.25,
+    "targetShare": 0.053,
+    "carryShare": 0.216,
+    "redZoneTouchesPerGame": 1.88,
+    "redZoneShare": 0.333,
+    "goalLineShare": 0.273,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.28
+   }
+  },
+  {
+   "playerId": "00-0039880",
+   "name": "Malik Washington",
+   "position": "WR",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2364,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.75,
+    "carriesPerGame": 1.38,
+    "targetShare": 0.238,
+    "carryShare": 0.049,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.182,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0038951",
+   "name": "Sean Tucker",
+   "position": "RB",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2335,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.12,
+    "carriesPerGame": 4.5,
+    "targetShare": 0.005,
+    "carryShare": 0.133,
+    "redZoneTouchesPerGame": 2.0,
+    "redZoneShare": 0.3,
+    "goalLineShare": 0.625,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.411
+   }
+  },
+  {
+   "playerId": "00-0039919",
+   "name": "Rome Odunze",
+   "position": "WR",
+   "team": "CHI",
+   "opponent": "SEA",
+   "isHome": false,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.2322,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 5.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.172,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.15,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.71,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0030506",
+   "name": "Travis Kelce",
+   "position": "TE",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2297,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.205,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.125,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.258
+   }
+  },
+  {
+   "playerId": "00-0038621",
+   "name": "DeMario Douglas",
+   "position": "WR",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2255,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 4.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.162,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.118,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0033537",
+   "name": "Deshaun Watson",
+   "position": "QB",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2215,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 6.25,
+    "targetShare": 0.0,
+    "carryShare": 0.246,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.296,
+    "goalLineShare": 0.125,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.123
+   }
+  },
+  {
+   "playerId": "00-0040736",
+   "name": "Mason Taylor",
+   "position": "TE",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2193,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.174,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.143,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 2.16,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0038128",
+   "name": "Malik Willis",
+   "position": "QB",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2185,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 6.75,
+    "targetShare": 0.0,
+    "carryShare": 0.234,
+    "redZoneTouchesPerGame": 1.25,
+    "redZoneShare": 0.185,
+    "goalLineShare": 0.222,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.8,
+    "recentTdRate": 0.254
+   }
+  },
+  {
+   "playerId": "00-0036894",
+   "name": "Pat Freiermuth",
+   "position": "TE",
+   "team": "PIT",
+   "opponent": "CLE",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2158,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.75,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.131,
+    "carryShare": 0.017,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.171,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.5,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.258
+   }
+  },
+  {
+   "playerId": "00-0035537",
+   "name": "Ty Johnson",
+   "position": "RB",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2147,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.62,
+    "carriesPerGame": 3.38,
+    "targetShare": 0.1,
+    "carryShare": 0.103,
+    "redZoneTouchesPerGame": 2.12,
+    "redZoneShare": 0.242,
+    "goalLineShare": 0.217,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.237
+   }
+  },
+  {
+   "playerId": "00-0041496",
+   "name": "Jonah Coleman",
+   "position": "RB",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2099,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.67,
+    "carriesPerGame": 6.33,
+    "targetShare": 0.062,
+    "carryShare": 0.275,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.375,
+    "goalLineShare": 0.2,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.86,
+    "recentTdRate": 0.271
+   }
+  },
+  {
+   "playerId": "00-0041547",
+   "name": "KC Concepcion",
+   "position": "WR",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2095,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.43,
+    "carriesPerGame": 1.29,
+    "targetShare": 0.22,
+    "carryShare": 0.049,
+    "redZoneTouchesPerGame": 0.71,
+    "redZoneShare": 0.167,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0040878",
+   "name": "Mike Washington Jr.",
+   "position": "RB",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2092,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.86,
+    "carriesPerGame": 5.71,
+    "targetShare": 0.024,
+    "carryShare": 0.235,
+    "redZoneTouchesPerGame": 1.14,
+    "redZoneShare": 0.258,
+    "goalLineShare": 0.091,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 1.39,
+    "recentTdRate": 0.188
+   }
+  },
+  {
+   "playerId": "00-0036970",
+   "name": "Kyle Pitts",
+   "position": "TE",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2072,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.163,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.194,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 1.71,
+    "recentTdRate": 0.258
+   }
+  },
+  {
+   "playerId": "00-0035993",
+   "name": "Tyler Huntley",
+   "position": "QB",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2058,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 4.88,
+    "targetShare": 0.0,
+    "carryShare": 0.15,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.143,
+    "goalLineShare": 0.071,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.167
+   }
+  },
+  {
+   "playerId": "00-0037809",
+   "name": "Chig Okonkwo",
+   "position": "TE",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.2058,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 5.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.189,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.138,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 1.02,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0038994",
+   "name": "Jordan Addison",
+   "position": "WR",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2036,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.0,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.168,
+    "carryShare": 0.013,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.07,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0033908",
+   "name": "Cooper Kupp",
+   "position": "WR",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.2015,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.124,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.094,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0041523",
+   "name": "Caleb Douglas",
+   "position": "WR",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2009,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.33,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.183,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.67,
+    "redZoneShare": 0.5,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.233
+   }
+  },
+  {
+   "playerId": "00-0039851",
+   "name": "Drake Maye",
+   "position": "QB",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2007,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 5.38,
+    "targetShare": 0.0,
+    "carryShare": 0.181,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.207,
+    "goalLineShare": 0.333,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 0.8,
+    "recentTdRate": 0.167
+   }
+  },
+  {
+   "playerId": "00-0040663",
+   "name": "Harold Fannin Jr.",
+   "position": "TE",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.2002,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.18,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.167,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 1.02,
+    "recentTdRate": 0.345
+   }
+  },
+  {
+   "playerId": "00-0039894",
+   "name": "Xavier Worthy",
+   "position": "WR",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.2001,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.12,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.186,
+    "carryShare": 0.01,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.121,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 0.62,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0037252",
+   "name": "Greg Dulcich",
+   "position": "TE",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.198,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.38,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.172,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.333,
+    "goalLineShare": 0.053,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0036924",
+   "name": "Michael Carter",
+   "position": "RB",
+   "team": "TEN",
+   "opponent": "CIN",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1978,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.38,
+    "carriesPerGame": 6.88,
+    "targetShare": 0.094,
+    "carryShare": 0.355,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.133,
+    "goalLineShare": 0.25,
+    "teamImpliedPoints": 17.0,
+    "opponentTdsAllowedRatio": 0.65,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0041395",
+   "name": "Eli Raridon",
+   "position": "TE",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1974,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.67,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.089,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.83,
+    "redZoneShare": 0.2,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 1.71,
+    "recentTdRate": 0.245
+   }
+  },
+  {
+   "playerId": "00-0041040",
+   "name": "Antonio Williams",
+   "position": "WR",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.1966,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.33,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.14,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.33,
+    "redZoneShare": 0.1,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.175
+   }
+  },
+  {
+   "playerId": "00-0033921",
+   "name": "Chris Godwin Jr.",
+   "position": "WR",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1951,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.38,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.159,
+    "carryShare": 0.012,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.094,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0040556",
+   "name": "Corey Kiner",
+   "position": "RB",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1929,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.62,
+    "carriesPerGame": 4.75,
+    "targetShare": 0.021,
+    "carryShare": 0.174,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.304,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 1.6,
+    "recentTdRate": 0.085
+   }
+  },
+  {
+   "playerId": "00-0038997",
+   "name": "Josh Downs",
+   "position": "WR",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1923,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 6.25,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.194,
+    "carryShare": 0.009,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.172,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.62,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0039793",
+   "name": "AJ Barner",
+   "position": "TE",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.1916,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.0,
+    "carriesPerGame": 0.5,
+    "targetShare": 0.133,
+    "carryShare": 0.016,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.219,
+    "goalLineShare": 0.071,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 1.02,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0036613",
+   "name": "Jaylen Waddle",
+   "position": "WR",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1912,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 5.75,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.212,
+    "carryShare": 0.015,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.121,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.43,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0040727",
+   "name": "Tre Harris",
+   "position": "WR",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1901,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.62,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.16,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.148,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0036355",
+   "name": "Justin Herbert",
+   "position": "QB",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1896,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.12,
+    "carriesPerGame": 5.38,
+    "targetShare": 0.004,
+    "carryShare": 0.192,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.194,
+    "goalLineShare": 0.3,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.123
+   }
+  },
+  {
+   "playerId": "00-0036550",
+   "name": "Rashod Bateman",
+   "position": "WR",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1878,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.124,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.121,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0038544",
+   "name": "Quentin Johnston",
+   "position": "WR",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1865,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 4.75,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.165,
+    "carryShare": 0.009,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.086,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.309
+   }
+  },
+  {
+   "playerId": "00-0030279",
+   "name": "Keenan Allen",
+   "position": "WR",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.186,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 7.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.223,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.167,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.62,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0039918",
+   "name": "Caleb Williams",
+   "position": "QB",
+   "team": "CHI",
+   "opponent": "SEA",
+   "isHome": false,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.1856,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 4.5,
+    "targetShare": 0.0,
+    "carryShare": 0.155,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.163,
+    "goalLineShare": 0.067,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.21
+   }
+  },
+  {
+   "playerId": "00-0040669",
+   "name": "Isaac TeSlaa",
+   "position": "WR",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1851,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.092,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.107,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.71,
+    "recentTdRate": 0.265
+   }
+  },
+  {
+   "playerId": "00-0041048",
+   "name": "Ted Hurst III",
+   "position": "WR",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1841,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.83,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.133,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.67,
+    "redZoneShare": 0.167,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.175
+   }
+  },
+  {
+   "playerId": "00-0037545",
+   "name": "Rashid Shaheed",
+   "position": "WR",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.1803,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 3.88,
+    "carriesPerGame": 0.5,
+    "targetShare": 0.129,
+    "carryShare": 0.016,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.062,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0041032",
+   "name": "Kenyon Sadiq",
+   "position": "TE",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1803,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.57,
+    "carriesPerGame": 0.14,
+    "targetShare": 0.127,
+    "carryShare": 0.006,
+    "redZoneTouchesPerGame": 0.29,
+    "redZoneShare": 0.043,
+    "goalLineShare": 0.125,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 2.16,
+    "recentTdRate": 0.226
+   }
+  },
+  {
+   "playerId": "00-0038041",
+   "name": "Jake Ferguson",
+   "position": "TE",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1771,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.093,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.133,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 2.39,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0037742",
+   "name": "Treylon Burks",
+   "position": "WR",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.1771,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 3.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.129,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.316,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0040870",
+   "name": "Ja'Kobi Lane",
+   "position": "WR",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1755,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.33,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.146,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.67,
+    "redZoneShare": 0.417,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.122
+   }
+  },
+  {
+   "playerId": "00-0039915",
+   "name": "Ladd McConkey",
+   "position": "WR",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1731,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.126,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.114,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.352
+   }
+  },
+  {
+   "playerId": "00-0033119",
+   "name": "Jacoby Brissett",
+   "position": "QB",
+   "team": "ARI",
+   "opponent": "DAL",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1718,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.12,
+    "carriesPerGame": 3.62,
+    "targetShare": 0.003,
+    "carryShare": 0.148,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.211,
+    "goalLineShare": 0.375,
+    "teamImpliedPoints": 23.8,
+    "opponentTdsAllowedRatio": 0.8,
+    "recentTdRate": 0.123
+   }
+  },
+  {
+   "playerId": "00-0039066",
+   "name": "Michael Mayer",
+   "position": "TE",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1707,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 5.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.151,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.071,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0040189",
+   "name": "Oronde Gadsden II",
+   "position": "TE",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1699,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.62,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.121,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.281,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0040162",
+   "name": "Dylan Sampson",
+   "position": "RB",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1686,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 5.12,
+    "targetShare": 0.093,
+    "carryShare": 0.202,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.154,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 0.76,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0040867",
+   "name": "Makai Lemon",
+   "position": "WR",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.168,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 5.14,
+    "carriesPerGame": 0.14,
+    "targetShare": 0.164,
+    "carryShare": 0.006,
+    "redZoneTouchesPerGame": 0.14,
+    "redZoneShare": 0.059,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.161
+   }
+  },
+  {
+   "playerId": "00-0038839",
+   "name": "Mitchell Tinsley",
+   "position": "WR",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1664,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.102,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.171,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.194
+   }
+  },
+  {
+   "playerId": "00-0035228",
+   "name": "Kyler Murray",
+   "position": "QB",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1651,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 5.0,
+    "targetShare": 0.0,
+    "carryShare": 0.176,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.101,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.123
+   }
+  },
+  {
+   "playerId": "00-0038129",
+   "name": "Cade Otton",
+   "position": "TE",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1645,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.177,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.156,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0039893",
+   "name": "Brian Thomas Jr.",
+   "position": "WR",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1643,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.129,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.073,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0037741",
+   "name": "Jahan Dotson",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1638,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.147,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.141,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0036407",
+   "name": "Jerry Jeudy",
+   "position": "WR",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1594,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.5,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.164,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.067,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0036971",
+   "name": "Trevor Lawrence",
+   "position": "QB",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1585,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 3.38,
+    "targetShare": 0.0,
+    "carryShare": 0.123,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.108,
+    "goalLineShare": 0.1,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.254
+   }
+  },
+  {
+   "playerId": "00-0034855",
+   "name": "Baker Mayfield",
+   "position": "QB",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1584,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 3.0,
+    "targetShare": 0.0,
+    "carryShare": 0.105,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.154,
+    "goalLineShare": 0.083,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.123
+   }
+  },
+  {
+   "playerId": "00-0033307",
+   "name": "Kendrick Bourne",
+   "position": "WR",
+   "team": "ARI",
+   "opponent": "DAL",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1583,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.13,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.132,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.8,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.048
+   }
+  },
+  {
+   "playerId": "00-0035689",
+   "name": "Dawson Knox",
+   "position": "TE",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1577,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.12,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.077,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.132,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.171
+   }
+  },
+  {
+   "playerId": "00-0038454",
+   "name": "Keaton Mitchell",
+   "position": "RB",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1577,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.12,
+    "carriesPerGame": 5.75,
+    "targetShare": 0.082,
+    "carryShare": 0.185,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.125,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.65,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0040648",
+   "name": "Tory Horton",
+   "position": "WR",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.1559,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.088,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.133,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.339
+   }
+  },
+  {
+   "playerId": "00-0036919",
+   "name": "Kenny Gainwell",
+   "position": "RB",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1549,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 4.75,
+    "targetShare": 0.108,
+    "carryShare": 0.165,
+    "redZoneTouchesPerGame": 1.0,
+    "redZoneShare": 0.102,
+    "goalLineShare": 0.143,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.28
+   }
+  },
+  {
+   "playerId": "00-0039391",
+   "name": "Kimani Vidal",
+   "position": "RB",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1544,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.75,
+    "carriesPerGame": 5.12,
+    "targetShare": 0.06,
+    "carryShare": 0.177,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.08,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.65,
+    "recentTdRate": 0.324
+   }
+  },
+  {
+   "playerId": "00-0041100",
+   "name": "Josh Cameron",
+   "position": "WR",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1536,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.07,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.67,
+    "redZoneShare": 0.121,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.258
+   }
+  },
+  {
+   "playerId": "00-0039732",
+   "name": "Bo Nix",
+   "position": "QB",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1524,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 4.62,
+    "targetShare": 0.0,
+    "carryShare": 0.182,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.179,
+    "goalLineShare": 0.214,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.8,
+    "recentTdRate": 0.21
+   }
+  },
+  {
+   "playerId": "00-0040887",
+   "name": "Josh Cuevas",
+   "position": "TE",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1517,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.2,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.076,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.4,
+    "redZoneShare": 0.091,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.176
+   }
+  },
+  {
+   "playerId": "00-0032464",
+   "name": "Kalif Raymond",
+   "position": "WR",
+   "team": "CHI",
+   "opponent": "SEA",
+   "isHome": false,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.1498,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 4.25,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.131,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.093,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.71,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0040170",
+   "name": "Elic Ayomanor",
+   "position": "WR",
+   "team": "TEN",
+   "opponent": "CIN",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.148,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.136,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.333,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.0,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0039299",
+   "name": "George Holani",
+   "position": "RB",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.1469,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.75,
+    "carriesPerGame": 4.75,
+    "targetShare": 0.054,
+    "carryShare": 0.158,
+    "redZoneTouchesPerGame": 1.62,
+    "redZoneShare": 0.262,
+    "goalLineShare": 0.333,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0040785",
+   "name": "Dohnte Meyers",
+   "position": "WR",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1455,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.33,
+    "carriesPerGame": 0.17,
+    "targetShare": 0.093,
+    "carryShare": 0.007,
+    "redZoneTouchesPerGame": 0.17,
+    "redZoneShare": 0.032,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0040215",
+   "name": "Gavin Bartholomew",
+   "position": "TE",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1444,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.67,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.093,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.33,
+    "redZoneShare": 0.067,
+    "goalLineShare": null,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 2.85,
+    "recentTdRate": 0.104
+   }
+  },
+  {
+   "playerId": "00-0041503",
+   "name": "Nate Boerkircher",
+   "position": "TE",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1439,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.6,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.056,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.4,
+    "redZoneShare": 0.067,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.176
+   }
+  },
+  {
+   "playerId": "00-0039021",
+   "name": "Roschon Johnson",
+   "position": "RB",
+   "team": "CHI",
+   "opponent": "SEA",
+   "isHome": false,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.1425,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.25,
+    "carriesPerGame": 3.25,
+    "targetShare": 0.041,
+    "carryShare": 0.091,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.104,
+    "goalLineShare": 0.077,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.193
+   }
+  },
+  {
+   "playerId": "00-0034348",
+   "name": "Courtland Sutton",
+   "position": "WR",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1417,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 4.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.161,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.226,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.43,
+    "recentTdRate": 0.265
+   }
+  },
+  {
+   "playerId": "00-0038558",
+   "name": "Darnell Washington",
+   "position": "TE",
+   "team": "PIT",
+   "opponent": "CLE",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1413,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.088,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.171,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.5,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0033881",
+   "name": "Evan Engram",
+   "position": "TE",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1412,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.119,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.065,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0040676",
+   "name": "Cam Ward",
+   "position": "QB",
+   "team": "TEN",
+   "opponent": "CIN",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1397,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.62,
+    "targetShare": 0.0,
+    "carryShare": 0.117,
+    "redZoneTouchesPerGame": 1.12,
+    "redZoneShare": 0.231,
+    "goalLineShare": 0.308,
+    "teamImpliedPoints": 17.0,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.167
+   }
+  },
+  {
+   "playerId": "00-0041529",
+   "name": "Kevin Coleman Jr.",
+   "position": "WR",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1394,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.6,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.143,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.4,
+    "redZoneShare": 0.222,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.191
+   }
+  },
+  {
+   "playerId": "00-0039074",
+   "name": "Davis Allen",
+   "position": "TE",
+   "team": "LA",
+   "opponent": "LAC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1391,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.88,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.049,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.093,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 26.0,
+    "opponentTdsAllowedRatio": 0.56,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0040311",
+   "name": "Theo Wease Jr.",
+   "position": "WR",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1385,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.8,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.109,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.4,
+    "redZoneShare": 0.1,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.191
+   }
+  },
+  {
+   "playerId": "00-0039792",
+   "name": "Devontez Walker",
+   "position": "WR",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1365,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.063,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.046,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.232
+   }
+  },
+  {
+   "playerId": "00-0033699",
+   "name": "Austin Ekeler",
+   "position": "RB",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.136,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 4.5,
+    "targetShare": 0.101,
+    "carryShare": 0.188,
+    "redZoneTouchesPerGame": 0.62,
+    "redZoneShare": 0.182,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.193
+   }
+  },
+  {
+   "playerId": "00-0036442",
+   "name": "Joe Burrow",
+   "position": "QB",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1359,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.75,
+    "targetShare": 0.0,
+    "carryShare": 0.113,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.167,
+    "goalLineShare": 0.182,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.123
+   }
+  },
+  {
+   "playerId": "00-0039875",
+   "name": "Ray Davis",
+   "position": "RB",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1357,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.0,
+    "carriesPerGame": 3.75,
+    "targetShare": 0.038,
+    "carryShare": 0.121,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.053,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0039874",
+   "name": "Jaylen Wright",
+   "position": "RB",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1348,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.62,
+    "carriesPerGame": 5.88,
+    "targetShare": 0.027,
+    "carryShare": 0.212,
+    "redZoneTouchesPerGame": 1.5,
+    "redZoneShare": 0.24,
+    "goalLineShare": 0.167,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.86,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0039530",
+   "name": "Brevyn Spann-Ford",
+   "position": "TE",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1335,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.055,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.022,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 2.39,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0038046",
+   "name": "Charlie Kolar",
+   "position": "TE",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1333,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.082,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.065,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0039798",
+   "name": "Isaiah Davis",
+   "position": "RB",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.13,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.38,
+    "carriesPerGame": 2.0,
+    "targetShare": 0.046,
+    "carryShare": 0.086,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.217,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.106
+   }
+  },
+  {
+   "playerId": "00-0040237",
+   "name": "Tez Johnson",
+   "position": "WR",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1297,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.0,
+    "carriesPerGame": 0.5,
+    "targetShare": 0.073,
+    "carryShare": 0.016,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.094,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0040184",
+   "name": "KeAndre Lambert-Smith",
+   "position": "WR",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1296,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.079,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.068,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.123
+   }
+  },
+  {
+   "playerId": "00-0040563",
+   "name": "Efton Chism III",
+   "position": "WR",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1292,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.25,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.081,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.081,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.155
+   }
+  },
+  {
+   "playerId": "00-0036259",
+   "name": "Jauan Jennings",
+   "position": "WR",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1285,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.108,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.103,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.352
+   }
+  },
+  {
+   "playerId": "00-0036988",
+   "name": "Josh Palmer",
+   "position": "WR",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1277,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.086,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.05,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0041251",
+   "name": "Jalon Daniels",
+   "position": "QB",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1273,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.2,
+    "carriesPerGame": 4.4,
+    "targetShare": 0.007,
+    "carryShare": 0.133,
+    "redZoneTouchesPerGame": 0.4,
+    "redZoneShare": 0.067,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.076
+   }
+  },
+  {
+   "playerId": "00-0041125",
+   "name": "Seth McGowan",
+   "position": "RB",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1265,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.71,
+    "carriesPerGame": 4.57,
+    "targetShare": 0.022,
+    "carryShare": 0.16,
+    "redZoneTouchesPerGame": 0.57,
+    "redZoneShare": 0.108,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.76,
+    "recentTdRate": 0.111
+   }
+  },
+  {
+   "playerId": "00-0041443",
+   "name": "Skyler Bell",
+   "position": "WR",
+   "team": "BUF",
+   "opponent": "BAL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1263,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.062,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.1,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 28.8,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.137
+   }
+  },
+  {
+   "playerId": "00-0040590",
+   "name": "Konata Mumpfield",
+   "position": "WR",
+   "team": "LA",
+   "opponent": "LAC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.1245,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.086,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.079,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 26.0,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.141
+   }
+  },
+  {
+   "playerId": "00-0040131",
+   "name": "Kyle Williams",
+   "position": "WR",
+   "team": "NE",
+   "opponent": "MIA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1238,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.5,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.052,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.2,
+    "opponentTdsAllowedRatio": 0.81,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0039041",
+   "name": "Elijah Higgins",
+   "position": "TE",
+   "team": "ARI",
+   "opponent": "DAL",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1229,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.06,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.036,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.8,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0033375",
+   "name": "Tim Patrick",
+   "position": "WR",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1221,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.081,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.15,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0038794",
+   "name": "Jaleel McLaughlin",
+   "position": "RB",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1221,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.0,
+    "carriesPerGame": 3.62,
+    "targetShare": 0.031,
+    "carryShare": 0.139,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.069,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 0.76,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0035631",
+   "name": "Drew Sample",
+   "position": "TE",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1218,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.06,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.048,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0033873",
+   "name": "Patrick Mahomes",
+   "position": "QB",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1206,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.12,
+    "carriesPerGame": 3.5,
+    "targetShare": 0.004,
+    "carryShare": 0.135,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.08,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 0.8,
+    "recentTdRate": 0.21
+   }
+  },
+  {
+   "playerId": "00-0039868",
+   "name": "Troy Franklin",
+   "position": "WR",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1196,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.75,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.065,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.103,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.43,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0041525",
+   "name": "Chris Bell",
+   "position": "WR",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1173,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.17,
+    "carriesPerGame": 0.17,
+    "targetShare": 0.128,
+    "carryShare": 0.006,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0032951",
+   "name": "Laquon Treadwell",
+   "position": "WR",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1169,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.102,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.12,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.62,
+    "recentTdRate": 0.048
+   }
+  },
+  {
+   "playerId": "00-0040024",
+   "name": "Darius Cooper",
+   "position": "WR",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.1159,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.091,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.167,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.216
+   }
+  },
+  {
+   "playerId": "00-0037120",
+   "name": "Tyler Goodson",
+   "position": "RB",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1153,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.62,
+    "carriesPerGame": 3.12,
+    "targetShare": 0.018,
+    "carryShare": 0.12,
+    "redZoneTouchesPerGame": 0.88,
+    "redZoneShare": 0.125,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.063
+   }
+  },
+  {
+   "playerId": "00-0037291",
+   "name": "Jalen Nailor",
+   "position": "WR",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1142,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 3.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.111,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.071,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0035710",
+   "name": "Daniel Jones",
+   "position": "QB",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.114,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.75,
+    "targetShare": 0.0,
+    "carryShare": 0.097,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.136,
+    "goalLineShare": 0.111,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.167
+   }
+  },
+  {
+   "playerId": "00-0040584",
+   "name": "Gunnar Helm",
+   "position": "TE",
+   "team": "TEN",
+   "opponent": "CIN",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1104,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.094,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.1,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.0,
+    "opponentTdsAllowedRatio": 0.56,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0041013",
+   "name": "Emmett Johnson",
+   "position": "RB",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1102,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.83,
+    "carriesPerGame": 3.17,
+    "targetShare": 0.061,
+    "carryShare": 0.12,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.054,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.12
+   }
+  },
+  {
+   "playerId": "00-0038976",
+   "name": "Marvin Mims Jr.",
+   "position": "WR",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1089,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.62,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.087,
+    "carryShare": 0.015,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.067,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.43,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0035891",
+   "name": "Cody White",
+   "position": "WR",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1089,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.067,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.13,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0033955",
+   "name": "Jeremy McNichols",
+   "position": "RB",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.1083,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.62,
+    "carriesPerGame": 3.38,
+    "targetShare": 0.063,
+    "carryShare": 0.119,
+    "redZoneTouchesPerGame": 0.75,
+    "redZoneShare": 0.083,
+    "goalLineShare": 0.083,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.106
+   }
+  },
+  {
+   "playerId": "00-0034270",
+   "name": "Tyler Conklin",
+   "position": "TE",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1062,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.75,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.049,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.023,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.215
+   }
+  },
+  {
+   "playerId": "00-0041044",
+   "name": "Zachariah Branch",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1051,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.71,
+    "carriesPerGame": 0.14,
+    "targetShare": 0.063,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.14,
+    "redZoneShare": 0.029,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0034837",
+   "name": "Calvin Ridley",
+   "position": "WR",
+   "team": "TEN",
+   "opponent": "CIN",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.105,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 2.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.09,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.083,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.0,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0035662",
+   "name": "Marquise Brown",
+   "position": "WR",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.1036,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.75,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.091,
+    "carryShare": 0.01,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.042,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.222
+   }
+  },
+  {
+   "playerId": "00-0036626",
+   "name": "Dyami Brown",
+   "position": "WR",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.1026,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.12,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.069,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.057,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0040646",
+   "name": "Jalen Royals",
+   "position": "WR",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.1014,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.75,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.057,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.046,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 0.62,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0037755",
+   "name": "Jelani Woods",
+   "position": "TE",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.1013,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.051,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.118,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 2.16,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0034975",
+   "name": "Justice Hill",
+   "position": "RB",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0997,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.12,
+    "carriesPerGame": 2.62,
+    "targetShare": 0.078,
+    "carryShare": 0.085,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.017,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.15
+   }
+  },
+  {
+   "playerId": "00-0036637",
+   "name": "Noah Gray",
+   "position": "TE",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.0997,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.087,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.062,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.041
+   }
+  },
+  {
+   "playerId": "00-0037666",
+   "name": "Jalen Tolbert",
+   "position": "WR",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.0985,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.072,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.05,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0040298",
+   "name": "Andrew Armstrong",
+   "position": "WR",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.0979,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.066,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.1,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 0.62,
+    "recentTdRate": 0.137
+   }
+  },
+  {
+   "playerId": "00-0035406",
+   "name": "Lil'Jordan Humphrey",
+   "position": "WR",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.0943,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.071,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.045,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.43,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0039451",
+   "name": "Isaiah Williams",
+   "position": "WR",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.094,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.62,
+    "carriesPerGame": 0.38,
+    "targetShare": 0.097,
+    "carryShare": 0.015,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.042,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0038115",
+   "name": "Daniel Bellinger",
+   "position": "TE",
+   "team": "TEN",
+   "opponent": "CIN",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0938,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.057,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.031,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.0,
+    "opponentTdsAllowedRatio": 0.56,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0032392",
+   "name": "Austin Hooper",
+   "position": "TE",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0936,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.075,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.088,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 1.71,
+    "recentTdRate": 0.171
+   }
+  },
+  {
+   "playerId": "00-0033217",
+   "name": "Mo Alie-Cox",
+   "position": "TE",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0926,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.063,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.5,
+    "redZoneShare": 0.114,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0040890",
+   "name": "Cyrus Allen",
+   "position": "WR",
+   "team": "KC",
+   "opponent": "DEN",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.092,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.053,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.0,
+    "opponentTdsAllowedRatio": 0.62,
+    "recentTdRate": 0.11
+   }
+  },
+  {
+   "playerId": "00-0036754",
+   "name": "Brock Wright",
+   "position": "TE",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0883,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.061,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.02,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.128
+   }
+  },
+  {
+   "playerId": "00-0036422",
+   "name": "Adam Trautman",
+   "position": "TE",
+   "team": "DEN",
+   "opponent": "KC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.0865,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 2.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.06,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.025,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0035208",
+   "name": "Olamide Zaccheaus",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0862,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 2.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.088,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.083,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.135
+   }
+  },
+  {
+   "playerId": "00-0033077",
+   "name": "Dak Prescott",
+   "position": "QB",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0846,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.25,
+    "targetShare": 0.0,
+    "carryShare": 0.095,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.058,
+    "goalLineShare": 0.048,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.08
+   }
+  },
+  {
+   "playerId": "00-0039489",
+   "name": "Hayden Rucci",
+   "position": "TE",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.0846,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.009,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.042,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.194
+   }
+  },
+  {
+   "playerId": "00-0041524",
+   "name": "Will Kacmarek",
+   "position": "TE",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.0839,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.2,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.047,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.085
+   }
+  },
+  {
+   "playerId": "00-0030565",
+   "name": "Geno Smith",
+   "position": "QB",
+   "team": "NYJ",
+   "opponent": "LV",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.083,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.88,
+    "targetShare": 0.0,
+    "carryShare": 0.116,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.077,
+    "goalLineShare": 0.1,
+    "teamImpliedPoints": 23.5,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.036
+   }
+  },
+  {
+   "playerId": "00-0034365",
+   "name": "Ian Thomas",
+   "position": "TE",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0819,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.046,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0036628",
+   "name": "John Bates",
+   "position": "TE",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.08,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 1.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.052,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.1,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 1.02,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0040894",
+   "name": "Malik Benson",
+   "position": "WR",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0799,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.29,
+    "carriesPerGame": 0.14,
+    "targetShare": 0.036,
+    "carryShare": 0.006,
+    "redZoneTouchesPerGame": 0.57,
+    "redZoneShare": 0.1,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0038738",
+   "name": "Hunter Luepke",
+   "position": "RB",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0798,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.75,
+    "carriesPerGame": 1.62,
+    "targetShare": 0.021,
+    "carryShare": 0.064,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.05,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.106
+   }
+  },
+  {
+   "playerId": "00-0039355",
+   "name": "Luke McCaffrey",
+   "position": "WR",
+   "team": "WAS",
+   "opponent": "PHI",
+   "isHome": true,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.0786,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.041,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.048,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.2,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.178
+   }
+  },
+  {
+   "playerId": "00-0036429",
+   "name": "Charlie Woerner",
+   "position": "TE",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0768,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.38,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.048,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.056,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 1.71,
+    "recentTdRate": 0.041
+   }
+  },
+  {
+   "playerId": "00-0041132",
+   "name": "Deion Burks",
+   "position": "WR",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0764,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.4,
+    "carriesPerGame": 0.6,
+    "targetShare": 0.043,
+    "carryShare": 0.02,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.62,
+    "recentTdRate": 0.1
+   }
+  },
+  {
+   "playerId": "00-0038394",
+   "name": "Will Mallory",
+   "position": "TE",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0746,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.068,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.043,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.041
+   }
+  },
+  {
+   "playerId": "00-0039062",
+   "name": "Jonathan Mingo",
+   "position": "WR",
+   "team": "DAL",
+   "opponent": "ARI",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0744,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.38,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.038,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.024,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 30.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.048
+   }
+  },
+  {
+   "playerId": "00-0033576",
+   "name": "Eric Saubert",
+   "position": "TE",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.0735,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.033,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.094,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 1.02,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0036980",
+   "name": "Elijah Moore",
+   "position": "WR",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.0724,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 2.0,
+    "carriesPerGame": 0.25,
+    "targetShare": 0.066,
+    "carryShare": 0.01,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 1.09,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0040154",
+   "name": "Tai Felton",
+   "position": "WR",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0717,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.12,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.042,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.029,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.05
+   }
+  },
+  {
+   "playerId": "00-0039917",
+   "name": "Michael Penix Jr.",
+   "position": "QB",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0714,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.0,
+    "targetShare": 0.0,
+    "carryShare": 0.074,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.043,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.123
+   }
+  },
+  {
+   "playerId": "00-0041483",
+   "name": "Eli Stowers",
+   "position": "TE",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.0699,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 1.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.03,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 2.62,
+    "recentTdRate": 0.134
+   }
+  },
+  {
+   "playerId": "00-0038710",
+   "name": "Blake Whiteheart",
+   "position": "TE",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0676,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.88,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.033,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.067,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 1.02,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0037292",
+   "name": "Andrew Ogletree",
+   "position": "TE",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0671,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 1.0,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.032,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.069,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.084
+   }
+  },
+  {
+   "playerId": "00-0040506",
+   "name": "Myles Price",
+   "position": "WR",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0665,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.88,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.037,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.07,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.048
+   }
+  },
+  {
+   "playerId": "00-0026498",
+   "name": "Matthew Stafford",
+   "position": "QB",
+   "team": "LA",
+   "opponent": "LAC",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.0652,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 1.88,
+    "targetShare": 0.0,
+    "carryShare": 0.069,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.07,
+    "goalLineShare": 0.077,
+    "teamImpliedPoints": 26.0,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.036
+   }
+  },
+  {
+   "playerId": "00-0033106",
+   "name": "Jared Goff",
+   "position": "QB",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0617,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 1.88,
+    "targetShare": 0.0,
+    "carryShare": 0.068,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.043,
+    "goalLineShare": 0.059,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.08
+   }
+  },
+  {
+   "playerId": "00-0037317",
+   "name": "Nick Muse",
+   "position": "TE",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0608,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.016,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.17,
+    "redZoneShare": 0.04,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 1.71,
+    "recentTdRate": 0.161
+   }
+  },
+  {
+   "playerId": "00-0041579",
+   "name": "Seydou Traore",
+   "position": "TE",
+   "team": "MIA",
+   "opponent": "NE",
+   "isHome": true,
+   "kickoff": "2026-11-01T21:25:00Z",
+   "probability": 0.0604,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.021,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 0.79,
+    "recentTdRate": 0.117
+   }
+  },
+  {
+   "playerId": "00-0040238",
+   "name": "LeQuint Allen Jr.",
+   "position": "RB",
+   "team": "JAX",
+   "opponent": "IND",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0583,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.75,
+    "carriesPerGame": 1.25,
+    "targetShare": 0.024,
+    "carryShare": 0.046,
+    "redZoneTouchesPerGame": 0.38,
+    "redZoneShare": 0.037,
+    "goalLineShare": 0.083,
+    "teamImpliedPoints": 28.2,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.063
+   }
+  },
+  {
+   "playerId": "00-0041051",
+   "name": "Zavion Thomas",
+   "position": "WR",
+   "team": "CHI",
+   "opponent": "SEA",
+   "isHome": false,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.0556,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.83,
+    "carriesPerGame": 0.17,
+    "targetShare": 0.025,
+    "carryShare": 0.005,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.71,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0041104",
+   "name": "Demond Claiborne",
+   "position": "RB",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0552,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 1.5,
+    "targetShare": 0.019,
+    "carryShare": 0.051,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": null,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.144
+   }
+  },
+  {
+   "playerId": "00-0037745",
+   "name": "Velus Jones Jr.",
+   "position": "RB",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.0544,
+   "injuryStatus": "Questionable",
+   "factors": {
+    "targetsPerGame": 0.12,
+    "carriesPerGame": 1.62,
+    "targetShare": 0.004,
+    "carryShare": 0.056,
+    "redZoneTouchesPerGame": 0.25,
+    "redZoneShare": 0.071,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.063
+   }
+  },
+  {
+   "playerId": "00-0041081",
+   "name": "Max Bredeson",
+   "position": "RB",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0539,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.02,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": null,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 0.97,
+    "recentTdRate": 0.18
+   }
+  },
+  {
+   "playerId": "00-0034869",
+   "name": "Sam Darnold",
+   "position": "QB",
+   "team": "SEA",
+   "opponent": "CHI",
+   "isHome": true,
+   "kickoff": "2026-11-03T01:15:00Z",
+   "probability": 0.0515,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.25,
+    "targetShare": 0.0,
+    "carryShare": 0.075,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.029,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 1.75,
+    "recentTdRate": 0.036
+   }
+  },
+  {
+   "playerId": "00-0039407",
+   "name": "Dylan Laube",
+   "position": "RB",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0505,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 0.62,
+    "targetShare": 0.014,
+    "carryShare": 0.025,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.029,
+    "goalLineShare": 0.083,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 1.39,
+    "recentTdRate": 0.106
+   }
+  },
+  {
+   "playerId": "00-0029604",
+   "name": "Kirk Cousins",
+   "position": "QB",
+   "team": "LV",
+   "opponent": "NYJ",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0498,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 2.25,
+    "targetShare": 0.0,
+    "carryShare": 0.092,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 22.0,
+    "opponentTdsAllowedRatio": 0.8,
+    "recentTdRate": 0.08
+   }
+  },
+  {
+   "playerId": "00-0023459",
+   "name": "Aaron Rodgers",
+   "position": "QB",
+   "team": "PIT",
+   "opponent": "CLE",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0497,
+   "injuryStatus": "Active",
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 1.62,
+    "targetShare": 0.0,
+    "carryShare": 0.072,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.5,
+    "opponentTdsAllowedRatio": 0.33,
+    "recentTdRate": 0.08
+   }
+  },
+  {
+   "playerId": "00-0033246",
+   "name": "Johnny Mundt",
+   "position": "TE",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.0468,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 1.25,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.038,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 2.62,
+    "recentTdRate": 0.041
+   }
+  },
+  {
+   "playerId": "00-0039364",
+   "name": "Sione Vaki",
+   "position": "RB",
+   "team": "DET",
+   "opponent": "MIN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0465,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.62,
+    "carriesPerGame": 2.0,
+    "targetShare": 0.018,
+    "carryShare": 0.073,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.021,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 24.8,
+    "opponentTdsAllowedRatio": 0.65,
+    "recentTdRate": 0.063
+   }
+  },
+  {
+   "playerId": "00-0040509",
+   "name": "Ben Yurosek",
+   "position": "TE",
+   "team": "MIN",
+   "opponent": "DET",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0465,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.57,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.02,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 21.8,
+    "opponentTdsAllowedRatio": 2.85,
+    "recentTdRate": 0.072
+   }
+  },
+  {
+   "playerId": "00-0040208",
+   "name": "Tahj Brooks",
+   "position": "RB",
+   "team": "CIN",
+   "opponent": "TEN",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0435,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.25,
+    "carriesPerGame": 1.5,
+    "targetShare": 0.008,
+    "carryShare": 0.057,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 29.5,
+    "opponentTdsAllowedRatio": 1.07,
+    "recentTdRate": 0.066
+   }
+  },
+  {
+   "playerId": "00-0038400",
+   "name": "Tanner McKee",
+   "position": "QB",
+   "team": "PHI",
+   "opponent": "WAS",
+   "isHome": false,
+   "kickoff": "2026-11-02T01:20:00Z",
+   "probability": 0.0431,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.0,
+    "carriesPerGame": 1.88,
+    "targetShare": 0.0,
+    "carryShare": 0.063,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 17.2,
+    "opponentTdsAllowedRatio": 0.8,
+    "recentTdRate": 0.06
+   }
+  },
+  {
+   "playerId": "00-0041094",
+   "name": "Bauer Sharp",
+   "position": "TE",
+   "team": "TB",
+   "opponent": "ATL",
+   "isHome": true,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0428,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.17,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.006,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 23.0,
+    "opponentTdsAllowedRatio": 1.25,
+    "recentTdRate": 0.078
+   }
+  },
+  {
+   "playerId": "00-0036463",
+   "name": "Chris Blair",
+   "position": "WR",
+   "team": "ATL",
+   "opponent": "TB",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0413,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.023,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 20.5,
+    "opponentTdsAllowedRatio": 0.9,
+    "recentTdRate": 0.073
+   }
+  },
+  {
+   "playerId": "00-0036630",
+   "name": "Tylan Wallace",
+   "position": "WR",
+   "team": "CLE",
+   "opponent": "PIT",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0396,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.022,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.0,
+    "opponentTdsAllowedRatio": 1.0,
+    "recentTdRate": 0.091
+   }
+  },
+  {
+   "playerId": "00-0039796",
+   "name": "Rasheen Ali",
+   "position": "RB",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0385,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.38,
+    "carriesPerGame": 0.62,
+    "targetShare": 0.015,
+    "carryShare": 0.019,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 1.28,
+    "recentTdRate": 0.106
+   }
+  },
+  {
+   "playerId": "00-0033439",
+   "name": "Pharaoh Brown",
+   "position": "TE",
+   "team": "IND",
+   "opponent": "JAX",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0373,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.016,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.12,
+    "redZoneShare": 0.026,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 18.2,
+    "opponentTdsAllowedRatio": 1.48,
+    "recentTdRate": 0.041
+   }
+  },
+  {
+   "playerId": "00-0040075",
+   "name": "LaJohntay Wester",
+   "position": "WR",
+   "team": "BAL",
+   "opponent": "BUF",
+   "isHome": false,
+   "kickoff": "2026-11-01T18:00:00Z",
+   "probability": 0.0326,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.62,
+    "carriesPerGame": 0.0,
+    "targetShare": 0.023,
+    "carryShare": 0.0,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 25.8,
+    "opponentTdsAllowedRatio": 1.38,
+    "recentTdRate": 0.048
+   }
+  },
+  {
+   "playerId": "00-0038573",
+   "name": "Derius Davis",
+   "position": "WR",
+   "team": "LAC",
+   "opponent": "LA",
+   "isHome": false,
+   "kickoff": "2026-11-01T21:05:00Z",
+   "probability": 0.031,
+   "injuryStatus": null,
+   "factors": {
+    "targetsPerGame": 0.5,
+    "carriesPerGame": 0.12,
+    "targetShare": 0.017,
+    "carryShare": 0.004,
+    "redZoneTouchesPerGame": 0.0,
+    "redZoneShare": 0.0,
+    "goalLineShare": 0.0,
+    "teamImpliedPoints": 19.5,
+    "opponentTdsAllowedRatio": 1.19,
+    "recentTdRate": 0.048
+   }
+  }
+ ],
+ "results": [
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0023459",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0026498",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0029604",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0030279",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0030506",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0030565",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0031236",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0031503",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0031610",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0031610",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0031763",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0032392",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0032464",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0032764",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0032951",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033077",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033090",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033106",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033110",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033119",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033217",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033280",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033288",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033293",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033307",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033526",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033537",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033576",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033589",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0033589",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033858",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033873",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033881",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033906",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033908",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0033921",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034270",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034348",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034351",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034365",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034383",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034386",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034753",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034829",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034844",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034855",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034869",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0034975",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035021",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035228",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035229",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035250",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035261",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035359",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035406",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035594",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035602",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035631",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035640",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035644",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035662",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035676",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035700",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0035700",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035710",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035891",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0035993",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036040",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036139",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036158",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036223",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036244",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036259",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036264",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0036264",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036275",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036290",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036309",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036322",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036331",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036358",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036407",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036410",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036422",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036425",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036429",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036442",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036463",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036550",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036554",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036555",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0036555",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036556",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036567",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036613",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036637",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036775",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036875",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036887",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036894",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036900",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036906",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036919",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036924",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036963",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036970",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036980",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0036997",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037005",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0037005",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037091",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0037091",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037120",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037132",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037156",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037157",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037228",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037238",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037239",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037240",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037247",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037252",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037258",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037263",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037291",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037292",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037311",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037317",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037525",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037545",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037594",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037614",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0037614",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037740",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037741",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037744",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037745",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037755",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037805",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037834",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037838",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0037840",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038041",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0038098",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038102",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038115",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038117",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038124",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0038124",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038128",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038129",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038134",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038394",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038400",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038409",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038440",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038488",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038519",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038542",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038543",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038551",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038558",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038559",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038563",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038576",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038597",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038608",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038618",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038621",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038640",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038738",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038783",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038794",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038797",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038839",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038840",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0038840",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038896",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038951",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038976",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038977",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038994",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038996",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0038996",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0038997",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039021",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039041",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039062",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039064",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039065",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039066",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039074",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039075",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039139",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039150",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0039150",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039163",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039299",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039337",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039338",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039359",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039361",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039364",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039365",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039384",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039407",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039410",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039424",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039451",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039491",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0039491",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039530",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039589",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039732",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039738",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039751",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039793",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039794",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039796",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039798",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039811",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0039811",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039814",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039849",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039851",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039868",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039874",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039880",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039890",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039894",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039917",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039918",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039919",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039920",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0039923",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040009",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0040009",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040024",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040075",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040122",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040124",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0040124",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040126",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040131",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040138",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040154",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040162",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040170",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040172",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040177",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040187",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0040187",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040198",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040208",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040215",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040225",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040237",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040277",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040298",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040352",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0040352",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040394",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0040394",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040506",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040556",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040563",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040583",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040584",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040590",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040598",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040644",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0040644",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040646",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040648",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040663",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040667",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0040667",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040669",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040676",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040705",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040715",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040730",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040734",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040735",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040736",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040743",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040784",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040785",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040867",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040870",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040878",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040879",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040887",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040890",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040894",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0040948",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 8,
+   "playerId": "00-0040948",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041013",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041032",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041037",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041041",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041042",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041044",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041048",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041051",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041052",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041067",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041081",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041094",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041099",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041125",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041132",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041251",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041267",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041395",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041397",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041438",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041483",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041489",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041496",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041511",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041523",
+   "scored": true
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041525",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041529",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041547",
+   "scored": false
+  },
+  {
+   "season": 2026,
+   "week": 7,
+   "playerId": "00-0041579",
+   "scored": false
+  }
+ ]
+}
