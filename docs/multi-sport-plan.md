@@ -36,3 +36,16 @@ Decided with Kalen on 2026-11-01. Use this as the brief for the next build.
   line movement).
 - Phase 3: team pages (game log vs our line, rating trend, roster, injuries).
 - Phase 4: standings, upset alerts, March bracket center.
+
+## Mockup and agreed tweaks (2026-11-01)
+Mockup (private to Kalen): https://claude.ai/artifact/YbQwRq2FU3TRYGNxghe8AQ — home with
+Home | NFL | College Basketball tabs, NFL section (coral accent), college section (blue
+accent), phone home. Build from it with these changes:
+1. **Record next to the picks**: each sport card on the home page carries its own record
+   line (e.g. "NFL early lines: 9-6, +2.4 units"), not just small boxes in the corner.
+2. **College on the home page shows only the top 3 picks by gap**, never the full list.
+3. **Next start time** on each sport card on game days ("next kickoff 1:00 PM",
+   "first tip 6:30 PM").
+4. **Check the blue accent in light mode** before locking it in; adjust for contrast.
+5. Keep a small "New: tracking since Nov 2" note on college pages for the first month or
+   two after launch.
