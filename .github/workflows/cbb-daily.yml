@@ -11,6 +11,8 @@ on:
     - cron: "10 21 * * *"  # 16:10 ET - before evening tips
     - cron: "40 0 * * *"   # 19:40 ET - before late tips
   workflow_dispatch: {}
+  push:
+    branches: [claude/beautiful-mendel-t4wvmz]  # TEMP: one test run before merge
 
 concurrency:
   group: cbb-daily
@@ -36,7 +38,10 @@ jobs:
           cache-dependency-path: research/cbb-model/requirements.txt
       - run: pip install -r requirements.txt
       - name: Season label
-        run: echo "SEASON=$(( $(date -u +%-m) >= 7 ? $(date -u +%Y) + 1 : $(date -u +%Y) ))" >> "$GITHUB_ENV"
+        run: |
+          month=$(date -u +%-m); year=$(date -u +%Y)
+          if [ "$month" -ge 7 ]; then year=$((year + 1)); fi
+          echo "SEASON=$year" >> "$GITHUB_ENV"
       - name: Past seasons (cached for the season)
         id: past
         uses: actions/cache@v4
