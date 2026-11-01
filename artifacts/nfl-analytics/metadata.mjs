@@ -1,4 +1,6 @@
 // Public document metadata, shared by Vite development and the production web server.
+import { cbbIsPublic } from '../../lib/sports-launch.mjs';
+
 const configuredOrigin = process.env.PUBLIC_SITE_URL || 'https://probablesports.com';
 const origin = new URL(configuredOrigin).origin;
 const defaultApiOrigin = process.env.INTERNAL_API_ORIGIN || 'http://127.0.0.1:80';
@@ -23,6 +25,15 @@ const pages = {
   '/defense-vs-position': ['NFL Defense vs Position | Probable', 'Fantasy points and touchdowns each NFL defense allows to quarterbacks, running backs, receivers and tight ends.'],
   '/methodology': ['How Probable Makes Its Picks | Probable', 'What goes into Probable\'s game projections and touchdown picks, how they are tested, and how picks are graded.'],
   '/performance': ['NFL Model Performance | Probable', 'How Probable\'s game and touchdown models performed on seasons they never trained on, and this season\'s graded record.'],
+};
+
+// College basketball pages: indexed only once college is public (lib/sports-launch.mjs).
+// Keep in sync with src/lib/public-metadata.ts.
+export const cbbPages = {
+  '/cbb': ['College Basketball Picks and Lines Today | Probable', 'Our line for every Division I college basketball game today and tomorrow next to the opening and current spread, with picks tracked in public.'],
+  '/cbb/ratings': ['College Basketball Power Ratings: All D-I Teams Ranked | Probable', 'Every Division I men\'s college basketball team ranked by opponent-adjusted offense, defense and tempo, updated every morning.'],
+  '/cbb/record': ['College Basketball Picks Record Against the Spread | Probable', 'Every college basketball spread pick Probable has made this season, graded at the line posted before tip-off.'],
+  '/cbb/how-it-works': ['How Probable\'s College Basketball Model Works | Probable', 'How our college basketball ratings and lines are built, how they were tested against three seasons of sportsbook lines, and how picks are graded.'],
 };
 
 function tags({ title, description, path, index }) {
@@ -83,6 +94,10 @@ export async function documentForPath(pathname, { apiOrigin = defaultApiOrigin }
   const normalized = path.length > 1 ? path.replace(/\/$/, '') : path;
   if (pages[normalized]) {
     const [title, description] = pages[normalized];
+    return { status: 200, tags: tags({ title, description, path: normalized, index: true }) };
+  }
+  if (cbbPages[normalized] && cbbIsPublic()) {
+    const [title, description] = cbbPages[normalized];
     return { status: 200, tags: tags({ title, description, path: normalized, index: true }) };
   }
   if (normalized === '/share') {

@@ -530,12 +530,28 @@
   overflow-y: auto;
 }
 .gl-sidebar .gl-brand { padding: 4px 10px 8px; }
-/* NFL / College Hoops switch above the menu. */
-.gl-sport-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px; border: 1px solid hsl(var(--border)); border-radius: 10px; }
-.gl-sport-switch a { padding: 6px 4px; border-radius: 7px; color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 700; text-align: center; text-decoration: none; white-space: nowrap; }
-.gl-sport-switch a:hover { color: hsl(var(--foreground)); }
-.gl-sport-switch a[aria-current] { background: hsl(var(--foreground)); color: hsl(var(--background)); }
-.gl-mobile-nav .gl-sport-switch { margin-bottom: 10px; }
+/* Each sport keeps a small accent of its own: NFL coral, college blue. */
+.consumer-shell[data-sport="cbb"] { --primary: 221 72% 46%; --accent: 221 72% 46%; --ring: 221 72% 46%; }
+.dark .consumer-shell[data-sport="cbb"] { --primary: 214 95% 70%; --accent: 214 95% 70%; --ring: 214 95% 70%; }
+/* NFL | College Basketball tabs in the top bar of every page. */
+.gl-sport-tabs { display: flex; align-self: stretch; gap: 4px; }
+.gl-sport-tabs a { --tab-accent: 15 76% 45%; display: inline-flex; align-items: center; padding: 0 12px; border-bottom: 3px solid transparent; color: hsl(var(--muted-foreground)); font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.gl-sport-tabs a[data-sport="cbb"] { --tab-accent: 221 72% 46%; }
+.dark .gl-sport-tabs a { --tab-accent: 17 100% 68%; }
+.dark .gl-sport-tabs a[data-sport="cbb"] { --tab-accent: 214 95% 70%; }
+.gl-sport-tabs a:hover { color: hsl(var(--foreground)); }
+.gl-sport-tabs a[aria-current] { border-bottom-color: hsl(var(--tab-accent)); color: hsl(var(--foreground)); }
+.gl-sport-tabs a:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+.gl-sport-tab-short { display: none; }
+.gl-sport-tabs + .gl-crumbs { padding-left: 14px; border-left: 1px solid hsl(var(--border)); }
+@media (max-width: 1080px) {
+  .gl-sport-tabs { margin-left: auto; gap: 0; }
+  .gl-sport-tabs a { padding: 0 9px; font-size: 13px; }
+}
+@media (max-width: 520px) {
+  .gl-sport-tab-long { display: none; }
+  .gl-sport-tab-short { display: inline; }
+}
 .gl-side-nav { display: grid; gap: 16px; }
 .gl-side-group { display: grid; gap: 2px; }
 .gl-side-label { margin: 0 0 4px; padding: 0 10px; color: hsl(var(--muted-foreground)); font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
@@ -1081,3 +1097,23 @@
 .gl-glossary dt { font-size: 13px; font-weight: 700; }
 .gl-glossary dd { margin: 2px 0 0; color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.5; }
 .gl-link-button { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+
+/* Home page: each sport's top picks side by side, in that sport's accent. */
+.gl-sports-today { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 4px 0 28px; }
+.gl-sport-card { --tab-accent: 15 76% 45%; display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; border-top: 3px solid hsl(var(--tab-accent)); }
+.gl-sport-card[data-sport="cbb"] { --tab-accent: 221 72% 46%; }
+.dark .gl-sport-card { --tab-accent: 17 100% 68%; }
+.dark .gl-sport-card[data-sport="cbb"] { --tab-accent: 214 95% 70%; }
+.gl-sport-card h2 { margin: 2px 0 0; font-size: 18px; font-weight: 700; }
+.gl-sport-card-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.gl-sport-card-list a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; background: hsl(var(--secondary)); color: inherit; text-decoration: none; }
+.gl-sport-card-list a:hover { background: hsl(var(--tab-accent) / .12); }
+.gl-sport-card-list a > span { display: grid; min-width: 0; }
+.gl-sport-card-list small { display: flex; align-items: center; gap: 5px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+.gl-sport-card-num { justify-items: end; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gl-sport-card-num b { color: hsl(var(--tab-accent)); font-size: 17px; }
+.gl-sport-card-empty { margin: 0; color: hsl(var(--muted-foreground)); font-size: 14px; }
+.gl-sport-card footer .gl-link { color: hsl(var(--tab-accent)); }
+.gl-sport-card footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: auto; font-size: 13px; }
+.gl-sport-section-title { margin: 0 0 12px; font-size: 22px; font-weight: 800; }
+@media (max-width: 760px) { .gl-sports-today { grid-template-columns: 1fr; } }

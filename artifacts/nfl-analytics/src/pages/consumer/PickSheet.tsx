@@ -14,6 +14,8 @@ import { HundredGrid, abbr, toPoolGame } from '@/components/GameSim';
 import { matchupAccents } from '@/lib/team-colors';
 import { ConsumerLoading, useConsumerNow } from './consumer-ui';
 import { GameTabs } from '@/components/GameTabs';
+import { SportsToday } from '@/components/SportsToday';
+import { useCbbVisible } from '@/hooks/use-cbb-visible';
 
 export { TeamChip };
 
@@ -130,17 +132,32 @@ export default function PickSheet() {
     const early = new Map((projections.data?.early.games ?? []).map(pick => [pick.gameId, pick]));
     return (week?.games ?? []).map(game => buildGameView(game, byGame.get(game.gameId), locks.get(game.gameId), early.get(game.gameId)));
   }, [week, projections.data]);
+  // Once college basketball is visible the home page covers both sports: each
+  // sport's top picks first, then this week's NFL board below.
+  const bothSports = useCbbVisible();
+  const weekLabel = week ? `${week.season} season · Week ${week.week}` : null;
   const linesAt = views.map(view => view.game.market?.spread?.capturedAt ?? view.game.market?.total?.capturedAt).filter((value): value is string => Boolean(value)).sort().at(-1);
 
   return <div className="gl-page">
-    <header className="gl-hero">
+    {bothSports ? <>
+      <header className="gl-hero">
+        <div>
+          <p className="gl-label">Today&apos;s picks</p>
+          <h1 className="gl-title">NFL and college basketball, <span>priced against the books.</span></h1>
+          <p className="gl-lede">Our numbers next to the sportsbook&apos;s for every NFL game and every Division I college basketball game. Every pick is timestamped before it starts, and each sport keeps its own record.</p>
+        </div>
+      </header>
+      <SportsToday now={now} week={weekLabel ? `NFL · ${weekLabel}` : null} />
+      <h2 className="gl-sport-section-title">NFL this week</h2>
+      <HeroStats season={week?.season} />
+    </> : <header className="gl-hero">
       <div>
-        <p className="gl-label">{week ? `${week.season} season · Week ${week.week}` : 'NFL picks'}</p>
+        <p className="gl-label">{weekLabel ?? 'NFL picks'}</p>
         <h1 className="gl-title">Who&apos;s likely to score, <span>priced against the books.</span></h1>
         <p className="gl-lede">Anytime touchdown chances for every player and a projected score for every game, from NFL play-by-play data. Every pick is timestamped before kickoff.</p>
       </div>
       <HeroStats season={week?.season} />
-    </header>
+    </header>}
     <DataFreshness linesAt={linesAt} now={now} />
 
     <PoolTeaser views={views} now={now} />

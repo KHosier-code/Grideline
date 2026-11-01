@@ -109,3 +109,14 @@ export function gamesByDay(games: CbbGame[], now = new Date()) {
     games: list,
   }));
 }
+
+/**
+ * The home page's college picks: games we pick that haven't tipped yet, from
+ * the next Eastern-time day that has any, biggest disagreement first.
+ */
+export function topCbbPicks(games: CbbGame[], now = Date.now(), limit = 3) {
+  const upcoming = games.filter(game => game.pick && Date.parse(game.tip) > now);
+  const day = gamesByDay(upcoming, new Date(now))[0];
+  if (!day) return { label: null, picks: [] as CbbGame[] };
+  return { label: day.label, picks: [...day.games].sort((a, b) => b.pick!.edge - a.pick!.edge).slice(0, limit) };
+}

@@ -36,3 +36,12 @@ Decided with Kalen on 2026-11-01. Use this as the brief for the next build.
   line movement).
 - Phase 3: team pages (game log vs our line, rating trend, roster, injuries).
 - Phase 4: standings, upset alerts, March bracket center.
+
+## Built (layout, 2026-11-01)
+- Launch switch: `lib/sports-launch.mjs` (`CBB_LAUNCH_AT`, 6 a.m. Eastern Dec 1). Used by
+  `CbbGate`, the shell's sport tabs, the home page, `/api/consumer/cbb`, `metadata.mjs`,
+  `serve.mjs` (sitemap) and `lib/public-metadata.ts`. Moving the launch is that one line.
+- Sport tabs in the top bar (`ConsumerShellView.tsx`); per-sport menu, footer and accent
+  (`src/lib/sports.ts`, `data-sport` on the shell). New college Record page at `/cbb/record`.
+- Home page (`PickSheet.tsx` + `components/SportsToday.tsx`): both sports' top picks when
+  college is visible, the NFL-only page otherwise.

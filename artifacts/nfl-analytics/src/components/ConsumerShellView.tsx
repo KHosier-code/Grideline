@@ -5,6 +5,9 @@ import {
 } from 'lucide-react';
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from './ConsumerAccountNavigation';
 import type { consumerAccountState } from '@/lib/consumer-account-state';
+import { SPORTS, cbbVisible, isCbbPath, type Sport } from '@/lib/sports';
+
+export { isCbbPath };
 
 type NavItem = { href: string; label: string; icon: typeof Gauge; signedInOnly?: boolean };
 /** `collapsible` groups fold away until opened, or while you're on one of their pages. */
@@ -35,30 +38,40 @@ export const consumerNavGroups: NavGroup[] = [
     { href: '/methodology', label: 'How it works', icon: BookOpen },
   ] },
 ];
-/** College basketball lives under /cbb with its own menu. */
+/** College basketball lives under /cbb with its own menu and record. */
 export const cbbNavGroups: NavGroup[] = [
-  { label: 'College Hoops', items: [
-    { href: '/cbb', label: 'Games', icon: CalendarDays },
+  { label: 'College Basketball', items: [
+    { href: '/cbb', label: 'Today\'s games', icon: CalendarDays },
     { href: '/cbb/ratings', label: 'Power Ratings', icon: ListOrdered },
+    { href: '/cbb/record', label: 'Record', icon: BarChart3 },
     { href: '/cbb/how-it-works', label: 'How it works', icon: BookOpen },
   ] },
 ];
+const navFor: Record<Sport, NavGroup[]> = { nfl: consumerNavGroups, cbb: cbbNavGroups };
 /** Flat list, kept for callers that only need the links. */
 export const consumerNav = consumerNavGroups.flatMap(group => group.items);
-
-export const isCbbPath = (location: string) => location === '/cbb' || location.startsWith('/cbb/');
 
 /** Each sport's home page matches only itself, not the pages under it. */
 function isActive(location: string, href: string) {
   return href === '/' || href === '/cbb' ? location === href : location === href || location.startsWith(`${href}/`);
 }
 
-function crumbs(location: string) {
-  for (const group of [...consumerNavGroups, ...cbbNavGroups]) {
+function crumbs(location: string, sport: Sport) {
+  for (const group of navFor[sport]) {
     const item = group.items.find(entry => isActive(location, entry.href));
-    if (item) return [group.label, item.label];
+    if (item) return sport === 'cbb' ? [item.label] : [group.label, item.label];
   }
   return [];
+}
+
+/** NFL | College Basketball, across the top of every page once college is visible. */
+function SportTabs({ sport }: { sport: Sport }) {
+  return <nav className="gl-sport-tabs" aria-label="Sport">
+    {(['nfl', 'cbb'] as const).map(key => <Link key={key} href={SPORTS[key].home} data-sport={key}
+      aria-current={sport === key ? 'true' : undefined}>
+      <span className="gl-sport-tab-long">{SPORTS[key].name}</span><span className="gl-sport-tab-short">{SPORTS[key].short}</span>
+    </Link>)}
+  </nav>;
 }
 
 export function ConsumerShellView({
@@ -74,14 +87,14 @@ export function ConsumerShellView({
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => setOpen(false), [location]);
-  // College Hoops is an admin-only preview for now.
-  const cbb = isCbbPath(location) && account.adminVerified;
-  const trail = cbb || !isCbbPath(location) ? crumbs(location) : [];
-  const sportSwitch = (onNavigate?: () => void) => account.adminVerified && <div className="gl-sport-switch" role="group" aria-label="Sport">
-    <Link href="/" aria-current={!cbb ? 'true' : undefined} onClick={onNavigate}>NFL</Link>
-    <Link href="/cbb" aria-current={cbb ? 'true' : undefined} onClick={onNavigate}>College Hoops</Link>
-  </div>;
-  const nav = (onNavigate?: () => void) => (cbb ? cbbNavGroups : consumerNavGroups).map(group => {
+  // College basketball is visible to administrators until launch, then to everyone.
+  // Before then a customer at a /cbb address is sent home by CbbGate, so the
+  // shell keeps showing the NFL menu.
+  const showTabs = cbbVisible(account.adminVerified);
+  const sport: Sport = isCbbPath(location) && showTabs ? 'cbb' : 'nfl';
+  const trail = isCbbPath(location) && !showTabs ? [] : crumbs(location, sport);
+  const info = SPORTS[sport];
+  const nav = (onNavigate?: () => void) => navFor[sport].map(group => {
     const items = group.items.filter(item => !item.signedInOnly || account.signedIn);
     if (!items.length) return null;
     const links = items.map(item => {
@@ -104,10 +117,9 @@ export function ConsumerShellView({
     </div>;
   });
 
-  return <div className="consumer-shell gl-app">
+  return <div className="consumer-shell gl-app" data-sport={sport}>
     <aside className="gl-sidebar">
       <Link href="/" className="gl-brand"><img src={`${import.meta.env.BASE_URL}logo-icon.svg`} alt="" />probable</Link>
-      {sportSwitch()}
       <nav className="gl-side-nav" aria-label="Primary navigation">
         {nav()}
         <div className="gl-side-group"><ConsumerWorkspaceLink verified={account.adminVerified} /></div>
@@ -124,15 +136,15 @@ export function ConsumerShellView({
           aria-label={open ? 'Close navigation' : 'Open navigation'} aria-controls="consumer-mobile-navigation"
           aria-expanded={open} onClick={() => setOpen(!open)}>{open ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}</button>
         <Link href="/" className="gl-brand gl-brand-mobile"><img src={`${import.meta.env.BASE_URL}logo-icon.svg`} alt="" />probable</Link>
+        {showTabs && <SportTabs sport={sport} />}
         <ol className="gl-crumbs" aria-label="Breadcrumb">
-          <li><Link href={cbb ? '/cbb' : '/'}>Probable</Link></li>
+          <li><Link href={info.home}>{sport === 'cbb' ? info.name : 'Probable'}</Link></li>
           {trail.map((crumb, index) => <li key={crumb} aria-current={index === trail.length - 1 ? 'page' : undefined}>{crumb}</li>)}
         </ol>
       </header>
       {open && <div className="gl-mobile-nav-backdrop" aria-hidden="true" onClick={() => setOpen(false)} />}
       {open && <nav id="consumer-mobile-navigation" className="gl-mobile-nav" aria-label="Mobile navigation"
         onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); } }}>
-        {sportSwitch(() => setOpen(false))}
         {nav(() => setOpen(false))}
         <ConsumerWorkspaceLink verified={account.adminVerified} onNavigate={() => setOpen(false)} />
         <div className="gl-side-foot">
@@ -143,8 +155,8 @@ export function ConsumerShellView({
       <main className="gl-shell-main">{children}</main>
       <footer className="gl-footer">
         <div className="gl-footer-inner">
-          <p><b>Probable</b>Anytime TD picks priced against the books, game projections and power ratings, built from play-by-play data and updated through the week.</p>
-          <p><b>Projections, not promises</b>Every number is a model estimate. Lines move, so check your sportsbook before betting. <Link href="/methodology">How the model works</Link>.</p>
+          <p><b>{sport === 'cbb' ? 'Probable College Basketball' : 'Probable'}</b>{info.footer.about}</p>
+          <p><b>Projections, not promises</b>{info.footer.caution} <Link href={info.methodology}>How the model works</Link> · <Link href={info.record}>{info.name} record</Link>.</p>
           <p><b>Bet responsibly</b>21+ where sports betting is legal. If gambling stops being fun, call or text 1-800-GAMBLER.</p>
         </div>
       </footer>

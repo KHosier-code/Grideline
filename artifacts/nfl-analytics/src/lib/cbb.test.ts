@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultProfileSeason, favorite, formatRate, formatRecord, formatWL, formatSpread, gamesByDay, modelHomeSpread, seasonLabel, winRate, type CbbGame } from './cbb.ts';
+import { defaultProfileSeason, favorite, formatRate, formatRecord, formatWL, formatSpread, gamesByDay, modelHomeSpread, seasonLabel, topCbbPicks, winRate, type CbbGame } from './cbb.ts';
 
 const game = (id: string, tip: string, homeMargin = 5): CbbGame => ({
   id, tip, neutral: false, home: { id: 'H', rank: 10, apRank: null }, away: { id: 'A', rank: 50, apRank: null },
@@ -42,4 +42,35 @@ test('profile helpers', () => {
   assert.equal(defaultProfileSeason(0), 'last');
   assert.equal(defaultProfileSeason(299), 'last');
   assert.equal(defaultProfileSeason(300), 'current');
+});
+
+test('home page college picks: next day with picks, biggest edge first, no started games', () => {
+  const now = Date.parse('2026-12-02T15:00:00Z'); // 10 a.m. Eastern
+  const pick = (id: string, tip: string, edge: number): CbbGame => ({ ...game(id, tip), pick: { side: 'home', team: 'H', line: -3, edge } });
+  const games = [
+    pick('started', '2026-12-02T14:00:00Z', 9),
+    pick('small', '2026-12-02T23:00:00Z', 2.1),
+    game('nopick', '2026-12-02T23:30:00Z'),
+    pick('big', '2026-12-03T00:30:00Z', 4.4), // 7:30 p.m. Eastern, still today
+    pick('mid', '2026-12-02T20:00:00Z', 3),
+    pick('tomorrow', '2026-12-03T23:00:00Z', 8),
+  ];
+  const top = topCbbPicks(games, now, 2);
+  assert.equal(top.label, 'Today');
+  assert.deepEqual(top.picks.map(g => g.id), ['big', 'mid']);
+  const later = topCbbPicks(games, Date.parse('2026-12-03T05:00:00Z'));
+  assert.equal(later.label, 'Today');
+  assert.deepEqual(later.picks.map(g => g.id), ['tomorrow']);
+  assert.deepEqual(topCbbPicks([], now), { label: null, picks: [] });
+});
+
+test('one launch date opens college basketball everywhere', async () => {
+  const { CBB_LAUNCH_AT, cbbIsPublic, cbbVisible } = await import('./sports.ts');
+  const launch = Date.parse(CBB_LAUNCH_AT);
+  assert.equal(cbbIsPublic(launch - 1), false);
+  assert.equal(cbbIsPublic(launch), true);
+  assert.equal(cbbIsPublic(new Date(launch + 1)), true);
+  assert.equal(cbbVisible(false, launch - 1), false);
+  assert.equal(cbbVisible(true, launch - 1), true);
+  assert.equal(cbbVisible(false, launch), true);
 });

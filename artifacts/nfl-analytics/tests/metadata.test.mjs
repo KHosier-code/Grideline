@@ -45,3 +45,25 @@ test('game identity comes from API, not the URL or unavailable projections', asy
     globalThis.fetch = originalFetch;
   }
 });
+test('college basketball pages are indexed only from the launch date', async () => {
+  const { CBB_LAUNCH_AT, CBB_PUBLIC_PATHS } = await import('../../../lib/sports-launch.mjs');
+  const realNow = Date.now;
+  try {
+    Date.now = () => Date.parse(CBB_LAUNCH_AT) - 1;
+    for (const path of CBB_PUBLIC_PATHS) {
+      const before = await documentForPath(path);
+      assert.match(before.tags, /noindex, nofollow/);
+      assert.doesNotMatch(before.tags, /College Basketball/);
+    }
+    Date.now = () => Date.parse(CBB_LAUNCH_AT);
+    for (const path of CBB_PUBLIC_PATHS) {
+      const after = await documentForPath(path);
+      assert.equal(after.status, 200);
+      assert.match(after.tags, /College Basketball/);
+      assert.match(after.tags, /index, follow/);
+      assert.match(after.tags, new RegExp(`rel="canonical" href="https://probablesports.com${path}"`));
+    }
+  } finally {
+    Date.now = realNow;
+  }
+});

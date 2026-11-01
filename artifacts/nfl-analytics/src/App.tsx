@@ -20,6 +20,7 @@ import { CbbGate } from '@/pages/cbb/CbbGate';
 const CbbGames = lazy(() => import('@/pages/cbb/CbbGames'));
 const CbbRatings = lazy(() => import('@/pages/cbb/CbbRatings'));
 const CbbMethodology = lazy(() => import('@/pages/cbb/CbbMethodology'));
+const CbbRecord = lazy(() => import('@/pages/cbb/CbbRecord'));
 const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
 const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
 const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
@@ -164,6 +165,7 @@ function Router() {
     <Route path="/parlays"><Redirect to="/" replace /></Route>
     <Route path="/cbb/ratings"><ConsumerShell><CbbGate><CbbRatings /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
+    <Route path="/cbb/record"><ConsumerShell><CbbGate><CbbRecord /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
@@ -194,6 +196,7 @@ function Router() {
     <Route path="/parlays"><Redirect to="/" replace /></Route>
       <Route path="/cbb/ratings"><ConsumerShell><CbbGate><CbbRatings /></CbbGate></ConsumerShell></Route>
       <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
+      <Route path="/cbb/record"><ConsumerShell><CbbGate><CbbRecord /></CbbGate></ConsumerShell></Route>
       <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
       <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
       <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>

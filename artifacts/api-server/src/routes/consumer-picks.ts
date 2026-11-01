@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type RequestHandler } from "express";
 import { and, asc, desc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import * as zod from "zod/v4";
 import {
@@ -19,6 +19,7 @@ import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEm
 import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
 import { injuryTimeline } from "../lib/td-injuries";
 import { requireAdmin } from "../middlewares/admin";
+import { cbbIsPublic } from "../../../../lib/sports-launch.mjs";
 import { seasonCache } from "../lib/season-cache";
 import { cbbRecord, type CbbPick, type CbbResult } from "../lib/cbb-record";
 import { syncNwsWeather } from "../lib/weather";
@@ -585,9 +586,13 @@ let cbbRecordCache: { key: string; record: ReturnType<typeof cbbRecord> } | null
  * College basketball: the latest daily run (research/cbb-model/daily.py) with
  * ratings and upcoming games, plus the spread record graded from every run
  * this season. Only each run's picks and finals are read for the record.
- * Admin-only while it's in preview: drop requireAdmin to open it to everyone.
+ * Administrators only until CBB_LAUNCH_AT (lib/sports-launch.mjs), then open to
+ * everyone; the website's pages switch on the same date.
  */
-router.get("/consumer/cbb", requireAdmin, async (req, res): Promise<void> => {
+const requireAdminBeforeCbbLaunch: RequestHandler = (req, res, next) =>
+  cbbIsPublic() ? next() : requireAdmin(req, res, next);
+
+router.get("/consumer/cbb", requireAdminBeforeCbbLaunch, async (req, res): Promise<void> => {
   try {
     const latest = await latestReportRow("cbb");
     if (!latest) {
@@ -604,7 +609,7 @@ router.get("/consumer/cbb", requireAdmin, async (req, res): Promise<void> => {
         .where(and(eq(weeklyReportsTable.kind, "cbb"), eq(weeklyReportsTable.season, latest.season)));
       cbbRecordCache = { key, record: cbbRecord(runs) };
     }
-    res.set("Cache-Control", "private, no-store");
+    res.set("Cache-Control", cbbIsPublic() ? "public, max-age=120" : "private, no-store");
     res.json({
       status: "available", season: latest.season, generatedAt: latest.generatedAt.toISOString(),
       report: latest.payload, record: cbbRecordCache.record,
