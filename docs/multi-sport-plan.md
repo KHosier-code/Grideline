@@ -49,3 +49,20 @@ accent), phone home. Build from it with these changes:
 4. **Check the blue accent in light mode** before locking it in; adjust for contrast.
 5. Keep a small "New: tracking since Nov 2" note on college pages for the first month or
    two after launch.
+
+## Built (2026-11-01)
+- **Launch switch**: `lib/launch/sports-launch.mjs` (`CBB_PUBLIC_LAUNCH = 2026-12-01T11:00:00Z`,
+  6 AM ET). Used by the API (`middlewares/cbb-launch.ts` on `/api/consumer/cbb`), the
+  web app (`src/lib/sports.ts`: `CbbGate`, sport tabs, home card), `metadata.mjs` /
+  `public-metadata.ts` (titles, indexing) and `serve.mjs` (sitemap). Moving the date is
+  that one line. The "New" note runs until `CBB_NEW_NOTE_UNTIL` (Feb 1, 2027).
+- **Home** (`/`, `pages/consumer/Home.tsx`): one card per sport with its own record
+  line, next start time on game days, NFL top 3 TD picks + early-line picks, college top 3
+  picks by gap + top 3 ratings. Before launch, customers see only the NFL card.
+- **NFL "This week"** moved from `/` to `/nfl`; every other NFL URL is unchanged.
+- **College menu**: Today's games `/cbb`, Power Ratings, Record `/cbb/record` (new page),
+  How it works.
+- **Tabs**: Home | NFL | College Basketball in the top bar (own row on phones), replacing
+  the sidebar switch. Hidden from customers until launch.
+- **Accent**: coral NFL, blue college. Light-mode blue is `hsl(211 80% 40%)`, not the
+  mockup's #6fb6ff, which was 2.0:1 on the light page; the new one is 5.6:1. Dark mode keeps the mockup blue.
