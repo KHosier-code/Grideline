@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { favorite, formatRecord, formatSpread, gamesByDay, modelHomeSpread, seasonLabel, winRate, type CbbGame } from './cbb.ts';
+import { defaultProfileSeason, favorite, formatRate, formatRecord, formatWL, formatSpread, gamesByDay, modelHomeSpread, seasonLabel, winRate, type CbbGame } from './cbb.ts';
 
 const game = (id: string, tip: string, homeMargin = 5): CbbGame => ({
   id, tip, neutral: false, home: { id: 'H', rank: 10, apRank: null }, away: { id: 'A', rank: 50, apRank: null },
@@ -33,4 +33,13 @@ test('games group by Eastern-time day, late tips stay on their night', () => {
     game('next', '2026-11-11T23:00:00Z'),
   ], now);
   assert.deepEqual(days.map(day => [day.label, day.games.map(g => g.id)]), [['Today', ['early', 'late']], ['Tomorrow', ['next']]]);
+});
+
+test('profile helpers', () => {
+  assert.deepEqual([0.5234, 0.1, null, Number.NaN].map(formatRate), ['52.3%', '10.0%', '—', '—']);
+  assert.equal(formatWL([7, 3]), '7-3');
+  assert.equal(formatWL(undefined), '—');
+  assert.equal(defaultProfileSeason(0), 'last');
+  assert.equal(defaultProfileSeason(299), 'last');
+  assert.equal(defaultProfileSeason(300), 'current');
 });
