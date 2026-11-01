@@ -1,3 +1,5 @@
+import { isCbbPublic } from '../../lib/launch/sports-launch.mjs';
+
 // Public document metadata, shared by Vite development and the production web server.
 const configuredOrigin = process.env.PUBLIC_SITE_URL || 'https://probablesports.com';
 const origin = new URL(configuredOrigin).origin;
@@ -11,6 +13,7 @@ const url = path => `${origin}${prefix}${path}`;
 
 const pages = {
   '/': ['Probable | Free NFL Touchdown Picks and Game Projections', 'Free weekly anytime touchdown picks and a projected score for every NFL game, adjusted for the starting quarterback, next to the Vegas line.'],
+  '/nfl': ['NFL Picks This Week: Touchdowns, Game Lines and Pool Picks | Probable', 'This week\'s anytime touchdown picks, our projected score and line for every NFL game, early-line spread picks and the safest pool picks.'],
   '/touchdowns': ['Anytime Touchdown Picks This Week | Probable', 'Ranked anytime touchdown scorer picks for every NFL game, with each player\'s red-zone role, target and carry share, Vegas team total and defensive matchup.'],
   '/pickem': ['NFL Pool Picks This Week: Winners, Spreads and Totals | Probable', 'Every NFL game ranked for pick\'em, confidence, survivor, against-the-spread and over/under pools, with 100-game simulations of each matchup.'],
   '/power-ratings': ['NFL Power Ratings: All 32 Teams Ranked | Probable', 'Every NFL team ranked 1-32 by points better or worse than an average team, with offense, defense and quarterback ratings.'],
@@ -25,12 +28,30 @@ const pages = {
   '/performance': ['NFL Model Performance | Probable', 'How Probable\'s game and touchdown models performed on seasons they never trained on, and this season\'s graded record.'],
 };
 
+// College basketball pages, listed only once college basketball is public.
+const cbbPages = {
+  '/cbb': ['College Basketball Picks Today: Every D-I Game vs the Line | Probable', 'Our projected line for every Division I game today and tomorrow next to the sportsbook spread, with a pick wherever we disagree by 2+ points.'],
+  '/cbb/ratings': ['College Basketball Power Ratings: Every D-I Team | Probable', 'Every Division I team ranked by points per 100 possessions better than average, with offense, defense, tempo, Four Factors and strength of schedule.'],
+  '/cbb/record': ['College Basketball Picks Record | Probable', 'Every college basketball spread pick, saved before tip-off and graded at the line posted, tracked in public since November 2.'],
+  '/cbb/how-it-works': ['How Our College Basketball Model Works | Probable', 'How Probable rates every Division I team, projects each game and decides when to make a college basketball spread pick.'],
+};
+// The home page covers both sports once college basketball is public.
+const bothSportsHome = ['Probable | NFL and College Basketball Picks Priced Against the Books', 'Today\'s best NFL and college basketball picks next to the sportsbook line, each sport with its own model and its own public record.'];
+
+/** Indexed pages right now: the NFL pages always, college pages once launched. */
+export function publicPages(now = Date.now()) {
+  return isCbbPublic(now) ? { ...pages, '/': bothSportsHome, ...cbbPages } : pages;
+}
+
+/** Paths for the sitemap, in the same launch state. */
+export const sitemapPages = (now = Date.now()) => Object.keys(publicPages(now));
+
 function tags({ title, description, path, index }) {
   const canonical = url(path);
   // TD Picks and Home preview with this week's picks card. The version changes
   // every Tuesday so X and iMessage don't keep showing last week's card.
   const nflWeek = Math.floor((Date.now() - Date.UTC(2020, 0, 7, 12)) / (7 * 86_400_000));
-  const image = path === '/touchdowns' || path === '/'
+  const image = path === '/touchdowns' || path === '/' || path === '/nfl'
     ? `${origin}/api/share/td-card.png?v=${nflWeek}`
     : url('/probable-share.png');
   return [
@@ -75,14 +96,15 @@ export async function playerSitemapPaths({ apiOrigin = defaultApiOrigin } = {}) 
   }
 }
 
-export async function documentForPath(pathname, { apiOrigin = defaultApiOrigin } = {}) {
+export async function documentForPath(pathname, { apiOrigin = defaultApiOrigin, now = Date.now() } = {}) {
   const path = pathname.slice(prefix.length) || '/';
   if (pathname !== `${prefix}${path}` || (!pathname.startsWith(`${prefix}/`) && pathname !== prefix)) {
     return { status: 404, tags: tags({ title: 'Page not found | Probable', description: 'This page is unavailable.', path: '/', index: false }) };
   }
   const normalized = path.length > 1 ? path.replace(/\/$/, '') : path;
-  if (pages[normalized]) {
-    const [title, description] = pages[normalized];
+  const indexed = publicPages(now);
+  if (indexed[normalized]) {
+    const [title, description] = indexed[normalized];
     return { status: 200, tags: tags({ title, description, path: normalized, index: true }) };
   }
   if (normalized === '/share') {

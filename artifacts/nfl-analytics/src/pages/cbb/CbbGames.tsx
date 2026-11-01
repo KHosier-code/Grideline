@@ -6,15 +6,13 @@ import {
   type CbbGame, type CbbGradedPick, type CbbRecord, type CbbTeam,
 } from '@/lib/cbb';
 import { useCbb } from '@/lib/cbb-data';
+import { CbbLogo } from './CbbLogo';
 import './cbb.css';
+
+export { CbbLogo };
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;
 const tipTime = (tip: string) => new Date(tip).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
-
-export function CbbLogo({ team, size = 28 }: { team: CbbTeam | undefined; size?: number }) {
-  if (!team?.logo) return <span className="cbb-logo-blank" style={{ width: size, height: size }} aria-hidden="true" />;
-  return <img className="cbb-logo" src={team.logo} alt="" width={size} height={size} loading="lazy" />;
-}
 
 function TeamLine({ team, rank, apRank, home, neutral }: { team: CbbTeam | undefined; rank: number; apRank: number | null; home: boolean; neutral: boolean }) {
   return <div className="cbb-team">
@@ -67,7 +65,7 @@ function GameCard({ game, teams }: { game: CbbGame; teams: Map<string, CbbTeam> 
   </article>;
 }
 
-function RecordPanel({ record, teams }: { record: CbbRecord; teams: Map<string, CbbTeam> }) {
+export function RecordPanel({ record, teams }: { record: CbbRecord; teams: Map<string, CbbTeam> }) {
   const graded = record.wins + record.losses + record.pushes;
   const rate = winRate(record);
   const name = (id: string) => teams.get(id)?.short ?? 'Unknown';
@@ -119,7 +117,7 @@ export default function CbbGames() {
     <header className="gl-hero">
       <div>
         <p className="gl-label">{report ? `College basketball · ${seasonLabel(report.season)}` : 'College basketball'}</p>
-        <h1 className="gl-title">College Hoops <span>Games</span></h1>
+        <h1 className="gl-title">Every Division I game, <span>our line next to the book&apos;s.</span></h1>
         <p className="gl-lede">Our line for every Division I game today and tomorrow, next to the sportsbook&apos;s opening and current numbers. A pick means we disagree with the current spread by {report?.model.pickEdge ?? 2}+ points.</p>
       </div>
     </header>
@@ -147,6 +145,6 @@ export default function CbbGames() {
       </section>)}
     </>}
 
-    {record && <RecordPanel record={record} teams={teams} />}
+    {record && <p className="cbb-muted cbb-record-link">College spreads this season: <b>{record.wins + record.losses + record.pushes ? formatRecord(record) : 'none graded yet'}</b>. <Link href="/cbb/record" className="gl-link">Every graded pick ›</Link></p>}
   </div>;
 }

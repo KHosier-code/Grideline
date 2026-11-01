@@ -18,7 +18,7 @@ import { ODDS_BACKUP_RECENT_MS, recentOddsCapture } from "../lib/kickoff-clock";
 import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEmail, subscribe } from "../lib/newsletter";
 import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
 import { injuryTimeline } from "../lib/td-injuries";
-import { requireAdmin } from "../middlewares/admin";
+import { requireAdminUntilCbbLaunch } from "../middlewares/cbb-launch";
 import { seasonCache } from "../lib/season-cache";
 import { cbbRecord, type CbbPick, type CbbResult } from "../lib/cbb-record";
 import { syncNwsWeather } from "../lib/weather";
@@ -585,9 +585,9 @@ let cbbRecordCache: { key: string; record: ReturnType<typeof cbbRecord> } | null
  * College basketball: the latest daily run (research/cbb-model/daily.py) with
  * ratings and upcoming games, plus the spread record graded from every run
  * this season. Only each run's picks and finals are read for the record.
- * Admin-only while it's in preview: drop requireAdmin to open it to everyone.
+ * Admin-only until the public launch date in lib/launch/sports-launch.mjs.
  */
-router.get("/consumer/cbb", requireAdmin, async (req, res): Promise<void> => {
+router.get("/consumer/cbb", requireAdminUntilCbbLaunch, async (req, res): Promise<void> => {
   try {
     const latest = await latestReportRow("cbb");
     if (!latest) {

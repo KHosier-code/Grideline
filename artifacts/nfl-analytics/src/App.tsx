@@ -11,6 +11,7 @@ import { useRouteMetadata } from '@/lib/public-metadata';
 import { ConsumerLoadingFallback, ConsumerShell } from '@/components/ConsumerShell';
 import './index.css';
 
+const Home = lazy(() => import('@/pages/consumer/Home'));
 const PickSheet = lazy(() => import('@/pages/consumer/PickSheet'));
 const TouchdownPicks = lazy(() => import('@/pages/consumer/TouchdownPicks'));
 const PlayerTouchdown = lazy(() => import('@/pages/consumer/PlayerTouchdown'));
@@ -20,6 +21,7 @@ import { CbbGate } from '@/pages/cbb/CbbGate';
 const CbbGames = lazy(() => import('@/pages/cbb/CbbGames'));
 const CbbRatings = lazy(() => import('@/pages/cbb/CbbRatings'));
 const CbbMethodology = lazy(() => import('@/pages/cbb/CbbMethodology'));
+const CbbRecord = lazy(() => import('@/pages/cbb/CbbRecord'));
 const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
 const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
 const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
@@ -132,7 +134,7 @@ function Router() {
   const { isLoaded, isSignedIn } = useAuth();
   // Public pages can render while Clerk initializes. Admin and account routes
   // still wait for a definitive identity before making an access decision.
-  const publicRoute = location === '/' || location === '/games' || location.startsWith('/games/')
+  const publicRoute = location === '/' || location === '/nfl' || location === '/games' || location.startsWith('/games/')
     || location === '/performance' || location === '/receipts' || location === '/methodology'
     || location === '/defense-vs-position' || location === '/teams' || location === '/usage'
     || location === '/saved-games' || location === '/my-picks' || location === '/touchdowns' || location === '/props'
@@ -163,12 +165,14 @@ function Router() {
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/parlays"><Redirect to="/" replace /></Route>
     <Route path="/cbb/ratings"><ConsumerShell><CbbGate><CbbRatings /></CbbGate></ConsumerShell></Route>
+    <Route path="/cbb/record"><ConsumerShell><CbbGate><CbbRecord /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
     <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
-    <Route path="/"><ConsumerShell><PickSheet /></ConsumerShell></Route>
+    <Route path="/nfl"><ConsumerShell><PickSheet /></ConsumerShell></Route>
+    <Route path="/"><ConsumerShell><Home /></ConsumerShell></Route>
     <Route component={SignInRedirect} />
   </Switch></RoutedErrorBoundary>;
   return <RoutedErrorBoundary><Switch>
@@ -193,14 +197,16 @@ function Router() {
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/parlays"><Redirect to="/" replace /></Route>
       <Route path="/cbb/ratings"><ConsumerShell><CbbGate><CbbRatings /></CbbGate></ConsumerShell></Route>
-      <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
+      <Route path="/cbb/record"><ConsumerShell><CbbGate><CbbRecord /></CbbGate></ConsumerShell></Route>
+    <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
       <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
       <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
       <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
-      {/* The production-build performance fixture mounts this same weekly Home
-          component without Clerk; only this branch grants signed-in routing. */}
-      <Route path="/"><ConsumerShell><PickSheet /></ConsumerShell></Route>
+      {/* The production-build performance fixture mounts the weekly NFL page
+          (PickSheet) without Clerk; only this branch grants signed-in routing. */}
+      <Route path="/nfl"><ConsumerShell><PickSheet /></ConsumerShell></Route>
+      <Route path="/"><ConsumerShell><Home /></ConsumerShell></Route>
       <Route component={NotFound} />
   </Switch></RoutedErrorBoundary>;
 }
