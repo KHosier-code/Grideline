@@ -11,8 +11,6 @@ on:
     - cron: "10 21 * * *"  # 16:10 ET - before evening tips
     - cron: "40 0 * * *"   # 19:40 ET - before late tips
   workflow_dispatch: {}
-  push:
-    branches: [claude/beautiful-mendel-t4wvmz]  # TEMP: one test run before merge
 
 concurrency:
   group: cbb-daily
