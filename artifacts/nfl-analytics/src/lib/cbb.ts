@@ -3,7 +3,47 @@ export type CbbTeam = {
   id: string; name: string; short: string; abbr: string | null; logo: string | null; color: string | null;
   rank: number; preseasonRank: number; net: number; offense: number; defense: number; tempo: number;
   offenseRank: number; defenseRank: number; tempoRank: number; wins: number; losses: number;
+  /** Four Factors and shot profile, this season and last (research/cbb-model/factors.py). */
+  profile?: CbbProfile | null; lastSeason?: CbbProfile | null;
+  /** Average opponent rating, and records against our top 50 / top 100 and over the last 10 games. */
+  sos?: number | null; sosRank?: number | null;
+  vsTop50?: [number, number]; vsTop100?: [number, number]; last10?: [number, number];
 };
+export type CbbFactorKey = 'efg' | 'tov' | 'orb' | 'ftr' | 'three_rate' | 'three_pct' | 'two_pct' | 'ft_pct';
+/** Each factor as [value, rank 1-N], rank 1 = best for that side (three-point rate: 1 = shoots the most). */
+export type CbbProfile = {
+  games: number;
+  off: Partial<Record<CbbFactorKey, [number, number | null]>>;
+  def: Partial<Record<CbbFactorKey, [number, number | null]>>;
+};
+
+/** What each factor means, in the order the tables show them. */
+export const CBB_FACTORS: Array<{ key: CbbFactorKey; label: string; short: string; offense: string; defense: string | null }> = [
+  { key: 'efg', label: 'Effective FG%', short: 'eFG%', offense: 'Shooting, with threes worth 1.5 makes', defense: 'Opponents\' effective FG%' },
+  { key: 'tov', label: 'Turnover rate', short: 'TO%', offense: 'Turnovers per possession (lower is better)', defense: 'Turnovers forced per possession' },
+  { key: 'orb', label: 'Off. rebound rate', short: 'OR%', offense: 'Share of its misses it rebounds', defense: 'Share of opponents\' misses they rebound (lower is better)' },
+  { key: 'ftr', label: 'Free throw rate', short: 'FTR', offense: 'Free throw attempts per shot', defense: 'Opponents\' free throw attempts per shot' },
+  { key: 'three_rate', label: '3-point rate', short: '3PA%', offense: 'Share of shots that are threes (style, not strength)', defense: 'Share of opponents\' shots that are threes' },
+  { key: 'three_pct', label: '3-point %', short: '3P%', offense: 'Three-point shooting', defense: 'Opponents\' three-point shooting' },
+  { key: 'two_pct', label: '2-point %', short: '2P%', offense: 'Two-point shooting', defense: 'Opponents\' two-point shooting' },
+  { key: 'ft_pct', label: 'Free throw %', short: 'FT%', offense: 'Free throw shooting', defense: null },
+];
+
+/** 0.523 -> "52.3%"; the factor tables show every rate as a percentage. */
+export const formatRate = (value: number | null | undefined) =>
+  value === null || value === undefined || !Number.isFinite(value) ? '—' : `${(value * 100).toFixed(1)}%`;
+
+/** "7-3" from [wins, losses]. */
+export const formatWL = (wl: [number, number] | undefined) => wl ? `${wl[0]}-${wl[1]}` : '—';
+
+/**
+ * Which season's profile to show by default: last season's until this season
+ * has enough games (about two weeks in) for the numbers to mean something.
+ */
+export const PROFILE_MIN_GAMES = 300;
+export function defaultProfileSeason(gamesPlayed: number) {
+  return gamesPlayed >= PROFILE_MIN_GAMES ? 'current' as const : 'last' as const;
+}
 export type CbbLine = {
   provider: string | null; homeSpread: number | null; homeSpreadOpen: number | null;
   total: number | null; totalOpen: number | null; homeMoneyline: number | null; awayMoneyline: number | null;

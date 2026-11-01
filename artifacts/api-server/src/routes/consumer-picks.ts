@@ -589,9 +589,7 @@ let cbbRecordCache: { key: string; record: ReturnType<typeof cbbRecord> } | null
  */
 router.get("/consumer/cbb", requireAdmin, async (req, res): Promise<void> => {
   try {
-    const [latest] = await db.select().from(weeklyReportsTable)
-      .where(eq(weeklyReportsTable.kind, "cbb"))
-      .orderBy(desc(weeklyReportsTable.generatedAt)).limit(1);
+    const latest = await latestReportRow("cbb");
     if (!latest) {
       res.json({ status: "unavailable", season: null, generatedAt: null, report: null, record: null });
       return;

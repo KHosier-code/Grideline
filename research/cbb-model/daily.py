@@ -37,6 +37,7 @@ import numpy as np
 import pandas as pd
 
 from ratings import Params, Ratings, load_games
+from factors import box_from_sportsdataverse, possessions, rank_factors, team_factors, team_games
 from roster import RosterPrior, design, player_seasons, turnover
 
 BASE = Params(ridge=5.0)  # ridge 5 with the roster prior (backtest_roster.py)
@@ -111,7 +112,7 @@ def scoreboard(day):
 
 
 def box(game_id):
-    """Points and possessions for a finished game from its ESPN box score."""
+    """Each team's box score for a finished game (factors.STATS), or None."""
     data = get(f"{ESPN}/summary?event={game_id}")
     if not data:
         return None
@@ -119,13 +120,17 @@ def box(game_id):
     for team in data.get("boxscore", {}).get("teams", []):
         stats = {s["name"]: s.get("displayValue") for s in team.get("statistics", [])}
         try:
-            fga = float(stats["fieldGoalsMade-fieldGoalsAttempted"].split("-")[1])
-            fta = float(stats["freeThrowsMade-freeThrowsAttempted"].split("-")[1])
-            oreb = float(stats["offensiveRebounds"])
-            tov = float(stats.get("totalTurnovers") or stats["turnovers"])
-        except (KeyError, ValueError, AttributeError, IndexError):
+            fgm, fga = (float(x) for x in stats["fieldGoalsMade-fieldGoalsAttempted"].split("-"))
+            tpm, tpa = (float(x) for x in stats["threePointFieldGoalsMade-threePointFieldGoalsAttempted"].split("-"))
+            ftm, fta = (float(x) for x in stats["freeThrowsMade-freeThrowsAttempted"].split("-"))
+            sides[str(team["team"]["id"])] = {
+                "fgm": fgm, "fga": fga, "tpm": tpm, "tpa": tpa, "ftm": ftm, "fta": fta,
+                "oreb": float(stats["offensiveRebounds"]), "dreb": float(stats["defensiveRebounds"]),
+                "tov": float(stats.get("totalTurnovers") or stats["turnovers"]),
+                "pts": fgm * 2 + tpm + ftm,
+            }
+        except (KeyError, ValueError, AttributeError, IndexError, TypeError):
             return None
-        sides[str(team["team"]["id"])] = fga - oreb + tov + 0.475 * fta
     return sides if len(sides) == 2 else None
 
 
@@ -192,8 +197,9 @@ def history(data_dir, current):
 
 
 def current_games(season, teams, cache_dir, today):
-    """This season's finished D-I vs D-I games, with possessions (cached)."""
-    path = os.path.join(cache_dir, f"boxes_{season}.json")
+    """This season's finished D-I vs D-I games with possessions, plus their box
+    scores in factors.team_games form (cached; v2 keeps the full box)."""
+    path = os.path.join(cache_dir, f"boxes_v2_{season}.json")
     cache = json.load(open(path)) if os.path.exists(path) else {}
     start = datetime(season - 1, 11, 1).date()
     days = [start + timedelta(days=i) for i in range((today - start).days + 1)] if today >= start else []
@@ -208,17 +214,52 @@ def current_games(season, teams, cache_dir, today):
                 cache[game_id] = sides
     os.makedirs(cache_dir, exist_ok=True)
     json.dump(cache, open(path, "w"))
-    rows = []
+    rows, boxes = [], []
     for g in finals:
         sides = cache.get(g["id"])
         if not sides or g["home"] not in sides or g["away"] not in sides:
             continue
         rows.append({"game_id": g["id"], "date": pd.Timestamp(g["tip"]).tz_convert(None), "home": g["home"], "away": g["away"],
                      "neutral": g["neutral"], "home_pts": g["home_pts"], "away_pts": g["away_pts"],
-                     "poss": (sides[g["home"]] + sides[g["away"]]) / 2})
+                     "poss": (possessions(sides[g["home"]]) + possessions(sides[g["away"]])) / 2})
+        boxes.append({"game_id": g["id"], "date": g["tip"], "home": g["home"], "away": g["away"], "stats": sides})
     frame = pd.DataFrame(rows, columns=["game_id", "date", "home", "away", "neutral", "home_pts", "away_pts", "poss"])
     frame = frame[(frame.poss > 40) & (frame.poss < 110)] if len(frame) else frame
-    return frame.sort_values("date").reset_index(drop=True), boards
+    return frame.sort_values("date").reset_index(drop=True), boards, boxes
+
+
+def compact_factors(f):
+    """{games, off: {stat: [value, rank]}, def: {...}} with values rounded, or None."""
+    if not f:
+        return None
+    side = lambda d: {k: [round(v["adj"], 3), v.get("rank")] for k, v in d.items()}  # noqa: E731
+    return {"games": f["games"], "off": side(f["offense"]), "def": side(f["defense"])}
+
+
+def schedule_profile(games: pd.DataFrame, rank: dict[str, int], net: dict[str, float]):
+    """Strength of schedule (average opponent rating), record against the top
+    50 and top 100 of our ratings, and the last 10 games, for each team."""
+    out: dict[str, dict] = {}
+    rows = []
+    for g in games.itertuples():
+        for team, opp, won in ((g.home, g.away, g.home_pts > g.away_pts), (g.away, g.home, g.away_pts > g.home_pts)):
+            rows.append((g.date, team, opp, won))
+    rows.sort()
+    by_team: dict[str, list] = {}
+    for date, team, opp, won in rows:
+        by_team.setdefault(team, []).append((opp, won))
+    for team, played in by_team.items():
+        wl = lambda games_: [sum(w for _, w in games_), sum(not w for _, w in games_)]  # noqa: E731
+        out[team] = {
+            "sos": round(float(np.mean([net[o] for o, _ in played if o in net])), 2) if played else None,
+            "vsTop50": wl([(o, w) for o, w in played if rank.get(o, 999) <= 50]),
+            "vsTop100": wl([(o, w) for o, w in played if rank.get(o, 999) <= 100]),
+            "last10": wl(played[-10:]),
+        }
+    sos = {t: v["sos"] for t, v in out.items() if v["sos"] is not None}
+    for i, t in enumerate(sorted(sos, key=lambda t: -sos[t])):
+        out[t]["sosRank"] = i + 1
+    return out
 
 
 def win_prob(margin):
@@ -251,7 +292,7 @@ def main(data_dir, cache_dir, out_path=None):
     pred_off, pred_def = prior_model.predict(X)
     prior = {team: (o, d, last.get(team, (0, 0, 0))[2] * BASE.carryover) for team, o, d in zip(X.index, pred_off, pred_def)}
 
-    games, boards = current_games(season, set(teams), cache_dir, today - timedelta(days=1))
+    games, boards, boxes = current_games(season, set(teams), cache_dir, today - timedelta(days=1))
     print(f"{len(games)} finished games this season", flush=True)
     model = Ratings(sorted(teams), prior, BASE, league=league).fit(games, pd.Timestamp(now).tz_convert(None))
 
@@ -278,6 +319,21 @@ def main(data_dir, cache_dir, out_path=None):
                   "offense": round(shown_off[t], 1), "defense": round(shown_def[t], 1), "tempo": round(tempo[t], 1),
                   "offenseRank": r_off[t], "defenseRank": r_def[t], "tempoRank": r_tempo[t],
                   "wins": record[t][0], "losses": record[t][1]} for t in sorted(teams, key=lambda t: r_net[t])]
+
+    # Team profiles: Four Factors and shot profile (opponent-adjusted, ranked),
+    # this season and last, plus schedule strength and records.
+    current = team_factors(team_games(boxes, set(teams)))
+    rank_factors(current)
+    try:
+        last_season = team_factors(team_games(box_from_sportsdataverse(data_dir, season - 1), set(teams)))
+        rank_factors(last_season)
+    except FileNotFoundError:
+        last_season = {}
+    schedule = schedule_profile(games, r_net, net)
+    for row in team_rows:
+        row["profile"] = compact_factors(current.get(row["id"]))
+        row["lastSeason"] = compact_factors(last_season.get(row["id"]))
+        row.update(schedule.get(row["id"], {"sos": None, "sosRank": None, "vsTop50": [0, 0], "vsTop100": [0, 0], "last10": [0, 0]}))
 
     # Today's and tomorrow's games.
     upcoming = [g for day in (today, today + timedelta(days=1)) for g in scoreboard(day)
