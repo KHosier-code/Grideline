@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { documentForPath, injectMetadata } from '../metadata.mjs';
+import { documentForPath, injectMetadata, sitemapPages } from '../metadata.mjs';
 
 test('public routes have distinct crawler-visible metadata', async () => {
   for (const [path, fragment] of [['/', 'Touchdown Picks'], ['/games', 'Projections and Lines'], ['/methodology', 'How Probable Makes Its Picks'], ['/performance', 'Model Performance']]) {
-    const result = await documentForPath(path);
+    // Before the college launch; the home page's title changes after it (tested below).
+    const result = await documentForPath(path, { now: Date.parse('2026-11-15T12:00:00Z') });
     assert.equal(result.status, 200);
     assert.match(result.tags, new RegExp(fragment));
     assert.match(result.tags, /name="robots" content="index, follow"/);
@@ -43,5 +44,23 @@ test('game identity comes from API, not the URL or unavailable projections', asy
     assert.match(offline.tags, /noindex, nofollow/);
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+test('college basketball pages are indexed only from the launch date', async () => {
+  const before = Date.parse('2026-11-30T12:00:00Z');
+  const after = Date.parse('2026-12-01T12:00:00Z');
+  for (const path of ['/cbb', '/cbb/ratings', '/cbb/record', '/cbb/how-it-works']) {
+    assert.match((await documentForPath(path, { now: before })).tags, /noindex, nofollow/);
+    const launched = await documentForPath(path, { now: after });
+    assert.match(launched.tags, /College Basketball/);
+    assert.match(launched.tags, /name="robots" content="index, follow"/);
+  }
+  assert.ok(!sitemapPages(before).some(path => path.startsWith('/cbb')));
+  assert.ok(sitemapPages(after).includes('/cbb'));
+  assert.match((await documentForPath('/', { now: before })).tags, /<title>Probable \| Free NFL Touchdown Picks/);
+  assert.match((await documentForPath('/', { now: after })).tags, /NFL and College Basketball/);
+  // NFL pages keep working through the launch.
+  for (const now of [before, after]) {
+    for (const path of ['/nfl', '/touchdowns', '/games', '/performance']) assert.match((await documentForPath(path, { now })).tags, /index, follow/);
   }
 });

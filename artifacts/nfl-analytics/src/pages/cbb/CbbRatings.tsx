@@ -7,7 +7,7 @@ import {
   type CbbFactorKey, type CbbProfile, type CbbTeam,
 } from '@/lib/cbb';
 import { useCbb } from '@/lib/cbb-data';
-import { CbbLogo } from './CbbGames';
+import { CbbLogo } from './CbbLogo';
 import './cbb.css';
 
 type View = 'ratings' | 'offense' | 'defense' | 'shooting' | 'schedule';

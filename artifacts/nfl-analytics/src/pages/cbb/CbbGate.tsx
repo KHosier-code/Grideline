@@ -1,24 +1,23 @@
 import { type ReactNode } from 'react';
 import { Redirect } from 'wouter';
-import { useAuth } from '@clerk/react';
-import { useAdminStatus } from '@/hooks/use-admin-status';
-import { consumerAccountState } from '@/lib/consumer-account-state';
+import { CBB_PUBLIC_LAUNCH, useCbbAccess } from '@/lib/sports';
 import { ConsumerLoading } from '@/pages/consumer/consumer-ui';
 
 /**
- * College basketball is a preview for administrators only. Everyone else is
- * sent to the NFL home page; nothing about it is shown or fetched for them.
- * To launch it, render the children directly and drop requireAdmin from
- * /api/consumer/cbb.
+ * College basketball is open to everyone from its launch date
+ * (lib/launch/sports-launch.mjs). Before then only administrators see it;
+ * everyone else is sent to the home page and nothing is fetched for them.
  */
+const launchDay = new Date(CBB_PUBLIC_LAUNCH).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+
 export function CbbGate({ children }: { children: ReactNode }) {
-  const { isLoaded, isSignedIn } = useAuth();
-  const admin = useAdminStatus();
-  const account = consumerAccountState(isLoaded, isSignedIn, admin);
-  if (account.adminVerified) return <>
-    <p className="cbb-preview">Preview: only administrators can see College Hoops. Customers don&apos;t see it in the menu or at these addresses.</p>
+  const access = useCbbAccess();
+  const note = access.newNote && <p className="cbb-new"><b>New</b> We started tracking college basketball picks on November 2.</p>;
+  if (access.visible) return <>
+    {!access.launched && <p className="cbb-preview">Preview: only administrators can see College Basketball until it opens to everyone on {launchDay}.</p>}
+    {note}
     {children}
   </>;
-  if (!isLoaded || (isSignedIn && (admin.isLoading || admin.isFetching))) return <ConsumerLoading label="Checking access…" />;
+  if (access.pending) return <ConsumerLoading label="Checking access…" />;
   return <Redirect to="/" replace />;
 }
