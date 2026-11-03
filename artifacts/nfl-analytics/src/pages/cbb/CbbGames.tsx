@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { ConsumerLoading } from '@/pages/consumer/consumer-ui';
 import {
-  favorite, formatRecord, formatSpread, gamesByDay, modelHomeSpread, seasonLabel, winRate,
+  CBB_CARD_SIZE, favorite, formatRecord, formatSpread, gamesByDay, modelHomeSpread, seasonLabel, winRate,
   type CbbGame, type CbbGradedPick, type CbbRecord, type CbbTeam,
 } from '@/lib/cbb';
 import { useCbb } from '@/lib/cbb-data';
@@ -34,15 +34,17 @@ function lineText(homeSpread: number | null, game: CbbGame, teams: Map<string, C
   return `${teams.get(fav.team)?.abbr ?? teams.get(fav.team)?.short ?? ''} ${formatSpread(-fav.points)}`;
 }
 
-function GameCard({ game, teams }: { game: CbbGame; teams: Map<string, CbbTeam> }) {
+function GameCard({ game, teams, official }: { game: CbbGame; teams: Map<string, CbbTeam>; official: CbbGradedPick | undefined }) {
   const home = teams.get(game.home.id);
   const away = teams.get(game.away.id);
-  const pickTeam = game.pick ? teams.get(game.pick.team) : undefined;
   const homeProb = game.model.homeWinProb;
-  return <article className={`gl-card cbb-game${game.pick ? ' has-pick' : ''}`}>
+  // An official pick shows the line it locked at; any other disagreement is only a lean.
+  const lean = !official && game.pick ? game.pick : null;
+  return <article className={`gl-card cbb-game${official ? ' has-pick' : ''}`}>
     <header className="cbb-game-head">
       <span>{tipTime(game.tip)} ET{game.neutral ? ' · neutral site' : ''}</span>
-      {game.pick && <span className="gl-pill strong">Pick: {pickTeam?.short ?? 'side'} {formatSpread(game.pick.line)}</span>}
+      {official && <span className="gl-pill strong">Pick: {teams.get(official.team)?.short ?? 'side'} {formatSpread(official.line)}</span>}
+      {lean && <span className="gl-pill small" title="We disagree with the line, but it isn't on today's card and isn't graded">Lean: {teams.get(lean.team)?.short ?? 'side'} {formatSpread(lean.line)}</span>}
     </header>
     <div className="cbb-game-body">
       <div className="cbb-teams">
@@ -84,7 +86,7 @@ function RecordPanel({ record, teams }: { record: CbbRecord; teams: Map<string, 
   return <section className="gl-card cbb-record" aria-labelledby="cbb-record-title">
     <h2 id="cbb-record-title">Season record <small>tracking</small></h2>
     {graded === 0
-      ? <p className="cbb-muted">No picks graded yet. Every pick is saved the first time it appears here, before tip-off, at the line shown then.{record.pending ? ` ${record.pending} waiting on results.` : ''}</p>
+      ? <p className="cbb-muted">No picks graded yet. Each day's card is locked with the first update after 7 AM Eastern, before tip-off, at the lines shown then.{record.pending ? ` ${record.pending} waiting on results.` : ''}</p>
       : <>
         <div className="gl-stats">
           <div className="gl-stat"><b>{formatRecord(record)}</b><small>against the spread</small></div>
@@ -112,20 +114,21 @@ export default function CbbGames() {
   const { query, report, record } = useCbb();
   const [picksOnly, setPicksOnly] = useState(false);
   const teams = useMemo(() => new Map((report?.teams ?? []).map(team => [team.id, team])), [report]);
-  const days = useMemo(() => gamesByDay((report?.games ?? []).filter(game => !picksOnly || game.pick)), [report, picksOnly]);
-  const pickCount = report?.games.filter(game => game.pick).length ?? 0;
+  const official = useMemo(() => new Map((record?.official ?? []).map(pick => [pick.id, pick])), [record]);
+  const days = useMemo(() => gamesByDay((report?.games ?? []).filter(game => !picksOnly || official.has(game.id))), [report, picksOnly, official]);
+  const pickCount = report?.games.filter(game => official.has(game.id)).length ?? 0;
 
   return <div className="gl-page">
     <header className="gl-hero">
       <div>
         <p className="gl-label">{report ? `College basketball · ${seasonLabel(report.season)}` : 'College basketball'}</p>
         <h1 className="gl-title">College Hoops <span>Games</span></h1>
-        <p className="gl-lede">Our line for every Division I game today and tomorrow, next to the sportsbook&apos;s opening and current numbers. A pick means we disagree with the current spread by {report?.model.pickEdge ?? 2}+ points.</p>
+        <p className="gl-lede">Our line for every Division I game today and tomorrow, next to the sportsbook&apos;s opening and current numbers. Each morning we pick up to {CBB_CARD_SIZE} games: our biggest disagreements with the spread, between 2 and 6 points. Only those count toward the record. Other games where we disagree are marked as leans.</p>
       </div>
     </header>
 
     <aside className="gl-card cbb-note" aria-label="About these picks">
-      <b>New for this season, and still proving itself.</b> In testing on the last three seasons, our numbers did not beat closing lines (50.2%). Against 2025-26 opening lines, games where we disagreed by 2–6 points won 52–54%, and the line moved our way about twice as often as against us. That&apos;s a thin edge, so we&apos;re tracking every pick in public before calling it one. <Link href="/cbb/how-it-works" className="gl-link">How it works</Link>.
+      <b>New for this season, and still proving itself.</b> In testing on the last three seasons, our numbers did not beat closing lines (50.2%). Against 2025-26 opening lines, games where we disagreed by 2–6 points won 52–54%, and the line moved our way about twice as often as against us. That&apos;s a thin edge, so we&apos;re tracking the daily card in public before calling it one. <Link href="/cbb/how-it-works" className="gl-link">How it works</Link>.
     </aside>
 
     {query.isLoading && <ConsumerLoading label="Loading games…" />}
@@ -140,10 +143,10 @@ export default function CbbGames() {
         </div>
         <p className="cbb-muted">Updated {new Date(report.generatedAt).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET · lines from {report.games.find(game => game.line?.provider)?.line?.provider ?? 'ESPN'}</p>
       </div>
-      {days.length === 0 && <div className="gl-empty"><strong>{picksOnly ? 'No picks on the board right now.' : 'No Division I games today or tomorrow.'}</strong>{picksOnly ? 'We only pick a game when we disagree with the line by 2+ points.' : 'Check back on the next game day.'}</div>}
+      {days.length === 0 && <div className="gl-empty"><strong>{picksOnly ? 'No picks on the board right now.' : 'No Division I games today or tomorrow.'}</strong>{picksOnly ? `The day's card (up to ${CBB_CARD_SIZE} picks) is set with the first update after 7 AM Eastern.` : 'Check back on the next game day.'}</div>}
       {days.map(day => <section key={day.key} className="cbb-day" aria-label={day.label}>
         <h2 className="cbb-day-title">{day.label} <small>{day.games.length} games</small></h2>
-        <div className="cbb-grid">{day.games.map(game => <GameCard key={game.id} game={game} teams={teams} />)}</div>
+        <div className="cbb-grid">{day.games.map(game => <GameCard key={game.id} game={game} teams={teams} official={official.get(game.id)} />)}</div>
       </section>)}
     </>}
 
