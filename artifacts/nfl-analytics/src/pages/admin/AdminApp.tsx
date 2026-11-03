@@ -1,7 +1,7 @@
 import { lazy, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { UserButton, useAuth } from '@clerk/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Bell, CalendarDays, Check, ChevronRight, Clock3, Database, FileSearch, ChartNoAxesColumnIncreasing, LayoutDashboard, LineChart, ListFilter, Loader2, Radio, LockKeyhole, Menu, RefreshCw, Save, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, TrendingUp, UserRound, X } from 'lucide-react';
+import { Activity, AlertTriangle, Bell, CalendarDays, Check, ChevronRight, Clock3, Database, FileSearch, ChartNoAxesColumnIncreasing, Globe, LayoutDashboard, LineChart, ListFilter, Loader2, Radio, LockKeyhole, Menu, RefreshCw, Save, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, TrendingUp, UserRound, X } from 'lucide-react';
 import {
   getGetDashboardSummaryQueryKey,
   getGetDataHealthQueryKey,
@@ -376,6 +376,7 @@ function Shell({ children }: { children: ReactNode }) {
           ))}
         </div>
         <div className="sidebar-footer">
+          <Link href="/" className="nav-item" onClick={() => setMobileOpen(false)} data-testid="link-nav-consumer-view"><Globe className="h-[17px] w-[17px]" /><span>Consumer view</span></Link>
           <ThemeToggle className="sidebar-theme-toggle" />
           <div className="connection-row">
             <span className={cx('connection-dot', isHealthy ? 'connection-live' : 'connection-muted')} />
@@ -389,8 +390,9 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-shell">
         <div className="mobile-topbar">
           <button type="button" className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation" data-testid="button-open-navigation"><Menu className="h-5 w-5" /></button>
-          <Link href="/admin" className="brand brand-mobile" data-testid="link-mobile-home"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Probable" className="h-5 w-5" /><strong>Gridline</strong></Link>
-          <span className="ml-auto"><ThemeToggle /></span>
+          <Link href="/admin" className="brand brand-mobile" data-testid="link-mobile-home"><img src={`${import.meta.env.BASE_URL}logo-icon.png`} alt="Probable" className="h-5 w-5" /><strong>Probable</strong></Link>
+          {/* The desktop top bar (with "Consumer view") is hidden on phones. */}
+          <span className="ml-auto flex items-center gap-2"><Link href="/" className="button button-subtle" data-testid="link-mobile-consumer-view">Consumer view</Link><ThemeToggle /></span>
         </div>
         <div className="topbar">
           <div className="topbar-context"><span className="live-kicker"><span className="live-pulse" />CONTROL ROOM</span><span className="topbar-divider" />{new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date())}</div>
