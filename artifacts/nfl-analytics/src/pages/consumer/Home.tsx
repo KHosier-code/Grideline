@@ -79,7 +79,8 @@ function cbbLine(homeSpread: number | null, game: CbbGame, teams: Map<string, Cb
 function CbbCard({ now }: { now: number }) {
   const { query, report, record } = useCbb();
   const teams = useMemo(() => new Map((report?.teams ?? []).map(team => [team.id, team])), [report]);
-  const picks = useMemo(() => topCbbPicks(report?.games ?? [], now), [report, now]);
+  const official = useMemo(() => new Set((record?.official ?? []).map(pick => pick.id)), [record]);
+  const picks = useMemo(() => topCbbPicks(report?.games ?? [], now, 3, official), [report, now, official]);
   const top = useMemo(() => [...(report?.teams ?? [])].sort((a, b) => a.rank - b.rank).slice(0, 3), [report]);
   const graded = record ? record.wins + record.losses + record.pushes : 0;
   const recordText = record && graded ? `${formatRecord(record)}, ${units(record.units)}` : 'tracking since Nov 2, none graded yet';
@@ -87,7 +88,7 @@ function CbbCard({ now }: { now: number }) {
 
   return <section className="gl-card gl-sport-card" data-sport="cbb" aria-labelledby="home-cbb">
     <SportCardHead title="College Basketball · Today" href="/cbb" cta="All games" record={`College spreads: ${recordText}`} start={start} />
-    <h3 id="home-cbb" className="gl-label">Biggest disagreements with the line</h3>
+    <h3 id="home-cbb" className="gl-label">{official.size ? "Today's card" : 'Biggest disagreements with the line'}</h3>
     {query.isLoading ? <ConsumerLoading label="Loading college games…" />
       : query.isError ? <p className="gl-sport-empty">College games couldn&apos;t load. Refresh in a minute.</p>
       : picks.length ? <ol className="gl-sport-list">{picks.map(game => {
