@@ -282,7 +282,7 @@ export type WatchAlert = {
   kind: "flagged" | "moved-toward" | "moved-away";
   gameId: string;
   at: Date;
-  /** Plain-language line for a notification, e.g. "Gridline has KC by 7.5; the opener is KC -3 at DraftKings." */
+  /** Plain-language line for a notification, e.g. "Probable has KC by 7.5; the opener is KC -3 at DraftKings." */
   message: string;
 };
 
@@ -308,7 +308,7 @@ export function watchAlerts(watch: WatchGame[], quotesByGame: Map<string, Spread
     const ours = lineText(game.gridlineMargin, home, away);
     if (flaggedAt >= since) {
       alerts.push({ kind: "flagged", gameId: game.gameId, at: flaggedAt,
-        message: `${away} at ${home}: Gridline has ${ours}, the opener is ${homeLineText(game.openLine, home, away)} at ${game.sportsbook} (${Math.abs(game.gap).toFixed(1)} pts apart). Now ${homeLineText(game.currentLine, home, away)}.` });
+        message: `${away} at ${home}: Probable has ${ours}, the opener is ${homeLineText(game.openLine, home, away)} at ${game.sportsbook} (${Math.abs(game.gap).toFixed(1)} pts apart). Now ${homeLineText(game.currentLine, home, away)}.` });
     }
     const book = bookQuotes(quotesByGame.get(game.gameId) ?? [], game.sportsbook, new Date(game.kickoff));
     const latest = book.at(-1);
@@ -318,7 +318,7 @@ export function watchAlerts(watch: WatchGame[], quotesByGame: Map<string, Spread
     const toward = game.side === "home" ? homeMove : -homeMove;
     if (Math.abs(toward) < 1) continue;
     alerts.push({ kind: toward > 0 ? "moved-toward" : "moved-away", gameId: game.gameId, at: latest.capturedAt,
-      message: `${away} at ${home}: the line moved ${toward > 0 ? "toward" : "away from"} Gridline (${ours}), from ${homeLineText(previous.homeLine, home, away)} to ${homeLineText(latest.homeLine, home, away)} at ${game.sportsbook}.` });
+      message: `${away} at ${home}: the line moved ${toward > 0 ? "toward" : "away from"} Probable (${ours}), from ${homeLineText(previous.homeLine, home, away)} to ${homeLineText(latest.homeLine, home, away)} at ${game.sportsbook}.` });
   }
   return alerts.sort((a, b) => b.at.getTime() - a.at.getTime());
 }

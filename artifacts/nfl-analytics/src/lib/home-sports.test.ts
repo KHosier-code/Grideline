@@ -31,8 +31,10 @@ test('home shows only the top three college picks by gap, upcoming only', () => 
 });
 
 test('NFL early-line record reads as W-L with units at -110', () => {
-  assert.equal(nflRecordText({ wins: 9, losses: 6, pushes: 0 }), '9-6, +2.4 units');
-  assert.equal(nflRecordText({ wins: 2, losses: 4, pushes: 1 }), '2-4-1, −2.4 units');
+  assert.equal(nflRecordText({ wins: 9, losses: 6, pushes: 0 }), '9-6, +2.4 units · 15 picks, too few to judge');
+  assert.equal(nflRecordText({ wins: 3, losses: 2, pushes: 0 }), '3-2, +0.8 units · 5 picks, too few to judge');
+  assert.equal(nflRecordText({ wins: 170, losses: 150, pushes: 0 }), '170-150, +5.0 units');
+  assert.equal(nflRecordText({ wins: 2, losses: 4, pushes: 1 }), '2-4-1, −2.4 units · 7 picks, too few to judge');
   assert.equal(nflRecordText({ wins: 0, losses: 0, pushes: 0 }), 'no picks graded yet');
   assert.equal(nflRecordText(undefined), 'no picks graded yet');
 });

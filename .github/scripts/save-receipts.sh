@@ -20,7 +20,7 @@ else
   git worktree add --detach "$dir"
   git -C "$dir" checkout -q --orphan new-receipts
   git -C "$dir" rm -rfq --ignore-unmatch .
-  printf '%s\n' "# Gridline receipts" "" \
+  printf '%s\n' "# Probable receipts" "" \
     "Every model run's payload exactly as it was sent to the site, saved by the Weekly picks workflow." \
     "Folders are season/week; file names are the UTC time of the run. Nothing here is ever edited." > "$dir/README.md"
 fi

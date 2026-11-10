@@ -18,10 +18,19 @@ export function nextStart(times: string[], now: number, noun: 'kickoff' | 'tip')
   return `${first ? 'First' : 'Next'} ${noun} ${clock(next)} ET`;
 }
 
-/** NFL early-line record at -110, as "9-6, +2.4 units". */
+/**
+ * Graded picks below which a spread record says nothing about skill. Even 300
+ * picks at 55% is not clear of the 52.4% break-even; this only stops a
+ * handful of picks from reading like a track record.
+ */
+export const TOO_FEW_TO_JUDGE = 300;
+
+/** NFL early-line record at -110, as "9-6, +2.4 units · 15 picks, too few to judge". */
 export function nflRecordText(record: { wins: number; losses: number; pushes: number } | undefined) {
-  if (!record || record.wins + record.losses + record.pushes === 0) return 'no picks graded yet';
-  return `${formatRecord({ ...record, units: 0 })}, ${units(record.wins - record.losses * 1.1)}`;
+  const picks = record ? record.wins + record.losses + record.pushes : 0;
+  if (!record || picks === 0) return 'no picks graded yet';
+  const text = `${formatRecord({ ...record, units: 0 })}, ${units(record.wins - record.losses * 1.1)}`;
+  return picks < TOO_FEW_TO_JUDGE ? `${text} · ${picks} ${picks === 1 ? 'pick' : 'picks'}, too few to judge` : text;
 }
 
 /** Today's three college games where we're furthest from the line, and only those. */

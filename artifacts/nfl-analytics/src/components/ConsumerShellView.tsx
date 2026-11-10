@@ -12,7 +12,8 @@ type NavItem = { href: string; label: string; icon: typeof Gauge; signedInOnly?:
 type NavGroup = { label: string; items: NavItem[]; collapsible?: boolean };
 
 /**
- * NFL: five things most visitors come for, then everything else under Research.
+ * NFL: five things most visitors come for, how picks are graded, then everything
+ * else folded under research.
  * Breadcrumbs read the group labels below.
  */
 export const consumerNavGroups: NavGroup[] = [
@@ -23,7 +24,12 @@ export const consumerNavGroups: NavGroup[] = [
     { href: '/pickem', label: 'Pool Picks', icon: Grid3x3 },
     { href: '/performance', label: 'NFL Record', icon: BarChart3 },
   ] },
-  { label: 'NFL research', collapsible: true, items: [
+  // Always open: the pages that say how picks are made and prove when they were posted.
+  { label: 'How we grade', items: [
+    { href: '/methodology', label: 'How it works', icon: BookOpen },
+    { href: '/receipts', label: 'Receipts', icon: Receipt },
+  ] },
+  { label: 'More NFL research', collapsible: true, items: [
     { href: '/power-ratings', label: 'Power Ratings', icon: ListOrdered },
     { href: '/qb-rankings', label: 'QB Rankings', icon: UserRound },
     { href: '/teams', label: 'Team Charts', icon: Gauge },
@@ -31,9 +37,7 @@ export const consumerNavGroups: NavGroup[] = [
     { href: '/matchups', label: 'Matchups', icon: Swords },
     { href: '/defense-vs-position', label: 'Defense vs Position', icon: ShieldHalf },
     { href: '/red-zone', label: 'Red Zone', icon: Crosshair },
-    { href: '/receipts', label: 'Receipts', icon: Receipt },
     { href: '/my-picks', label: 'My Picks', icon: Bookmark },
-    { href: '/methodology', label: 'How it works', icon: BookOpen },
   ] },
 ];
 /** College basketball lives under /cbb with its own menu and its own record. */
@@ -102,7 +106,7 @@ export function ConsumerShellView({
   const cbbOpen = cbbAccess(account.adminVerified).visible;
   const sport: Sport = cbbOpen ? sportForPath(location) : location === '/' ? 'home' : 'nfl';
   const groups = sport === 'cbb' ? cbbNavGroups
-    : sport === 'home' && cbbOpen ? [consumerNavGroups[0], ...cbbNavGroups, consumerNavGroups[1]]
+    : sport === 'home' && cbbOpen ? [consumerNavGroups[0], ...cbbNavGroups, ...consumerNavGroups.slice(1)]
     : consumerNavGroups;
   const trail = crumbs(location, sport === 'cbb' ? cbbNavGroups : consumerNavGroups);
   const sportTabs = cbbOpen && <nav className="gl-sport-tabs" aria-label="Sport">
@@ -123,7 +127,9 @@ export function ConsumerShellView({
     if (group.collapsible) {
       const holdsCurrent = items.some(item => isActive(location, item.href));
       return <details key={`${group.label}-${holdsCurrent}`} className="gl-side-group gl-side-fold" open={holdsCurrent}>
-        <summary className="gl-side-label">{group.label}<ChevronDown aria-hidden="true" /></summary>
+        <summary className="gl-side-label">
+          <span>{group.label} <span className="gl-side-count">{items.length}</span></span><ChevronDown aria-hidden="true" />
+        </summary>
         {links}
       </details>;
     }
