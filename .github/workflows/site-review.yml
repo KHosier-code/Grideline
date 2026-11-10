@@ -1,0 +1,128 @@
+name: Site review snapshot (one-off)
+
+# One-off: saves the live site's public pick data and phone-sized screenshots
+# to research/site-review/ on this branch for a site review. Public pages and
+# public API routes only; no secrets. Removed again after the review.
+on:
+  push:
+    branches: [claude/beautiful-mendel-t4wvmz]
+    paths: [.github/workflows/site-review.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Public pick data
+        run: |
+          mkdir -p research/site-review/api && cd research/site-review/api
+          B=https://probablesports.com/api
+          get() { curl -sS -m 90 "$B/$1" -o raw.json -w "$1 %{http_code} %{size_download}B %{time_total}s\n" || true; }
+          get consumer/touchdowns; jq -c 'del(.picks[].factors)' raw.json > touchdowns.json || cp raw.json touchdowns.raw
+          for w in 4 5 6 7 8 9 10; do
+            get "consumer/touchdowns?season=2026&week=$w"
+            jq -c '{season,week,generatedAt,picks:[.picks[]|del(.factors)]}' raw.json > "touchdowns_w$w.json" || true
+            get "consumer/game-projections?season=2026&week=$w"; jq -c . raw.json > "games_w$w.json" || true
+          done
+          get consumer/game-projections; jq -c . raw.json > games.json || true
+          get consumer/receipts; jq -c . raw.json > receipts.json || true
+          get consumer/replay; jq -c . raw.json > replay.json || true
+          get consumer/freshness; jq -c . raw.json > freshness.json || true
+          get consumer/touchdowns/players; jq -c . raw.json > td_players.json || true
+          get consumer/cbb; head -c 300 raw.json; echo
+          rm -f raw.json
+          curl -sS -m 30 https://probablesports.com/sitemap.xml -o sitemap.xml -w "sitemap %{http_code}\n" || true
+          curl -sS -m 30 https://probablesports.com/robots.txt -o robots.txt -w "robots %{http_code}\n" || true
+          curl -sS -m 30 https://probablesports.com/ -o home.html -w "home %{http_code} %{size_download}B %{time_total}s\n" || true
+          curl -sS -m 30 -A "Googlebot/2.1" https://probablesports.com/touchdowns -o touchdowns_bot.html -w "touchdowns (bot) %{http_code} %{size_download}B\n" || true
+          ls -la
+      - name: Phone screenshots
+        run: |
+          OUT="$GITHUB_WORKSPACE/research/site-review/shots"; mkdir -p "$OUT"
+          cd "$RUNNER_TEMP" && npm init -y >/dev/null && npm i playwright@1.50.1 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+          cat > shots.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import { writeFileSync, readFileSync } from 'node:fs';
+          const out = process.argv[2];
+          const origin = 'https://probablesports.com';
+          let slug = null;
+          try { slug = JSON.parse(readFileSync(`${out}/../api/td_players.json`, 'utf8')).players?.[0]?.slug ?? null; } catch {}
+          const pages = [['home', '/', 5], ['touchdowns', '/touchdowns', 5], ['games', '/games', 3], ['performance', '/performance', 5],
+            ['receipts', '/receipts', 2], ['methodology', '/methodology', 3], ['pickem', '/pickem', 3], ['power-ratings', '/power-ratings', 2],
+            ['cbb', '/cbb', 1], ['sign-in', '/sign-in', 1]];
+          if (slug) pages.push(['td-player', `/td/${slug}`, 3]);
+          const browser = await chromium.launch();
+          const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1.5, isMobile: true, hasTouch: true,
+            userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+          const metrics = [];
+          async function capture(name, path, slices) {
+            const page = await ctx.newPage();
+            const errors = [];
+            page.on('pageerror', e => errors.push(String(e.message).slice(0, 160)));
+            page.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 160)); });
+            const started = Date.now();
+            try { await page.goto(origin + path, { waitUntil: 'networkidle', timeout: 45000 }); } catch (e) { errors.push('goto: ' + String(e.message).slice(0, 120)); }
+            const settled = Date.now() - started;
+            await page.waitForTimeout(1500);
+            const info = await page.evaluate(() => {
+              const nav = performance.getEntriesByType('navigation')[0];
+              const res = performance.getEntriesByType('resource');
+              const sum = type => Math.round(res.filter(r => r.name.match(type)).reduce((t, r) => t + (r.transferSize || 0), 0) / 1024);
+              const paint = performance.getEntriesByType('paint').find(p => p.name === 'first-contentful-paint');
+              const small = [...document.querySelectorAll('a, button')].filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.height < 40; });
+              const tiny = [...document.querySelectorAll('body *')].filter(el => el.children.length === 0 && el.textContent.trim() && parseFloat(getComputedStyle(el).fontSize) < 12).length;
+              return {
+                url: location.pathname + location.search, title: document.title,
+                description: document.querySelector('meta[name="description"]')?.content ?? null,
+                h1: [...document.querySelectorAll('h1')].map(h => h.innerText.trim()),
+                scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight,
+                ttfbMs: nav ? Math.round(nav.responseStart) : null, domContentLoadedMs: nav ? Math.round(nav.domContentLoadedEventEnd) : null,
+                fcpMs: paint ? Math.round(paint.startTime) : null, jsKb: sum(/\.js(\?|$)/), cssKb: sum(/\.css(\?|$)/), requests: res.length,
+                smallTapTargets: small.length, smallTapSamples: small.slice(0, 8).map(el => (el.innerText || el.getAttribute('aria-label') || '').trim().slice(0, 30)),
+                tinyTextNodes: tiny, links: document.querySelectorAll('a[href]').length,
+                text: document.body.innerText.replace(/\n{3,}/g, '\n\n').slice(0, 7000),
+              };
+            });
+            metrics.push({ name, path, settledMs: settled, errors: errors.slice(0, 8), ...info });
+            const height = Math.min(info.scrollHeight, slices * 1000);
+            for (let i = 0; i * 1000 < height; i += 1) {
+              await page.screenshot({ path: `${out}/${name}-${i + 1}.jpg`, type: 'jpeg', quality: 62, fullPage: true,
+                clip: { x: 0, y: i * 1000, width: 390, height: Math.min(1000, info.scrollHeight - i * 1000) } });
+            }
+            return page;
+          }
+          for (const [name, path, slices] of pages) { const page = await capture(name, path, slices); await page.close(); }
+          // The menu, opened, and the first game page a visitor would tap.
+          const home = await ctx.newPage();
+          await home.goto(origin + '/', { waitUntil: 'networkidle', timeout: 45000 }).catch(() => {});
+          const toggle = home.locator('.gl-menu-toggle, [aria-label="Open navigation"]').first();
+          if (await toggle.count()) { await toggle.click().catch(() => {}); await home.waitForTimeout(600); await home.screenshot({ path: `${out}/menu-open.jpg`, type: 'jpeg', quality: 62 }); }
+          await home.close();
+          const games = await ctx.newPage();
+          await games.goto(origin + '/games', { waitUntil: 'networkidle', timeout: 45000 }).catch(() => {});
+          const href = await games.locator('a[href^="/games/"]').first().getAttribute('href').catch(() => null);
+          await games.close();
+          if (href) { const page = await capture('game-detail', href, 4); await page.close(); }
+          writeFileSync(`${out}/metrics.json`, JSON.stringify(metrics, null, 1));
+          await browser.close();
+          console.log(metrics.map(m => `${m.name}: ${m.url} fcp ${m.fcpMs}ms js ${m.jsKb}KB h ${m.scrollHeight} errors ${m.errors.length}`).join('\n'));
+          EOF
+          node shots.mjs "$OUT"
+          ls -la "$OUT" | head -60; du -sh "$OUT"
+      - name: Commit
+        if: ${{ !cancelled() }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add research/site-review
+          git commit -m "Site review snapshot (temporary)" || exit 0
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
