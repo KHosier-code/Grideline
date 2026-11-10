@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /props
+Sitemap: https://probablesports.com/sitemap.xml
