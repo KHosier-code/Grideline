@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import { TD_TEST, pctText } from '@/lib/td-testing';
 import { useGetConsumerGameProjections, useGetConsumerTouchdowns, getGetConsumerGameProjectionsQueryKey } from '@workspace/api-client-react';
 
 const pct = (value: unknown, fallback: string) => typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : fallback;
@@ -7,8 +8,11 @@ const pts = (value: unknown, fallback: string) => typeof value === 'number' ? va
 export default function ConsumerMethodology() {
   const touchdowns = useGetConsumerTouchdowns();
   const games = useGetConsumerGameProjections(undefined, { query: { queryKey: getGetConsumerGameProjectionsQueryKey() } });
-  const td = touchdowns.data?.evaluation;
+  const book = touchdowns.data?.bookComparison;
+  const bookReady = book && book.players > 0 && book.modelBrier !== null && book.bookBrier !== null;
   const game = games.data?.evaluation ?? {};
+  const early = games.data?.early;
+  const earlyGraded = early ? early.beatClose + early.lostClose + early.sameClose : 0;
 
   const sections = [
     {
@@ -29,7 +33,10 @@ export default function ConsumerMethodology() {
           <li><b>Matchup:</b> touchdowns the defense has allowed to that position recently.</li>
           <li><b>Track record:</b> how often the player has scored, adjusted for small samples.</li>
         </ul>
-        <p>Players ruled out on the injury report are removed. In testing on {td?.testedOn ?? 'games the model never trained on'}, <b>{pct(td?.topTenHitRate, '59.5%')}</b> of each week&apos;s top 10 scored. The percentages are realistic: players we gave about a 30% chance scored about 30% of the time. Most volume and red-zone value is already priced in by sportsbooks, and we haven&apos;t yet tested the model against sportsbook TD prices, so treat our fair odds as a reference, not a signal to bet. Books keep a cut of roughly 20% on anytime-TD bets.</p>
+        <p>Players ruled out on the injury report are removed. In testing from {TD_TEST.span}, each season predicted by a model trained only on earlier ones, <b>{pctText(TD_TEST.topTen.rate)}</b> of each week&apos;s top 10 scored. Those players are heavy favorites, usually around {TD_TEST.topTenTypicalPrice}, which needs {pctText(TD_TEST.topTenBreakEven)} to break even, so a high hit rate is not the same as a profit. The percentages are realistic: players we gave about a 30% chance scored about 30% of the time.</p>
+        <p>We also grade the model against sportsbook prices every week. {bookReady
+          ? <>On {book.players} players with a DraftKings or FanDuel price this season, our prediction error was {book.modelBrier!.toFixed(4)} against {book.bookBrier!.toFixed(4)} for the books once their cut of roughly {Math.round(book.hold * 100)}% is removed (lower is better). That is about level: </>
+          : <>So far our numbers have come out about level with the books&apos; once their cut of roughly 20% is removed: </>}our chances are about as accurate as the books&apos; prices, not more. Treat our fair odds as a check on the price, not a signal to bet. The running comparison is on the <Link href="/performance" className="gl-link">record page</Link>.</p>
       </>,
     },
     {
@@ -54,8 +61,10 @@ export default function ConsumerMethodology() {
     {
       title: 'Where our line helps: before the market moves',
       body: <>
-        <p>Closing lines are hard to beat, but opening lines are softer. From 2021 to 2026, when our projection disagreed with the opening spread, the line moved toward our number by kickoff about two times in three (65–72%, depending on the size of the gap), and this held in games with no quarterback news. That is called closing line value, and it is the earliest sign that a number has real information in it.</p>
-        <p>We now save each game&apos;s opening and closing line from DraftKings and FanDuel and grade this live on the <Link href="/performance" className="gl-link">Model Performance</Link> page. The home page lists the games where we disagree with Vegas most, with how far the line has moved since it opened. Until the live record backs it up, these are second opinions, not picks.</p>
+        <p>Closing lines are hard to beat, but opening lines are softer. When a line moves toward a pick after the pick is made, that is called closing line value, and it is the fastest honest sign that a number has real information in it: it shows up in weeks, where a win-loss record takes years.</p>
+        <p>It only counts from the moment a pick is posted. In past seasons the line often moved from the opener toward our number, but the opener comes out days before our projection does, and our projection knows things the opener didn&apos;t, such as who is starting at quarterback. So we grade line movement live from the time each early-line pick posts, at the line you could have bet then. {earlyGraded > 0
+          ? <>So far the line has moved our way on {early!.beatClose} of {earlyGraded} picks, far too few to judge.</>
+          : <>No picks have closed yet.</>} See the <Link href="/performance" className="gl-link">Model Performance</Link> page. Until that record backs it up, our line is a second opinion, not a pick.</p>
       </>,
     },
     {

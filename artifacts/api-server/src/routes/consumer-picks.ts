@@ -10,6 +10,7 @@ import {
   favoriteRecord, lineValueGames, lineValueSummary, openerWatch, openerWatchSummary, projectionsBeforeKickoff, spreadLocks, spreadLockSummary, earlyLinePicks, earlyLineSummary, winnerRecord,
 } from "../lib/game-projections";
 import { loadSeasonProjectionData } from "../lib/projection-data";
+import { listReceipts, parseReceiptPath, readReceipt } from "../lib/receipts-restore";
 import {
   bookComparison, bookFairProbability, boardForWeek, expectedValue, fairAmericanOdds, mergePropReports, topTenRecord, valueFive, valueRecord,
 } from "../lib/touchdown-board";
@@ -118,7 +119,7 @@ type SeasonBoards = Awaited<ReturnType<typeof readSeasonBoards>>;
  */
 const loadSeasonBoards = seasonCache((season) => readSeasonBoards(season), async (season) => {
   const [row] = await db.select({
-    runs: sql<string>`(select max(${touchdownPickRunsTable.generatedAt})::text from ${touchdownPickRunsTable} where ${touchdownPickRunsTable.season} = ${season})`,
+    runs: sql<string>`(select max(${touchdownPickRunsTable.generatedAt})::text || '/' || count(*)::text from ${touchdownPickRunsTable} where ${touchdownPickRunsTable.season} = ${season})`,
     results: sql<string>`(select count(*)::text from ${touchdownPickResultsTable} where ${touchdownPickResultsTable.season} = ${season})`,
     props: sql<string>`(select max(${weeklyReportsTable.generatedAt})::text from ${weeklyReportsTable} where ${weeklyReportsTable.kind} = 'td-props' and ${weeklyReportsTable.season} = ${season})`,
   }).from(sql`(select 1) as fingerprint`);
@@ -406,6 +407,86 @@ router.post("/games/projections/ingest", async (req, res): Promise<void> => {
   } catch (error) {
     req.log.error({ error }, "Game projection ingest failed");
     res.status(500).json({ error: "Game projection ingest failed" });
+  }
+});
+
+/**
+ * Puts back runs that are on the public receipts branch but not in the
+ * database (see lib/receipts-restore.ts). Existing runs and grades are never
+ * changed. Send {"apply": true} to write; without it, reports what it would do.
+ */
+router.post("/receipts/restore", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  const apply = req.body?.apply === true;
+  try {
+    const { files, skipped } = await listReceipts(fetch, req.get("x-github-token") ?? undefined);
+    const [gameRuns, tdRuns] = await Promise.all([
+      db.select({ season: gameProjectionRunsTable.season, week: gameProjectionRunsTable.week, generatedAt: gameProjectionRunsTable.generatedAt }).from(gameProjectionRunsTable),
+      db.select({ season: touchdownPickRunsTable.season, week: touchdownPickRunsTable.week, generatedAt: touchdownPickRunsTable.generatedAt }).from(touchdownPickRunsTable),
+    ]);
+    const key = (kind: string, season: number, week: number, generatedAt: Date | string) => `${kind}|${season}|${week}|${new Date(generatedAt).toISOString()}`;
+    const have = new Set([
+      ...gameRuns.map((run) => key("games", run.season, run.week, run.generatedAt)),
+      ...tdRuns.map((run) => key("touchdowns", run.season, run.week, run.generatedAt)),
+    ]);
+    const restored: Array<{ path: string; receivedAt: string }> = [];
+    const rejected = [...skipped];
+    const results: Array<{ season: number; week: number; playerId: string; scored: boolean }> = [];
+    for (const file of files) {
+      const payload = await readReceipt(file);
+      const parsed = file.kind === "games" ? gameIngestSchema.safeParse(payload) : ingestSchema.safeParse(payload);
+      if (!parsed.success) { rejected.push({ path: file.path, reason: "does not match the ingest format" }); continue; }
+      const body = parsed.data;
+      const generatedAt = new Date(body.generatedAt);
+      if (body.season !== file.season || body.week !== file.week || generatedAt > file.committedAt) {
+        rejected.push({ path: file.path, reason: "contents do not match the file name or commit time" });
+        continue;
+      }
+      if ("results" in body) results.push(...body.results);
+      if (have.has(key(file.kind, body.season, body.week, generatedAt))) continue;
+      restored.push({ path: file.path, receivedAt: file.committedAt.toISOString() });
+      if (!apply) continue;
+      if ("games" in body) {
+        await db.insert(gameProjectionRunsTable).values({
+          season: body.season, week: body.week, generatedAt, receivedAt: file.committedAt,
+          modelVersion: body.modelVersion, evaluation: body.evaluation, games: body.games, teams: body.teams,
+        }).onConflictDoNothing();
+      } else {
+        await db.insert(touchdownPickRunsTable).values({
+          season: body.season, week: body.week, generatedAt, receivedAt: file.committedAt,
+          modelVersion: body.modelVersion, evaluation: body.evaluation, picks: body.picks,
+        }).onConflictDoNothing();
+      }
+    }
+    // Newest payload first, so a player's latest grade wins; grades already
+    // in the database are kept.
+    const grades = new Map<string, (typeof results)[number]>();
+    for (const result of results.reverse()) {
+      const id = `${result.season}|${result.week}|${result.playerId}`;
+      if (!grades.has(id)) grades.set(id, result);
+    }
+    let gradesAdded = 0;
+    if (apply && grades.size) {
+      const rows = [...grades.values()];
+      for (let start = 0; start < rows.length; start += 500) {
+        const inserted = await db.insert(touchdownPickResultsTable).values(rows.slice(start, start + 500))
+          .onConflictDoNothing().returning({ id: touchdownPickResultsTable.id });
+        gradesAdded += inserted.length;
+      }
+    }
+    const byWeek: Record<string, number> = {};
+    for (const item of restored) {
+      const file = parseReceiptPath(item.path)!;
+      const label = `${file.season} week ${file.week} ${file.kind}`;
+      byWeek[label] = (byWeek[label] ?? 0) + 1;
+    }
+    res.status(apply ? 201 : 200).json({
+      applied: apply, receipts: files.length, restored: restored.length, byWeek, gradesAdded: apply ? gradesAdded : null,
+      rejected, runs: restored,
+    });
+  } catch (error) {
+    req.log.error({ error }, "Receipts restore failed");
+    res.status(502).json({ error: error instanceof Error ? error.message : "Receipts restore failed" });
   }
 });
 

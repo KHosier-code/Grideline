@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NewsletterSignup } from '@/components/NewsletterSignup';
 import { CountUp } from '@/components/CountUp';
 import { TouchdownStat } from '@/components/TrackRecord';
+import { TD_TEST, pctText } from '@/lib/td-testing';
 import { Link } from 'wouter';
 import {
   getGetConsumerTouchdownsQueryKey, useGetConsumerTouchdowns, type ConsumerTouchdownPick,
@@ -161,14 +162,14 @@ export default function TouchdownPicks() {
         <p className="gl-lede">The chance each player scores a rushing or receiving touchdown this week. The ranking weighs how often the ball comes their way, their role near the goal line, how many points Vegas expects their team to score, and the defense they face.</p>
       </div>
       <div className="gl-stats" aria-label="Model accuracy">
-        {data?.evaluation.topTenHitRate !== null && data?.evaluation.topTenHitRate !== undefined && <div className="gl-stat">
-          <b><CountUp text={pct(data.evaluation.topTenHitRate)} /></b><small>of top-10 picks scored in testing</small>
-        </div>}
         {record && record.weeksGraded > 0 && <TouchdownStat record={record} />}
+        <div className="gl-stat">
+          <b><CountUp text={pctText(TD_TEST.topTen.rate)} /></b><small>of top-10 picks scored in testing, {TD_TEST.short}. At their usual price (about {TD_TEST.topTenTypicalPrice}) they need {pctText(TD_TEST.topTenBreakEven)} to break even.</small>
+        </div>
         {value && value.picks > 0 && <div className="gl-stat">
           <b><CountUp text={`${value.hits}/${value.picks} · ${units(value.units)}`} /></b><small>Value 5 picks this season, 1 unit each at the price we picked them</small>
         </div>}
-        {data?.evaluation.testedOn && <p className="gl-stats-note">Tested on {data.evaluation.testedOn}.</p>}
+        <p className="gl-stats-note">Tested walk-forward, {TD_TEST.span}: each season predicted by a model trained only on earlier ones.</p>
       </div>
     </header>
 
@@ -237,9 +238,9 @@ export default function TouchdownPicks() {
 
     <footer className="gl-card" style={{ padding: 18 }}>
       <div className="gl-footer-inner" style={{ padding: 0 }}>
-        <p><b>Fair odds</b>The price that matches our probability. In testing on 2022 through 2026, our top 5 players each week scored 58.5% of the time, and our percentages matched how often players actually scored. The model averages five fits so one random draw can&apos;t move the board.</p>
+        <p><b>Fair odds</b>The price that matches our probability. In testing from {TD_TEST.span}, our percentages matched how often players actually scored. This season they have been about as accurate as the books&apos; own prices once the books&apos; cut is taken out, so most weeks the book pays less than our fair price, and the gap is the books&apos; cut. The model averages five fits so one random draw can&apos;t move the board.</p>
         <p><b>Book</b>The best anytime-TD price at DraftKings or FanDuel when we last checked. Books keep a cut of roughly 20% on these bets, so compare our chance with the book&apos;s chance after the cut, not the raw price.</p>
-        <p><b>Top 5</b>Our five most likely scorers. In testing on 2022 through 2026 they scored 58.5% of the time, against 53.7% for the top 10. Graded as their own tier on the record page.</p>
+        <p><b>Top 5</b>Our five most likely scorers. In testing from {TD_TEST.span} they scored {pctText(TD_TEST.topFive.rate)} of the time, against {pctText(TD_TEST.topTen.rate)} for the top 10. These are heavy favorites: a high hit rate can still lose money at the book&apos;s price. Graded as their own tier on the record page.</p>
         <p><b>Value 5</b>Up to five players with a 20% chance or better, priced from +150 to +400, whose best book price pays at least 5 cents per $1 more than our probability says it should. These lose more often than the Top 5 but pay more when they hit. We haven&apos;t been able to test this against past prices, so each pick is locked at kickoff and graded at the price we picked it, 1 unit each. Prices move; check your book before betting.</p>
         <p><b>Favorable / Neutral / Tough</b>Half how many points Vegas expects the team to score, half the defense: touchdowns, yards and red-zone looks it allows to the position, red-zone trips and touchdown rate it allows, and how efficient offenses are against it on runs (RBs, QBs) or passes (WRs, TEs). Favorable is the top quarter of this week&apos;s players at the position, tough the bottom quarter. In 2022–2026, favorable players scored 23% of the time and tough ones 15%. Our probability already includes all of this; the tag shows which way the matchup leans.</p>
         <p><b>Red-zone touches</b>Targets plus carries inside the opponent&apos;s 20-yard line, per game over the player&apos;s last 8 games.</p>

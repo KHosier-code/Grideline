@@ -69,7 +69,8 @@ export function latestBookLines(rows: OddsRow[], sides: Sides): BookLines[] {
  */
 export const loadSeasonProjectionData = seasonCache(readSeasonProjectionData, async (season) => {
   const [row] = await db.select({
-    run: sql<string>`(select max(${gameProjectionRunsTable.generatedAt})::text from ${gameProjectionRunsTable} where ${gameProjectionRunsTable.season} = ${season})`,
+    // Count as well as newest: runs restored from the receipts branch are older than the newest.
+    run: sql<string>`(select max(${gameProjectionRunsTable.generatedAt})::text || '/' || count(*)::text from ${gameProjectionRunsTable} where ${gameProjectionRunsTable.season} = ${season})`,
     odds: sql<string>`(select max(${sportsbookOddsTable.id})::text from ${sportsbookOddsTable})`,
     finals: sql<string>`(select count(${gamesTable.finalHomeScore})::text from ${gamesTable} where ${gamesTable.season} = ${season})`,
   }).from(sql`(select 1) as fingerprint`);

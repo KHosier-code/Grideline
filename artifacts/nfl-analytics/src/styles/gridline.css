@@ -536,9 +536,12 @@
 .gl-side-fold > summary { display: flex; align-items: center; justify-content: space-between; min-height: 36px; cursor: pointer; list-style: none; border-radius: 8px; }
 .gl-side-fold > summary::-webkit-details-marker { display: none; }
 .gl-side-fold > summary:hover { color: hsl(var(--foreground)); }
+.gl-side-count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 1px 5px; border-radius: 9px; background: hsl(var(--secondary)); color: hsl(var(--foreground)); font-size: 10px; letter-spacing: 0; text-align: center; }
 .gl-side-fold > summary:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
 .gl-side-fold > summary svg { width: 14px; height: 14px; transition: transform .15s ease; }
 .gl-side-fold[open] > summary svg { transform: rotate(180deg); }
+/* The mobile menu hides icons; the fold's chevron is what shows it opens. */
+.gl-mobile-nav .gl-side-fold > summary svg { display: block; }
 .gl-side-group a, .gl-mobile-nav a {
   display: flex;
   align-items: center;

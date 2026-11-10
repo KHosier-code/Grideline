@@ -12,7 +12,7 @@ fi
 topic=$(jq -r '.ntfyTopic // empty' alerts.json)
 echo "$(jq '.alerts | length' alerts.json) alert(s) since $STARTED_AT${topic:+, sending to ntfy.sh/$topic}"
 jq -c '.alerts | reverse | .[]' alerts.json | while read -r alert; do
-  title=$(jq -r '{"flagged": "New watch-list game", "moved-toward": "Line moved toward Gridline", "moved-away": "Line moved away from Gridline"}[.kind]' <<<"$alert")
+  title=$(jq -r '{"flagged": "New watch-list game", "moved-toward": "Line moved toward Probable", "moved-away": "Line moved away from Probable"}[.kind]' <<<"$alert")
   message=$(jq -r .message <<<"$alert")
   echo "- $title: $message"
   [ -n "$topic" ] || continue

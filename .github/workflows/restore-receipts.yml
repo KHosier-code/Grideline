@@ -1,0 +1,47 @@
+name: Restore receipts
+
+# Puts back model runs that are on the public `receipts` branch but missing
+# from the site's database (weeks 4-5 and the start of week 6 were lost in the
+# October 2026 database move). The site reads the branch from GitHub itself
+# and dates each run by the commit that saved it; it never changes a run or a
+# grade it already has. Run once with "apply" off to see what it would do,
+# then again with it on.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write the missing runs (off = only report what would be restored)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+      GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+      # This run's read-only token, so the site's GitHub reads aren't rate-limited.
+      GITHUB_READ_TOKEN: ${{ github.token }}
+    steps:
+      - name: Restore from the receipts branch
+        run: |
+          set -euo pipefail
+          [ -n "$GRIDLINE_INGEST_URL" ] && [ -n "$GRIDLINE_INGEST_TOKEN" ] || { echo "Ingest URL or token is not set"; exit 1; }
+          apply=${{ inputs.apply && 'true' || 'false' }}
+          code=$(curl -sS -o restore.json -w '%{http_code}' --max-time 300 -X POST \
+            -H "Authorization: Bearer $GRIDLINE_INGEST_TOKEN" -H "Content-Type: application/json" \
+            -H "X-GitHub-Token: $GITHUB_READ_TOKEN" \
+            -d "{\"apply\": $apply}" "${GRIDLINE_INGEST_URL%/}/api/receipts/restore")
+          jq '{applied, receipts, restored, byWeek, gradesAdded, rejected}' restore.json || cat restore.json
+          case "$code" in 2*) ;; *) echo "Restore failed with HTTP $code"; exit 1 ;; esac
+          {
+            echo "### Receipts restore ($([ "$apply" = true ] && echo applied || echo dry run))"
+            echo
+            echo '```json'
+            jq '{restored, byWeek, gradesAdded, rejected}' restore.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

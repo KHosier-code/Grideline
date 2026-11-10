@@ -43,8 +43,8 @@ function HeroStats({ season }: { season: number | undefined }) {
   const params = season ? { season } : undefined;
   const projections = useGetConsumerGameProjections(params, { query: { queryKey: getGetConsumerGameProjectionsQueryKey(params), enabled: season !== undefined } });
   return <div className="gl-stats" aria-label="How the picks are doing">
-    <TouchdownStat record={touchdowns.data?.record} testingHitRate={touchdowns.data?.evaluation.topTenHitRate} />
-    <LineValueStat lineValue={projections.data?.lineValue} />
+    <TouchdownStat record={touchdowns.data?.record} />
+    <LineValueStat early={projections.data?.early} />
     <TrackRecordNote />
   </div>;
 }

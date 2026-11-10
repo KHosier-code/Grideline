@@ -145,7 +145,7 @@ test("watch alerts: new flags and moves of a point or more since a time", () => 
   assert.match(recent[0].message, /from KC -1 to BUF -1/);
   const all = watchAlerts(watch, quotes, new Date("2026-09-28T00:00:00Z"));
   assert.deepEqual(all.map((alert) => alert.kind), ["moved-toward", "flagged"]);
-  assert.match(all[1].message, /Gridline has BUF -6, the opener is KC -1 at DraftKings/);
+  assert.match(all[1].message, /Probable has BUF -6, the opener is KC -1 at DraftKings/);
 });
 
 test("lock times: Saturday noon ET for Sunday and Monday games, six hours ahead otherwise", () => {
