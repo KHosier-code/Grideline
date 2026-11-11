@@ -65,7 +65,14 @@ export type CbbGradedPick = CbbPickSide & {
   id: string; tip: string; home: string; away: string; postedAt: string;
   outcome: 'win' | 'loss' | 'push' | 'pending'; homePoints: number | null; awayPoints: number | null;
 };
-export type CbbRecord = CbbTally & { pending: number; byEdge: Array<CbbTally & { min: number; max: number | null }>; recent: CbbGradedPick[] };
+export type CbbRecord = CbbTally & {
+  pending: number; byEdge: Array<CbbTally & { min: number; max: number | null }>; recent: CbbGradedPick[];
+  /** The daily card's picks still waiting on a result, at their locked lines (older API: absent). */
+  official?: CbbGradedPick[];
+};
+
+/** Up to this many official picks a day: the biggest 2-6 point gaps on the morning card. */
+export const CBB_CARD_SIZE = 5;
 
 /** "2026-27" for season 2027. */
 export const seasonLabel = (season: number) => `${season - 1}-${String(season).slice(2)}`;

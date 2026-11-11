@@ -32,7 +32,7 @@ export default function CbbMethodology() {
 
     <section className="gl-card">
       <h2>Picks and the record</h2>
-      <p>A pick is any game where our line disagrees with the current spread by 2 or more points. The board updates four times a day. Each pick is saved the first time it appears, before tip-off, at the line shown then, and graded at that line. Later updates can&apos;t change it, add it after the fact or remove it.</p>
+      <p>Each morning, the first update after 7 AM Eastern sets the day&apos;s card: up to 5 games where our line disagrees most with the current spread, between 2 and 6 points. (Bigger gaps were usually stale or mistaken lines in testing.) Those picks lock at the line shown then and are the only ones graded. Later updates can&apos;t change the card, add to it after the fact or remove a pick. Other games where we disagree show on the board as leans and are never counted.</p>
       <p>Lines and scores come from ESPN (DraftKings or ESPN BET, whichever ESPN shows). Your sportsbook&apos;s number may differ, so check it before you bet.</p>
       <p><Link href="/cbb" className="gl-link">Today&apos;s games</Link> · <Link href="/cbb/ratings" className="gl-link">Power ratings</Link></p>
     </section>

@@ -33,11 +33,14 @@ export function nflRecordText(record: { wins: number; losses: number; pushes: nu
   return picks < TOO_FEW_TO_JUDGE ? `${text} · ${picks} ${picks === 1 ? 'pick' : 'picks'}, too few to judge` : text;
 }
 
-/** Today's three college games where we're furthest from the line, and only those. */
-export function topCbbPicks(games: CbbGame[], now: number, count = 3) {
-  return games
-    .filter(game => game.pick && Date.parse(game.tip) > now)
-    .sort((a, b) => b.pick!.edge - a.pick!.edge)
-    .slice(0, count);
+/**
+ * The college games to feature: the day's official card when it's set (the
+ * record's `official` ids), otherwise the biggest 2-6 point disagreements, the
+ * same window the card uses. Upcoming games only, at most `count`.
+ */
+export function topCbbPicks(games: CbbGame[], now: number, count = 3, official: ReadonlySet<string> = new Set()) {
+  const upcoming = games.filter(game => game.pick && Date.parse(game.tip) > now);
+  const card = upcoming.filter(game => official.has(game.id));
+  const pool = card.length ? card : upcoming.filter(game => game.pick!.edge >= 2 && game.pick!.edge < 6);
+  return pool.sort((a, b) => b.pick!.edge - a.pick!.edge).slice(0, count);
 }
-
