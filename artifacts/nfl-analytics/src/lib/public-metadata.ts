@@ -18,6 +18,7 @@ const pages: Record<string, [string, string]> = {
   '/defense-vs-position': ['NFL Defense vs Position | Probable', 'Fantasy points and touchdowns each NFL defense allows to quarterbacks, running backs, receivers and tight ends.'],
   '/methodology': ['How Probable Makes Its Picks | Probable', 'What goes into Probable\'s game projections and touchdown picks, how they are tested, and how picks are graded.'],
   '/performance': ['NFL Model Performance | Probable', 'How Probable\'s game and touchdown models performed on seasons they never trained on, and this season\'s graded record.'],
+  '/receipts': ['NFL Pick Receipts: Every Pick Timestamped Before Kickoff | Probable', 'Every NFL projection and touchdown pick as the site received it before kickoff, with the time it arrived, the result, and a link to the public GitHub copy.'],
 };
 
 // College basketball pages, listed only once college basketball is public.

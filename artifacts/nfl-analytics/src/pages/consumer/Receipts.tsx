@@ -7,6 +7,9 @@ import { ConsumerLoading } from './consumer-ui';
 /** Each weekly-picks run commits what it sent to this branch (see .github/workflows/weekly-picks.yml). */
 const RECEIPTS_URL = 'https://github.com/KHosier-code/Grideline/tree/receipts';
 
+/** The site's database starts here; earlier runs were restored from the receipts branch. */
+const DATABASE_MOVE = Date.parse('2026-10-17T00:00:00Z');
+
 const stamp = (iso: string) => new Date(iso).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const pct = (value: number) => `${Math.round(value * 100)}%`;
 
@@ -115,6 +118,8 @@ export default function Receipts() {
         </tr>)}</tbody>
       </table></div>
     </details>}
+
+    {data?.runs.some(run => Date.parse(run.receivedAt) < DATABASE_MOVE) && <p className="gl-note">Runs from before October 17, 2026 were lost when the site moved databases and were put back from the public GitHub branch. For those, the &quot;Received&quot; time is the time GitHub saved the file, which is a few seconds to about a minute after the site first got it, so they can only look later than they were, never earlier.</p>}
 
     <p className="gl-note">A projection only counts for a game if the site received it before kickoff; a run that arrives late is kept in the log but never graded. See <Link href="/performance" className="gl-link">Model Performance</Link> for the season totals.</p>
   </div>;

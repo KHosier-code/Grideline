@@ -146,13 +146,13 @@ router.get("/feeds/watch-list.xml", async (req, res): Promise<void> => {
   try {
     const alerts = await currentAlerts(new Date(Date.now() - 7 * 86_400_000));
     const origin = `${req.protocol}://${req.get("host")}`;
-    const titles = { flagged: "New watch-list game", "moved-toward": "Line moved toward Gridline", "moved-away": "Line moved away from Gridline" };
+    const titles = { flagged: "New watch-list game", "moved-toward": "Line moved toward Probable", "moved-away": "Line moved away from Probable" };
     const items = alerts.map((alert) => `<item><title>${xml(titles[alert.kind])}</title><description>${xml(alert.message)}</description>`
       + `<link>${xml(`${origin}/performance#watch-list`)}</link><guid isPermaLink="false">${xml(`${alert.kind}-${alert.gameId}-${alert.at.toISOString()}`)}</guid>`
       + `<pubDate>${alert.at.toUTCString()}</pubDate></item>`).join("");
     res.set({ "Content-Type": "application/rss+xml; charset=utf-8", "Cache-Control": "public, max-age=600" });
-    res.send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Gridline watch list</title>`
-      + `<link>${xml(`${origin}/performance#watch-list`)}</link><description>Games where Gridline's line is 4+ points off the opener, and when those lines move.</description>${items}</channel></rss>`);
+    res.send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Probable watch list</title>`
+      + `<link>${xml(`${origin}/performance#watch-list`)}</link><description>Games where Probable's line is 4+ points off the opener, and when those lines move.</description>${items}</channel></rss>`);
   } catch (error) {
     req.log.error({ error }, "Watch-list feed failed");
     res.status(503).type("text/plain").send("Feed is being refreshed");

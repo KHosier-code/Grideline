@@ -12,6 +12,7 @@ import { TeamLogo } from '@/components/TeamLogo';
 import { bookShort } from '@/lib/line-shopping';
 import { lineText, vegasLineText } from '@/lib/pick-sheet';
 import { ConsumerLoading } from './consumer-ui';
+import { TD_TEST } from '@/lib/td-testing';
 
 const pct = (value: number, digits = 1) => `${(value * 100).toFixed(digits)}%`;
 const num = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -63,7 +64,7 @@ function ReplaySection({ replay }: { replay: Replay }) {
     <div className="gl-record-grid">
       <div className="gl-card gl-record-card">
         <span className="gl-label">Touchdown top 10, replayed</span>
-        <b><CountUp text={`${hits}/${picks}`} /></b><p>{pct(hits / Math.max(1, picks), 0)} scored. In back-testing the weekly top 10 averaged about 60%.</p>
+        <b><CountUp text={`${hits}/${picks}`} /></b><p>{pct(hits / Math.max(1, picks), 0)} scored. In testing from {TD_TEST.span} the weekly top 10 scored {pct(TD_TEST.topTen.rate)}.</p>
       </div>
       <div className="gl-card gl-record-card">
         <span className="gl-label">Game winners, replayed</span>
@@ -127,8 +128,8 @@ function EarlyLineSection({ early }: { early: ConsumerEarlyLinePicks }) {
     {early.stopped && <p className="gl-note gl-paused"><b>Stopped.</b> The first {early.stopAfter} picks won under {Math.round(early.stopRate * 100)}%, so we stopped making new ones, as we said we would before the first pick.</p>}
     <div className="gl-record-grid">
       <div className="gl-card gl-record-card"><span className="gl-label">Record at the posted line</span><b>{recordText(early.record)}</b><p>{coverRate(early.record)}. Break-even at -110 is 52.4%.</p></div>
-      <div className="gl-card gl-record-card"><span className="gl-label">Beat the closing line</span><b>{clvGames ? `${early.beatClose}/${clvGames}` : '—'}</b><p>How often the line moved toward our pick after we posted. The fastest sign of a real edge.</p></div>
-      <div className="gl-card gl-record-card"><span className="gl-label">In testing</span><b>55–57%</b><p>What we expect. 4+ point gaps went 62% in 2023–24 and 70% in 2025 at the opening line; after adjusting for fitting, and since Monday&apos;s line is later than the opener, expect less.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">Beat the closing line</span><b>{clvGames ? `${early.beatClose}/${clvGames}` : '—'}</b><p>How often the line moved toward our pick after we posted. The fastest honest sign of an edge, and still too few picks to judge.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">In testing</span><b>Unproven</b><p>4+ point gaps went 62% in 2023–24 and 70% in 2025 at the opening line, but the rule came out of a search of thousands of filters, the test knew who actually started at quarterback, and it went 1–7 in 2026 through week 3. Treat it as a lead we are checking, not an expected win rate.</p></div>
     </div>
     <p className="gl-note">The rule, set before the first pick: our first projection after Monday 8 AM ET, compared with the DraftKings or FanDuel line captured closest to it. A pick needs a gap of {early.gap}+ points, and it&apos;s graded at that number, not the opener or the close. If the first {early.stopAfter} graded picks win under {Math.round(early.stopRate * 100)}%, we stop. Expect one to three a week.</p>
     {picks.length > 0 ? <div className="gl-card gl-table-wrap">
@@ -157,7 +158,7 @@ function SpreadLocksSection({ locks }: { locks: ConsumerSpreadLocks }) {
   const date = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   return <section className="gl-section" id="spread-picks" aria-labelledby="spread-picks-head">
     <div className="gl-section-head"><h2 id="spread-picks-head">Spread picks</h2><p>Locked Saturday noon ET at the best DraftKings or FanDuel number, graded at that number</p></div>
-    {locks.pausedFrom && <p className="gl-note gl-paused"><b>Paused after week 5.</b> Our first week of locked spread picks went 1–7, and a five-season test showed our gap to the closing line doesn&apos;t predict covers. So we stopped posting spread picks instead of asking you to trust them. They come back only if a rule beats the closing line in a published backtest at prices you could bet. Every pick we made stays below.</p>}
+    {locks.pausedFrom && <p className="gl-note gl-paused"><b>Paused after week 5.</b> Our first week of locked spread picks went 1–7, and a five-season test showed our gap to the closing line doesn&apos;t predict covers. So we stopped posting spread picks instead of asking you to trust them. They come back only if a rule beats the closing line in a published backtest at prices you could bet.{picks.length > 0 ? ' Every pick we made stays below.' : <> The sportsbook lines those picks were locked at did not survive our October database move, so we can&apos;t rebuild the table here. The projections they came from are in the <a href="https://github.com/KHosier-code/Grideline/tree/receipts/2026/week-05" className="gl-link" target="_blank" rel="noreferrer">public week 5 receipts</a>.</>}</p>}
     <div className="gl-record-grid">
       <div className="gl-card gl-record-card"><span className="gl-label">Plays · {locks.playThreshold}+ pts off Vegas</span><b>{recordText(locks.plays)}</b><p>{coverRate(locks.plays)}. Break-even at -110 is 52.4%.</p></div>
       <div className="gl-card gl-record-card"><span className="gl-label">Leans · {locks.leanThreshold}–{locks.playThreshold} pts</span><b>{recordText(locks.leans)}</b><p>{coverRate(locks.leans)}. In testing, small gaps hit about 51–53%: close to a coin flip.</p></div>
@@ -196,7 +197,7 @@ function WatchListSection({ watch, topic }: { watch: ConsumerWatchList; topic: s
       <div className="gl-card gl-record-card"><span className="gl-label">At the opener</span><b>{recordText(watch.atsOpen)}</b><p>{coverRate(watch.atsOpen)}</p></div>
       <div className="gl-card gl-record-card"><span className="gl-label">When we posted</span><b>{recordText(watch.atsPublished)}</b><p>{coverRate(watch.atsPublished)}. The honest record: the line you could bet when the game joined the list.</p></div>
       <div className="gl-card gl-record-card"><span className="gl-label">At the close</span><b>{recordText(watch.atsClose)}</b><p>{coverRate(watch.atsClose)}. Break-even at -110 is 52.4%.</p></div>
-      <div className="gl-card gl-record-card"><span className="gl-label">Line moved our way</span><b>{moved ? `${watch.movedToward}/${moved}` : '—'}</b><p>Of {watch.flagged} {watch.flagged === 1 ? 'game' : 'games'} flagged, how often the line moved toward our side by kickoff, the earliest sign of a real edge.</p></div>
+      <div className="gl-card gl-record-card"><span className="gl-label">Line moved our way</span><b>{moved ? `${watch.movedToward}/${moved}` : '—'}</b><p>Of {watch.flagged} {watch.flagged === 1 ? 'game' : 'games'} flagged, how often the line moved toward our side between the opener and kickoff. Most of that move happens before we post, so read the &quot;When we posted&quot; record instead.</p></div>
     </div>
     {watch.games.length > 0 ? <div className="gl-card gl-table-wrap">
       <table className="gl-table gl-watch-table">
@@ -279,9 +280,10 @@ export default function ConsumerPerformance() {
     {(games.isLoading || touchdowns.isLoading) && <ConsumerLoading label="Loading performance…" />}
 
     <div className="gl-summary-grid">
-      <SummaryCard title="Touchdown picks" icon={<Trophy />} value={td?.evaluation.topTenHitRate != null ? pct(td.evaluation.topTenHitRate) : '—'}
-        caption="Each week's top 10 who scored, in testing"
-        rows={[['This season, top 5', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topFive.hits}/${tdRecord.topFive.picks}` : 'After the first graded week'],
+      <SummaryCard title="Touchdown picks" icon={<Trophy />} value={pct(TD_TEST.topTen.rate)}
+        caption={`Each week's top 10 who scored in testing, ${TD_TEST.short}`}
+        rows={[[`Break-even at about ${TD_TEST.topTenTypicalPrice}`, pct(TD_TEST.topTenBreakEven)],
+          ['This season, top 10 at book prices', tdRecord && tdRecord.priced.picks > 0 ? `${unitsShort(tdRecord.priced.units)} on ${tdRecord.priced.picks} picks` : 'After the first priced week'],['This season, top 5', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topFive.hits}/${tdRecord.topFive.picks}` : 'After the first graded week'],
           ['This season, top 10', tdRecord && tdRecord.weeksGraded > 0 ? `${tdRecord.topTenHits}/${tdRecord.topTenPicks}` : 'After the first graded week'],
           ['Value 5 (longer odds)', td?.valueRecord && td.valueRecord.picks > 0 ? `${td.valueRecord.hits}/${td.valueRecord.picks}, ${unitsShort(td.valueRecord.units)}` : 'After the first graded pick'],
           ['Ranking accuracy (AUC)', td?.evaluation.auc != null ? td.evaluation.auc.toFixed(3) : '—']]} />
@@ -313,16 +315,18 @@ export default function ConsumerPerformance() {
           <span className="gl-label">TD top 5 / top 10 that scored</span>
           {tdRecord && tdRecord.weeksGraded > 0 ? <><b><CountUp text={`${tdRecord.topFive.hits}/${tdRecord.topFive.picks}`} /></b>
             <p>Top 5: our probabilities expected {tdRecord.topFive.expectedHits.toFixed(1)}{tdRecord.topFive.priced.picks > 0 ? `, ${unitsShort(tdRecord.topFive.priced.units)} at book prices` : ''}.
-              Top 10: {tdRecord.topTenHits}/{tdRecord.topTenPicks} ({tdRecord.expectedHits.toFixed(1)} expected). In 2022–2026 testing the top 5 scored 58.5% and the top 10 53.7%. Beating the expected count says the model is sharp; profit at book prices says whether the books already knew.</p></>
+              Top 10: {tdRecord.topTenHits}/{tdRecord.topTenPicks} ({tdRecord.expectedHits.toFixed(1)} expected). In testing from {TD_TEST.span} the top 5 scored {pct(TD_TEST.topFive.rate)} and the top 10 {pct(TD_TEST.topTen.rate)}. A few hits above or below the expected count is ordinary luck at this sample size; profit at book prices is the number that matters.</p></>
             : <><b>—</b><p>The first graded week appears after this week&apos;s games.</p></>}
         </div>
         <div className="gl-card gl-record-card">
-          <span className="gl-label">Line value</span>
+          <span className="gl-label">Line moves from the opener</span>
           {clv && clv.leans > 0 ? <>
             <b>{moved ? <CountUp text={`${clv.movedToward}/${moved}`} /> : '—'}</b>
-            <p>Times Vegas moved toward our number after we disagreed with the opener by {clv.threshold}+ points
+            <p>Times the line moved toward our number after we disagreed with the opener by {clv.threshold}+ points
               ({clv.leans} {clv.leans === 1 ? 'game' : 'games'}, {clv.unchanged} unchanged{clv.averageMove !== null ? `, average ${clv.averageMove > 0 ? '+' : ''}${clv.averageMove.toFixed(2)} pts` : ''}).
-              Against the spread: {record(clv.atsOpen)} at the opener, {record(clv.atsClose)} at the close; 52.4% breaks even at -110.</p>
+              Against the spread: {record(clv.atsOpen)} at the opener, {record(clv.atsClose)} at the close; 52.4% breaks even at -110.
+              This counts from the opening line, days before we post, and our number knows things the opener didn&apos;t, such as who starts at quarterback, so it flatters us. Counted from when we actually posted: {game?.early && game.early.beatClose + game.early.lostClose + game.early.sameClose > 0
+                ? `${game.early.beatClose} of ${game.early.beatClose + game.early.lostClose + game.early.sameClose} early-line picks` : 'no graded picks yet'}.</p>
           </> : <><b>—</b><p>Appears once we have an opening and closing line for games where we disagreed with the opener.</p></>}
         </div>
         <div className="gl-card gl-record-card">
@@ -387,6 +391,6 @@ export default function ConsumerPerformance() {
 
     {replay && replay.weeks.length > 0 && <ReplaySection replay={replay} />}
 
-    <p className="gl-note">Against the opening line instead of the close, the same game model went about 53–54% when it disagreed by more than a point (2021–2025), which beats break-even but isn&apos;t yet enough evidence to call it an edge. We&apos;re now tracking opening and closing lines to test it on live games: if the line keeps moving toward our number after it opens, that is the earliest sign of a real edge, well before a win-loss record can show one. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
+    <p className="gl-note">Against the opening line instead of the close, the same game model went about 53–54% when it disagreed by more than a point (2021–2025), which beats break-even but isn&apos;t yet enough evidence to call it an edge. The test used the quarterback who actually started, which wasn&apos;t known when the line opened, so the real number is lower. We now track lines live from the moment each pick is posted: if the line keeps moving toward our number after that, it is the earliest honest sign of an edge, well before a win-loss record can show one. <Link href="/methodology" className="gl-link">How we test</Link>.</p>
   </div>;
 }

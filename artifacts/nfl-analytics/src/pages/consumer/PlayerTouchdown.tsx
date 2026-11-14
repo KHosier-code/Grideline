@@ -10,6 +10,9 @@ import { setPublicMetadata } from '@/lib/public-metadata';
 import { ConsumerLoading } from './consumer-ui';
 import { LEVEL_TEXT, bookEdge, factors, kickoffText } from './TouchdownPicks';
 
+/** "1 point", "6 points": the size of a probability gap in percentage points. */
+const pointsText = (edge: number) => { const n = Math.abs(Math.round(edge * 100)); return `${n} ${n === 1 ? 'point' : 'points'}`; };
+
 /** Shape of GET /api/consumer/touchdowns/player/:slug. */
 type PlayerPage = {
   status: 'available';
@@ -89,7 +92,7 @@ export default function PlayerTouchdown() {
       <h2 id="book-heading">Against the sportsbooks</h2>
       {pick.bookOdds && edge !== null ? <>
         <p className="gl-player-verdict">
-          <b className={edge > 0 ? 'gl-good' : ''}>{edge > 0 ? `${Math.round(edge * 100)} points better than the book` : edge < 0 ? `${Math.round(-edge * 100)} points worse than the book` : 'Priced about right'}</b>
+          <b className={edge > 0 ? 'gl-good' : ''}>{Math.round(edge * 100) > 0 ? `${pointsText(edge)} better than the book` : Math.round(edge * 100) < 0 ? `${pointsText(edge)} worse than the book` : 'Priced about right'}</b>
         </p>
         <p>Best price: <b>{formatPrice(pick.bookOdds.price)}</b> at {BOOK[pick.bookOdds.book] ?? pick.bookOdds.book}. That implies {pct(impliedProbability(pick.bookOdds.price))} with the book&apos;s cut,
           about {pct(tdFairProbability(pick.bookOdds.price))} without it. We say {pct(pick.probability)}.

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { documentForPath, injectMetadata, sitemapPages } from '../metadata.mjs';
 
 test('public routes have distinct crawler-visible metadata', async () => {
-  for (const [path, fragment] of [['/', 'Touchdown Picks'], ['/games', 'Projections and Lines'], ['/methodology', 'How Probable Makes Its Picks'], ['/performance', 'Model Performance']]) {
+  for (const [path, fragment] of [['/', 'Touchdown Picks'], ['/games', 'Projections and Lines'], ['/methodology', 'How Probable Makes Its Picks'], ['/performance', 'Model Performance'], ['/receipts', 'NFL Pick Receipts']]) {
     // Before the college launch; the home page's title changes after it (tested below).
     const result = await documentForPath(path, { now: Date.parse('2026-11-15T12:00:00Z') });
     assert.equal(result.status, 200);
@@ -57,6 +57,7 @@ test('college basketball pages are indexed only from the launch date', async () 
   }
   assert.ok(!sitemapPages(before).some(path => path.startsWith('/cbb')));
   assert.ok(sitemapPages(after).includes('/cbb'));
+  assert.ok(sitemapPages(before).includes('/receipts'));
   assert.match((await documentForPath('/', { now: before })).tags, /<title>Probable \| Free NFL Touchdown Picks/);
   assert.match((await documentForPath('/', { now: after })).tags, /NFL and College Basketball/);
   // NFL pages keep working through the launch.
