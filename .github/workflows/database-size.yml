@@ -1,0 +1,44 @@
+name: Database size
+
+# Once a day, asks the site how big the database is and which tables are
+# largest, and prints it here. The run fails (and GitHub emails you) when the
+# database passes the warning size, so a plan limit never arrives as a
+# surprise outage. Change the warning size with the repository variable
+# DB_SIZE_WARN_MB (Settings > Secrets and variables > Actions > Variables).
+on:
+  schedule:
+    - cron: "41 15 * * *"   # every day 11:41 ET
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Database size
+        env:
+          GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+          GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+          WARN_MB: ${{ vars.DB_SIZE_WARN_MB || '800' }}
+        run: |
+          status=$(curl -sS -m 60 -o size.json -w '%{http_code}' \
+            -H "Authorization: Bearer $GRIDLINE_INGEST_TOKEN" "${GRIDLINE_INGEST_URL%/}/api/ops/database-size" || echo 000)
+          if [ "$status" != "200" ]; then
+            echo "::error::The site couldn't read the database (HTTP $status): $(head -c 300 size.json 2>/dev/null)"
+            exit 1
+          fi
+          mb=$(jq '.bytes / 1048576 | floor' size.json)
+          echo "Database: ${mb} MB (warning at ${WARN_MB} MB)"
+          echo
+          jq -r '.tables[] | "\(.bytes / 1048576 * 10 | floor / 10) MB\t\(.rows) rows\t\(.name)"' size.json | column -t -s $'\t'
+          {
+            echo "### Database: ${mb} MB (warning at ${WARN_MB} MB)"
+            echo
+            echo "| Table | Size | Rows |"
+            echo "|---|---|---|"
+            jq -r '.tables[] | "| \(.name) | \(.bytes / 1048576 * 10 | floor / 10) MB | \(.rows) |"' size.json
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$mb" -ge "$WARN_MB" ]; then
+            echo "::error::The database is ${mb} MB, past the ${WARN_MB} MB warning size. Check the largest tables above."
+            exit 1
+          fi

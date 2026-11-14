@@ -590,6 +590,21 @@ const reportIngestSchema = zod.object({
   payload: zod.record(zod.string(), zod.unknown()),
 });
 
+/**
+ * Each college run is about 0.5 MB, four a day. Only the newest is shown in
+ * full; older runs are cut down to the picks and final scores the record is
+ * graded from (lib/cbb-record.ts), so the database grows by a few KB a run
+ * instead of half a megabyte.
+ */
+async function trimOldCbbRuns(season: number) {
+  await db.execute(sql`
+    UPDATE ${weeklyReportsTable}
+    SET payload = jsonb_build_object('picks', payload->'picks', 'results', payload->'results', 'trimmed', true)
+    WHERE kind = 'cbb' AND season = ${season} AND NOT (payload ? 'trimmed')
+      AND generated_at < (SELECT max(generated_at) FROM ${weeklyReportsTable} WHERE kind = 'cbb')
+  `);
+}
+
 router.post("/reports/ingest", async (req, res): Promise<void> => {
   if (!authorizeIngest(req, res)) return;
   const parsed = reportIngestSchema.safeParse(req.body);
@@ -603,6 +618,11 @@ router.post("/reports/ingest", async (req, res): Promise<void> => {
       kind: body.kind, season: body.season, week: body.week,
       generatedAt: new Date(body.generatedAt), payload: body.payload,
     }).onConflictDoNothing();
+    if (body.kind === "cbb") {
+      await trimOldCbbRuns(body.season).catch((error: unknown) => {
+        req.log.warn({ error }, "Trimming old college runs failed; will retry with the next run");
+      });
+    }
     res.status(201).json({ stored: body.kind });
   } catch (error) {
     req.log.error({ error }, "Weekly report ingest failed");
@@ -658,6 +678,32 @@ async function latestReport(kind: "usage" | "replay" | "matchups", req: import("
 router.get("/consumer/usage-report", (req, res) => latestReport("usage", req, res));
 router.get("/consumer/replay", (req, res) => latestReport("replay", req, res));
 router.get("/consumer/matchup-report", (req, res) => latestReport("matchups", req, res));
+
+/**
+ * The database's size and its largest tables, for the daily size check
+ * (.github/workflows/database-size.yml). Sizes only, no data.
+ */
+router.get("/ops/database-size", async (req, res): Promise<void> => {
+  if (!authorizeIngest(req, res)) return;
+  try {
+    const total = await db.execute(sql`SELECT pg_database_size(current_database())::bigint AS bytes`);
+    const tables = await db.execute(sql`
+      SELECT c.relname AS name, pg_total_relation_size(c.oid)::bigint AS bytes, GREATEST(c.reltuples, 0)::bigint AS rows
+      FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = current_schema() AND c.relkind IN ('r', 'p')
+      ORDER BY pg_total_relation_size(c.oid) DESC LIMIT 15
+    `);
+    res.set("Cache-Control", "no-store");
+    res.json({
+      bytes: Number((total.rows[0] as { bytes: string | number }).bytes),
+      tables: (tables.rows as Array<{ name: string; bytes: string | number; rows: string | number }>)
+        .map((row) => ({ name: row.name, bytes: Number(row.bytes), rows: Number(row.rows) })),
+    });
+  } catch (error) {
+    req.log.error({ error }, "Database size read failed");
+    res.status(503).json({ error: "Database unavailable", code: "consumer_data_unavailable" });
+  }
+});
 
 /** Graded record per season, rebuilt only when a new daily run arrives. */
 let cbbRecordCache: { key: string; record: ReturnType<typeof cbbRecord> } | null = null;
