@@ -88,8 +88,9 @@ What this says:
 - **Tuning matters in big or sharp pools, and in straight pools.** In the
   tough 100-person confidence pool it roughly triples the chance, from 1.7%
   to 5.2%. In straight pools, chalk ties too many people.
-- **The tuned sheet lost to chalk by more than a point in only 5 of 60 real
-  season comparisons.** It beat chalk in 31.
+- **The tuned sheet rarely loses to chalk in real seasons.** Over 64
+  distinct season comparisons, it beat chalk by more than a point in 28,
+  lost by more than a point in 9, and was within a point in 27.
 - **The lines are trustworthy.** A calibration fit gives k = 0.94 ± 0.22,
   where 1.0 is perfect. Shrinking toward 50% made held-out seasons slightly
   worse, so the lines are used as they are. Bowl Mania's crowd adds nothing
