@@ -5,6 +5,7 @@ name: Database size
 # database passes the warning size, so a plan limit never arrives as a
 # surprise outage. Change the warning size with the repository variable
 # DB_SIZE_WARN_MB (Settings > Secrets and variables > Actions > Variables).
+# On Nov 15, 2026 it was 4.3 GB, most of it player-ID history tables.
 on:
   schedule:
     - cron: "41 15 * * *"   # every day 11:41 ET
@@ -19,7 +20,7 @@ jobs:
         env:
           GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
           GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
-          WARN_MB: ${{ vars.DB_SIZE_WARN_MB || '800' }}
+          WARN_MB: ${{ vars.DB_SIZE_WARN_MB || '6000' }}
         run: |
           status=$(curl -sS -m 60 -o size.json -w '%{http_code}' \
             -H "Authorization: Bearer $GRIDLINE_INGEST_TOKEN" "${GRIDLINE_INGEST_URL%/}/api/ops/database-size" || echo 000)
