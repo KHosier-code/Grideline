@@ -16,4 +16,9 @@ export const pool = new Pool({
 });
 export const db = drizzle(pool, { schema });
 
+/** A separate pool a caller closes when done, e.g. the startup check, which retries while the database is down. */
+export function createPool() {
+  return new Pool({ connectionString: withExplicitTlsMode(process.env.DATABASE_URL!) });
+}
+
 export * from "./schema";

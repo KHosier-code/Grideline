@@ -194,8 +194,10 @@ export async function verifyProductionDatabase(
 
   let pool: QueryablePool | undefined;
   try {
+    // A fresh pool per check: the check is retried while the database is down,
+    // and a pool can't be reused once it has been closed.
     const database = await import("@workspace/db");
-    pool = database.pool;
+    pool = database.createPool();
     return await runProductionDatabasePreflight(pool, buildId, async () => {
       await new Promise<void>((resolve) => setImmediate(resolve));
       assertNoPostgresTlsCompatibilityWarnings(tlsWarnings);
@@ -203,6 +205,6 @@ export async function verifyProductionDatabase(
   } finally {
     process.off("warning", onWarning);
     console.warn = originalWarn;
-    if (pool) await (pool as typeof import("@workspace/db").pool).end();
+    if (pool) await (pool as ReturnType<typeof import("@workspace/db").createPool>).end();
   }
 }

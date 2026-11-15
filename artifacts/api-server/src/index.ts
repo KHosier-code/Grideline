@@ -18,7 +18,12 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 async function start() {
-  await ensurePlayerRecoveryReceiptCleanupMarker();
+  // The production check (production.ts) already stops startup when this
+  // table is missing. A write that fails here means the database is down or
+  // over a plan limit, and the site should still come up and say so.
+  await ensurePlayerRecoveryReceiptCleanupMarker().catch((err: unknown) => {
+    logger.error({ err }, "Receipt cleanup marker could not be written; starting without it");
+  });
   app.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");

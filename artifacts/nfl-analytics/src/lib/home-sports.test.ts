@@ -20,14 +20,18 @@ test('next start shows only on game days, in Eastern time', () => {
   assert.equal(nextStart(['2026-11-01T21:00:00-05:00'], noon, 'tip'), 'First tip 9:00 PM ET');
 });
 
-test('home shows only the top three college picks by gap, upcoming only', () => {
+test('home shows the top three college picks: the official card first, else 2-6 point gaps', () => {
   const now = Date.parse('2026-11-10T12:00:00Z');
   const games = [
-    game('a', '2026-11-10T23:00:00Z', 2.5), game('b', '2026-11-10T23:00:00Z', 6),
-    game('c', '2026-11-10T23:00:00Z', null), game('d', '2026-11-10T10:00:00Z', 9),
+    game('a', '2026-11-10T23:00:00Z', 2.5), game('b', '2026-11-10T23:00:00Z', 5.5),
+    game('c', '2026-11-10T23:00:00Z', null), game('d', '2026-11-10T10:00:00Z', 4.5),
     game('e', '2026-11-11T00:00:00Z', 4), game('f', '2026-11-11T01:00:00Z', 3),
+    game('huge', '2026-11-11T01:00:00Z', 9),
   ];
+  // No card yet: biggest gaps in the card's 2-6 window, upcoming only (d has tipped, huge is out of range).
   assert.deepEqual(topCbbPicks(games, now).map(item => item.id), ['b', 'e', 'f']);
+  // With a card, only its games.
+  assert.deepEqual(topCbbPicks(games, now, 3, new Set(['a', 'f'])).map(item => item.id), ['f', 'a']);
 });
 
 test('NFL early-line record reads as W-L with units at -110', () => {

@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { asc, desc, eq } from "drizzle-orm";
-import { db, gameProjectionRunsTable, touchdownPickResultsTable, touchdownPickRunsTable } from "@workspace/db";
+import { seasonTouchdownRows } from "./consumer-picks";
+import { desc, eq } from "drizzle-orm";
+import { db, gameProjectionRunsTable } from "@workspace/db";
 import { lockedAt, openerWatch, projectionsBeforeKickoff, watchAlerts } from "../lib/game-projections";
 import { loadSeasonProjectionData } from "../lib/projection-data";
 import { boardForWeek } from "../lib/touchdown-board";
@@ -61,10 +62,10 @@ router.get("/consumer/receipts", async (req, res): Promise<void> => {
       };
     }).sort((a, b) => (a.kickoff ?? "").localeCompare(b.kickoff ?? "") || a.gameId.localeCompare(b.gameId));
 
-    const tdRuns = await db.select().from(touchdownPickRunsTable)
-      .where(eq(touchdownPickRunsTable.season, season)).orderBy(asc(touchdownPickRunsTable.generatedAt));
-    const results = await db.select().from(touchdownPickResultsTable).where(eq(touchdownPickResultsTable.season, season));
-    const scored = new Map(results.map((row) => [`${row.week}|${row.playerId}`, row.scored]));
+    // Cached with the TD page's data (routes/consumer-picks.ts): read from the database only when it changes.
+    const { seasonRuns: tdRuns, resultsByWeek } = await seasonTouchdownRows(season);
+    const scored = new Map([...resultsByWeek].flatMap(([week, results]) =>
+      [...results].map(([playerId, value]) => [`${week}|${playerId}`, value] as const)));
     const now = new Date();
     const touchdowns = [...new Set(tdRuns.map((run) => run.week))].sort((a, b) => a - b).flatMap((week) =>
       boardForWeek(tdRuns.filter((run) => run.week === week), now).slice(0, 5).map((entry, index) => ({

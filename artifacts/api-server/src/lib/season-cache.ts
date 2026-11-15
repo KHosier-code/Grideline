@@ -28,3 +28,31 @@ export function seasonCache<T>(
     return value;
   };
 }
+
+/**
+ * Like seasonCache, but the database is read again only when the fingerprint
+ * changes (a new run, result or price), never just because time passed. The
+ * clock-dependent part, such as which run was the last before kickoff, is
+ * worked out in memory from the saved rows at most once per `deriveMs`. That
+ * costs no database transfer.
+ */
+export function seasonDataCache<R, T>(
+  read: (season: number) => Promise<R>,
+  fingerprint: (season: number) => Promise<string>,
+  derive: (rows: R, now: Date, season: number) => T | Promise<T>,
+  deriveMs = 60_000,
+  clock: () => number = Date.now,
+) {
+  const rows = seasonCache(read, fingerprint, Number.POSITIVE_INFINITY, clock);
+  const derived = new Map<number, { rows: R; at: number; value: Promise<T> }>();
+  return async (season: number): Promise<T> => {
+    const current = await rows(season);
+    const now = clock();
+    const entry = derived.get(season);
+    if (entry && entry.rows === current && now - entry.at < deriveMs) return entry.value;
+    const value = Promise.resolve().then(() => derive(current, new Date(now), season));
+    derived.set(season, { rows: current, at: now, value });
+    value.catch(() => { if (derived.get(season)?.value === value) derived.delete(season); });
+    return value;
+  };
+}

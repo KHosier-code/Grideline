@@ -65,7 +65,10 @@ export function latestBookLines(rows: OddsRow[], sides: Sides): BookLines[] {
  */
 /**
  * Every projection run, final score and saved line for a season, kept in
- * memory until a new run, price or final arrives (see season-cache.ts).
+ * memory until a new run, price or final arrives (see season-cache.ts). None
+ * of it depends on the clock, so it is never re-read just because time passed:
+ * re-reading every 5 minutes for each visitor and crawler sent hundreds of GB
+ * a month to the site from Neon.
  */
 export const loadSeasonProjectionData = seasonCache(readSeasonProjectionData, async (season) => {
   const [row] = await db.select({
@@ -75,7 +78,7 @@ export const loadSeasonProjectionData = seasonCache(readSeasonProjectionData, as
     finals: sql<string>`(select count(${gamesTable.finalHomeScore})::text from ${gamesTable} where ${gamesTable.season} = ${season})`,
   }).from(sql`(select 1) as fingerprint`);
   return `${row?.run}|${row?.odds}|${row?.finals}`;
-});
+}, Number.POSITIVE_INFINITY);
 
 async function readSeasonProjectionData(season: number) {
   const runs = await db.select().from(gameProjectionRunsTable)

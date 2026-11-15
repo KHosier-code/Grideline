@@ -80,3 +80,13 @@ export function createProductionDatabaseAlert(error: unknown) {
     action: "api_and_worker_not_started",
   } as const;
 }
+/**
+ * Startup failures that mean the deploy itself is wrong (missing settings,
+ * unsafe TLS, missing tables), as opposed to the database being down, full
+ * or over a plan limit. Only these keep the site from starting.
+ */
+export function isFatalStartupFailure(error: unknown) {
+  const category = classifyProductionDatabaseFailure(error);
+  if (category !== "database_connection_failed" && category !== "smoke_query_failed") return true;
+  return error instanceof Error && /schema is not ready/.test(error.message);
+}
