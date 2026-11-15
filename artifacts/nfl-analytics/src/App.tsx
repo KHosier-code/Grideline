@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { SignIn, SignUp, useAuth } from '@clerk/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChevronRight, Loader2 } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { useRouteMetadata } from '@/lib/public-metadata';
+import { countPageView } from '@/lib/visits';
 import { ConsumerLoadingFallback, ConsumerShell } from '@/components/ConsumerShell';
 import './index.css';
 
@@ -131,6 +132,7 @@ function SignInRedirect() {
 function Router() {
   useRouteMetadata();
   const [location] = useLocation();
+  useEffect(() => { countPageView(location); }, [location]);
   const { isLoaded, isSignedIn } = useAuth();
   // Public pages can render while Clerk initializes. Admin and account routes
   // still wait for a definitive identity before making an access decision.
