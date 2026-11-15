@@ -18,12 +18,14 @@ usage: python bowl_backtest.py bowlmania.json [--sims 4000] [--eval 20000]
 """
 import argparse
 import json
+import os
+import sys
 
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(__file__))
+import bowl_engine as engine  # noqa: E402
 
-def decimal(american: float) -> float:
-    return 1 + american / 100 if american > 0 else 1 + 100 / abs(american)
 
 
 def load_seasons(path):
@@ -32,8 +34,7 @@ def load_seasons(path):
         teams = game["o"]
         if len(teams) != 2 or not game.get("c") or not all(team.get("line") for team in teams):
             continue
-        implied = [1 / decimal(float(team["line"])) for team in teams]
-        win_a = implied[0] / sum(implied)
+        win_a = engine.win_chance(float(teams[0]["line"]), float(teams[1]["line"]))
         # Bowl Mania scoring formats: 1 straight-up picks (the default), 2
         # confidence points, 3 against the spread. Each pool type is played
         # against the crowd from its own format.
@@ -57,83 +58,23 @@ def load_seasons(path):
     } for season, games in sorted(seasons.items())}
 
 
-SHARP = 0.0
-STYLE = 0.0
-NOISE = 1.0
-
-
-def opponents(q, pool, sims, confidence, rng, noise=None, p=None):
-    """Each opponent's picks (True = team A) and points per game: (sims, pool, games).
-
-    A share SHARP of opponents follow the betting favorites (90% of the time)
-    and rank their points by the line instead of by the crowd. STYLE > 0 gives
-    each other opponent a lean toward favorites or underdogs (a logit offset
-    with that standard deviation), so their picks are correlated the way a
-    real "chalk" or "upset" player's are. NOISE is how randomly opponents
-    order their confidence points.
-    """
-    noise = NOISE if noise is None else noise
-    n = len(q)
-    sharp = np.zeros(pool, dtype=bool)
-    if p is not None and SHARP > 0:
-        sharp[: int(round(SHARP * pool))] = True
-    lean = np.where(sharp[:, None], np.where(p >= 0.5, 0.9, 0.1)[None, :] if p is not None else q, q[None, :])
-    lean = np.broadcast_to(lean, (sims, pool, n))
-    if STYLE > 0 and p is not None:
-        favorite_is_a = (p >= 0.5)[None, None, :]
-        style = rng.normal(0, STYLE, (sims, pool, 1))
-        logit = np.log(lean / (1 - lean)) + np.where(favorite_is_a, style, -style)
-        lean = np.where(sharp[None, :, None], lean, 1 / (1 + np.exp(-logit)))
-    picks = rng.random((sims, pool, n)) < lean
-    if not confidence:
-        return picks, np.ones((sims, pool, n))
-    basis = np.where(sharp[:, None], (p if p is not None else q)[None, :], q[None, :])
-    share = np.clip(np.where(picks, basis[None], 1 - basis[None]), 0.01, 0.99)
-    conviction = np.log(share / (1 - share)) + rng.normal(0, noise, (sims, pool, n))
-    points = conviction.argsort(axis=2).argsort(axis=2) + 1.0
-    return picks, points
-
-
-def best_rival(outcomes, picks, points):
-    """Highest opponent score in each simulated pool, and how many opponents have it."""
-    right = picks == outcomes[:, None, :]
-    scores = (right * points).sum(axis=2)
-    top = scores.max(axis=1)
-    return top, (scores == top[:, None]).sum(axis=1)
-
-
-def win_rate(sheet_picks, sheet_points, outcomes, rival):
-    """Chance our sheet finishes first, splitting a tie evenly with every rival who shares it."""
-    top, tied = rival
-    ours = ((sheet_picks == outcomes) * sheet_points).sum(axis=1)
-    return float(np.mean(np.where(ours > top, 1.0, np.where(ours == top, 1.0 / (tied + 1), 0.0))))
-
-
-def chalk(p, confidence):
-    picks = p >= 0.5
-    if not confidence:
-        return picks, np.ones(len(p))
-    sure = np.maximum(p, 1 - p)
-    return picks, sure.argsort().argsort() + 1.0
-
-
-def optimise(p, q, pool, confidence, sims, rng, rounds=6):
-    outcomes = rng.random((sims, len(p))) < p
-    rival = best_rival(outcomes, *opponents(q, pool, sims, confidence, rng, p=p))
-    picks, points = chalk(p, confidence)
-    best = win_rate(picks, points, outcomes, rival)
+def tune_with(p, q, pool, confidence, rng, sims, settings, rounds=6):
+    """bowl_engine.tune, but with explicit opponent settings instead of a named pool type."""
+    outcomes, rival = engine.simulate_rivals(p, q, pool, sims, confidence, rng, **settings)
+    picks, points = engine.chalk(p, confidence)
+    best = engine.win_rate(picks, points, outcomes, rival)
     for _ in range(rounds):
         improved = False
         for i in range(len(p)):
             trial = picks.copy(); trial[i] = ~trial[i]
-            score = win_rate(trial, points, outcomes, rival)
+            score = engine.win_rate(trial, points, outcomes, rival)
             if score > best + 1e-9:
                 picks, best, improved = trial, score, True
         if confidence:
             for i in range(len(p)):
                 for j in range(i + 1, len(p)):
                     trial = points.copy(); trial[i], trial[j] = trial[j], trial[i]
-                    score = win_rate(picks, trial, outcomes, rival)
+                    score = engine.win_rate(picks, trial, outcomes, rival)
                     if score > best + 1e-9:
                         points, best, improved = trial, score, True
         if not improved:
@@ -154,8 +95,7 @@ def main():
     parser.add_argument("--noise", type=float, default=1.0, help="how randomly opponents order confidence points")
     parser.add_argument("--scoring", default="confidence,straight")
     args = parser.parse_args()
-    global SHARP, STYLE, NOISE
-    SHARP, STYLE, NOISE = args.sharp, args.style, args.noise
+    settings = {"style": args.style, "noise": args.noise, "sharp": args.sharp}
     seasons = load_seasons(args.data)
     rng = np.random.default_rng(args.seed)
     rows = []
@@ -164,21 +104,20 @@ def main():
             for season, s in seasons.items():
                 p, actual = s["p"], s["actual"]
                 q = s["q_confidence"] if confidence else s["q_straight"]
-                picks, points = optimise(p, q, pool, confidence, args.sims, rng)
-                c_picks, c_points = chalk(p, confidence)
+                picks, points = tune_with(p, q, pool, confidence, rng, args.sims, settings)
+                c_picks, c_points = engine.chalk(p, confidence)
                 # Fresh simulations to score both sheets: outcomes from the lines...
-                outcomes = rng.random((args.eval, len(p))) < p
-                rival = best_rival(outcomes, *opponents(q, pool, args.eval, confidence, rng, p=p))
+                outcomes, rival = engine.simulate_rivals(p, q, pool, args.eval, confidence, rng, **settings)
                 # ...and the real results, with many draws of who else was in the pool.
                 real = np.repeat(actual[None, :], args.eval, axis=0)
-                real_rival = best_rival(real, *opponents(q, pool, args.eval, confidence, rng, p=p))
+                _, real_rival = engine.simulate_rivals(p, q, pool, args.eval, confidence, rng, outcomes=real, **settings)
                 rows.append({
                     "scoring": "confidence" if confidence else "straight", "pool": pool, "season": season,
                     "games": len(p), "fair_share": 1 / (pool + 1),
-                    "chalk_sim": win_rate(c_picks, c_points, outcomes, rival),
-                    "ours_sim": win_rate(picks, points, outcomes, rival),
-                    "chalk_real": win_rate(c_picks, c_points, real, real_rival),
-                    "ours_real": win_rate(picks, points, real, real_rival),
+                    "chalk_sim": engine.win_rate(c_picks, c_points, outcomes, rival),
+                    "ours_sim": engine.win_rate(picks, points, outcomes, rival),
+                    "chalk_real": engine.win_rate(c_picks, c_points, real, real_rival),
+                    "ours_real": engine.win_rate(picks, points, real, real_rival),
                     "flips": int((picks != c_picks).sum()),
                 })
                 r = rows[-1]
