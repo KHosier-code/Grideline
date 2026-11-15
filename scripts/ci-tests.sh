@@ -29,6 +29,7 @@ API_TESTS=(
  production-startup
 )
 ROUTE_TESTS=(authorization usage-analytics)
+MIDDLEWARE_TESTS=(cbb-launch)
 WEB_TESTS=(
   analytics consumer-account-state consumer-board consumer-matchups consumer-presentation
   dvp-matchups line-picks line-shopping market pick-sheet player-portraits
@@ -43,6 +44,11 @@ for name in "${API_TESTS[@]}"; do
   files+=("$out")
 done
 for name in "${ROUTE_TESTS[@]}"; do files+=("artifacts/api-server/dist/routes/$name.test.mjs"); done
+for name in "${MIDDLEWARE_TESTS[@]}"; do
+  (cd artifacts/api-server && pnpm exec esbuild "src/middlewares/$name.test.ts" --bundle --platform=node \
+    --format=esm --packages=external --outfile="dist/middlewares/$name.test.mjs" --log-level=warning)
+  files+=("artifacts/api-server/dist/middlewares/$name.test.mjs")
+done
 for name in "${WEB_TESTS[@]}"; do
   (cd artifacts/api-server && pnpm exec esbuild "../nfl-analytics/src/lib/$name.test.ts" --bundle --platform=node \
     --format=esm --packages=external --alias:@=../nfl-analytics/src --outfile="dist/web-tests/$name.test.mjs" --log-level=warning)
@@ -52,5 +58,6 @@ done
 echo "::group::Unit tests"
 node --test "${files[@]}" \
   artifacts/nfl-analytics/tests/metadata.test.mjs \
+  lib/launch/sports-launch.test.mjs \
   artifacts/nfl-analytics/tests/performance-sparse-evidence.test.mjs
 echo "::endgroup::"
