@@ -34,39 +34,57 @@ def load_seasons(path):
             continue
         implied = [1 / decimal(float(team["line"])) for team in teams]
         win_a = implied[0] / sum(implied)
-        crowd_a = teams[0]["p"].get("1")
-        if crowd_a is None:
+        # Bowl Mania scoring formats: 1 straight-up picks (the default), 2
+        # confidence points, 3 against the spread. Each pool type is played
+        # against the crowd from its own format.
+        crowd_straight, crowd_confidence = teams[0]["p"].get("1"), teams[0]["p"].get("2")
+        if crowd_straight is None or crowd_confidence is None:
             continue
         winner = 0 if game["c"][0] == teams[0]["id"] else 1 if game["c"][0] == teams[1]["id"] else None
         if winner is None:
             continue
         seasons.setdefault(game["s"], []).append({
-            "name": game["n"], "win_a": win_a, "crowd_a": crowd_a, "a_won": winner == 0,
+            "name": game["n"], "win_a": win_a, "crowd_straight": crowd_straight,
+            "crowd_confidence": crowd_confidence, "a_won": winner == 0,
             "teams": (teams[0]["a"], teams[1]["a"]),
         })
     return {season: {
         "games": games,
         "p": np.array([g["win_a"] for g in games]),
-        "q": np.clip(np.array([g["crowd_a"] for g in games]), 0.01, 0.99),
+        "q_straight": np.clip(np.array([g["crowd_straight"] for g in games]), 0.01, 0.99),
+        "q_confidence": np.clip(np.array([g["crowd_confidence"] for g in games]), 0.01, 0.99),
         "actual": np.array([g["a_won"] for g in games]),
     } for season, games in sorted(seasons.items())}
 
 
 SHARP = 0.0
+STYLE = 0.0
+NOISE = 1.0
 
 
-def opponents(q, pool, sims, confidence, rng, noise=1.0, p=None):
+def opponents(q, pool, sims, confidence, rng, noise=None, p=None):
     """Each opponent's picks (True = team A) and points per game: (sims, pool, games).
 
     A share SHARP of opponents follow the betting favorites (90% of the time)
-    and rank their points by the line instead of by the crowd.
+    and rank their points by the line instead of by the crowd. STYLE > 0 gives
+    each other opponent a lean toward favorites or underdogs (a logit offset
+    with that standard deviation), so their picks are correlated the way a
+    real "chalk" or "upset" player's are. NOISE is how randomly opponents
+    order their confidence points.
     """
+    noise = NOISE if noise is None else noise
     n = len(q)
     sharp = np.zeros(pool, dtype=bool)
     if p is not None and SHARP > 0:
         sharp[: int(round(SHARP * pool))] = True
     lean = np.where(sharp[:, None], np.where(p >= 0.5, 0.9, 0.1)[None, :] if p is not None else q, q[None, :])
-    picks = rng.random((sims, pool, n)) < lean[None, :, :]
+    lean = np.broadcast_to(lean, (sims, pool, n))
+    if STYLE > 0 and p is not None:
+        favorite_is_a = (p >= 0.5)[None, None, :]
+        style = rng.normal(0, STYLE, (sims, pool, 1))
+        logit = np.log(lean / (1 - lean)) + np.where(favorite_is_a, style, -style)
+        lean = np.where(sharp[None, :, None], lean, 1 / (1 + np.exp(-logit)))
+    picks = rng.random((sims, pool, n)) < lean
     if not confidence:
         return picks, np.ones((sims, pool, n))
     basis = np.where(sharp[:, None], (p if p is not None else q)[None, :], q[None, :])
@@ -77,15 +95,18 @@ def opponents(q, pool, sims, confidence, rng, noise=1.0, p=None):
 
 
 def best_rival(outcomes, picks, points):
-    """Highest opponent score in each simulated pool."""
+    """Highest opponent score in each simulated pool, and how many opponents have it."""
     right = picks == outcomes[:, None, :]
-    return (right * points).sum(axis=2).max(axis=1)
+    scores = (right * points).sum(axis=2)
+    top = scores.max(axis=1)
+    return top, (scores == top[:, None]).sum(axis=1)
 
 
 def win_rate(sheet_picks, sheet_points, outcomes, rival):
-    """Chance our sheet finishes first (ties split evenly; the rival count is approximate for ties)."""
+    """Chance our sheet finishes first, splitting a tie evenly with every rival who shares it."""
+    top, tied = rival
     ours = ((sheet_picks == outcomes) * sheet_points).sum(axis=1)
-    return float(np.mean(np.where(ours > rival, 1.0, np.where(ours == rival, 0.5, 0.0))))
+    return float(np.mean(np.where(ours > top, 1.0, np.where(ours == top, 1.0 / (tied + 1), 0.0))))
 
 
 def chalk(p, confidence):
@@ -129,16 +150,20 @@ def main():
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--out")
     parser.add_argument("--sharp", type=float, default=0.0, help="share of opponents who follow the betting favorites")
+    parser.add_argument("--style", type=float, default=0.0, help="spread of opponents' lean toward favorites or upsets")
+    parser.add_argument("--noise", type=float, default=1.0, help="how randomly opponents order confidence points")
+    parser.add_argument("--scoring", default="confidence,straight")
     args = parser.parse_args()
-    global SHARP
-    SHARP = args.sharp
+    global SHARP, STYLE, NOISE
+    SHARP, STYLE, NOISE = args.sharp, args.style, args.noise
     seasons = load_seasons(args.data)
     rng = np.random.default_rng(args.seed)
     rows = []
-    for confidence in (True, False):
+    for confidence in [kind == "confidence" for kind in args.scoring.split(",")]:
         for pool in [int(x) for x in args.pools.split(",")]:
             for season, s in seasons.items():
-                p, q, actual = s["p"], s["q"], s["actual"]
+                p, actual = s["p"], s["actual"]
+                q = s["q_confidence"] if confidence else s["q_straight"]
                 picks, points = optimise(p, q, pool, confidence, args.sims, rng)
                 c_picks, c_points = chalk(p, confidence)
                 # Fresh simulations to score both sheets: outcomes from the lines...
