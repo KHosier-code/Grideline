@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { countEvent } from '@/lib/visits';
 
 type State = { kind: 'idle' | 'sending' | 'done' | 'error'; message?: string };
 
@@ -7,7 +8,7 @@ type State = { kind: 'idle' | 'sending' | 'done' | 'error'; message?: string };
  * "Get Tuesday's picks": the newsletter signup (POST /api/newsletter/subscribe,
  * sent on to Buttondown). Hidden until BUTTONDOWN_API_KEY is set on the server.
  */
-export function NewsletterSignup({ source }: { source: string }) {
+export function NewsletterSignup({ source, title = 'Get Tuesday\'s picks', copy }: { source: string; title?: string; copy?: string }) {
   const id = useId();
   const status = useQuery({
     queryKey: ['newsletter-status'],
@@ -32,7 +33,7 @@ export function NewsletterSignup({ source }: { source: string }) {
         body: JSON.stringify({ email, source, website }),
       });
       const body = await response.json().catch(() => ({})) as { message?: string };
-      if (response.ok) setState({ kind: 'done' });
+      if (response.ok) { setState({ kind: 'done' }); countEvent('newsletter_signup', source.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40)); }
       else setState({ kind: 'error', message: body.message ?? 'Something went wrong. Please try again.' });
     } catch {
       setState({ kind: 'error', message: 'Something went wrong. Please try again.' });
@@ -41,8 +42,8 @@ export function NewsletterSignup({ source }: { source: string }) {
 
   return <section className="gl-signup" aria-labelledby={`${id}-title`}>
     <div className="gl-signup-copy">
-      <h2 id={`${id}-title`}>Get Tuesday&apos;s picks</h2>
-      <p>The top 10 anytime TD picks every Tuesday, with last week&apos;s receipts, wins and losses. Free, and one click to unsubscribe.</p>
+      <h2 id={`${id}-title`}>{title}</h2>
+      <p>{copy ?? 'The top 10 anytime TD picks every Tuesday, with last week\'s receipts, wins and losses. Free, and one click to unsubscribe.'}</p>
     </div>
     {state.kind === 'done'
       ? <p className="gl-signup-done" role="status"><b>Almost there.</b> Check your inbox and tap the confirmation link.</p>

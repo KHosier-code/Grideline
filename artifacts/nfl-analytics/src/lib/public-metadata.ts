@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { isCbbPublic } from '@/lib/sports';
+import { isBowlsPublic, isCbbPublic } from '@/lib/sports';
 
 // Keep in sync with metadata.mjs (server-rendered tags for the same pages).
 const pages: Record<string, [string, string]> = {
@@ -31,7 +31,10 @@ const cbbPages: Record<string, [string, string]> = {
 // The home page covers both sports once college basketball is public.
 const bothSportsHome: [string, string] = ['Probable | NFL and College Basketball Picks Priced Against the Books', 'Today\'s best NFL and college basketball picks next to the sportsbook line, each sport with its own model and its own public record.'];
 
-const publicPages = () => isCbbPublic() ? { ...pages, '/': bothSportsHome, ...cbbPages } : pages;
+const bowlsPages: Record<string, [string, string]> = {
+  '/pools/bowls': ['Bowl Pool Picks 2026: A Sheet Built to Win Your Pool | Probable', 'Free bowl pool picks for confidence and straight-up pools, built from the betting market and how ESPN Bowl Mania players pick, with the upsets that raise your chance of finishing first.'],
+};
+const publicPages = () => ({ ...(isCbbPublic() ? { ...pages, '/': bothSportsHome, ...cbbPages } : pages), ...(isBowlsPublic() ? bowlsPages : {}) });
 
 const setMeta = (selector: string, attribute: string, value: string) => {
   let element = document.head.querySelector<HTMLMetaElement>(selector);

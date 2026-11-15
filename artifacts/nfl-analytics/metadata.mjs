@@ -1,4 +1,4 @@
-import { isCbbPublic } from '../../lib/launch/sports-launch.mjs';
+import { isBowlsPublic, isCbbPublic } from '../../lib/launch/sports-launch.mjs';
 
 // Public document metadata, shared by Vite development and the production web server.
 const configuredOrigin = process.env.PUBLIC_SITE_URL || 'https://probablesports.com';
@@ -36,12 +36,17 @@ const cbbPages = {
   '/cbb/record': ['College Basketball Picks Record | Probable', 'Every college basketball spread pick, saved before tip-off and graded at the line posted, tracked in public since November 2.'],
   '/cbb/how-it-works': ['How Our College Basketball Model Works | Probable', 'How Probable rates every Division I team, projects each game and decides when to make a college basketball spread pick.'],
 };
+// The bowl pool page, listed once it opens on matchup day.
+const bowlsPages = {
+  '/pools/bowls': ['Bowl Pool Picks 2026: A Sheet Built to Win Your Pool | Probable', 'Free bowl pool picks for confidence and straight-up pools, built from the betting market and how ESPN Bowl Mania players pick, with the upsets that raise your chance of finishing first.'],
+};
 // The home page covers both sports once college basketball is public.
 const bothSportsHome = ['Probable | NFL and College Basketball Picks Priced Against the Books', 'Today\'s best NFL and college basketball picks next to the sportsbook line, each sport with its own model and its own public record.'];
 
 /** Indexed pages right now: the NFL pages always, college pages once launched. */
 export function publicPages(now = Date.now()) {
-  return isCbbPublic(now) ? { ...pages, '/': bothSportsHome, ...cbbPages } : pages;
+  const sports = isCbbPublic(now) ? { ...pages, '/': bothSportsHome, ...cbbPages } : pages;
+  return isBowlsPublic(now) ? { ...sports, ...bowlsPages } : sports;
 }
 
 /** Paths for the sitemap, in the same launch state. */

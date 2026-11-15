@@ -33,7 +33,7 @@ MIDDLEWARE_TESTS=(cbb-launch)
 WEB_TESTS=(
   analytics consumer-account-state consumer-board consumer-matchups consumer-presentation
   dvp-matchups line-picks line-shopping market pick-sheet player-portraits
-  matchup-edges player-slug pool-strategy sim slates td-matchup cbb home-sports visits
+  matchup-edges player-slug pool-strategy sim slates td-matchup cbb home-sports visits bowls
 )
 
 files=()
