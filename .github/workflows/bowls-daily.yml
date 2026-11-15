@@ -1,0 +1,56 @@
+name: Bowl pools daily
+
+# Bowl pool sheets (research/pools/bowls_daily.py): this season's bowls,
+# betting lines and ESPN Bowl Mania pick shares, with a sheet for every pool
+# size, scoring type and kind of pool, sent to the site. Runs only from
+# December through mid-January; before the matchups are set there is nothing
+# to publish and the run ends quietly. Times are UTC.
+on:
+  schedule:
+    - cron: "17 12 * 12 *"   # 07:17 ET every day in December
+    - cron: "17 22 * 12 *"   # 17:17 ET
+    - cron: "17 12 1-15 1 *" # January, until the title game
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Year the bowls start (blank = this season)"
+        required: false
+      upload:
+        description: "Send to the site"
+        type: boolean
+        default: true
+
+concurrency:
+  group: bowls-daily
+  cancel-in-progress: false
+
+env:
+  GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+  GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: research/pools
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy==2.1.3
+      - name: Season
+        run: |
+          season="${{ inputs.season }}"
+          if [ -z "$season" ]; then
+            month=$(date -u +%-m); season=$(date -u +%Y)
+            if [ "$month" -le 6 ]; then season=$((season - 1)); fi
+          fi
+          echo "SEASON=$season" >> "$GITHUB_ENV"
+      - name: Build and send the sheets
+        run: |
+          flag="--upload"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.upload }}" != "true" ]; then flag=""; fi
+          python bowls_daily.py --season "$SEASON" --out bowls_payload.json $flag
