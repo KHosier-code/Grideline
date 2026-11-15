@@ -96,6 +96,13 @@ What this says:
   worse, so the lines are used as they are. Bowl Mania's crowd adds nothing
   to the line: its coefficient is -0.16 ± 0.15 when added to the line.
 
+- **A crowd estimated from the odds alone is worse than no estimate.**
+  Fitting the public's pick share from the betting line misses by 15–17
+  points on average (`crowd_model.py`). Sheets tuned to that estimate lost
+  to plain chalk: 18–23% against 26–34% in 25-person mixed confidence
+  pools, leaving each season out. Without ESPN's real pick data, the tool
+  publishes the chalk sheet.
+
 What it doesn't:
 - **Opponents' confidence-point habits and styles are assumed.** That's why
   there are five scenarios.
