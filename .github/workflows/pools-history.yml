@@ -1,0 +1,32 @@
+name: Pools history pull (one-off)
+
+# One-off: prints past ESPN Bowl Mania pick percentages, lines and results as
+# compact JSON lines for the bowl pool back-test. Log output only; no data is
+# committed. Removed after use.
+on:
+  push:
+    branches: [claude/beautiful-mendel-t4wvmz]
+    paths: [.github/workflows/pools-history.yml]
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Bowl Mania seasons
+        run: |
+          for year in 2022 2023 2024 2025; do
+            key="college-football-bowl-mania-$year"
+            code=$(curl -sS -m 60 -o c.json -w '%{http_code}' "https://gambit-api.fantasy.espn.com/apis/v1/challenges/$key?platform=chui&view=chui_default" || echo 000)
+            echo "== $key HTTP $code"
+            [ "$code" = "200" ] || continue
+            jq -c --arg y "$year" '{season: $y, formats: .scoringFormatIds, settings: (.settings | tostring | .[0:600])}' c.json
+            jq -c '.propositions[0] | del(.possibleOutcomes) ' c.json | head -c 1500; echo
+            jq -c '.propositions[0].possibleOutcomes[0].mappings' c.json | head -c 1200; echo
+            jq -c --arg y "$year" '.propositions[] | {s: $y, n: .name, d: .date, st: .status, c: (.correctOutcomes // null),
+              o: [.possibleOutcomes[] | {id, a: .abbrev, t: .name,
+                  p: ([.choiceCounters[]? | {key: (.scoringFormatId|tostring), value: ((.percentage * 1000 | round) / 1000)}] | from_entries),
+                  line: ([.mappings[]? | select(.type == "BETTING_LINE") | .value] | first),
+                  comp: ([.mappings[]? | select(.type == "COMPETITOR_ID") | .value] | first),
+                  ev: ([.mappings[]? | select(.type == "EVENT_ID") | .value] | first)}]}' c.json
+          done
