@@ -16,6 +16,7 @@ import gameAlertsRouter from "./game-alerts";
 import userPicksRouter from "./user-picks";
 import verifiedImageryRouter from "./verified-imagery";
 import opsRouter from "./ops";
+import visitsRouter from "./visits";
 
 const router: IRouter = Router();
 
@@ -36,4 +37,5 @@ router.use(gameAlertsRouter);
 router.use(userPicksRouter);
 router.use(verifiedImageryRouter);
 router.use(opsRouter);
+router.use(visitsRouter);
 export default router;

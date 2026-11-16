@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { SignIn, SignUp, useAuth } from '@clerk/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChevronRight, Loader2 } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { useRouteMetadata } from '@/lib/public-metadata';
+import { countPageView } from '@/lib/visits';
 import { ConsumerLoadingFallback, ConsumerShell } from '@/components/ConsumerShell';
 import './index.css';
 
@@ -18,10 +19,12 @@ const PlayerTouchdown = lazy(() => import('@/pages/consumer/PlayerTouchdown'));
 const PowerRatings = lazy(() => import('@/pages/consumer/PowerRatings'));
 const QbRankings = lazy(() => import('@/pages/consumer/QbRankings'));
 import { CbbGate } from '@/pages/cbb/CbbGate';
+import { BowlsGate } from '@/pages/pools/BowlsGate';
 const CbbGames = lazy(() => import('@/pages/cbb/CbbGames'));
 const CbbRatings = lazy(() => import('@/pages/cbb/CbbRatings'));
 const CbbMethodology = lazy(() => import('@/pages/cbb/CbbMethodology'));
 const CbbRecord = lazy(() => import('@/pages/cbb/CbbRecord'));
+const BowlPools = lazy(() => import('@/pages/pools/BowlPools'));
 const ConsumerGames = lazy(() => import('@/pages/consumer/ConsumerGames'));
 const ConsumerGameDetail = lazy(() => import('@/pages/consumer/ConsumerGameDetail'));
 const ConsumerSavedGames = lazy(() => import('@/pages/consumer/ConsumerSavedGames'));
@@ -131,6 +134,7 @@ function SignInRedirect() {
 function Router() {
   useRouteMetadata();
   const [location] = useLocation();
+  useEffect(() => { countPageView(location); }, [location]);
   const { isLoaded, isSignedIn } = useAuth();
   // Public pages can render while Clerk initializes. Admin and account routes
   // still wait for a definitive identity before making an access decision.
@@ -141,7 +145,7 @@ function Router() {
     || location === '/power-ratings' || location === '/qb-rankings'
     || location === '/weekly-picks'
     || location === '/red-zone' || location === '/matchups' || location === '/share' || location === '/pickem' || location === '/parlays'
-    || location.startsWith('/td/') || location === '/cbb' || location.startsWith('/cbb/');
+    || location.startsWith('/td/') || location === '/cbb' || location.startsWith('/cbb/') || location === '/pools/bowls';
   if (!isLoaded && !publicRoute) return <ConsumerLoadingFallback />;
   if (!isSignedIn) return <RoutedErrorBoundary><Switch>
     <Route path="/sign-up/*?" component={SignUpPage} />
@@ -168,6 +172,7 @@ function Router() {
     <Route path="/cbb/record"><ConsumerShell><CbbGate><CbbRecord /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
+    <Route path="/pools/bowls"><ConsumerShell><BowlsGate><BowlPools /></BowlsGate></ConsumerShell></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
     <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>
@@ -200,6 +205,7 @@ function Router() {
       <Route path="/cbb/record"><ConsumerShell><CbbGate><CbbRecord /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
       <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
+    <Route path="/pools/bowls"><ConsumerShell><BowlsGate><BowlPools /></BowlsGate></ConsumerShell></Route>
       <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
       <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
       <Route path="/props"><ConsumerShell><TouchdownPicks /></ConsumerShell></Route>

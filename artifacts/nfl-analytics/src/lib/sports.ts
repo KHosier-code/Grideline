@@ -1,9 +1,9 @@
 import { useAuth } from '@clerk/react';
 import { useAdminStatus } from '@/hooks/use-admin-status';
 import { consumerAccountState } from '@/lib/consumer-account-state';
-import { isCbbPublic, showCbbNewNote } from '../../../../lib/launch/sports-launch.mjs';
+import { isBowlsPublic, isCbbPublic, showCbbNewNote } from '../../../../lib/launch/sports-launch.mjs';
 
-export { CBB_PUBLIC_LAUNCH, isCbbPublic, showCbbNewNote } from '../../../../lib/launch/sports-launch.mjs';
+export { BOWLS_PUBLIC_LAUNCH, CBB_PUBLIC_LAUNCH, isBowlsPublic, isCbbPublic, showCbbNewNote } from '../../../../lib/launch/sports-launch.mjs';
 
 export type Sport = 'home' | 'nfl' | 'cbb';
 
@@ -27,4 +27,18 @@ export function useCbbAccess() {
   const access = cbbAccess(account.adminVerified);
   const pending = !access.visible && (!isLoaded || Boolean(isSignedIn && (admin.isLoading || admin.isFetching)));
   return { ...access, adminVerified: account.adminVerified, pending };
+}
+
+/** The bowl pool page: everyone after it opens on matchup day, only verified administrators before. */
+export function bowlsAccess(adminVerified: boolean, now = Date.now()) {
+  return { visible: isBowlsPublic(now) || adminVerified, launched: isBowlsPublic(now) };
+}
+
+export function useBowlsAccess() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const admin = useAdminStatus();
+  const account = consumerAccountState(isLoaded, isSignedIn, admin);
+  const access = bowlsAccess(account.adminVerified);
+  const pending = !access.visible && (!isLoaded || Boolean(isSignedIn && (admin.isLoading || admin.isFetching)));
+  return { ...access, pending };
 }

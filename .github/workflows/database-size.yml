@@ -1,7 +1,8 @@
-name: Database size
+name: Daily check
 
-# Once a day, asks the site how big the database is and which tables are
-# largest, and prints it here. The run fails (and GitHub emails you) when the
+# Once a day: visitors over the last week (first-party counts, see
+# api-server lib/visit-counts.ts), then how big the database is and which
+# tables are largest. The run fails (and GitHub emails you) when the
 # database passes the warning size, so a plan limit never arrives as a
 # surprise outage. Change the warning size with the repository variable
 # DB_SIZE_WARN_MB (Settings > Secrets and variables > Actions > Variables).
@@ -16,6 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Visitors, last 7 days
+        env:
+          GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}
+          GRIDLINE_INGEST_TOKEN: ${{ secrets.GRIDLINE_INGEST_TOKEN }}
+        run: |
+          status=$(curl -sS -m 60 -o visits.json -w '%{http_code}' \
+            -H "Authorization: Bearer $GRIDLINE_INGEST_TOKEN" "${GRIDLINE_INGEST_URL%/}/api/ops/visits?days=7" || echo 000)
+          if [ "$status" != "200" ]; then echo "::warning::Visit counts unavailable (HTTP $status)"; exit 0; fi
+          {
+            echo "### Visitors, last 7 days"
+            echo
+            echo "| Day | Visitors | Back within a week | Page views | Top pages | Sources | Bowl sheets built |"
+            echo "|---|---|---|---|---|---|---|"
+            jq -r '.days[] | "| \(.day) | \(.visitors // 0) | \(.returning // 0) | \([.views // {} | .[]] | add // 0) | \(.views // {} | to_entries | sort_by(-.value) | .[:4] | map("\(.key) \(.value)") | join(", ")) | \(.sources // {} | to_entries | sort_by(-.value) | map("\(.key) \(.value)") | join(", ")) | \(.events.bowl_sheet_built // 0) |"' visits.json
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Database size
         env:
           GRIDLINE_INGEST_URL: ${{ secrets.GRIDLINE_INGEST_URL }}

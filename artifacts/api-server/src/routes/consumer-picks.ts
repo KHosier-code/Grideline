@@ -19,7 +19,8 @@ import { ODDS_BACKUP_RECENT_MS, recentOddsCapture } from "../lib/kickoff-clock";
 import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEmail, subscribe } from "../lib/newsletter";
 import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
 import { injuryTimeline } from "../lib/td-injuries";
-import { requireAdminUntilCbbLaunch } from "../middlewares/cbb-launch";
+import { requireAdminUntilBowlsLaunch, requireAdminUntilCbbLaunch } from "../middlewares/cbb-launch";
+import { isBowlsPublic } from "../../../../lib/launch/sports-launch.mjs";
 import { seasonDataCache } from "../lib/season-cache";
 import { cbbRecord, type CbbPick, type CbbResult } from "../lib/cbb-record";
 import { syncNwsWeather } from "../lib/weather";
@@ -599,7 +600,7 @@ router.get("/consumer/power-ratings", async (req, res): Promise<void> => {
 });
 
 const reportIngestSchema = zod.object({
-  kind: zod.enum(["usage", "replay", "matchups", "share-td", "share-clip", "cbb"]),
+  kind: zod.enum(["usage", "replay", "matchups", "share-td", "share-clip", "cbb", "bowls"]),
   season: zod.number().int().min(2000).max(2200),
   week: zod.number().int().min(0).max(22),
   generatedAt: zod.string().datetime({ offset: true }),
@@ -755,6 +756,26 @@ router.get("/consumer/cbb", requireAdminUntilCbbLaunch, async (req, res): Promis
   } catch (error) {
     req.log.error({ error }, "College basketball read failed");
     res.status(503).json({ error: "College basketball is being refreshed", code: "consumer_data_unavailable" });
+  }
+});
+
+/**
+ * Bowl pool sheets: the latest daily run of research/pools/bowls_daily.py,
+ * with every bowl and a sheet per pool size, scoring type and kind of pool.
+ * Admin-only until the page opens (lib/launch/sports-launch.mjs).
+ */
+router.get("/consumer/bowls", requireAdminUntilBowlsLaunch, async (req, res): Promise<void> => {
+  try {
+    const latest = await latestReportRow("bowls");
+    res.set("Cache-Control", isBowlsPublic() ? "public, max-age=300" : "private, no-store");
+    if (!latest) {
+      res.json({ status: "unavailable", season: null, generatedAt: null, report: null });
+      return;
+    }
+    res.json({ status: "available", season: latest.season, generatedAt: latest.generatedAt.toISOString(), report: latest.payload });
+  } catch (error) {
+    req.log.error({ error }, "Bowl pool read failed");
+    res.status(503).json({ error: "Bowl pool sheets are being refreshed", code: "consumer_data_unavailable" });
   }
 });
 

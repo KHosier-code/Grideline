@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { isCbbPublic } from "../../../../lib/launch/sports-launch.mjs";
+import { isBowlsPublic, isCbbPublic } from "../../../../lib/launch/sports-launch.mjs";
 import { requireAdmin } from "./admin";
 
 /**
@@ -20,3 +20,19 @@ export function createRequireAdminUntilCbbLaunch(
 }
 
 export const requireAdminUntilCbbLaunch = createRequireAdminUntilCbbLaunch();
+
+/** The bowl pool page: admin-only until it opens on matchup day (lib/launch/sports-launch.mjs). */
+export function createRequireAdminUntilBowlsLaunch(
+  gate: RequestHandler = requireAdmin,
+  now: () => number = Date.now,
+): RequestHandler {
+  return (req, res, next) => {
+    if (isBowlsPublic(now())) {
+      next();
+      return;
+    }
+    gate(req, res, next);
+  };
+}
+
+export const requireAdminUntilBowlsLaunch = createRequireAdminUntilBowlsLaunch();

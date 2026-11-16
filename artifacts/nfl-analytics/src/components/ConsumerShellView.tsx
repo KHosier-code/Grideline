@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from './ConsumerAccountNavigation';
 import type { consumerAccountState } from '@/lib/consumer-account-state';
-import { cbbAccess, isCbbPath, sportForPath, type Sport } from '@/lib/sports';
+import { bowlsAccess, cbbAccess, isCbbPath, sportForPath, type Sport } from '@/lib/sports';
 
 type NavItem = { href: string; label: string; icon: typeof Gauge; signedInOnly?: boolean };
 /** `collapsible` groups fold away until opened, or while you're on one of their pages. */
@@ -53,6 +53,11 @@ export const cbbNavGroups: NavGroup[] = [
 export const consumerNav = consumerNavGroups.flatMap(group => group.items);
 
 export { isCbbPath };
+
+/** Office pool tools, in every section's menu once open (admins before). */
+const poolsNavGroup: NavGroup = { label: 'Pools', items: [
+  { href: '/pools/bowls', label: 'Bowl Pool Picks', icon: Trophy },
+] };
 
 const tabs: Array<{ sport: Sport; href: string; label: string; short: string }> = [
   { sport: 'home', href: '/', label: 'Home', short: 'Home' },
@@ -105,10 +110,12 @@ export function ConsumerShellView({
   // College basketball is admin-only until its launch date; then everyone gets the tabs.
   const cbbOpen = cbbAccess(account.adminVerified).visible;
   const sport: Sport = cbbOpen ? sportForPath(location) : location === '/' ? 'home' : 'nfl';
-  const groups = sport === 'cbb' ? cbbNavGroups
+  const bowlsOpen = bowlsAccess(account.adminVerified).visible;
+  const sportGroups = sport === 'cbb' ? cbbNavGroups
     : sport === 'home' && cbbOpen ? [consumerNavGroups[0], ...cbbNavGroups, ...consumerNavGroups.slice(1)]
     : consumerNavGroups;
-  const trail = crumbs(location, sport === 'cbb' ? cbbNavGroups : consumerNavGroups);
+  const groups = bowlsOpen ? [sportGroups[0], poolsNavGroup, ...sportGroups.slice(1)] : sportGroups;
+  const trail = crumbs(location, [...(sport === 'cbb' ? cbbNavGroups : consumerNavGroups), poolsNavGroup]);
   const sportTabs = cbbOpen && <nav className="gl-sport-tabs" aria-label="Sport">
     {tabs.map(tab => <Link key={tab.sport} href={tab.href} data-tab={tab.sport} aria-current={sport === tab.sport ? 'page' : undefined}>
       <span className="gl-tab-long">{tab.label}</span><span className="gl-tab-short">{tab.short}</span>

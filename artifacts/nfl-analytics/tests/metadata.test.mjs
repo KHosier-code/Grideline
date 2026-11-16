@@ -65,3 +65,13 @@ test('college basketball pages are indexed only from the launch date', async () 
     for (const path of ['/nfl', '/touchdowns', '/games', '/performance']) assert.match((await documentForPath(path, { now })).tags, /index, follow/);
   }
 });
+test('the bowl pool page is indexed only from noon Eastern on matchup day', async () => {
+  const before = Date.parse('2026-12-06T16:00:00Z');
+  const after = Date.parse('2026-12-06T18:00:00Z');
+  assert.match((await documentForPath('/pools/bowls', { now: before })).tags, /noindex, nofollow/);
+  const launched = await documentForPath('/pools/bowls', { now: after });
+  assert.match(launched.tags, /Bowl Pool Picks/);
+  assert.match(launched.tags, /name="robots" content="index, follow"/);
+  assert.ok(!sitemapPages(before).includes('/pools/bowls'));
+  assert.ok(sitemapPages(after).includes('/pools/bowls'));
+});
