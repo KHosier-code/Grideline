@@ -169,9 +169,9 @@ function Router() {
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/parlays"><Redirect to="/" replace /></Route>
     <Route path="/cbb/ratings"><ConsumerShell><CbbGate><CbbRatings /></CbbGate></ConsumerShell></Route>
-    <Route path="/cbb/record"><ConsumerShell><CbbGate><CbbRecord /></CbbGate></ConsumerShell></Route>
+    <Route path="/cbb/record"><ConsumerShell><CbbGate picks><CbbRecord /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
-    <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
+    <Route path="/cbb"><ConsumerShell><CbbGate picks><CbbGames /></CbbGate></ConsumerShell></Route>
     <Route path="/pools/bowls"><ConsumerShell><BowlsGate><BowlPools /></BowlsGate></ConsumerShell></Route>
     <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
     <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>
@@ -202,9 +202,9 @@ function Router() {
     <Route path="/pickem"><ConsumerShell><Pickem /></ConsumerShell></Route>
     <Route path="/parlays"><Redirect to="/" replace /></Route>
       <Route path="/cbb/ratings"><ConsumerShell><CbbGate><CbbRatings /></CbbGate></ConsumerShell></Route>
-      <Route path="/cbb/record"><ConsumerShell><CbbGate><CbbRecord /></CbbGate></ConsumerShell></Route>
+      <Route path="/cbb/record"><ConsumerShell><CbbGate picks><CbbRecord /></CbbGate></ConsumerShell></Route>
     <Route path="/cbb/how-it-works"><ConsumerShell><CbbGate><CbbMethodology /></CbbGate></ConsumerShell></Route>
-      <Route path="/cbb"><ConsumerShell><CbbGate><CbbGames /></CbbGate></ConsumerShell></Route>
+      <Route path="/cbb"><ConsumerShell><CbbGate picks><CbbGames /></CbbGate></ConsumerShell></Route>
     <Route path="/pools/bowls"><ConsumerShell><BowlsGate><BowlPools /></BowlsGate></ConsumerShell></Route>
       <Route path="/power-ratings"><ConsumerShell><PowerRatings /></ConsumerShell></Route>
       <Route path="/qb-rankings"><ConsumerShell><QbRankings /></ConsumerShell></Route>

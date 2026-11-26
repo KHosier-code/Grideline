@@ -20,7 +20,8 @@ import { createRateLimiter, createWeeklyDraft, newsletterConfigured, normalizeEm
 import { bestBookPrice, captureTouchdownProps, touchdownPropCaptures, type TouchdownPropsReport } from "../lib/td-props";
 import { injuryTimeline } from "../lib/td-injuries";
 import { requireAdminUntilBowlsLaunch, requireAdminUntilCbbLaunch } from "../middlewares/cbb-launch";
-import { isBowlsPublic } from "../../../../lib/launch/sports-launch.mjs";
+import { isBowlsPublic, isCbbPicksPublic } from "../../../../lib/launch/sports-launch.mjs";
+import { getAdminAuthStatus } from "../middlewares/admin";
 import { seasonDataCache } from "../lib/season-cache";
 import { cbbRecord, type CbbPick, type CbbResult } from "../lib/cbb-record";
 import { syncNwsWeather } from "../lib/weather";
@@ -722,6 +723,12 @@ router.get("/ops/database-size", async (req, res): Promise<void> => {
   }
 });
 
+/** A college report with only the ratings: no games, lines, picks or results. */
+export function cbbRatingsOnly(payload: Record<string, unknown>) {
+  const { games: _games, picks: _picks, results: _results, ...ratings } = payload;
+  return { ...ratings, games: [] };
+}
+
 /** Graded record per season, rebuilt only when a new daily run arrives. */
 let cbbRecordCache: { key: string; record: ReturnType<typeof cbbRecord> } | null = null;
 
@@ -729,7 +736,8 @@ let cbbRecordCache: { key: string; record: ReturnType<typeof cbbRecord> } | null
  * College basketball: the latest daily run (research/cbb-model/daily.py) with
  * ratings and upcoming games, plus the spread record graded from every run
  * this season. Only each run's picks and finals are read for the record.
- * Admin-only until the public launch date in lib/launch/sports-launch.mjs.
+ * Admin-only until the public launch date in lib/launch/sports-launch.mjs;
+ * after it, non-admins get the ratings only unless CBB_PICKS_PUBLIC.
  */
 router.get("/consumer/cbb", requireAdminUntilCbbLaunch, async (req, res): Promise<void> => {
   try {
@@ -749,9 +757,13 @@ router.get("/consumer/cbb", requireAdminUntilCbbLaunch, async (req, res): Promis
       cbbRecordCache = { key, record: cbbRecord(runs) };
     }
     res.set("Cache-Control", "private, no-store");
+    // Ratings are public after launch; games, picks and the record are not (CBB_PICKS_PUBLIC).
+    const picksVisible = isCbbPicksPublic() || getAdminAuthStatus(req).isAdmin;
     res.json({
       status: "available", season: latest.season, generatedAt: latest.generatedAt.toISOString(),
-      report: latest.payload, record: cbbRecordCache.record,
+      report: picksVisible ? latest.payload : cbbRatingsOnly(latest.payload),
+      record: picksVisible ? cbbRecordCache.record : null,
+      picksVisible,
     });
   } catch (error) {
     req.log.error({ error }, "College basketball read failed");

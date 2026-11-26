@@ -1,4 +1,4 @@
-import { isBowlsPublic, isCbbPublic } from '../../lib/launch/sports-launch.mjs';
+import { isBowlsPublic, isCbbPicksPublic, isCbbPublic } from '../../lib/launch/sports-launch.mjs';
 
 // Public document metadata, shared by Vite development and the production web server.
 const configuredOrigin = process.env.PUBLIC_SITE_URL || 'https://probablesports.com';
@@ -44,8 +44,14 @@ const bowlsPages = {
 const bothSportsHome = ['Probable | NFL and College Basketball Picks Priced Against the Books', 'Today\'s best NFL and college basketball picks next to the sportsbook line, each sport with its own model and its own public record.'];
 
 /** Indexed pages right now: the NFL pages always, college pages once launched. */
+// Without college picks (CBB_PICKS_PUBLIC), only the ratings pages are listed, and the home page says so.
+const cbbRatingsPages = { '/cbb/ratings': cbbPages['/cbb/ratings'], '/cbb/how-it-works': cbbPages['/cbb/how-it-works'] };
+const ratingsHome = ['Probable | NFL Picks and College Basketball Power Ratings', 'Free NFL touchdown picks and game projections priced against the books, plus power ratings for every Division I college basketball team.'];
+
 export function publicPages(now = Date.now()) {
-  const sports = isCbbPublic(now) ? { ...pages, '/': bothSportsHome, ...cbbPages } : pages;
+  const sports = !isCbbPublic(now) ? pages
+    : isCbbPicksPublic(now) ? { ...pages, '/': bothSportsHome, ...cbbPages }
+    : { ...pages, '/': ratingsHome, ...cbbRatingsPages };
   return isBowlsPublic(now) ? { ...sports, ...bowlsPages } : sports;
 }
 

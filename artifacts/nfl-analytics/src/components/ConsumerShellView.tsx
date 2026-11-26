@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { ConsumerAccountAction, ConsumerWorkspaceLink } from './ConsumerAccountNavigation';
 import type { consumerAccountState } from '@/lib/consumer-account-state';
-import { bowlsAccess, cbbAccess, isCbbPath, sportForPath, type Sport } from '@/lib/sports';
+import { bowlsAccess, cbbAccess, cbbHomePath, isCbbPath, sportForPath, type Sport } from '@/lib/sports';
 
-type NavItem = { href: string; label: string; icon: typeof Gauge; signedInOnly?: boolean };
+type NavItem = { href: string; label: string; icon: typeof Gauge; signedInOnly?: boolean; picksOnly?: boolean };
 /** `collapsible` groups fold away until opened, or while you're on one of their pages. */
 type NavGroup = { label: string; items: NavItem[]; collapsible?: boolean };
 
@@ -42,10 +42,10 @@ export const consumerNavGroups: NavGroup[] = [
 ];
 /** College basketball lives under /cbb with its own menu and its own record. */
 export const cbbNavGroups: NavGroup[] = [
-  { label: 'College picks', items: [
-    { href: '/cbb', label: "Today's games", icon: CalendarDays },
+  { label: 'College basketball', items: [
+    { href: '/cbb', label: "Today's games", icon: CalendarDays, picksOnly: true },
     { href: '/cbb/ratings', label: 'Power Ratings', icon: ListOrdered },
-    { href: '/cbb/record', label: 'College Record', icon: BarChart3 },
+    { href: '/cbb/record', label: 'College Record', icon: BarChart3, picksOnly: true },
     { href: '/cbb/how-it-works', label: 'How it works', icon: BookOpen },
   ] },
 ];
@@ -66,7 +66,11 @@ const tabs: Array<{ sport: Sport; href: string; label: string; short: string }> 
 ];
 
 /** Footer wording per section. */
-function FooterCopy({ sport }: { sport: Sport }) {
+function FooterCopy({ sport, cbbPicks }: { sport: Sport; cbbPicks: boolean }) {
+  if (sport === 'cbb' && !cbbPicks) return <>
+    <p><b>Probable College Basketball</b>Power ratings for every Division I team from tempo-free efficiency, adjusted for opponents and home court, updated four times a day.</p>
+    <p><b>Ratings, not picks</b>We don&apos;t publish college spread picks: in our own tracking they didn&apos;t beat the betting line. <Link href="/cbb/how-it-works">How the ratings work</Link>.</p>
+  </>;
   if (sport === 'cbb') return <>
     <p><b>Probable College Basketball</b>Our line for every Division I game next to the sportsbook&apos;s, from tempo-free team ratings updated four times a day. Its record is kept apart from the NFL&apos;s.</p>
     <p><b>Projections, not promises</b>Every number is a model estimate. Lines move, so check your sportsbook before betting. <Link href="/cbb/how-it-works">How the college model works</Link>.</p>
@@ -109,6 +113,7 @@ export function ConsumerShellView({
   useEffect(() => setOpen(false), [location]);
   // College basketball is admin-only until its launch date; then everyone gets the tabs.
   const cbbOpen = cbbAccess(account.adminVerified).visible;
+  const cbbPicks = cbbAccess(account.adminVerified).picks;
   const sport: Sport = cbbOpen ? sportForPath(location) : location === '/' ? 'home' : 'nfl';
   const bowlsOpen = bowlsAccess(account.adminVerified).visible;
   const sportGroups = sport === 'cbb' ? cbbNavGroups
@@ -117,12 +122,12 @@ export function ConsumerShellView({
   const groups = bowlsOpen ? [sportGroups[0], poolsNavGroup, ...sportGroups.slice(1)] : sportGroups;
   const trail = crumbs(location, [...(sport === 'cbb' ? cbbNavGroups : consumerNavGroups), poolsNavGroup]);
   const sportTabs = cbbOpen && <nav className="gl-sport-tabs" aria-label="Sport">
-    {tabs.map(tab => <Link key={tab.sport} href={tab.href} data-tab={tab.sport} aria-current={sport === tab.sport ? 'page' : undefined}>
+    {tabs.map(tab => <Link key={tab.sport} href={tab.sport === 'cbb' ? cbbHomePath(cbbPicks) : tab.href} data-tab={tab.sport} aria-current={sport === tab.sport ? 'page' : undefined}>
       <span className="gl-tab-long">{tab.label}</span><span className="gl-tab-short">{tab.short}</span>
     </Link>)}
   </nav>;
   const nav = (onNavigate?: () => void) => groups.map(group => {
-    const items = group.items.filter(item => !item.signedInOnly || account.signedIn);
+    const items = group.items.filter(item => (!item.signedInOnly || account.signedIn) && (!item.picksOnly || cbbPicks));
     if (!items.length) return null;
     const links = items.map(item => {
       const Icon = item.icon;
@@ -167,7 +172,7 @@ export function ConsumerShellView({
         <Link href="/" className="gl-brand gl-brand-mobile"><img src={`${import.meta.env.BASE_URL}logo-icon.svg`} alt="" />probable</Link>
         <ol className="gl-crumbs" aria-label="Breadcrumb">
           <li><Link href="/">Probable</Link></li>
-          {sport === 'cbb' && <li><Link href="/cbb">College Basketball</Link></li>}
+          {sport === 'cbb' && <li><Link href={cbbHomePath(cbbPicks)}>College Basketball</Link></li>}
           {sport === 'nfl' && cbbOpen && <li><Link href="/nfl">NFL</Link></li>}
           {trail.map((crumb, index) => <li key={crumb} aria-current={index === trail.length - 1 ? 'page' : undefined}>{crumb}</li>)}
         </ol>
@@ -186,7 +191,7 @@ export function ConsumerShellView({
       <main className="gl-shell-main">{children}</main>
       <footer className="gl-footer">
         <div className="gl-footer-inner">
-          <FooterCopy sport={sport === 'home' && !cbbOpen ? 'nfl' : sport} />
+          <FooterCopy sport={sport === 'home' && !cbbOpen ? 'nfl' : sport} cbbPicks={cbbPicks} />
           <p><b>Bet responsibly</b>21+ where sports betting is legal. If gambling stops being fun, call or text 1-800-GAMBLER.</p>
         </div>
       </footer>
