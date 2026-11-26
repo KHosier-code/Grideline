@@ -1,7 +1,9 @@
 import { Link } from 'wouter';
+import { useCbbAccess } from '@/lib/sports';
 import './cbb.css';
 
 export default function CbbMethodology() {
+  const { picks } = useCbbAccess();
   return <div className="gl-page cbb-prose">
     <header className="gl-hero">
       <div>
@@ -30,11 +32,18 @@ export default function CbbMethodology() {
       <p>Break-even at standard −110 pricing is 52.4%, so the honest summary is: a small edge, if any, and only if you bet before the line moves. Totals showed no edge at all, so we show our total but don&apos;t pick them.</p>
     </section>
 
-    <section className="gl-card">
+    {!picks && <section className="gl-card">
+      <h2>Why we don&apos;t publish college picks</h2>
+      <p>We tracked a daily card in private from November 2: up to 5 games a day where our line disagreed with the morning spread by 2 to 6 points, locked before tip-off and graded at that line. Through November 26 it went 43–57 against the spread (43%), well under the 52.4% needed to break even. The bigger our disagreement, the worse it did, which usually means the betting market knows something the ratings don&apos;t: injuries, lineups and early-season roster changes.</p>
+      <p>That matches the testing above: no edge against closing lines. So we publish the ratings, which are a good read on how strong every team is, and not picks against the spread. The ratings will also power our bracket pool tool in March.</p>
+      <p><Link href="/cbb/ratings" className="gl-link">Power ratings</Link></p>
+    </section>}
+
+    {picks && <section className="gl-card">
       <h2>Picks and the record</h2>
       <p>Each morning, the first update after 7 AM Eastern sets the day&apos;s card: up to 5 games where our line disagrees most with the current spread, between 2 and 6 points. (Bigger gaps were usually stale or mistaken lines in testing.) Those picks lock at the line shown then and are the only ones graded. Later updates can&apos;t change the card, add to it after the fact or remove a pick. Other games where we disagree show on the board as leans and are never counted.</p>
       <p>Lines and scores come from ESPN (DraftKings or ESPN BET, whichever ESPN shows). Your sportsbook&apos;s number may differ, so check it before you bet.</p>
       <p><Link href="/cbb" className="gl-link">Today&apos;s games</Link> · <Link href="/cbb/ratings" className="gl-link">Power ratings</Link></p>
-    </section>
+    </section>}
   </div>;
 }

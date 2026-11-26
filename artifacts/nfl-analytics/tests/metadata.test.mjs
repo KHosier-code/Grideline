@@ -46,20 +46,26 @@ test('game identity comes from API, not the URL or unavailable projections', asy
     globalThis.fetch = originalFetch;
   }
 });
-test('college basketball pages are indexed only from the launch date', async () => {
+test('college ratings pages are indexed from the launch date; college picks pages are not', async () => {
   const before = Date.parse('2026-11-30T12:00:00Z');
   const after = Date.parse('2026-12-01T12:00:00Z');
-  for (const path of ['/cbb', '/cbb/ratings', '/cbb/record', '/cbb/how-it-works']) {
+  for (const path of ['/cbb/ratings', '/cbb/how-it-works']) {
     assert.match((await documentForPath(path, { now: before })).tags, /noindex, nofollow/);
     const launched = await documentForPath(path, { now: after });
     assert.match(launched.tags, /College Basketball/);
     assert.match(launched.tags, /name="robots" content="index, follow"/);
   }
+  // College picks stay admin-only (CBB_PICKS_PUBLIC is false), so their pages are never listed.
+  for (const path of ['/cbb', '/cbb/record']) {
+    assert.match((await documentForPath(path, { now: after })).tags, /noindex, nofollow/);
+  }
   assert.ok(!sitemapPages(before).some(path => path.startsWith('/cbb')));
-  assert.ok(sitemapPages(after).includes('/cbb'));
+  assert.ok(sitemapPages(after).includes('/cbb/ratings'));
+  assert.ok(!sitemapPages(after).includes('/cbb'));
+  assert.ok(!sitemapPages(after).includes('/cbb/record'));
   assert.ok(sitemapPages(before).includes('/receipts'));
   assert.match((await documentForPath('/', { now: before })).tags, /<title>Probable \| Free NFL Touchdown Picks/);
-  assert.match((await documentForPath('/', { now: after })).tags, /NFL and College Basketball/);
+  assert.match((await documentForPath('/', { now: after })).tags, /NFL Picks and College Basketball Power Ratings/);
   // NFL pages keep working through the launch.
   for (const now of [before, after]) {
     for (const path of ['/nfl', '/touchdowns', '/games', '/performance']) assert.match((await documentForPath(path, { now })).tags, /index, follow/);

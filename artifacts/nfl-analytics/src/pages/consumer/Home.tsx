@@ -76,6 +76,23 @@ function cbbLine(homeSpread: number | null, game: CbbGame, teams: Map<string, Cb
   return `${team?.abbr ?? team?.short ?? ''} ${formatSpread(-fav.points)}`;
 }
 
+/** College basketball for visitors: the power ratings only (college picks are admin-only, CBB_PICKS_PUBLIC). */
+function CbbRatingsCard() {
+  const { query, report } = useCbb();
+  const top = useMemo(() => [...(report?.teams ?? [])].sort((a, b) => a.rank - b.rank).slice(0, 8), [report]);
+  return <section className="gl-card gl-sport-card" data-sport="cbb" aria-labelledby="home-cbb">
+    <SportCardHead title="College Basketball · Power Ratings" href="/cbb/ratings" cta={report?.teams.length ? `All ${report.teams.length} teams` : "All teams"}
+      record="Every Division I team, adjusted for opponents and home court" start={null} />
+    <h3 id="home-cbb" className="gl-label">Top 8 right now</h3>
+    {query.isLoading ? <ConsumerLoading label="Loading college ratings…" />
+      : query.isError || !top.length ? <p className="gl-sport-empty">College ratings couldn&apos;t load. Refresh in a minute.</p>
+      : <ul className="gl-sport-chips">{top.map(team => <li key={team.id}><Link href="/cbb/ratings" className="gl-sport-chip gl-sport-chip-team">
+        <CbbLogo team={team} size={22} />
+        <span><b>{team.rank}. {team.short}</b><small>{team.net >= 0 ? '+' : '−'}{Math.abs(team.net).toFixed(1)} per 100 · {team.wins}-{team.losses}</small></span>
+      </Link></li>)}</ul>}
+  </section>;
+}
+
 function CbbCard({ now }: { now: number }) {
   const { query, report, record } = useCbb();
   const teams = useMemo(() => new Map((report?.teams ?? []).map(team => [team.id, team])), [report]);
@@ -130,14 +147,16 @@ export default function Home() {
       <div>
         <p className="gl-label">{today}</p>
         <h1 className="gl-title">Today&apos;s best picks, <span>priced against the books.</span></h1>
-        <p className="gl-lede">{cbb.visible
+        <p className="gl-lede">{cbb.visible && cbb.picks
           ? 'NFL and college basketball, each with its own model and its own public record. Every pick is timestamped before kickoff or tip-off.'
-          : 'Anytime touchdown chances and a projected score for every NFL game, from play-by-play data. Every pick is timestamped before kickoff.'}</p>
+          : cbb.visible
+            ? 'Anytime touchdown chances and a projected score for every NFL game, plus power ratings for every college basketball team. Every NFL pick is timestamped before kickoff.'
+            : 'Anytime touchdown chances and a projected score for every NFL game, from play-by-play data. Every pick is timestamped before kickoff.'}</p>
       </div>
     </header>
     <div className={`gl-sport-cards${cbb.visible ? '' : ' single'}`}>
       <NflCard now={now} />
-      {cbb.visible && <CbbCard now={now} />}
+      {cbb.visible && (cbb.picks ? <CbbCard now={now} /> : <CbbRatingsCard />)}
     </div>
     <NewsletterSignup source="home" />
   </div>;
